@@ -1,0 +1,41 @@
+
+name: Testing Go-Code
+
+on:
+  push:
+    branches: [ master, dev ]
+  pull_request:
+    branches: [ master, dev ]
+
+  workflow_dispatch:
+
+jobs:
+  Tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: git clone
+        uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
+
+      - name: Run tests
+        run: |
+          go version
+          make test
+
+      - name: Run cover profile
+        run: |
+          go test -coverprofile=cover.txt ./...
+          go tool cover -html=cover.txt -o cover.html
+
+      - name: Upload cover files
+        uses: actions/upload-artifact@v2
+        with:
+          name: cover_text_html
+          path: cover.*t*
+          retention-days: 14
+
+      - name: Run linter
+        run: make lint

@@ -1,2 +1,1 @@
-# sgroups
-security groups backend API
+# Security groups service V1
