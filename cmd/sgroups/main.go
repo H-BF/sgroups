@@ -9,6 +9,8 @@ import (
 	"github.com/H-BF/sgroups/internal/config"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
+
+	_ "github.com/jackc/pgx/v4"
 )
 
 func main() {

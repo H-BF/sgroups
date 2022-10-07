@@ -14,13 +14,13 @@ import (
 type KnownValueTypes interface {
 	time.Time |
 
-	~int | ~uint |
-	~int64 | ~uint64 |
-	~int32 | ~uint32 |
-	~int16 | ~uint16 |
-	~int8 | ~uint8 |
-	~float32 | ~float64 |
-	~string | ~bool
+		~int | ~uint |
+		~int64 | ~uint64 |
+		~int32 | ~uint32 |
+		~int16 | ~uint16 |
+		~int8 | ~uint8 |
+		~float32 | ~float64 |
+		~string | ~bool
 }
 
 func typeCast[T any](in any, ret *T) error {
@@ -89,7 +89,8 @@ func constructTypeCastInvoker[T KnownValueTypes](c typeCastFunc[T]) functional.C
 }
 
 func regTypeCastFunc[T KnownValueTypes](c typeCastFunc[T]) {
-	ty := reflect.TypeOf((*T)(nil)).Elem()
+	var a *T
+	ty := reflect.TypeOf(a).Elem()
 	if typeCastInvokers[ty] != nil {
 		panic(errors.Errorf("('%v') type cast is always registered", ty))
 	}
