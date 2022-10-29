@@ -47,7 +47,7 @@ type (
 	MemDbSchemaInit func(*MemDbSchema)
 
 	//IntegrityChecker mem db data integrity checker
-	IntegrityChecker func(writer MemDbWriter) error
+	IntegrityChecker func(MemDbReader) error
 
 	//MemDbReader reader interface
 	MemDbReader interface {

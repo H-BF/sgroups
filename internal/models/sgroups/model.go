@@ -40,8 +40,9 @@ type (
 
 	//SGRuleIdentity security rule ID as key
 	SGRuleIdentity struct {
-		SgFrom, SgTo SecurityGroup
-		Transport    NetworkTransport
+		SgFrom    SecurityGroup
+		SgTo      SecurityGroup
+		Transport NetworkTransport
 	}
 
 	//SGRule security rule for From-To security groups
@@ -50,6 +51,9 @@ type (
 		PortsFrom, PortsTo PortRanges
 	}
 )
+
+//PortRangeFactory ...
+var PortRangeFactory = ranges.IntsFactory(PortNumber(0))
 
 const (
 	//TCP ...
@@ -77,4 +81,24 @@ func (sgRuleKey SGRuleIdentity) IdentityHash() string {
 func (sgRuleKey SGRuleIdentity) String() string {
 	return fmt.Sprintf("'%s'('%s' - '%s')",
 		sgRuleKey.Transport, sgRuleKey.SgFrom.Name, sgRuleKey.SgTo.Name)
+}
+
+//ArePortRangesEq checks if two multi ranges are equal
+func ArePortRangesEq(l, r PortRanges) bool {
+	n := l.Len()
+	if n != r.Len() {
+		return false
+	}
+	rr := make([]PortRange, 0, 2*n)
+	l.Iterate(func(r PortRange) bool {
+		rr = append(rr, r)
+		return true
+	})
+	r.Iterate(func(r PortRange) bool {
+		rr = append(rr, r)
+		return true
+	})
+	x := ranges.NewMultiRange(PortRangeFactory)
+	x.Update(ranges.CombineExclude, rr...)
+	return x.Len() == 0
 }

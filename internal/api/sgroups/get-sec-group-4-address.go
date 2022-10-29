@@ -39,7 +39,10 @@ func (srv *sgService) GetSecGroupForAddress(ctx context.Context, req *sg.GetSecG
 		return nil,
 			status.Error(codes.InvalidArgument, "invalid request")
 	}
-	reader := srv.registryReader()
+	var reader registry.Reader
+	if reader, err = srv.registryReader(ctx); err != nil {
+		return nil, err
+	}
 	err = reader.ListSecurityGroups(ctx, func(group model.SecurityGroup) error {
 		resp = new(sg.SecGroup)
 		resp.Name = group.Name

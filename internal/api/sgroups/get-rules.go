@@ -64,10 +64,13 @@ func sgRule2proto(src model.SGRule) (ret sg.Rule, err error) {
 }
 
 func (srv *sgService) GetRules(ctx context.Context, req *sg.GetRulesReq) (resp *sg.RulesResp, err error) {
-	reader := srv.registryReader()
 	defer func() {
 		err = correctError(err)
 	}()
+	var reader registry.Reader
+	if reader, err = srv.registryReader(ctx); err != nil {
+		return nil, err
+	}
 	err = reader.ListSGRules(ctx, func(rule model.SGRule) error {
 		if resp == nil {
 			resp = new(sg.RulesResp)

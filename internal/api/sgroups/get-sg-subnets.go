@@ -13,10 +13,13 @@ import (
 )
 
 func (srv *sgService) GetSgSubnets(ctx context.Context, req *sg.GetSgSubnetsReq) (resp *sg.GetSgSubnetsResp, err error) {
-	reader := srv.registryReader()
 	defer func() {
 		err = correctError(err)
 	}()
+	var reader registry.Reader
+	if reader, err = srv.registryReader(ctx); err != nil {
+		return nil, err
+	}
 	err = reader.ListSecurityGroups(ctx, func(group model.SecurityGroup) error {
 		resp = new(sg.GetSgSubnetsResp)
 		for _, n := range group.Networks {

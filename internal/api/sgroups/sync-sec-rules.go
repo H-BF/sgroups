@@ -2,6 +2,7 @@ package sgroups
 
 import (
 	"context"
+
 	"github.com/H-BF/corlib/pkg/ranges"
 	"github.com/H-BF/protos/pkg/api/common"
 	sg "github.com/H-BF/protos/pkg/api/sgroups"
@@ -12,7 +13,7 @@ import (
 )
 
 type syncRules struct {
-	srv   *sgService
+	wr    registry.Writer
 	rules []*sg.Rule
 	ops   sg.SyncReq_SyncOp
 }
@@ -21,11 +22,12 @@ func (snc syncRules) process(ctx context.Context) error {
 	rules := make([]model.SGRule, 0, len(snc.rules))
 	for _, rl := range snc.rules {
 		var item model.SGRule
-		err := sgRule{SGRule: &item}.from(rl)
-		if err != nil {
+		if err := (sgRule{SGRule: &item}).from(rl); err != nil {
 			return err
 		}
-		rules = append(rules, item)
+		if snc.ops != sg.SyncReq_Delete {
+			rules = append(rules, item)
+		}
 	}
 	var opts []registry.Option
 	if err := syncOptionsFromProto(snc.ops, &opts); err != nil {
@@ -35,8 +37,7 @@ func (snc syncRules) process(ctx context.Context) error {
 	if snc.ops != sg.SyncReq_FullSync {
 		sc = registry.SGRule(rules...)
 	}
-	writer := snc.srv.registryWriter()
-	return writer.SyncSGRules(ctx, rules, sc, opts...)
+	return snc.wr.SyncSGRules(ctx, rules, sc, opts...)
 }
 
 type portsRange struct {
@@ -66,12 +67,11 @@ func (nt networkTransport) from(src common.Networks_NetIP_Transport) error {
 
 func (r portsRange) from(src []*common.Networks_NetIP_PortRange) {
 	rgs := make([]model.PortRange, 0, len(src))
-	fct := ranges.IntsFactory(model.PortNumber(0))
 	for _, s := range src {
 		rgs = append(rgs,
-			fct.Range(s.GetFrom(), false, s.GetTo(), false))
+			model.PortRangeFactory.Range(s.GetFrom(), false, s.GetTo(), false))
 	}
-	x := ranges.NewMultiRange(fct)
+	x := ranges.NewMultiRange(model.PortRangeFactory)
 	x.Update(ranges.CombineMerge, rgs...)
 	*r.PortRanges = x
 }

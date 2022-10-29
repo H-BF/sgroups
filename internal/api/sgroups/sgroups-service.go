@@ -16,14 +16,16 @@ import (
 )
 
 //NewSGroupsService creates service
-func NewSGroupsService(ctx context.Context) server.APIService {
+func NewSGroupsService(ctx context.Context, r registry.Registry) server.APIService {
 	return &sgService{
 		appCtx: ctx,
+		reg:    r,
 	}
 }
 
 type sgService struct {
 	appCtx context.Context
+	reg    registry.Registry
 
 	sg.UnimplementedSecGroupServiceServer
 }
@@ -55,12 +57,12 @@ func (srv *sgService) RegisterProxyGW(ctx context.Context, mux *grpcRt.ServeMux,
 	return sg.RegisterSecGroupServiceHandler(ctx, mux, c)
 }
 
-func (srv *sgService) registryReader() registry.Reader {
-	return nil
+func (srv *sgService) registryReader(ctx context.Context) (registry.Reader, error) {
+	return srv.reg.Reader(ctx)
 }
 
-func (srv *sgService) registryWriter() registry.Writer {
-	return nil
+func (srv *sgService) registryWriter(ctx context.Context) (registry.Writer, error) {
+	return srv.reg.Writer(ctx)
 }
 
 func correctError(err error) error {

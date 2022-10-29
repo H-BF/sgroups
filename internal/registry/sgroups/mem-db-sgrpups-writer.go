@@ -3,78 +3,201 @@ package sgroups
 import (
 	"context"
 	"reflect"
+	"sort"
+	"strings"
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	"github.com/hashicorp/go-memdb"
 	"github.com/pkg/errors"
 )
 
-var (
-	_ = sGroupsMemDbWriter{}
-)
-
 type sGroupsMemDbWriter struct {
+	sGroupsMemDbReader
 	writer MemDbWriter
 }
 
 //SyncNetworks impl Writer = update / delete networks
-func (wr sGroupsMemDbWriter) SyncNetworks(_ context.Context, networks []model.Network, scope Scope, opts ...Option) error {
+func (wr sGroupsMemDbWriter) SyncNetworks(ctx context.Context, networks []model.Network, scope Scope, opts ...Option) error {
 	const api = "mem-db/SyncNetworks"
-	var err error
-	var h diffHelper[model.Network, string]
-	if err = h.init(networks, nil); err != nil {
+
+	it, err := wr.writer.Get(TblNetworks, indexID)
+	if err != nil {
 		return errors.WithMessage(err, api)
 	}
-	var it MemDbIterator
-	if it, err = wr.writer.Get(TblNetworks, indexID, scope); err != nil {
-		return errors.WithMessage(err, api)
+	var ft filterTree[model.Network]
+	if !ft.init(scope) {
+		return errors.Errorf("bad scope")
 	}
-	for v := it.Next(); v != nil; v = it.Next() {
-		if err = h.addNew(*v.(*model.Network)); err != nil {
-			return errors.WithMessage(err, api)
-		}
+	it = memdb.NewFilterIterator(it, func(i interface{}) bool {
+		nw := *i.(*model.Network)
+		return !ft.invoke(nw)
+	})
+
+	var deleted []model.Network
+	h := syncHelper[model.Network, string]{
+		delete: func(obj *model.Network) error {
+			e := wr.writer.Delete(TblNetworks, obj)
+			if e == nil || errors.Is(e, memdb.ErrNotFound) {
+				deleted = append(deleted, *obj)
+			}
+			return e
+		},
+		upsert: func(obj *model.Network) error {
+			return wr.writer.Upsert(TblNetworks, obj)
+		},
+		postprocess: func() error {
+			return wr.afterDeleteNetworks(ctx, deleted)
+		},
 	}
-	upd, ins, del := h.diff(opts...)
-	for _, obj := range append(upd, ins...) {
-		if err = wr.writer.Upsert(TblNetworks, obj); err != nil {
-			return errors.WithMessage(err, api)
-		}
-	}
-	for _, obj := range del {
-		err = wr.writer.Delete(TblNetworks, obj)
-		if err != nil && !errors.Is(err, memdb.ErrNotFound) {
-			break
-		}
-		if err = wr.onDeleteNetwork(obj); err != nil {
-			break
-		}
-	}
+	err = h.doSync(networks, it, opts...)
 	return errors.WithMessage(err, api)
 }
 
 //SyncSecurityGroups impl Writer = update / delete security groups
 func (wr sGroupsMemDbWriter) SyncSecurityGroups(ctx context.Context, sgs []model.SecurityGroup, scope Scope, opts ...Option) error {
-	return nil
+	const api = "mem-db/SyncSecurityGroups"
+
+	it, err := wr.writer.Get(TblSecGroups, indexID)
+	if err != nil {
+		return errors.WithMessage(err, api)
+	}
+	var ft filterTree[model.SecurityGroup]
+	if !ft.init(scope) {
+		return errors.Errorf("bad scope")
+	}
+	it = memdb.NewFilterIterator(it, func(i interface{}) bool {
+		sg := *i.(*model.SecurityGroup)
+		return !ft.invoke(sg)
+	})
+
+	var deleted []model.SecurityGroup
+	h := syncHelper[model.SecurityGroup, string]{
+		upsert: func(obj *model.SecurityGroup) error {
+			return wr.writer.Upsert(TblSecGroups, obj)
+		},
+		delete: func(obj *model.SecurityGroup) error {
+			e := wr.writer.Delete(TblSecGroups, obj)
+			if e == nil || errors.Is(e, memdb.ErrNotFound) {
+				deleted = append(deleted, *obj)
+			}
+			return e
+		},
+		postprocess: func() error {
+			return wr.afterDeleteSGs(ctx, deleted)
+		},
+	}
+	err = h.doSync(sgs, it, opts...)
+	return errors.WithMessage(err, api)
 }
 
 //SyncSGRules impl Writer = update / delete security group rules
-func (wr sGroupsMemDbWriter) SyncSGRules(ctx context.Context, rules []model.SGRule, scope Scope, opts ...Option) error {
-	//var h updateHelper[model.SGRule, string]
-	//rules[0].PortsTo.
+func (wr sGroupsMemDbWriter) SyncSGRules(_ context.Context, rules []model.SGRule, scope Scope, opts ...Option) error {
+	const api = "mem-db/SyncSGRules"
+
+	it, err := wr.writer.Get(TblSecRules, indexID)
+	if err != nil {
+		return errors.WithMessage(err, api)
+	}
+	var ft filterTree[model.SGRule]
+	if !ft.init(scope) {
+		return errors.Errorf("bad scope")
+	}
+	it = memdb.NewFilterIterator(it, func(i interface{}) bool {
+		r := *i.(*model.SGRule)
+		return !ft.invoke(r)
+	})
+
+	h := syncHelper[model.SGRule, string]{
+		delete: func(obj *model.SGRule) error {
+			e := wr.writer.Delete(TblSecRules, obj)
+			if errors.Is(e, memdb.ErrNotFound) {
+				return nil
+			}
+			return e
+		},
+		upsert: func(obj *model.SGRule) error {
+			return wr.writer.Upsert(TblSecRules, obj)
+		},
+	}
+	err = h.doSync(rules, it, opts...)
+	return errors.WithMessage(err, api)
+}
+
+//Commit impl Writer
+func (wr sGroupsMemDbWriter) Commit() error {
+	return wr.writer.Commit()
+}
+
+//Abort impl Writer
+func (wr sGroupsMemDbWriter) Abort() {
+	wr.writer.Abort()
+}
+
+func (wr sGroupsMemDbWriter) afterDeleteNetworks(ctx context.Context, nw []model.Network) error {
+	if len(nw) == 0 {
+		return nil
+	}
+	nwNames := make([]model.NetworkName, 0, len(nw))
+	nwSet := make(map[model.NetworkName]bool)
+	for i := range nw {
+		nwSet[nw[i].Name] = true
+		nwNames = append(nwNames, nw[i].Name)
+	}
+	scope := NetworkNames(nwNames[0], nwNames[1:]...)
+	var sgs []model.SecurityGroup
+	//get related SG(s)
+	err := wr.ListSecurityGroups(ctx, func(sg model.SecurityGroup) error {
+		nws := sg.Networks[:0]
+		for _, n := range sg.Networks {
+			if !nwSet[n.Name] {
+				nws = append(nws, n)
+			}
+		}
+		if len(nws) != len(sg.Networks) {
+			sg.Networks = nws
+			sgs = append(sgs, sg)
+		}
+		return nil
+	}, scope)
+	if err != nil {
+		return errors.WithMessage(err, "get related SG(s)")
+	}
+	//update related SG(s)
+	for i := range sgs {
+		s := &sgs[i]
+		if err = wr.writer.Upsert(TblSecGroups, s); err != nil {
+			return errors.WithMessagef(err, "update related '%s' SG", s.Name)
+		}
+	}
 	return nil
 }
 
-func (wr sGroupsMemDbWriter) onDeleteNetwork(nw model.Network) error {
-	_ = nw
-	return nil
+func (wr sGroupsMemDbWriter) afterDeleteSGs(ctx context.Context, sgs []model.SecurityGroup) error {
+	if len(sgs) == 0 {
+		return nil
+	}
+	names := make([]string, 0, len(sgs))
+	for i := range sgs {
+		names = append(names, sgs[i].Name)
+	}
+	scope := Or(SGFrom(names[0], names[1:]...), SGTo(names[0], names[1:]...))
+
+	//delete related SGRule(s)
+	err := wr.SyncSGRules(ctx, nil,
+		scope, SyncOmitInsert{}, SyncOmitUpdate{})
+
+	return errors.WithMessage(err, "delete related SGRule(s)")
 }
 
-type diffHelper[T any, TKey comparable] struct {
-	cur map[TKey]T
-	new map[TKey]T
+type syncHelper[T any, TKey comparable] struct {
+	cur, new    map[TKey]T
+	preprocess  func() error
+	upsert      func(*T) error
+	delete      func(*T) error
+	postprocess func() error
 }
 
-func (h *diffHelper[T, TKey]) init(newValues, curValues []T) error {
+func (h *syncHelper[T, TKey]) load(newValues []T, curValIt MemDbIterator) error {
 	h.cur = make(map[TKey]T)
 	h.new = make(map[TKey]T)
 	for _, v := range newValues {
@@ -82,15 +205,15 @@ func (h *diffHelper[T, TKey]) init(newValues, curValues []T) error {
 			return e
 		}
 	}
-	for _, v := range curValues {
-		if e := h.addCurrent(v); e != nil {
+	for v := curValIt.Next(); v != nil; v = curValIt.Next() {
+		if e := h.addCurrent(*v.(*T)); e != nil {
 			return e
 		}
 	}
 	return nil
 }
 
-func (h diffHelper[T, TKey]) add(v T, toCurrent bool) error {
+func (h syncHelper[T, TKey]) add(v T, toCurrent bool) error {
 	k, e := h.extractKey(v)
 	if e != nil {
 		return e
@@ -103,15 +226,15 @@ func (h diffHelper[T, TKey]) add(v T, toCurrent bool) error {
 	return nil
 }
 
-func (h diffHelper[T, TKey]) addNew(v T) error {
+func (h syncHelper[T, TKey]) addNew(v T) error {
 	return h.add(v, false)
 }
 
-func (h diffHelper[T, TKey]) addCurrent(v T) error {
+func (h syncHelper[T, TKey]) addCurrent(v T) error {
 	return h.add(v, true)
 }
 
-func (h diffHelper[T, TKey]) diff(opts ...Option) (upd, ins, del []T) {
+func (h syncHelper[T, TKey]) diff(opts ...Option) (upd, ins, del []T) {
 	i, u, d := true, true, true
 	for n := range opts {
 		switch opts[n].(type) {
@@ -134,7 +257,7 @@ func (h diffHelper[T, TKey]) diff(opts ...Option) (upd, ins, del []T) {
 	}
 	if d {
 		for keyCur, vCur := range h.cur {
-			if _, found := h.cur[keyCur]; !found {
+			if _, found := h.new[keyCur]; !found {
 				del = append(del, vCur)
 			}
 		}
@@ -142,7 +265,7 @@ func (h diffHelper[T, TKey]) diff(opts ...Option) (upd, ins, del []T) {
 	return
 }
 
-func (h diffHelper[T, TKey]) extractKey(obj T) (TKey, error) {
+func (h syncHelper[T, TKey]) extractKey(obj T) (TKey, error) {
 	var k TKey
 	var vSrc reflect.Value
 	switch a := interface{}(obj).(type) {
@@ -164,6 +287,69 @@ func (h diffHelper[T, TKey]) extractKey(obj T) (TKey, error) {
 	return k, nil
 }
 
-func (h diffHelper[T, TKey]) isEQ(l, r T) bool {
+func (h syncHelper[T, TKey]) isEQ(l, r T) bool {
+	switch lt := interface{}(l).(type) {
+	case model.Network:
+		rt := interface{}(r).(model.Network)
+		return lt.Net.IP.Equal(rt.Net.IP) &&
+			lt.Net.Mask.String() == rt.Net.Mask.String()
+	case model.SecurityGroup:
+		rt := interface{}(r).(model.SecurityGroup)
+		if len(lt.Networks) != len(rt.Networks) {
+			return false
+		}
+		sort.Slice(lt.Networks, func(i, j int) bool {
+			return strings.Compare(lt.Networks[i].Name, lt.Networks[j].Name) < 0
+		})
+		sort.Slice(rt.Networks, func(i, j int) bool {
+			return strings.Compare(rt.Networks[i].Name, rt.Networks[j].Name) < 0
+		})
+		var h1 syncHelper[model.Network, string]
+		for i := range lt.Networks {
+			if eq := h1.isEQ(lt.Networks[i], rt.Networks[i]); !eq {
+				return false
+			}
+			if lt.Networks[i].Name != rt.Networks[i].Name {
+				return false
+			}
+		}
+		return true
+	case model.SGRule:
+		rt := interface{}(r).(model.SGRule)
+		return model.ArePortRangesEq(lt.PortsFrom, rt.PortsFrom) &&
+			model.ArePortRangesEq(lt.PortsTo, rt.PortsTo)
+	default:
+	}
 	return false
+}
+
+func (h syncHelper[T, TKey]) doSync(newValues []T, curValIt MemDbIterator, opts ...Option) error {
+	var err error
+	if h.preprocess != nil {
+		err = h.preprocess()
+		if err != nil {
+			return err
+		}
+	}
+	if err = h.load(newValues, curValIt); err != nil {
+		return err
+	}
+	upd, ins, del := h.diff(opts...)
+	ups := append(upd, ins...)
+	for i := range ups {
+		obj := &ups[i]
+		if err = h.upsert(obj); err != nil {
+			return err
+		}
+	}
+	for i := range del {
+		obj := &del[i]
+		if err = h.delete(obj); err != nil {
+			return err
+		}
+	}
+	if h.postprocess != nil {
+		err = h.postprocess()
+	}
+	return err
 }

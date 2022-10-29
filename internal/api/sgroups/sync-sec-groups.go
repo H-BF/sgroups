@@ -9,7 +9,7 @@ import (
 )
 
 type syncGroups struct {
-	srv    *sgService
+	wr     registry.Writer
 	groups []*sg.SecGroup
 	ops    sg.SyncReq_SyncOp
 }
@@ -17,12 +17,13 @@ type syncGroups struct {
 func (snc syncGroups) process(ctx context.Context) error {
 	names := make([]string, 0, len(snc.groups))
 	groups := make([]model.SecurityGroup, 0, len(snc.groups))
-	var opts []registry.Option
 	var sc registry.Scope = registry.NoScope
 	for _, g := range snc.groups {
-		var x securityGroup
-		x.from(g)
-		groups = append(groups, x.SecurityGroup)
+		if snc.ops != sg.SyncReq_Delete {
+			var x securityGroup
+			x.from(g)
+			groups = append(groups, x.SecurityGroup)
+		}
 		if snc.ops != sg.SyncReq_FullSync {
 			names = append(names, g.GetName())
 		}
@@ -30,11 +31,11 @@ func (snc syncGroups) process(ctx context.Context) error {
 	if len(names) != 0 {
 		sc = registry.SG(names[0], names[1:]...)
 	}
+	var opts []registry.Option
 	if err := syncOptionsFromProto(snc.ops, &opts); err != nil {
 		return err
 	}
-	writer := snc.srv.registryWriter()
-	return writer.SyncSecurityGroups(ctx, groups, sc, opts...)
+	return snc.wr.SyncSecurityGroups(ctx, groups, sc, opts...)
 }
 
 type securityGroup struct {

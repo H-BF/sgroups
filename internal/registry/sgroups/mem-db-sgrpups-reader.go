@@ -4,11 +4,8 @@ import (
 	"context"
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
+	"github.com/hashicorp/go-memdb"
 	"github.com/pkg/errors"
-)
-
-var ( //TODO: Delete this
-	_ = sGroupsMemDbReader{}
 )
 
 type sGroupsMemDbReader struct {
@@ -33,8 +30,8 @@ func (rd sGroupsMemDbReader) ListSecurityGroups(_ context.Context, consume func(
 //ListSGRules impl Reader
 func (rd sGroupsMemDbReader) ListSGRules(_ context.Context, consume func(model.SGRule) error, scope Scope) error {
 	return memDbListObjects(rd.reader, scope, TblSecRules, func(rule model.SGRule) error {
-		ok, e := rd.fillSgRuleID(&rule.SGRuleIdentity)
-		if !ok || e != nil {
+		id := &rule.SGRuleIdentity
+		if e := rd.fillSgRuleID(id); e != nil {
 			return errors.WithMessagef(e, "when fill SgRule %s", rule.SGRuleIdentity)
 		}
 		return consume(rule)
@@ -61,18 +58,21 @@ func (rd sGroupsMemDbReader) fillSG(sg *model.SecurityGroup) error {
 	return nil
 }
 
-func (rd sGroupsMemDbReader) fillSgRuleID(sgID *model.SGRuleIdentity) (bool, error) {
+func (rd sGroupsMemDbReader) fillSgRuleID(sgID *model.SGRuleIdentity) error {
 	for _, s := range []*model.SecurityGroup{&sgID.SgFrom, &sgID.SgTo} {
 		obj, e := rd.reader.First(TblSecGroups, indexID, s.Name)
-		if e != nil || obj == nil {
-			return false, errors.WithMessagef(e, "when find SG '%s'", s.Name)
+		if e != nil {
+			return errors.WithMessagef(e, "when find related SG '%s'", s.Name)
+		}
+		if obj == nil {
+			return errors.Errorf("no related SG '%s'", s.Name)
 		}
 		s = obj.(*model.SecurityGroup)
 		if e = rd.fillSG(s); e != nil {
-			return false, errors.WithMessagef(e, "when fill SG '%s'", s.Name)
+			return errors.WithMessagef(e, "when fill SG '%s'", s.Name)
 		}
 	}
-	return true, nil
+	return nil
 }
 
 func memDbListObjects[T filterKindArg](reader MemDbReader, sc Scope, tbl TableID, consume func(T) error) error {
@@ -85,12 +85,14 @@ func memDbListObjects[T filterKindArg](reader MemDbReader, sc Scope, tbl TableID
 	if err != nil {
 		return err
 	}
-	for x := it.Next(); x != nil; it.Next() {
-		obj := *x.(*T)
-		if !f.invoke(obj) {
-			continue
-		}
-		if e := consume(obj); e != nil {
+	if it == nil {
+		return nil
+	}
+	it = memdb.NewFilterIterator(it, func(x interface{}) bool {
+		return !f.invoke(*x.(*T))
+	})
+	for x := it.Next(); x != nil; x = it.Next() {
+		if e := consume(*x.(*T)); e != nil {
 			return e
 		}
 	}

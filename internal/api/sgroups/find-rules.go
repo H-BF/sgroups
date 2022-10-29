@@ -12,10 +12,13 @@ import (
 )
 
 func (srv *sgService) FindRules(ctx context.Context, req *sg.FindRulesReq) (resp *sg.RulesResp, err error) {
-	reader := srv.registryReader()
 	defer func() {
 		err = correctError(err)
 	}()
+	var reader registry.Reader
+	if reader, err = srv.registryReader(ctx); err != nil {
+		return nil, err
+	}
 	var sc1, sc2 registry.Scope = registry.NoScope, registry.NoScope
 	if s := req.GetSgFrom(); len(s) > 0 {
 		sc1 = registry.SGFrom(s[0], s[1:]...)

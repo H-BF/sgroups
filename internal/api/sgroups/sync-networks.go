@@ -12,7 +12,7 @@ import (
 )
 
 type syncNetworks struct {
-	srv      *sgService
+	wr       registry.Writer
 	networks []*sg.Network
 	ops      sg.SyncReq_SyncOp
 }
@@ -32,17 +32,19 @@ func (n *network) from(protoNw *sg.Network) error {
 }
 
 func (snc syncNetworks) process(ctx context.Context) error {
-	dst := make([]model.Network, 0, len(snc.networks))
+	networks := make([]model.Network, 0, len(snc.networks))
 	names := make([]string, 0, len(snc.networks))
 	for _, src := range snc.networks {
-		var item network
-		if e := item.from(src); e != nil {
-			return status.Errorf(codes.InvalidArgument, "when convert (%s) network", src)
+		if snc.ops != sg.SyncReq_Delete {
+			var item network
+			if e := item.from(src); e != nil {
+				return status.Errorf(codes.InvalidArgument, "when convert (%s) network", src)
+			}
+			networks = append(networks, item.Network)
 		}
 		if snc.ops != sg.SyncReq_FullSync {
 			names = append(names, src.GetName())
 		}
-		dst = append(dst, item.Network)
 	}
 	var sc registry.Scope = registry.NoScope
 	if len(names) != 0 {
@@ -52,8 +54,7 @@ func (snc syncNetworks) process(ctx context.Context) error {
 	if err := syncOptionsFromProto(snc.ops, &opts); err != nil {
 		return err
 	}
-	writer := snc.srv.registryWriter()
-	return writer.SyncNetworks(ctx, dst, sc, opts...)
+	return snc.wr.SyncNetworks(ctx, networks, sc, opts...)
 }
 
 func syncOptionsFromProto(o sg.SyncReq_SyncOp, opts *[]registry.Option) error {
