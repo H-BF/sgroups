@@ -67,7 +67,7 @@ func (rd sGroupsMemDbReader) fillSgRuleID(sgID *model.SGRuleIdentity) error {
 		if obj == nil {
 			return errors.Errorf("no related SG '%s'", s.Name)
 		}
-		s = obj.(*model.SecurityGroup)
+		*s = *obj.(*model.SecurityGroup)
 		if e = rd.fillSG(s); e != nil {
 			return errors.WithMessagef(e, "when fill SG '%s'", s.Name)
 		}
