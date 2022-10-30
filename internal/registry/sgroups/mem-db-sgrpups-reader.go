@@ -19,9 +19,16 @@ func (rd sGroupsMemDbReader) ListNetworks(_ context.Context, consume func(model.
 
 //ListSecurityGroups impl Reader
 func (rd sGroupsMemDbReader) ListSecurityGroups(_ context.Context, consume func(model.SecurityGroup) error, scope Scope) error {
-	return memDbListObjects(rd.reader, scope, TblSecGroups, func(sg model.SecurityGroup) error {
+	var f filterTree[model.SecurityGroup]
+	if !f.init(scope) {
+		return errors.New("bad scope for 'SecurityGroup' is passed")
+	}
+	return memDbListObjects(rd.reader, NoScope, TblSecGroups, func(sg model.SecurityGroup) error {
 		if e := rd.fillSG(&sg); e != nil {
 			return errors.WithMessagef(e, "when fill SG '%s'", sg.Name)
+		}
+		if !f.invoke(sg) {
+			return nil
 		}
 		return consume(sg)
 	})
@@ -29,10 +36,17 @@ func (rd sGroupsMemDbReader) ListSecurityGroups(_ context.Context, consume func(
 
 //ListSGRules impl Reader
 func (rd sGroupsMemDbReader) ListSGRules(_ context.Context, consume func(model.SGRule) error, scope Scope) error {
-	return memDbListObjects(rd.reader, scope, TblSecRules, func(rule model.SGRule) error {
+	var f filterTree[model.SGRule]
+	if !f.init(scope) {
+		return errors.New("bad scope for 'SGRule' is passed")
+	}
+	return memDbListObjects(rd.reader, NoScope, TblSecRules, func(rule model.SGRule) error {
 		id := &rule.SGRuleIdentity
 		if e := rd.fillSgRuleID(id); e != nil {
 			return errors.WithMessagef(e, "when fill SgRule %s", rule.SGRuleIdentity)
+		}
+		if !f.invoke(rule) {
+			return nil
 		}
 		return consume(rule)
 	})
