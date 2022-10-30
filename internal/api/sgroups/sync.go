@@ -11,10 +11,9 @@ import (
 )
 
 //Sync impl service
-func (srv *sgService) Sync(ctx context.Context, req *sg.SyncReq) (*emptypb.Empty, error) {
-	ret := new(emptypb.Empty)
+func (srv *sgService) Sync(ctx context.Context, req *sg.SyncReq) (ret *emptypb.Empty, err error) {
+	ret = new(emptypb.Empty)
 	var wr registry.Writer
-	var err error
 	if wr, err = srv.registryWriter(ctx); err != nil {
 		return ret, correctError(err)
 	}

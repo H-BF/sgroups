@@ -25,9 +25,7 @@ func (snc syncRules) process(ctx context.Context) error {
 		if err := (sgRule{SGRule: &item}).from(rl); err != nil {
 			return err
 		}
-		if snc.ops != sg.SyncReq_Delete {
-			rules = append(rules, item)
-		}
+		rules = append(rules, item)
 	}
 	var opts []registry.Option
 	if err := syncOptionsFromProto(snc.ops, &opts); err != nil {
@@ -36,6 +34,9 @@ func (snc syncRules) process(ctx context.Context) error {
 	var sc registry.Scope = registry.NoScope
 	if snc.ops != sg.SyncReq_FullSync {
 		sc = registry.SGRule(rules...)
+	}
+	if snc.ops == sg.SyncReq_Delete {
+		rules = rules[:0]
 	}
 	return snc.wr.SyncSGRules(ctx, rules, sc, opts...)
 }
@@ -78,7 +79,7 @@ func (r portsRange) from(src []*common.Networks_NetIP_PortRange) {
 
 func (r sgRule) from(src *sg.Rule) error {
 	r.SgFrom.Name = src.GetSgFrom().GetName()
-	r.SgTo.Name = src.GetSgFrom().GetName()
+	r.SgTo.Name = src.GetSgTo().GetName()
 	err := networkTransport{NetworkTransport: &r.Transport}.
 		from(src.GetTransport())
 	if err != nil {

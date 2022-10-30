@@ -140,11 +140,12 @@ func (tx *memDbWriter) Commit() error {
 		if e == nil {
 			e = tx.checkIntegrity()
 		}
-		if e != nil {
-			tx.commitErr = e
+		if e == nil {
+			tx.tx.Commit()
+		} else {
 			tx.tx.Abort()
+			tx.commitErr = e
 		}
-		tx.tx.Commit()
 	})
 	return tx.commitErr
 }

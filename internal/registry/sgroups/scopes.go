@@ -130,7 +130,8 @@ func NetworkNames(one model.NetworkName, other ...model.NetworkName) Scope {
 func SGRule(others ...model.SGRule) Scope {
 	ret := scopedSGRuleIdentity{}
 	for i := range others {
-		ret[others[i].IdentityHash()] = true
+		h := others[i].IdentityHash()
+		ret[h] = true
 	}
 	return ret
 }
@@ -341,7 +342,8 @@ func (p ScopedNetTransport) meta() metaInfo {
 }
 
 func (p scopedSGRuleIdentity) inSGRule(rule model.SGRule) bool {
-	return p[rule.IdentityHash()]
+	h := rule.IdentityHash()
+	return p[h]
 }
 
 func (p scopedSGRuleIdentity) meta() metaInfo {
