@@ -10,6 +10,8 @@ import (
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func Test_SGroupsService_MemDB(t *testing.T) {
@@ -249,4 +251,181 @@ func (sui *sGroupServiceTests) Test_Sync_Rules() {
 	}, registry.NoScope)
 	sui.Require().NoError(err)
 	sui.Require().Equal(0, cn)
+}
+
+func (sui *sGroupServiceTests) Test_GetSecGroupForAddress() {
+	nw1 := sui.newNetwork("net1", "10.10.10.0/24")
+	nw2 := sui.newNetwork("net2", "20.20.20.0/24")
+	sui.syncNetworks([]*api.Network{nw1, nw2}, api.SyncReq_FullSync)
+
+	sg1 := sui.newSG("sg1", nw1)
+	sg2 := sui.newSG("sg2", nw2)
+	sui.syncSGs([]*api.SecGroup{sg1, sg2}, api.SyncReq_FullSync)
+
+	tst := []struct {
+		ip    string
+		expSg *api.SecGroup
+	}{
+		{"10.10.10.2", sg1},
+		{"20.20.20.1", sg2},
+		{"30.30.30.1", nil},
+	}
+	for i := range tst {
+		t := tst[i]
+		req := api.GetSecGroupForAddressReq{
+			Address: t.ip,
+		}
+		resp, err := sui.srv.GetSecGroupForAddress(sui.ctx, &req)
+		if t.expSg == nil {
+			sui.Require().Error(err)
+			sui.Require().Equal(codes.NotFound, status.Code(err))
+		} else {
+			sui.Require().Equal(t.expSg.GetName(), resp.GetName())
+		}
+	}
+}
+
+func (sui *sGroupServiceTests) Test_GetSgSubnets() {
+	nw1 := sui.newNetwork("net1", "10.10.10.0/24")
+	nw2 := sui.newNetwork("net2", "20.20.20.0/24")
+	sui.syncNetworks([]*api.Network{nw1, nw2}, api.SyncReq_FullSync)
+
+	sg1 := sui.newSG("sg1", nw1)
+	sg2 := sui.newSG("sg2", nw2)
+	sg3 := sui.newSG("sg3")
+	sui.syncSGs([]*api.SecGroup{sg1, sg2, sg3}, api.SyncReq_FullSync)
+
+	tests := []struct {
+		sg         string
+		expNet     string
+		shouldFail bool
+		ec         codes.Code
+	}{
+		{"sg1", "net1", false, 0},
+		{"sg2", "net2", false, 0},
+		{"sg3", "", true, codes.NotFound},
+		{"sg4", "", true, codes.Internal},
+	}
+	req := new(api.GetSgSubnetsReq)
+	for _, t := range tests {
+		req.SgName = t.sg
+		resp, err := sui.srv.GetSgSubnets(sui.ctx, req)
+		if t.shouldFail {
+			sui.Require().Error(err)
+			c := status.Code(err)
+			sui.Require().Equal(t.ec, c)
+		} else {
+			nws := resp.GetNetworks()
+			sui.Require().Equal(1, len(nws))
+			sui.Require().Equal(t.expNet, nws[0].GetName())
+		}
+	}
+
+}
+
+func (sui *sGroupServiceTests) Test_GetRules() {
+	nw1 := sui.newNetwork("net1", "10.10.10.0/24")
+	nw2 := sui.newNetwork("net2", "20.20.20.0/24")
+	nw3 := sui.newNetwork("net3", "25.20.20.0/24")
+	sui.syncNetworks([]*api.Network{nw1, nw2, nw3}, api.SyncReq_FullSync)
+
+	sg1 := sui.newSG("sg1", nw1)
+	sg2 := sui.newSG("sg2", nw2)
+	sg3 := sui.newSG("sg3", nw3)
+	sui.syncSGs([]*api.SecGroup{sg1, sg2, sg3}, api.SyncReq_FullSync)
+
+	r1 := sui.newRule(sg1, sg2, common.Networks_NetIP_TCP)
+	r2 := sui.newRule(sg1, sg3, common.Networks_NetIP_UDP)
+	r3 := sui.newRule(sg2, sg1, common.Networks_NetIP_UDP)
+	r4 := sui.newRule(sg2, sg3, common.Networks_NetIP_TCP)
+	sui.syncRules([]*api.Rule{r1, r2, r3, r4}, api.SyncReq_FullSync)
+
+	tests := []struct {
+		from, to      string
+		shouldBeFound bool
+	}{
+		{"sg1", "sg2", true},
+		{"sg1", "sg3", true},
+
+		{"sg2", "sg1", true},
+		{"sg2", "sg3", true},
+
+		{"sg3", "sg1", false},
+		{"sg3", "sg2", false},
+	}
+
+	req := new(api.GetRulesReq)
+	for _, t := range tests {
+		req.SgFrom = t.from
+		req.SgTo = t.to
+		if resp, err := sui.srv.GetRules(sui.ctx, req); !t.shouldBeFound {
+			sui.Require().Error(err)
+			sui.Require().Equal(codes.NotFound, status.Code(err))
+		} else {
+			sui.Require().Equal(t.from, resp.GetRules()[0].GetSgFrom().GetName())
+			sui.Require().Equal(t.to, resp.GetRules()[0].GetSgTo().GetName())
+		}
+	}
+}
+
+func (sui *sGroupServiceTests) Test_FindRules() {
+	sg1 := sui.newSG("sg1")
+	sg2 := sui.newSG("sg2")
+	sg3 := sui.newSG("sg3")
+	sui.syncSGs([]*api.SecGroup{sg1, sg2, sg3}, api.SyncReq_FullSync)
+
+	r1 := sui.newRule(sg1, sg2, common.Networks_NetIP_TCP)
+	r2 := sui.newRule(sg1, sg3, common.Networks_NetIP_UDP)
+	r3 := sui.newRule(sg2, sg1, common.Networks_NetIP_TCP)
+	r4 := sui.newRule(sg2, sg3, common.Networks_NetIP_UDP)
+	sui.syncRules([]*api.Rule{r1, r2, r3, r4}, api.SyncReq_FullSync)
+
+	type sgPair = [2]string
+	expect := func(pairs ...string) map[sgPair]bool {
+		n := len(pairs)
+		if n%2 != 0 {
+			panic("odd pairs")
+		}
+		ret := make(map[sgPair]bool)
+		for i := 0; i < n; i += 2 {
+			ret[sgPair{pairs[i], pairs[i+1]}] = true
+		}
+		return ret
+	}
+	got := func(rr []*api.Rule) map[sgPair]struct{} {
+		ret := make(map[sgPair]struct{})
+		for _, r := range rr {
+			ret[sgPair{r.GetSgFrom().GetName(),
+				r.GetSgTo().GetName()}] = struct{}{}
+		}
+		return ret
+	}
+	sl := func(s ...string) []string { return s }
+	tests := []struct {
+		from []string
+		to   []string
+		exp  map[sgPair]bool
+	}{
+		{sl(), sl(), expect("sg1", "sg2", "sg1", "sg3", "sg2", "sg1", "sg2", "sg3")},
+		{sl("sg1"), sl(), expect("sg1", "sg2", "sg1", "sg3")},
+		{sl(), sl("sg1"), expect("sg2", "sg1")},
+		{sl("sg1", "sg2"), sl("sg3"), expect("sg1", "sg3", "sg2", "sg3")},
+		{sl("sg3"), sl(), expect()},
+	}
+
+	req := new(api.FindRulesReq)
+	for _, t := range tests {
+		req.SgFrom = t.from
+		req.SgTo = t.to
+		resp, err := sui.srv.FindRules(sui.ctx, req)
+		sui.Require().NoError(err)
+		sui.Require().NotNil(resp)
+		g := got(resp.GetRules())
+		for k := range g {
+			ok := t.exp[k]
+			sui.Require().True(ok)
+			delete(t.exp, k)
+		}
+		sui.Require().Equal(0, len(t.exp))
+	}
 }

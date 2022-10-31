@@ -33,9 +33,9 @@ func (srv *sgService) FindRules(ctx context.Context, req *sg.FindRulesReq) (resp
 			return errors.WithMessagef(e, "convert SGRule '%s' to proto", rule)
 		}
 		resp.Rules = append(resp.Rules, &r)
-		return errSuccess
+		return nil
 	}, registry.And(sc1, sc2))
-	if err != nil && !errors.Is(err, errSuccess) {
+	if err != nil {
 		return nil,
 			status.Errorf(codes.Internal, "reason: %v", err)
 	}

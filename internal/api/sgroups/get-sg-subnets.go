@@ -38,6 +38,10 @@ func (srv *sgService) GetSgSubnets(ctx context.Context, req *sg.GetSgSubnetsReq)
 		return nil, status.Errorf(codes.Internal, "reason: %v", err)
 	}
 	if resp == nil {
+		return nil, status.Errorf(codes.Internal,
+			"SG '%s' not found", req.GetSgName())
+	}
+	if len(resp.GetNetworks()) == 0 {
 		return nil, status.Errorf(codes.NotFound,
 			"no any subnet found for SG '%s'", req.GetSgName())
 	}

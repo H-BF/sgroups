@@ -71,26 +71,25 @@ func (srv *sgService) GetRules(ctx context.Context, req *sg.GetRulesReq) (resp *
 	if reader, err = srv.registryReader(ctx); err != nil {
 		return nil, err
 	}
+	resp = new(sg.RulesResp)
 	err = reader.ListSGRules(ctx, func(rule model.SGRule) error {
-		if resp == nil {
-			resp = new(sg.RulesResp)
-		}
 		r, e := sgRule2proto(rule)
 		if e != nil {
-			return errors.WithMessage(e, "on convert SGRule to proto")
+			return errors.WithMessagef(e, "on convert SGRule '%s' to proto", rule)
 		}
 		resp.Rules = append(resp.Rules, &r)
-		return errSuccess
+		return nil
 	}, registry.And(
 		registry.SGFrom(req.GetSgFrom()), registry.SGTo(req.GetSgTo()),
 	))
-	if err != nil && !errors.Is(err, errSuccess) {
+	if err != nil {
 		return nil,
 			status.Errorf(codes.Internal, "reason: %v", err)
 	}
-	if resp == nil {
+	if len(resp.GetRules()) == 0 {
 		return nil,
-			status.Error(codes.NotFound, "not found")
+			status.Errorf(codes.NotFound, "not found rules for from SG '%s' to SG '%s'",
+				req.GetSgFrom(), req.GetSgTo())
 	}
 	return resp, nil
 }
