@@ -9,6 +9,7 @@ run:
     - 3d-party
     - var
     - tmp
+    - internal/3d-party
   skip-files:
     - \.pb\.go$
     - \.pb\.gw\.go$

@@ -5,6 +5,8 @@ go 1.18
 require (
 	github.com/H-BF/corlib v0.0.2
 	github.com/H-BF/protos v0.0.2
+	github.com/c-robinson/iplib v1.0.6
+	github.com/g8rswimmer/error-chain v1.0.0
 	github.com/google/nftables v0.1.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.2
 	github.com/hashicorp/go-memdb v1.3.3
@@ -15,10 +17,10 @@ require (
 	github.com/spf13/cast v1.5.0
 	github.com/spf13/viper v1.12.0
 	github.com/stretchr/testify v1.8.0
-	github.com/vishvananda/netlink v1.1.0
 	github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df
 	go.uber.org/multierr v1.8.0
 	go.uber.org/zap v1.22.0
+	golang.org/x/sys v0.0.0-20220610221304-9f5ed59c137d
 	google.golang.org/grpc v1.48.0
 	google.golang.org/protobuf v1.28.1
 )
@@ -84,7 +86,6 @@ require (
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa // indirect
 	golang.org/x/mod v0.5.1 // indirect
 	golang.org/x/net v0.0.0-20220624214902-1bab6f366d9e // indirect
-	golang.org/x/sys v0.0.0-20220610221304-9f5ed59c137d // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/tools v0.1.8 // indirect
 	golang.org/x/xerrors v0.0.0-20220517211312-f3a8303e98df // indirect

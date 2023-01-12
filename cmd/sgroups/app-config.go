@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/H-BF/sgroups/internal/config"
 	"time"
+
+	"github.com/H-BF/sgroups/internal/config"
 )
 
 /*//Sample of config

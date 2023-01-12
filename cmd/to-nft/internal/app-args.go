@@ -1,4 +1,4 @@
-package main
+package internal
 
 import (
 	"flag"
@@ -9,5 +9,4 @@ var ConfigFile string
 
 func init() {
 	flag.StringVar(&ConfigFile, "config", "", "app config file")
-	flag.Parse()
 }
