@@ -44,6 +44,8 @@ func main() {
 	errc := make(chan error, 1)
 
 	go func() {
+		logger.Infof(ctx, "start nft-processot")
+		defer logger.Infof(ctx, "stop nft-processot")
 		defer close(errc)
 		errc <- runNftJob(ctx)
 	}()

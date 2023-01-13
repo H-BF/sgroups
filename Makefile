@@ -78,8 +78,8 @@ arch:=$(strip $(filter amd64 arm64,$(word 2,$(parts))))
 platform=
 parts=
 OUT?=$(CURDIR)/bin/$(APP)
-APP_IDENTITY:=github.com/H-BF/corlib/app/identity
-LDFLAGS:=-X '$(APP_IDENTITY).Name=$(APP_NAME)'\
+APP_IDENTITY?=github.com/H-BF/corlib/app/identity
+LDFLAGS?=-X '$(APP_IDENTITY).Name=$(APP_NAME)'\
          -X '$(APP_IDENTITY).Version=$(APP_VERSION)'\
          -X '$(APP_IDENTITY).BuildTS=$(BUILD_TS)'\
          -X '$(APP_IDENTITY).BuildBranch=$(GIT_BRANCH)'\
@@ -87,9 +87,9 @@ LDFLAGS:=-X '$(APP_IDENTITY).Name=$(APP_NAME)'\
          -X '$(APP_IDENTITY).BuildTag=$(GIT_TAG)'\
 
 .PHONY: sg-service
-sg-service: ##build sg service. Usage: make sg-service [no-lint=1] [platform=<linux|darwin>/<amd64|arm64>]
+sg-service: ##build sg service. Usage: make sg-service [platform=<linux|darwin>/<amd64|arm64>]
 ifeq ($(and $(os),$(arch)),)
-	$(error bad param 'platform'; usage: platform=os/arch; where os: linux|darwin arch: amd64|arm64)
+	$(error bad param 'platform'; usage: platform=<os>/<arch>; where <os> = linux|darwin ; <arch> = amd64|arm64)
 endif
 	@echo build '$(APP)' for OS/ARCH='$(os)'/'$(arch)' ... && \
 	echo into '$(OUT)' && \
@@ -97,3 +97,19 @@ endif
 	$(GO) build -ldflags="$(LDFLAGS)" -o $(OUT) $(CURDIR)/cmd/$(APP) &&\
 	echo -=OK=-
 
+
+.PHONY: to-nft
+to-nft: APP=to-nft
+to-nft: os=linux
+to-nft: ##build NFT processor. Usage: make to-nft [platform=linux/<amd64|arm64>]
+ifneq ($(os),linux)
+	$(error 'os' should be 'linux')
+endif
+ifeq ($(and $(os),$(arch)),)
+	$(error bad param 'platform'; usage: platform=linux/<arch>; where <arch> = amd64|arm64)
+endif
+	@echo build \"$(APP)\" for OS/ARCH=\"$(os)/$(arch)\" ... && \
+	echo into \"$(OUT)\" && \
+	env GOOS=$(os) GOARCH=$(arch) \
+	$(GO) build -ldflags="$(LDFLAGS)" -o $(OUT) $(CURDIR)/cmd/$(APP) &&\
+	echo -=OK=- 
