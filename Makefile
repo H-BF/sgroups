@@ -86,8 +86,8 @@ LDFLAGS:=-X '$(APP_IDENTITY).Name=$(APP_NAME)'\
          -X '$(APP_IDENTITY).BuildHash=$(GIT_HASH)'\
          -X '$(APP_IDENTITY).BuildTag=$(GIT_TAG)'\
 
-.PHONY: build
-build: ##build app. Usage: make build [no-lint=1] [platform=<linux|darwin>/<amd64|arm64>]
+.PHONY: sg-service
+sg-service: ##build sg service. Usage: make sg-service [no-lint=1] [platform=<linux|darwin>/<amd64|arm64>]
 ifeq ($(and $(os),$(arch)),)
 	$(error bad param 'platform'; usage: platform=os/arch; where os: linux|darwin arch: amd64|arm64)
 endif

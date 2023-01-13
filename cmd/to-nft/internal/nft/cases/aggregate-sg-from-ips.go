@@ -39,6 +39,8 @@ type (
 
 // Load it loads IPs by SG aggregate
 func (obj *IPsBySG) Load(ctx context.Context, client SGClient, ips []net.IP) error {
+	const api = "IPsBySG/Load"
+
 	if len(ips) == 0 {
 		return nil
 	}
@@ -74,8 +76,7 @@ func (obj *IPsBySG) Load(ctx context.Context, client SGClient, ips []net.IP) err
 		return nil
 	}
 	if err := parallel.ExecAbstract(len(ips), 7, job); err != nil {
-		errors.WithMessage(err, "load/IPsBySG")
-		return err
+		return errors.WithMessage(err, api)
 	}
 	for _, it := range agg {
 		*obj = append(*obj, it)
@@ -99,8 +100,8 @@ func (obj *IPsBySG) Dedup() {
 	})
 }
 
-// SplitIp4Ip6 ...
-func (obj IPsBySG) SplitIp4Ip6() (v4 IPsBySG, v6 IPsBySG) {
+// V4andV6 ...
+func (obj IPsBySG) V4andV6() (v4 IPsBySG, v6 IPsBySG) {
 	for _, src := range obj {
 		it4 := itemIPsBySG{SG: src.SG}
 		it6 := it4
