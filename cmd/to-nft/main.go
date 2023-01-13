@@ -4,13 +4,16 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"time"
 
 	"github.com/H-BF/corlib/logger"
 	. "github.com/H-BF/sgroups/cmd/to-nft/internal"
+	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft"
 	"github.com/H-BF/sgroups/internal/app"
 	"github.com/H-BF/sgroups/internal/config"
+	"github.com/H-BF/sgroups/pkg/nl"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
@@ -34,9 +37,86 @@ func main() {
 		logger.Fatal(ctx, err)
 	}
 	if err = SetupLogger(); err != nil {
-		logger.Fatal(ctx, errors.WithMessage(err, "when setup logger"))
+		logger.Fatal(ctx, errors.WithMessage(err, "setup logger"))
 	}
-	//ServicesDefDialDuration.Value(ctx, ServicesDefDialDuration.OptSink(func(d time.Duration) error {return nil}))
+
+	gracefulDuration, _ := AppGracefulShutdown.Value(ctx)
+	errc := make(chan error, 1)
+
+	go func() {
+		defer close(errc)
+		errc <- runNftJob(ctx)
+	}()
+	var jobErr error
+	select {
+	case <-ctx.Done():
+		if gracefulDuration >= time.Second {
+			logger.Infof(ctx, "%s in gracefull shutdowning...", gracefulDuration)
+			select {
+			case <-time.NewTimer(gracefulDuration).C:
+			case jobErr = <-errc:
+			}
+		}
+	case jobErr = <-errc:
+	}
+	if jobErr != nil {
+		logger.Fatal(ctx, jobErr)
+	}
 	logger.SetLevel(zap.InfoLevel)
 	logger.Info(ctx, "-= BYE =-")
+}
+
+func runNftJob(ctx context.Context) error {
+	var (
+		err       error
+		sgClient  SGClient
+		nlWatcher nl.NetlinkWatcher
+		nftProc   nft.NfTablesProcessor
+	)
+
+	if sgClient, err = NewSGClient(ctx); err != nil {
+		return err
+	}
+	defer sgClient.CloseConn()
+
+	nlWatcher, err = nl.NewNetlinkWatcher(nl.WithAgeOfMatutity{Age: 10 * time.Second})
+	if err != nil {
+		return errors.WithMessage(err, "create net-watcher")
+	}
+	defer nlWatcher.Close()
+
+	nftProc = nft.NewNfTablesProcessor(ctx, sgClient)
+	defer nftProc.Close()
+
+	var conf nft.NetConf
+	conf.Init()
+	stm := nlWatcher.Stream()
+loop:
+	for {
+		select {
+		case <-ctx.Done():
+			break loop
+		case msgs, ok := <-stm:
+			if !ok {
+				err = nl.ErrUnexpectedlyStopped
+				break loop
+			}
+			for _, m := range msgs {
+				if e, ok := m.(nl.ErrMsg); ok {
+					if errors.Is(e.Err, nl.ErrUnexpectedlyStopped) {
+						err = e
+						break loop
+					}
+					logger.ErrorKV(ctx, "net-watcher", "error", e)
+				}
+			}
+			if conf.UpdFromWatcher(msgs...) == 0 {
+				continue
+			}
+			if err = nftProc.ApplyConf(ctx, conf); err != nil {
+				break loop
+			}
+		}
+	}
+	return err
 }

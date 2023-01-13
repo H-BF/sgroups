@@ -193,7 +193,8 @@ func (conf *NetConf) Init() {
 }
 
 // UpdFromWatcher updates conf with messages came from netlink-watcher
-func (conf *NetConf) UpdFromWatcher(msgs ...nl.WatcherMsg) {
+func (conf *NetConf) UpdFromWatcher(msgs ...nl.WatcherMsg) uint {
+	var cnt uint
 	for _, m := range msgs {
 		switch v := m.(type) {
 		case nl.AddrUpdateMsg:
@@ -202,6 +203,7 @@ func (conf *NetConf) UpdFromWatcher(msgs ...nl.WatcherMsg) {
 				h = Delete
 			}
 			conf.IPAdresses.Upd(v.LinkIndex, v.Address, h)
+			cnt++
 		case nl.LinkUpdateMsg:
 			h := Update
 			if v.Deleted {
@@ -212,8 +214,10 @@ func (conf *NetConf) UpdFromWatcher(msgs ...nl.WatcherMsg) {
 				ID:   attrs.Index,
 				Name: attrs.Name,
 			}, h)
+			cnt++
 		}
 	}
+	return cnt
 }
 
 /*//

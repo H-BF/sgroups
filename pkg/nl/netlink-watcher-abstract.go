@@ -55,10 +55,10 @@ type (
 
 var (
 	//ErrUnexpectedlyStopped on recieving bad message from 'netlink'
-	ErrUnexpectedlyStopped = errors.New("watcher stream stopped unexpectedly")
+	ErrUnexpectedlyStopped = errors.New("net-watcher is stopped unexpectedly")
 
 	//ErrUnsupportedOption used unsupported option
-	ErrUnsupportedOption = errors.New("unsupported option")
+	ErrUnsupportedOption = errors.New("net-watcher unsupported option")
 )
 
 func (AddrUpdateMsg) isNetlinkWatcherMsg() {}
