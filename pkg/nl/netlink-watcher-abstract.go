@@ -54,7 +54,7 @@ type (
 )
 
 var (
-	//ErrUnexpectedlyStopped on recieving bad message from 'netlink'
+	//ErrUnexpectedlyStopped it setds when 'netlink' unextectedly fails
 	ErrUnexpectedlyStopped = errors.New("net-watcher is stopped unexpectedly")
 
 	//ErrUnsupportedOption used unsupported option
@@ -87,7 +87,7 @@ func (e ErrMsg) String() string {
 func (e ErrMsg) Error() string {
 	b, er := e.MarshalJSON()
 	if er != nil {
-		return "<?>"
+		return "<?>" //nolint:goconst
 	}
 	return string(b)
 }
@@ -108,7 +108,7 @@ func (m AddrUpdateMsg) MarshalJSON() ([]byte, error) {
 		Wather    WatcherID      `json:"wid,omitempty"`
 		Address   json.Marshaler `json:"ip"`
 		Subnet    string         `json:"subnet"`
-		LinkIndex int            `json:"link_index"`
+		LinkIndex int            `json:"link_index"` //nolint:tagliatelle
 		Deleted   bool           `json:"deleted"`
 	}{
 		Wather:    m.WID,

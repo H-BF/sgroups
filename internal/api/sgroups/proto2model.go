@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ProtoNetwork2Model converts Network (proto --> model)
+// Proto2ModelNetwork converts Network (proto --> model)
 func Proto2ModelNetwork(protoNw *sg.Network) (model.Network, error) {
 	const api = "proto2model-Network-conv"
 	var ret network

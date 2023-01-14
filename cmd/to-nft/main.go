@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/H-BF/corlib/logger"
-	. "github.com/H-BF/sgroups/cmd/to-nft/internal"
+	. "github.com/H-BF/sgroups/cmd/to-nft/internal" //nolint:revive
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft"
 	"github.com/H-BF/sgroups/internal/app"
 	"github.com/H-BF/sgroups/internal/config"
@@ -53,7 +53,7 @@ func main() {
 	select {
 	case <-ctx.Done():
 		if gracefulDuration >= time.Second {
-			logger.Infof(ctx, "%s in gracefull shutdowning...", gracefulDuration)
+			logger.Infof(ctx, "%s in shutdowning...", gracefulDuration)
 			select {
 			case <-time.NewTimer(gracefulDuration).C:
 			case jobErr = <-errc:
@@ -79,7 +79,7 @@ func runNftJob(ctx context.Context) error {
 	if sgClient, err = NewSGClient(ctx); err != nil {
 		return err
 	}
-	defer sgClient.CloseConn()
+	defer sgClient.CloseConn() //nolint:errcheck
 
 	nlWatcher, err = nl.NewNetlinkWatcher(nl.WithAgeOfMatutity{Age: 10 * time.Second})
 	if err != nil {

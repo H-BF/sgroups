@@ -8,7 +8,7 @@ import (
 
 // ErrDetails details error
 type ErrDetails struct {
-	Api     string
+	Api     string //nolint:revive
 	Msg     string
 	Details interface{}
 }

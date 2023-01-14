@@ -1,7 +1,7 @@
 package nft
 
 import (
-	"crypto/md5"
+	"crypto/md5" //nolint:gosec
 	"net"
 	"sort"
 
@@ -21,7 +21,7 @@ type (
 	LinkRefs map[LinkID]struct{}
 
 	//IpAddr ip address
-	IpAddr struct {
+	IpAddr struct { //nolint:revive
 		net.IPNet
 		Links LinkRefs
 	}
@@ -33,13 +33,13 @@ type (
 	IPAdresses map[IPAdressesMapKey]*IpAddr
 
 	//IpDev ip device
-	IpDev struct {
+	IpDev struct { //nolint:revive
 		Name string
 		ID   LinkID
 	}
 
 	//IpDevs ip devices
-	IpDevs map[LinkID]IpDev
+	IpDevs map[LinkID]IpDev //nolint:revive
 
 	//NetConf network conf
 	NetConf struct {
@@ -88,7 +88,7 @@ func (a IpAddr) Key() IPAdressesMapKey {
 		append([]byte{}, a.IP.To16()...),
 		a.Mask...,
 	)
-	return md5.Sum(s)
+	return md5.Sum(s) //nolint:gosec
 }
 
 // Clone makes a copy

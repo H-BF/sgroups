@@ -127,7 +127,7 @@ type (
 const (
 	scopeNone scopeOfUpdates = (1 << iota) >> 1
 
-	//WithNoLinks does not send 'Links'
+	//IgnoreLinks does not send 'Links'
 	IgnoreLinks
 
 	//IgnoreAddress does not send 'Adresses'
