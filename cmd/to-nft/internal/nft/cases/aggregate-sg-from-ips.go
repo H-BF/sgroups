@@ -100,8 +100,8 @@ func (obj *IPsBySG) Dedup() {
 	})
 }
 
-// V4andV6 ...
-func (obj IPsBySG) V4andV6() (v4 IPsBySG, v6 IPsBySG) {
+// SeparateV4andV6 it separates by PIv4 and IPv6
+func (obj IPsBySG) SeparateV4andV6() (v4 IPsBySG, v6 IPsBySG) {
 	for _, src := range obj {
 		it4 := itemIPsBySG{SG: src.SG}
 		it6 := it4
@@ -121,4 +121,13 @@ func (obj IPsBySG) V4andV6() (v4 IPsBySG, v6 IPsBySG) {
 		}
 	}
 	return v4, v6
+}
+
+// GetSGNames it extracts all SG' names
+func (obj IPsBySG) GetSGNames() []string {
+	ret := make([]string, 0, len(obj))
+	for i := range obj {
+		ret = append(ret, obj[i].SG.Name)
+	}
+	return ret
 }
