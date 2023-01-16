@@ -11,5 +11,5 @@ var (
 	ErrNfTablesProcessor = errors.New("NfTablesProcessor")
 
 	//ErrPortRange is a port range error
-	ErrPortRange = errors.Errorf("out of port range [0, %v)", 0, math.MaxUint16)
+	ErrPortRange = errors.Errorf("out of port range [0, %v)", math.MaxUint16)
 )
