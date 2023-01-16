@@ -55,7 +55,7 @@ func (obj *IPsBySG) Load(ctx context.Context, client SGClient, ips []net.IP) err
 			Address: ips[i].String(),
 		}
 		resp, err := client.GetSecGroupForAddress(ctx, req)
-		if status.Code(err) == codes.NotFound {
+		if status.Code(errors.Cause(err)) == codes.NotFound {
 			return nil
 		}
 		if err != nil {
@@ -70,12 +70,13 @@ func (obj *IPsBySG) Load(ctx context.Context, client SGClient, ips []net.IP) err
 		it := agg[sg.Name]
 		if it == nil {
 			it = new(item)
+			it.SG = sg
 			agg[sg.Name] = it
 		}
 		it.IPs = append(it.IPs, ips[i])
 		return nil
 	}
-	if err := parallel.ExecAbstract(len(ips), 7, job); err != nil {
+	if err := parallel.ExecAbstract(len(ips), 0, job); err != nil {
 		return errors.WithMessage(err, api)
 	}
 	for _, it := range agg {

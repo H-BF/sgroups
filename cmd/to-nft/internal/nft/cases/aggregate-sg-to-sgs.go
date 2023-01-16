@@ -59,6 +59,7 @@ func (agg *SgToSgs) Load(ctx context.Context, client SGClient, from, to []SgName
 		items := (*agg)[ndx]
 		if items == nil {
 			items = new([]SgToSgsItem)
+			(*agg)[ndx] = items
 		}
 		*items = append(*items, itm)
 	}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
+	"github.com/c-robinson/iplib"
 	nftLib "github.com/google/nftables"
 	nftLibUtil "github.com/google/nftables/binaryutil"
 	"github.com/pkg/errors"
@@ -45,9 +46,12 @@ func (tx *nfTablesTx) applyIPSets(tbl *nftLib.Table, agg cases.IPsBySG, ipV ipVe
 		}
 		var elements []nftLib.SetElement
 		for _, ip := range x.IPs {
+			ipAsInt := iplib.IPToBigint(ip)
+			b := ipAsInt.Bytes()
+			reverseBytes(b)
 			elements = append(elements,
 				nftLib.SetElement{
-					Key: ip,
+					Key: b,
 				})
 		}
 		if err := tx.AddSet(ipSet, elements); err != nil {
@@ -125,4 +129,10 @@ func (tx *nfTablesTx) abort() {
 	tx.commitOnce.Do(func() {
 		_ = c.CloseLasting()
 	})
+}
+
+func reverseBytes(p []byte) {
+	for i, j := 0, len(p)-1; i < j && j >= 0; i, j = i+1, j-1 {
+		p[i], p[j] = p[j], p[i]
+	}
 }

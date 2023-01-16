@@ -44,8 +44,8 @@ func main() {
 	errc := make(chan error, 1)
 
 	go func() {
-		logger.Infof(ctx, "start nft-processot")
-		defer logger.Infof(ctx, "stop nft-processot")
+		logger.Infof(ctx, "nft-processor start")
+		defer logger.Infof(ctx, "nft-processor stop")
 		defer close(errc)
 		errc <- runNftJob(ctx)
 	}()
@@ -115,9 +115,12 @@ loop:
 			if conf.UpdFromWatcher(msgs...) == 0 {
 				continue
 			}
+			logger.Infof(ctx, "net-conf has updated then it will apply")
 			if err = nftProc.ApplyConf(ctx, conf); err != nil {
+				logger.Errorf(ctx, "net-conf din`t apply")
 				break loop
 			}
+			logger.Infof(ctx, "net-conf applied")
 		}
 	}
 	return err

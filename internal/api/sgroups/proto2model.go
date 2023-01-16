@@ -43,7 +43,7 @@ func Proto2ModelSGRule(src *sg.Rule) (model.SGRule, error) {
 	if ret.SgFrom, err = Proto2ModelSG(src.GetSgFrom()); err != nil {
 		return ret, errors.WithMessage(err, api)
 	}
-	if ret.SgFrom, err = Proto2ModelSG(src.GetSgTo()); err != nil {
+	if ret.SgTo, err = Proto2ModelSG(src.GetSgTo()); err != nil {
 		return ret, errors.WithMessage(err, api)
 	}
 	return ret, nil
