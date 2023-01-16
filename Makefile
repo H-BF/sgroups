@@ -87,7 +87,7 @@ LDFLAGS?=-X '$(APP_IDENTITY).Name=$(APP_NAME)'\
          -X '$(APP_IDENTITY).BuildTag=$(GIT_TAG)'\
 
 .PHONY: sg-service
-sg-service: ##build sg service. Usage: make sg-service [platform=<linux|darwin>/<amd64|arm64>]
+sg-service: | go-deps ##build sg service. Usage: make sg-service [platform=<linux|darwin>/<amd64|arm64>]
 ifeq ($(and $(os),$(arch)),)
 	$(error bad param 'platform'; usage: platform=<os>/<arch>; where <os> = linux|darwin ; <arch> = amd64|arm64)
 endif
@@ -99,9 +99,10 @@ endif
 
 
 .PHONY: to-nft
+to-nft: | go-deps ##build NFT processor. Usage: make to-nft [platform=linux/<amd64|arm64>]
 to-nft: APP=to-nft
 to-nft: os=linux
-to-nft: ##build NFT processor. Usage: make to-nft [platform=linux/<amd64|arm64>]
+to-nft: 
 ifneq ($(os),linux)
 	$(error 'os' should be 'linux')
 endif
