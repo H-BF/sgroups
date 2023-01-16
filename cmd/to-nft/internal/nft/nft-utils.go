@@ -27,6 +27,6 @@ func (nameUtils) nameOfPortSet(tp model.NetworkTransport, sgFrom, sgTo string, i
 	if isDest {
 		dir = 'd'
 	}
-	//                 [s:d]-[tcp|udp]-sgFrom-2-sgTo
+	//                 [s:d]-[tcp|udp]-sgFrom-sgTo
 	return fmt.Sprintf("%c-%s-%s-%s", dir, tp, sgFrom, sgTo)
 }

@@ -86,7 +86,7 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, conf NetConf) 
 			pkgErr.ErrDetails{Api: api, Details: sgAgg6})
 	}
 
-	//add set(s) with <TCP|UDP> <S|D> Port(s)
+	//add set(s) with <TCP|UDP> <S|D> port range(s)
 	if err = tx.applyPortSets(tblMain, aggSgToSgs); err != nil {
 		return multierr.Combine(ErrNfTablesProcessor, err,
 			pkgErr.ErrDetails{Api: api, Details: aggSgToSgs})

@@ -1,11 +1,13 @@
 package nft
 
 import (
+	"math"
 	"sync"
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	nftLib "github.com/google/nftables"
+	nftLibUtil "github.com/google/nftables/binaryutil"
 	"github.com/pkg/errors"
 )
 
@@ -48,8 +50,8 @@ func (tx *nfTablesTx) applyIPSets(tbl *nftLib.Table, agg cases.IPsBySG, ipV ipVe
 					Key: ip,
 				})
 		}
-		if err := tx.SetAddElements(ipSet, elements); err != nil {
-			return errors.WithMessage(err, api)
+		if err := tx.AddSet(ipSet, elements); err != nil {
+			return errors.WithMessagef(err, "%s: add set", api)
 		}
 	}
 	return nil
@@ -57,21 +59,47 @@ func (tx *nfTablesTx) applyIPSets(tbl *nftLib.Table, agg cases.IPsBySG, ipV ipVe
 
 func (tx *nfTablesTx) applyPortSets(tbl *nftLib.Table, agg cases.SgToSgs) error {
 	const api = "ntf/apply-port-sets"
-	_ = api
 
+	var (
+		names nameUtils
+		err   error
+		be    = nftLibUtil.BigEndian
+	)
 	for k, items := range agg {
-		_ = k
 		for _, item := range *items {
-			item.PortsFrom.Iterate(func(r model.PortRange) bool {
-				_, _ = r.Bounds()
-				return true
-			})
-			item.PortsTo.Iterate(func(r model.PortRange) bool {
-				return true
-			})
+			pranges := []model.PortRanges{item.PortsFrom, item.PortsTo}
+			for i := range pranges {
+				portSet := &nftLib.Set{
+					Table:    tbl,
+					Name:     names.nameOfPortSet(k.Transport, k.SgFrom, item.SgTo, i > 0),
+					KeyType:  nftLib.TypeInetService,
+					Interval: true,
+				}
+				var elemnts []nftLib.SetElement
+				pranges[i].Iterate(func(r model.PortRange) bool {
+					a, b := r.Bounds()
+					b = b.AsExcluded()
+					aVal, _ := a.GetValue()
+					bVal, _ := b.GetValue()
+					if aVal > math.MaxUint16 || bVal > math.MaxUint16 {
+						err = ErrPortRange
+						return false //error
+					}
+					elemnts = append(elemnts,
+						nftLib.SetElement{
+							Key: be.PutUint16(uint16(aVal)), KeyEnd: be.PutUint16(uint16(bVal)),
+						})
+					return true
+				})
+				if err != nil {
+					return errors.WithMessage(err, api)
+				}
+				if err = tx.AddSet(portSet, elemnts); err != nil {
+					return errors.WithMessagef(err, "%s: add set", api)
+				}
+			}
 		}
 	}
-
 	return nil
 }
 
