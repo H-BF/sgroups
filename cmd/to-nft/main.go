@@ -45,9 +45,9 @@ func main() {
 
 	go func() {
 		logger.Infof(ctx, "nft-processor start")
-		defer logger.Infof(ctx, "nft-processor stop")
-		defer close(errc)
 		errc <- runNftJob(ctx)
+		close(errc)
+		logger.Infof(ctx, "nft-processor stop")
 	}()
 	var jobErr error
 	select {

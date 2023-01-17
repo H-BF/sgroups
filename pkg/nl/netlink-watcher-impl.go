@@ -180,11 +180,10 @@ func (w *netlinkWatcherImpl) Stream() <-chan []WatcherMsg {
 					break
 				}
 				if !ok { //it is stopped unexpectedly
-					m := []WatcherMsg{ErrMsg{
+					send([]WatcherMsg{ErrMsg{
 						WID: w.id,
 						Err: ErrUnexpectedlyStopped,
-					}}
-					send(m)
+					}})
 					break
 				}
 				switch v := recv.Interface().(type) {

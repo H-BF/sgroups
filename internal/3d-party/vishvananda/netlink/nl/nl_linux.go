@@ -4,6 +4,7 @@ package nl
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"net"
 	"runtime"
@@ -631,31 +632,38 @@ func (s *NetlinkSocket) Send(request *NetlinkRequest) error {
 }
 
 func (s *NetlinkSocket) Receive() ([]syscall.NetlinkMessage, *unix.SockaddrNetlink, error) {
-	fd := s.GetFd()
-	//if fd < 0 {
-	//	return nil, nil, fmt.Errorf("Receive called on a closed socket")
-	//}
+	var rb [RECEIVE_BUFFER_SIZE]byte
+	var from unix.Sockaddr
+	var nr int
 	for {
+		var err error
 		var v unix.FdSet
+		var ern syscall.Errno
+		fd := s.GetFd()
 		v.Set(fd)
 		tv := unix.NsecToTimeval(10 * time.Second.Nanoseconds())
-		n, e := unix.Select(fd+1, &v, nil, nil, &tv)
-		if e != nil {
-			return nil, nil, e
+		nr, err = unix.Select(fd+1, &v, nil, nil, &tv)
+		if err != nil {
+			if errors.As(err, &ern) && ern.Temporary() {
+				continue
+			}
+			return nil, nil, err
 		}
-		if n != 0 {
+		if nr == 0 {
+			continue
+		}
+		nr, from, err = unix.Recvfrom(fd, rb[:], 0)
+		if err == nil {
 			break
 		}
-	}
-	var fromAddr *unix.SockaddrNetlink
-	var rb [RECEIVE_BUFFER_SIZE]byte
-	nr, from, err := unix.Recvfrom(fd, rb[:], 0)
-	if err != nil {
+		if errors.As(err, &ern) && ern.Temporary() {
+			continue
+		}
 		return nil, nil, err
 	}
-	fromAddr, ok := from.(*unix.SockaddrNetlink)
-	if !ok {
-		return nil, nil, fmt.Errorf("error converting to netlink sockaddr")
+	fromAddr, _ := from.(*unix.SockaddrNetlink)
+	if fromAddr == nil {
+		return nil, nil, fmt.Errorf("error converting to 'SockaddrNetlink'")
 	}
 	if nr < unix.NLMSG_HDRLEN {
 		return nil, nil, fmt.Errorf("got short response from netlink")
