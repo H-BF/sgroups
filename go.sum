@@ -40,8 +40,8 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/BurntSushi/toml v0.4.1 h1:GaI7EiDXDRfa8VshkTj7Fym7ha+y8/XxIgD2okUIjLw=
 github.com/BurntSushi/toml v0.4.1/go.mod h1:CxXYINrC8qIiEnFrOxCa7Jy5BFHlXnUU2pbicEuybxQ=
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
-github.com/H-BF/corlib v0.0.2 h1:5qdOYJq+0oYwp59vtGwQoHpCAHySddnfzsV6HYxZotw=
-github.com/H-BF/corlib v0.0.2/go.mod h1:n/L0zuQUwPXUIYsQBzEwAPqptujkNkGDBpWvlBg/Ac0=
+github.com/H-BF/corlib v0.0.3 h1:9Uau/S0+HXOsuyQUJX496MQwrBm0D7bA4IASKquNKDg=
+github.com/H-BF/corlib v0.0.3/go.mod h1:n/L0zuQUwPXUIYsQBzEwAPqptujkNkGDBpWvlBg/Ac0=
 github.com/H-BF/protos v0.0.2 h1:5MpE2dBPidCHObaZ3GF7jjeZ39+gQo8YaA6DjFTWqhY=
 github.com/H-BF/protos v0.0.2/go.mod h1:uoLsNVsFGESodtSbKD0sV1MLtrt1upYi3xUN3CM9be8=
 github.com/Masterminds/semver/v3 v3.1.1/go.mod h1:VPu/7SZ7ePZ3QOrcuXROw5FAcLl4a0cBrbBpGY/8hQs=

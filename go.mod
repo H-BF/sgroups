@@ -3,7 +3,7 @@ module github.com/H-BF/sgroups
 go 1.18
 
 require (
-	github.com/H-BF/corlib v0.0.2
+	github.com/H-BF/corlib v0.0.3
 	github.com/H-BF/protos v0.0.2
 	github.com/c-robinson/iplib v1.0.6
 	github.com/g8rswimmer/error-chain v1.0.0

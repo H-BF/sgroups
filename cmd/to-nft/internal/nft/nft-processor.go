@@ -52,12 +52,29 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, conf NetConf) 
 	}
 	aggIPsBySG.Dedup()
 
-	sgNames := aggIPsBySG.GetSGNames()
-	if err = aggSgToSgs.Load(ctx, impl.sgClient, sgNames, sgNames); err != nil {
-		return multierr.Combine(ErrNfTablesProcessor,
-			err, pkgErr.ErrDetails{Api: api})
+	if sgNames := aggIPsBySG.GetSGNames(); len(sgNames) > 0 {
+		sgsVars := []struct {
+			from, to []string
+		}{{nil, sgNames}, {sgNames, nil}}
+		for _, arg := range sgsVars {
+			if err = aggSgToSgs.Load(ctx, impl.sgClient, arg.from, arg.to); err != nil {
+				return multierr.Combine(ErrNfTablesProcessor,
+					err, pkgErr.ErrDetails{Api: api})
+			}
+		}
+		aggSgToSgs.Dedup()
 	}
-	aggSgToSgs.Dedup()
+
+	{ //delete all unused IPs
+		sgs := aggSgToSgs.SgNameSet()
+		a := aggIPsBySG[:0]
+		for _, it := range aggIPsBySG {
+			if _, ok := sgs[it.SG.Name]; ok {
+				a = append(a, it)
+			}
+		}
+		aggIPsBySG = a
+	}
 
 	if tx, err = nfTx(); err != nil { //start nft transaction
 		return multierr.Combine(ErrNfTablesProcessor, err,

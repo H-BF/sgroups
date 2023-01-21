@@ -79,3 +79,15 @@ func (agg *SgToSgs) Dedup() {
 		})
 	}
 }
+
+// SgNameSet it gets SG name set used in tihs agg
+func (agg SgToSgs) SgNameSet() map[SgName]struct{} {
+	ret := make(map[SgName]struct{}, len(agg))
+	for k, items := range agg {
+		ret[k.SgFrom] = struct{}{}
+		for _, it := range *items {
+			ret[it.SgTo] = struct{}{}
+		}
+	}
+	return ret
+}

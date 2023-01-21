@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/H-BF/corlib/logger"
+	gs "github.com/H-BF/corlib/pkg/patterns/graceful-shutdown"
 	. "github.com/H-BF/sgroups/cmd/to-nft/internal" //nolint:revive
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft"
 	"github.com/H-BF/sgroups/internal/app"
@@ -54,10 +55,13 @@ func main() {
 	case <-ctx.Done():
 		if gracefulDuration >= time.Second {
 			logger.Infof(ctx, "%s in shutdowning...", gracefulDuration)
-			select {
-			case <-time.NewTimer(gracefulDuration).C:
-			case jobErr = <-errc:
-			}
+			_ = gs.ForDuration(gracefulDuration).Run(
+				gs.Chan(errc).Consume(
+					func(_ context.Context, err error) {
+						jobErr = err
+					},
+				),
+			)
 		}
 	case jobErr = <-errc:
 	}
