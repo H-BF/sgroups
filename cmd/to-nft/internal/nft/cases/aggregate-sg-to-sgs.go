@@ -71,16 +71,17 @@ func (agg *SgToSgs) Dedup() {
 	for _, items := range *agg {
 		sort.Slice(*items, func(i, j int) bool {
 			l, r := (*items)[i], (*items)[j]
-			return strings.Compare(l.SgTo, r.SgTo) < 0
+			return !strings.EqualFold(l.SgTo, r.SgTo) &&
+				strings.Compare(l.SgTo, r.SgTo) < 0
 		})
-		slice.DedupSlice(items, func(i, j int) bool {
+		_ = slice.DedupSlice(items, func(i, j int) bool {
 			l, r := (*items)[i], (*items)[j]
 			return strings.EqualFold(l.SgTo, r.SgTo)
 		})
 	}
 }
 
-// SgNameSet it gets SG name set used in tihs agg
+// SgNameSet it gets SG name set used in this aggregate
 func (agg SgToSgs) SgNameSet() map[SgName]struct{} {
 	ret := make(map[SgName]struct{}, len(agg))
 	for k, items := range agg {

@@ -41,14 +41,15 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, conf NetConf) 
 	var (
 		err        error
 		aggIPsBySG cases.IPsBySG
-		aggSgToSgs cases.SgToSgs
+		aggRules   cases.AggSgRules
 		tx         *nfTablesTx
 	)
 
-	actualIPs := conf.ActualIPs()
-	if err = aggIPsBySG.Load(ctx, impl.sgClient, actualIPs); err != nil {
+	effIPv4, effIPv6 := conf.EffectiveIPs()
+	allEffectiveIPs := append(effIPv4, effIPv6...)
+	if err = aggIPsBySG.Load(ctx, impl.sgClient, allEffectiveIPs); err != nil {
 		return multierr.Combine(ErrNfTablesProcessor,
-			err, pkgErr.ErrDetails{Api: api})
+			err, pkgErr.ErrDetails{Api: api, Details: allEffectiveIPs})
 	}
 	aggIPsBySG.Dedup()
 
@@ -57,23 +58,22 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, conf NetConf) 
 			from, to []string
 		}{{nil, sgNames}, {sgNames, nil}}
 		for _, arg := range sgsVars {
-			if err = aggSgToSgs.Load(ctx, impl.sgClient, arg.from, arg.to); err != nil {
+			if err = aggRules.Load(ctx, impl.sgClient, arg.from, arg.to); err != nil {
 				return multierr.Combine(ErrNfTablesProcessor,
 					err, pkgErr.ErrDetails{Api: api})
 			}
 		}
-		aggSgToSgs.Dedup()
-	}
-
-	{ //delete all unused IPs
-		sgs := aggSgToSgs.SgNameSet()
-		a := aggIPsBySG[:0]
-		for _, it := range aggIPsBySG {
-			if _, ok := sgs[it.SG.Name]; ok {
-				a = append(a, it)
+		aggRules.Dedup()
+		effSGs := aggIPsBySG.EffectiveSGs()
+		for i := range aggRules {
+			r := &aggRules[i]
+			if sg, ok := effSGs[r.SgFrom.Name]; ok {
+				r.SgFrom = sg
+			}
+			if sg, ok := effSGs[r.SgTo.Name]; ok {
+				r.SgTo = sg
 			}
 		}
-		aggIPsBySG = a
 	}
 
 	if tx, err = nfTx(); err != nil { //start nft transaction
@@ -90,23 +90,22 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, conf NetConf) 
 	}
 	_ = tx.AddTable(tblMain) //add table 'main'
 
-	sgAgg4, sgAgg6 := aggIPsBySG.SeparateV4andV6()
-	//add set(s) with IP4 address(es)
-	if err = tx.applyIPSets(tblMain, sgAgg4, ipV4); err != nil {
-		return multierr.Combine(ErrNfTablesProcessor, err,
-			pkgErr.ErrDetails{Api: api, Details: sgAgg4})
-	}
-
-	//add set(s) with IP6 address(es)
-	if err = tx.applyIPSets(tblMain, sgAgg6, ipV6); err != nil {
-		return multierr.Combine(ErrNfTablesProcessor, err,
-			pkgErr.ErrDetails{Api: api, Details: sgAgg6})
+	if useIPv4, useIPv6 := len(effIPv4) > 0, len(effIPv6) > 0; useIPv4 || useIPv6 {
+		usedSGs := aggRules.UsedSGs()
+		for _, sg := range usedSGs {
+			if err = tx.applyNetSets(tblMain, sg, useIPv4, useIPv6); err != nil {
+				return multierr.Combine(ErrNfTablesProcessor, err,
+					pkgErr.ErrDetails{Api: api, Details: sg})
+			}
+		}
 	}
 
 	//add set(s) with <TCP|UDP> <S|D> port range(s)
-	if err = tx.applyPortSets(tblMain, aggSgToSgs); err != nil {
-		return multierr.Combine(ErrNfTablesProcessor, err,
-			pkgErr.ErrDetails{Api: api, Details: aggSgToSgs})
+	for _, rule := range aggRules {
+		if err = tx.applyPortSets(tblMain, rule); err != nil {
+			return multierr.Combine(ErrNfTablesProcessor, err,
+				pkgErr.ErrDetails{Api: api, Details: aggRules})
+		}
 	}
 
 	//nft commit

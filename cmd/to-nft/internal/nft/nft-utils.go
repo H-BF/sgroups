@@ -9,11 +9,11 @@ import (
 
 type nameUtils struct{}
 
-func (nameUtils) nameOfAddrSet(ipV ipVersion, sgName string) string {
+func (nameUtils) nameOfNetSet(ipV ipVersion, sgName string) string {
 	if sgName = strings.TrimSpace(sgName); len(sgName) == 0 {
 		panic("no 'SG' name in arguments")
 	}
-	return fmt.Sprintf("IPv%v-%s", ipV, sgName)
+	return fmt.Sprintf("NetIPv%v-%s", ipV, sgName)
 }
 
 func (nameUtils) nameOfPortSet(tp model.NetworkTransport, sgFrom, sgTo string, isDest bool) string {

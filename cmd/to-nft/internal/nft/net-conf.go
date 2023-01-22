@@ -166,24 +166,29 @@ func (devs IpDevs) Clone() IpDevs {
 	return ret
 }
 
-// ActualIPs get actual unique IP list
-func (conf NetConf) ActualIPs() []net.IP {
-	var ret []net.IP
+// EffectiveIPs get effective unique IP list
+func (conf NetConf) EffectiveIPs() (IPv4 []net.IP, IPv6 []net.IP) {
 	for _, a := range conf.IPAdresses {
 		for lid := range a.Links {
 			if _, ok := conf.IpDevs[lid]; ok {
-				ret = append(ret, a.IP)
+				switch len(a.IP) {
+				case net.IPv4len:
+					IPv4 = append(IPv4, a.IP)
+				case net.IPv6len:
+					IPv6 = append(IPv6, a.IP)
+				}
 				break
 			}
 		}
 	}
-	sort.Slice(ret, func(i, j int) bool {
-		return iplib.CompareIPs(ret[i], ret[j]) < 0
-	})
-	_ = slice.DedupSlice(&ret, func(i, j int) bool {
-		return iplib.CompareIPs(ret[i], ret[j]) == 0
-	})
-	return ret
+	type iplist = []net.IP
+	for _, ips := range []*iplist{&IPv4, &IPv6} {
+		sort.Sort(iplib.ByIP(*ips))
+		_ = slice.DedupSlice(ips, func(i, j int) bool {
+			return iplib.CompareIPs((*ips)[i], (*ips)[j]) == 0
+		})
+	}
+	return IPv4, IPv6
 }
 
 // Init - inits internals

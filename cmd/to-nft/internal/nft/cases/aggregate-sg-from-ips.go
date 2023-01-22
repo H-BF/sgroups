@@ -19,6 +19,9 @@ import (
 )
 
 type (
+	// Network is type alias
+	Network = model.Network
+
 	//SgName is a type alias
 	SgName = string
 
@@ -87,18 +90,20 @@ func (obj *IPsBySG) Load(ctx context.Context, client SGClient, ips []net.IP) err
 
 // Dedup it deduplicates list an its IPs
 func (obj *IPsBySG) Dedup() {
+	sort.Slice(*obj, func(i, j int) bool {
+		l, r := (*obj)[i].SG.Name, (*obj)[j].SG.Name
+		return !strings.EqualFold(l, r) &&
+			strings.Compare(l, r) < 0
+	})
+	_ = slice.DedupSlice(obj, func(i, j int) bool {
+		return strings.EqualFold((*obj)[i].Name, (*obj)[j].Name)
+	})
 	for _, it := range *obj {
 		sort.Sort(it.IPs)
 		_ = slice.DedupSlice(&it.IPs, func(i, j int) bool {
 			return iplib.CompareIPs(it.IPs[i], it.IPs[j]) == 0
 		})
 	}
-	sort.Slice(*obj, func(i, j int) bool {
-		return strings.Compare((*obj)[i].SG.Name, (*obj)[j].SG.Name) < 0
-	})
-	_ = slice.DedupSlice(obj, func(i, j int) bool {
-		return strings.EqualFold((*obj)[i].Name, (*obj)[j].Name)
-	})
 }
 
 // SeparateV4andV6 it separates by PIv4 and IPv6
@@ -129,6 +134,26 @@ func (obj IPsBySG) GetSGNames() []string {
 	ret := make([]string, 0, len(obj))
 	for i := range obj {
 		ret = append(ret, obj[i].SG.Name)
+	}
+	return ret
+}
+
+// EffectiveSGs it gets SG(s) without redundant networks
+func (obj IPsBySG) EffectiveSGs() map[SgName]SG {
+	ret := make(map[SgName]SG, len(obj))
+	for _, it := range obj {
+		sg := it.SG
+		nws := sg.Networks[:0]
+		for _, nw := range sg.Networks {
+			for _, ip := range it.IPs {
+				if nw.Net.Contains(ip) {
+					nws = append(nws, nw)
+					break
+				}
+			}
+		}
+		sg.Networks = nws
+		ret[sg.Name] = sg
 	}
 	return ret
 }
