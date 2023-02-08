@@ -8,6 +8,7 @@ import (
 
 /*// config-sample.yaml
 
+netns: NetworkNS #is optional; def-val = ""
 graceful-shutdown: 10s
 logger:
   level: INFO
@@ -25,6 +26,8 @@ const (
 	AppLoggerLevel config.ValueT[string] = "logger/level"
 	//AppGracefulShutdown [optional]
 	AppGracefulShutdown config.ValueT[time.Duration] = "graceful-schutdown"
+	// NetNS network namespace
+	NetNS config.ValueT[string] = "netns"
 
 	//ServicesDefDialDuration default dial duraton to conect a service [optional]
 	ServicesDefDialDuration config.ValueT[time.Duration] = "extapi/svc/def-daial-duration"

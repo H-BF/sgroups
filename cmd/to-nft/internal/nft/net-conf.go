@@ -166,8 +166,8 @@ func (devs IpDevs) Clone() IpDevs {
 	return ret
 }
 
-// EffectiveIPs get effective unique IP list
-func (conf NetConf) EffectiveIPs() (IPv4 []net.IP, IPv6 []net.IP) {
+// LocalIPs get effective local unique IP lists
+func (conf NetConf) LocalIPs() (IPv4 []net.IP, IPv6 []net.IP) {
 	for _, a := range conf.IPAdresses {
 		for lid := range a.Links {
 			if _, ok := conf.IpDevs[lid]; ok {

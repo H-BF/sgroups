@@ -6,15 +6,17 @@ package main
 import (
 	"context"
 	"flag"
+	"os"
 	"time"
 
-	"github.com/H-BF/corlib/logger"
-	gs "github.com/H-BF/corlib/pkg/patterns/graceful-shutdown"
 	. "github.com/H-BF/sgroups/cmd/to-nft/internal" //nolint:revive
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft"
 	"github.com/H-BF/sgroups/internal/app"
 	"github.com/H-BF/sgroups/internal/config"
 	"github.com/H-BF/sgroups/pkg/nl"
+
+	"github.com/H-BF/corlib/logger"
+	gs "github.com/H-BF/corlib/pkg/patterns/graceful-shutdown"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 )
@@ -26,11 +28,17 @@ func main() {
 	logger.SetLevel(zap.InfoLevel)
 	logger.Info(ctx, "-= HELLO =-")
 
+	if false {
+		//TODO: REMOVE THIS
+		os.Setenv("NFT_NETNS", "ns1")
+	}
+
 	err := config.InitGlobalConfig(
 		config.WithAcceptEnvironment{EnvPrefix: "NFT"},
 		config.WithSourceFile{FileName: ConfigFile},
 		config.WithDefValue{Key: AppLoggerLevel, Val: "DEBUG"},
 		config.WithDefValue{Key: AppGracefulShutdown, Val: 10 * time.Second},
+		config.WithDefValue{Key: NetNS, Val: ""},
 		config.WithDefValue{Key: ServicesDefDialDuration, Val: 10 * time.Second},
 		config.WithDefValue{Key: SGroupsAddress, Val: "tcp://127.0.0.1:9000"},
 	)
@@ -85,13 +93,17 @@ func runNftJob(ctx context.Context) error {
 	}
 	defer sgClient.CloseConn() //nolint:errcheck
 
-	nlWatcher, err = nl.NewNetlinkWatcher(nl.WithAgeOfMatutity{Age: 10 * time.Second})
-	if err != nil {
+	netNs, _ := NetNS.Value(ctx)
+	netWathOpts := []nl.WatcherOption{
+		nl.WithAgeOfMatutity{Age: 10 * time.Second},
+		nl.WithNetns{Netns: netNs},
+	}
+	if nlWatcher, err = nl.NewNetlinkWatcher(netWathOpts...); err != nil {
 		return errors.WithMessage(err, "create net-watcher")
 	}
 	defer nlWatcher.Close()
 
-	nftProc = nft.NewNfTablesProcessor(ctx, sgClient)
+	nftProc = nft.NewNfTablesProcessor(ctx, sgClient, netNs)
 	defer nftProc.Close()
 
 	var conf nft.NetConf

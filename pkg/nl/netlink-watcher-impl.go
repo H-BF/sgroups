@@ -12,14 +12,16 @@ import (
 
 	"github.com/H-BF/sgroups/internal/3d-party/vishvananda/netlink"
 	"github.com/pkg/errors"
+	"github.com/vishvananda/netns"
 	"go.uber.org/multierr"
 	"golang.org/x/sys/unix"
 )
 
 // NewNetlinkWatcher creates NetlinkWatcher instance
-func NewNetlinkWatcher(opts ...watcherOption) (NetlinkWatcher, error) {
+func NewNetlinkWatcher(opts ...WatcherOption) (NetlinkWatcher, error) {
 	var id WatcherID
 	var age time.Duration
+	var ns string
 	sco := scopeNone
 
 	for _, o := range opts {
@@ -30,6 +32,8 @@ func NewNetlinkWatcher(opts ...watcherOption) (NetlinkWatcher, error) {
 			sco |= t
 		case WithAgeOfMatutity:
 			age = t.Age
+		case WithNetns:
+			ns = t.Netns
 		default:
 			return nil, multierr.Append(ErrUnsupportedOption,
 				errors.Errorf("bad option '%T'", t))
@@ -49,8 +53,19 @@ func NewNetlinkWatcher(opts ...watcherOption) (NetlinkWatcher, error) {
 		if err != nil {
 			close(ret.chClose)
 			close(ret.chErrors)
+			if ret.netns != nil {
+				_ = ret.netns.Close()
+			}
 		}
 	}()
+
+	if len(ns) > 0 {
+		var nsh netns.NsHandle
+		if nsh, err = netns.GetFromName(ns); err != nil {
+			return nil, errors.WithMessagef(err, "accessing netns '%s'", ns)
+		}
+		ret.netns = &nsh
+	}
 
 	ret.sel = []reflect.SelectCase{{
 		Dir:  reflect.SelectRecv,
@@ -63,6 +78,7 @@ func NewNetlinkWatcher(opts ...watcherOption) (NetlinkWatcher, error) {
 		o := netlink.LinkSubscribeOptions{
 			ListExisting:  true,
 			ErrorCallback: ret.onGotError,
+			Namespace:     ret.netns,
 		}
 		ch := make(chan netlink.LinkUpdate)
 		if err = netlink.LinkSubscribeWithOptions(ch, ret.chClose, o); err != nil {
@@ -78,6 +94,7 @@ func NewNetlinkWatcher(opts ...watcherOption) (NetlinkWatcher, error) {
 		o := netlink.AddrSubscribeOptions{
 			ListExisting:  true,
 			ErrorCallback: ret.onGotError,
+			Namespace:     ret.netns,
 		}
 		ch := make(chan netlink.AddrUpdate)
 		if err = netlink.AddrSubscribeWithOptions(ch, ret.chClose, o); err != nil {
@@ -102,23 +119,31 @@ type (
 		onceRun       sync.Once
 		onceClose     sync.Once
 		sel           []reflect.SelectCase
+		netns         *netns.NsHandle
 	}
 
-	watcherOption interface {
+	// WatcherOption ...
+	WatcherOption interface {
 		isWatcherOption()
 	}
 
 	//WithID sets ID to watcher
 	WithID struct {
-		watcherOption
+		WatcherOption
 		WatcherID
 	}
 
 	//WithAgeOfMatutity - every packet accumulates updates during some duration then
 	//it sends to consumer
 	WithAgeOfMatutity struct {
-		watcherOption
+		WatcherOption
 		Age time.Duration
+	}
+
+	// WithNetns select net NS(by name) for watching
+	WithNetns struct {
+		WatcherOption
+		Netns string
 	}
 
 	scopeOfUpdates uint32
@@ -224,6 +249,9 @@ func (w *netlinkWatcherImpl) Close() error {
 			close(o.chErrors)
 		})
 		close(w.chClose)
+		if w.netns != nil {
+			_ = w.netns.Close()
+		}
 	})
 	return nil
 }

@@ -3,18 +3,20 @@ package nft
 import (
 	"context"
 
-	sgAPI "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
 	pkgErr "github.com/H-BF/sgroups/pkg/errors"
-	"github.com/c-robinson/iplib"
+	"golang.org/x/sys/unix"
+
+	sgAPI "github.com/H-BF/protos/pkg/api/sgroups"
 	nftLib "github.com/google/nftables"
 	"go.uber.org/multierr"
 )
 
 // NewNfTablesProcessor creates NfTablesProcessor from SGClient
-func NewNfTablesProcessor(_ context.Context, client SGClient) NfTablesProcessor {
+func NewNfTablesProcessor(_ context.Context, client SGClient, netNS string) NfTablesProcessor {
 	return &nfTablesProcessorImpl{
 		sgClient: client,
+		netNS:    netNS,
 	}
 }
 
@@ -24,14 +26,10 @@ type (
 
 	nfTablesProcessorImpl struct {
 		sgClient SGClient
+		netNS    string
 	}
 
 	ipVersion = int
-)
-
-const (
-	ipV4 ipVersion = iplib.IP4Version
-	ipV6 ipVersion = iplib.IP6Version
 )
 
 // ApplyConf impl 'NfTablesProcessor'
@@ -40,73 +38,82 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, conf NetConf) 
 
 	var (
 		err        error
-		aggIPsBySG cases.IPsBySG
-		aggRules   cases.AggSgRules
+		localRules cases.LocalRules
+		localSGs   cases.LocalSGs
 		tx         *nfTablesTx
 	)
 
-	effIPv4, effIPv6 := conf.EffectiveIPs()
-	allEffectiveIPs := append(effIPv4, effIPv6...)
-	if err = aggIPsBySG.Load(ctx, impl.sgClient, allEffectiveIPs); err != nil {
+	localIPsV4, loaclIPsV6 := conf.LocalIPs()
+	allLoaclIPs := append(localIPsV4, loaclIPsV6...)
+	if err = localSGs.Load(ctx, impl.sgClient, allLoaclIPs); err != nil {
 		return multierr.Combine(ErrNfTablesProcessor,
-			err, pkgErr.ErrDetails{Api: api, Details: allEffectiveIPs})
+			err, pkgErr.ErrDetails{Api: api, Details: allLoaclIPs})
 	}
-	aggIPsBySG.Dedup()
-
-	if sgNames := aggIPsBySG.GetSGNames(); len(sgNames) > 0 {
-		sgsVars := []struct {
-			from, to []string
-		}{{nil, sgNames}, {sgNames, nil}}
-		for _, arg := range sgsVars {
-			if err = aggRules.Load(ctx, impl.sgClient, arg.from, arg.to); err != nil {
-				return multierr.Combine(ErrNfTablesProcessor,
-					err, pkgErr.ErrDetails{Api: api})
-			}
-		}
-		aggRules.Dedup()
-		effSGs := aggIPsBySG.EffectiveSGs()
-		for i := range aggRules {
-			r := &aggRules[i]
-			if sg, ok := effSGs[r.SgFrom.Name]; ok {
-				r.SgFrom = sg
-			}
-			if sg, ok := effSGs[r.SgTo.Name]; ok {
-				r.SgTo = sg
-			}
-		}
+	if err = localRules.Load(ctx, impl.sgClient, localSGs); err != nil {
+		return multierr.Combine(ErrNfTablesProcessor,
+			err, pkgErr.ErrDetails{Api: api})
 	}
 
-	if tx, err = nfTx(); err != nil { //start nft transaction
+	if tx, err = nfTx(impl.netNS); err != nil { //start nft transaction
 		return multierr.Combine(ErrNfTablesProcessor, err,
 			pkgErr.ErrDetails{Api: api})
 	}
 	defer tx.abort()
 
-	tx.FlushRuleset() //delete all defs
-
 	tblMain := &nftLib.Table{
 		Name:   "main",
 		Family: nftLib.TableFamilyINet,
 	}
+	//delete table 'main'
+	if err = tx.deleteTables(tblMain); err != nil {
+		return err
+	}
 	_ = tx.AddTable(tblMain) //add table 'main'
 
-	if useIPv4, useIPv6 := len(effIPv4) > 0, len(effIPv6) > 0; useIPv4 || useIPv6 {
-		usedSGs := aggRules.UsedSGs()
-		for _, sg := range usedSGs {
-			if err = tx.applyNetSets(tblMain, sg, useIPv4, useIPv6); err != nil {
-				return multierr.Combine(ErrNfTablesProcessor, err,
-					pkgErr.ErrDetails{Api: api, Details: sg})
-			}
-		}
+	var namesOfNetSets generatedSets
+	var namesOfPortSets generatedSets
+
+	namesOfNetSets, err = tx.applyNetSets(tblMain, localRules)
+	if err != nil {
+		return multierr.Combine(ErrNfTablesProcessor, err,
+			pkgErr.ErrDetails{Api: api})
+	}
+	namesOfPortSets, err = tx.applyPortSets(tblMain, localRules)
+	if err != nil {
+		return multierr.Combine(ErrNfTablesProcessor, err,
+			pkgErr.ErrDetails{Api: api})
 	}
 
-	//add set(s) with <TCP|UDP> <S|D> port range(s)
-	for _, rule := range aggRules {
-		if err = tx.applyPortSets(tblMain, rule); err != nil {
-			return multierr.Combine(ErrNfTablesProcessor, err,
-				pkgErr.ErrDetails{Api: api, Details: aggRules})
-		}
+	setTcpUdpProtos := &nftLib.Set{
+		Table:     tblMain,
+		Anonymous: true,
+		Constant:  true,
+		KeyType:   nftLib.TypeInetProto,
 	}
+	err = tx.AddSet(setTcpUdpProtos, []nftLib.SetElement{
+		{Key: []byte{unix.IPPROTO_TCP}},
+		{Key: []byte{unix.IPPROTO_UDP}},
+	})
+	if err != nil {
+		return multierr.Combine(ErrNfTablesProcessor, err,
+			pkgErr.ErrDetails{Api: api, Msg: "add 'tcp|upd' proto set"})
+	}
+
+	fwOutChain := tx.AddChain(&nftLib.Chain{
+		Name:  "FW-OUT",
+		Table: tblMain,
+	})
+
+	err = tx.fillWithOutRules(fwOutChain, localRules, setTcpUdpProtos,
+		namesOfNetSets, namesOfPortSets)
+	if err != nil {
+		return multierr.Combine(ErrNfTablesProcessor, err,
+			pkgErr.ErrDetails{Api: api})
+	}
+
+	beginRule().
+		drop().
+		applyRule(fwOutChain, tx.Conn)
 
 	//nft commit
 	if err = tx.commit(); err != nil {
