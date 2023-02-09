@@ -148,33 +148,32 @@ func (rules LocalRules) IterateNetworks(f func(sgName string, nets []net.IPNet, 
 // TemplatesOut ...
 func (rules LocalRules) TemplatesOut(f func(tr model.NetworkTransport, out string, in []string) error) error {
 	for from, to := range rules.SgRules {
-		if rules.LocalSGs[from.SgName] == nil {
-			continue
-		}
-		var in []string
-		for toSg := range to {
-			in = append(in, toSg)
-		}
-		if e := f(from.Transport, from.SgName, in); e != nil {
-			return e
+		if rules.LocalSGs[from.SgName] != nil {
+			var in []string
+			for toSg := range to {
+				in = append(in, toSg)
+			}
+			if e := f(from.Transport, from.SgName, in); e != nil {
+				return e
+			}
 		}
 	}
 	return nil
 }
 
 // TemplatesIn ...
-func (rules LocalRules) TemplatesIn(f func(tr model.NetworkTransport, in string, out []string) error) error {
+func (rules LocalRules) TemplatesIn(f func(tr model.NetworkTransport, in []string, out string) error) error {
 	data := make(map[SgFrom][]string)
 	for from, to := range rules.SgRules {
 		for toSg := range to {
 			if rules.LocalSGs[toSg] != nil {
-				k := SgFrom{SgName: toSg, Transport: from.Transport}
-				data[k] = append(data[k], from.SgName)
+				k := SgFrom{SgName: from.SgName, Transport: from.Transport}
+				data[k] = append(data[k], toSg)
 			}
 		}
 	}
-	for a, b := range data {
-		if e := f(a.Transport, a.SgName, b); e != nil {
+	for in, out := range data {
+		if e := f(in.Transport, out, in.SgName); e != nil {
 			return e
 		}
 	}

@@ -103,17 +103,31 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, conf NetConf) 
 		Name:  "FW-OUT",
 		Table: tblMain,
 	})
-
 	err = tx.fillWithOutRules(fwOutChain, localRules, setTcpUdpProtos,
 		namesOfNetSets, namesOfPortSets)
 	if err != nil {
 		return multierr.Combine(ErrNfTablesProcessor, err,
 			pkgErr.ErrDetails{Api: api})
 	}
-
 	beginRule().
 		drop().
 		applyRule(fwOutChain, tx.Conn)
+
+	fwInChain := tx.AddChain(&nftLib.Chain{
+		Name:  "FW-IN",
+		Table: tblMain,
+	})
+	/*//
+	err = tx.fillWithInRules(fwInChain, localRules, setTcpUdpProtos,
+		namesOfNetSets, namesOfPortSets)
+	if err != nil {
+		return multierr.Combine(ErrNfTablesProcessor, err,
+			pkgErr.ErrDetails{Api: api})
+	}
+	*/
+	beginRule().
+		drop().
+		applyRule(fwInChain, tx.Conn)
 
 	//nft commit
 	if err = tx.commit(); err != nil {

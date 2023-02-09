@@ -169,10 +169,21 @@ func (tx *nfTablesTx) applyPortSets(tbl *nftLib.Table, rules cases.LocalRules) (
 func (tx *nfTablesTx) fillWithOutRules(chn *nftLib.Chain, rules cases.LocalRules, tcpudp *nftLib.Set, nets, ports generatedSets) error {
 	const api = "nft/fill-chain-with-out-rules"
 
-	saddrC := make(map[string]int)
-	daddrC := make(map[string]int)
 	var names nameUtils
+	addrC := make(map[string]int)
 	e := rules.TemplatesOut(func(tr model.NetworkTransport, out string, in []string) error {
+		var outChainUsed bool
+		outChain := tx.AddChain(&nftLib.Chain{
+			Name:  "FW-OUT-" + out,
+			Table: chn.Table,
+		})
+		defer func() {
+			if !outChainUsed {
+				tx.DelChain(outChain)
+			} else {
+				beginRule().drop().applyRule(outChain, tx.Conn)
+			}
+		}()
 		for i := range in {
 			sport := names.nameOfPortSet(tr, out, in[i], false)
 			dport := names.nameOfPortSet(tr, out, in[i], true)
@@ -189,32 +200,30 @@ func (tx *nfTablesTx) fillWithOutRules(chn *nftLib.Chain, rules cases.LocalRules
 				if !(saddrSet != nil && daddrSet != nil) {
 					continue
 				}
-				saddrC[saddr]++
-				daddrC[daddr]++
+				addrC[saddr]++
+				addrC[daddr]++
 				switch ipV {
 				case iplib.IP4Version:
-					if saddrC[saddr] == 1 {
+					outChainUsed = true
+					if addrC[saddr] == 1 {
 						beginRule().
 							saddr4().inSet(saddrSet).
 							counter().
-							applyRule(chn, tx.Conn)
+							go2(outChain.Name).applyRule(chn, tx.Conn)
 					}
-					if daddrC[daddr] == 1 {
+					if addrC[daddr] == 1 {
 						beginRule().
 							metaL4PROTO().inSet(tcpudp).
 							daddr4().inSet(daddrSet).
-							metaNFTRACE(true).
-							applyRule(chn, tx.Conn)
+							metaNFTRACE(true).applyRule(outChain, tx.Conn)
 					}
 					beginRule().
-						ipProto(tr).
-						saddr4().inSet(saddrSet).
-						ipProto(tr).sport().inSet(sportSet).
-						daddr4().inSet(daddrSet).
+						ipProto(tr).daddr4().inSet(daddrSet).
 						ipProto(tr).dport().inSet(dportSet).
+						ipProto(tr).sport().inSet(sportSet).
 						counter().
 						accept().
-						applyRule(chn, tx.Conn)
+						applyRule(outChain, tx.Conn)
 				case iplib.IP6Version:
 					// TODO: to impl in future
 				}
@@ -225,9 +234,46 @@ func (tx *nfTablesTx) fillWithOutRules(chn *nftLib.Chain, rules cases.LocalRules
 	return errors.WithMessage(e, api)
 }
 
-func (tx *nfTablesTx) fillWithInRules(chn *nftLib.Chain, rules cases.LocalRules, nets, ports generatedSets) error {
+func (tx *nfTablesTx) fillWithInRules(chn *nftLib.Chain, rules cases.LocalRules, tcpudp *nftLib.Set, nets, ports generatedSets) error {
+	const api = "nft/fill-chain-with-in-rules"
 
-	return nil
+	saddrC := make(map[string]int)
+	daddrC := make(map[string]int)
+	var names nameUtils
+	e := rules.TemplatesIn(func(tr model.NetworkTransport, out []string, in string) error {
+		for i := range out {
+			sport := names.nameOfPortSet(tr, out[i], in, false)
+			dport := names.nameOfPortSet(tr, out[i], in, true)
+			sportSet := ports[sport]
+			dportSet := ports[dport]
+			if !(sportSet != nil && dportSet != nil) {
+				continue
+			}
+			for _, ipV := range []int{iplib.IP4Version, iplib.IP6Version} {
+				saddr := names.nameOfNetSet(ipV, out[i])
+				daddr := names.nameOfNetSet(ipV, in)
+				saddrSet := nets[saddr]
+				daddrSet := nets[daddr]
+				if saddrSet != nil {
+					saddrC[saddr]++
+				}
+				if daddrSet != nil {
+					daddrC[daddr]++
+				}
+				if !(saddrSet != nil && daddrSet != nil) {
+					continue
+				}
+				switch ipV {
+				case iplib.IP4Version:
+				case iplib.IP6Version:
+					// TODO: to impl in future
+				}
+			}
+		}
+		return nil
+	})
+
+	return errors.WithMessage(e, api)
 }
 
 func (tx *nfTablesTx) deleteTables(tbs ...*nftLib.Table) error {
