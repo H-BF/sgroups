@@ -14,6 +14,9 @@ func (d *dict[Tk, Tv]) del(ks ...Tk) *dict[Tk, Tv] {
 		for i := range ks {
 			delete(d.data, ks[i])
 		}
+		if d.len() == 0 {
+			d.data = nil
+		}
 	}
 	return d
 }

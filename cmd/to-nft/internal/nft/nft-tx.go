@@ -56,10 +56,16 @@ func (tx *nfTablesTx) loadConfig() {
 			*nftLib.Chain
 			rules []*nftLib.Rule
 		}
-		sets   = dict[string, *nftLib.Set]
+		set = struct {
+			*nftLib.Set
+			elements []nftLib.SetElement
+		}
+		sets   = dict[string, *set]
 		chains = dict[string, *chain]
+		flows  = dict[string, *nftLib.Flowtable]
 		table  = struct {
 			tbl *nftLib.Table
+			flows
 			sets
 			chains
 		}
@@ -98,12 +104,20 @@ func (tx *nfTablesTx) loadConfig() {
 		}
 	}
 	savedTables.iterate(func(k tk, t *table) bool {
-		sts, e := tx.GetSets(t.tbl)
-		if e != nil {
+		var sts []*nftLib.Set
+		//tx.ListFlowtables()
+		if sts, err = tx.GetSets(t.tbl); err != nil {
 			return false
 		}
 		for _, st := range sts {
-			t.sets.put(st.Name, st)
+			if _, ok := t.sets.get(st.Name); !ok {
+				st.Table = t.tbl
+				s := &set{Set: st}
+				if s.elements, err = tx.GetSetElements(st); err != nil {
+					return false
+				}
+				t.sets.put(st.Name, s)
+			}
 		}
 		t.chains.iterate(func(_ string, chn *chain) bool {
 			rls, e1 := tx.GetRules(chn.Table, chn.Chain)
