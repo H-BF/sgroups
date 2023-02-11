@@ -5,7 +5,6 @@ import (
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
 	pkgErr "github.com/H-BF/sgroups/pkg/errors"
-	"golang.org/x/sys/unix"
 
 	sgAPI "github.com/H-BF/protos/pkg/api/sgroups"
 	nftLib "github.com/google/nftables"
@@ -58,84 +57,15 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, conf NetConf) 
 		return multierr.Combine(ErrNfTablesProcessor, err,
 			pkgErr.ErrDetails{Api: api})
 	}
-	defer tx.abort()
+	defer tx.Close()
 
 	tblMain := &nftLib.Table{
 		Name:   "main",
 		Family: nftLib.TableFamilyINet,
 	}
-	//delete table 'main'
-	if err = tx.deleteTables(tblMain); err != nil {
-		return err
-	}
-	_ = tx.AddTable(tblMain) //add table 'main'
-
-	var namesOfNetSets generatedSets
-	var namesOfPortSets generatedSets
-
-	namesOfNetSets, err = tx.applyNetSets(tblMain, localRules)
-	if err != nil {
-		return multierr.Combine(ErrNfTablesProcessor, err,
-			pkgErr.ErrDetails{Api: api})
-	}
-	namesOfPortSets, err = tx.applyPortSets(tblMain, localRules)
-	if err != nil {
-		return multierr.Combine(ErrNfTablesProcessor, err,
-			pkgErr.ErrDetails{Api: api})
-	}
-
-	setTcpUdpProtos := &nftLib.Set{
-		Table:     tblMain,
-		Anonymous: true,
-		Constant:  true,
-		KeyType:   nftLib.TypeInetProto,
-	}
-	err = tx.AddSet(setTcpUdpProtos, []nftLib.SetElement{
-		{Key: []byte{unix.IPPROTO_TCP}},
-		{Key: []byte{unix.IPPROTO_UDP}},
-	})
-	if err != nil {
-		return multierr.Combine(ErrNfTablesProcessor, err,
-			pkgErr.ErrDetails{Api: api, Msg: "add 'tcp|upd' proto set"})
-	}
-
-	fwOutChain := tx.AddChain(&nftLib.Chain{
-		Name:  "FW-OUT",
-		Table: tblMain,
-	})
-	err = tx.fillWithOutRules(fwOutChain, localRules, setTcpUdpProtos,
-		namesOfNetSets, namesOfPortSets)
-	if err != nil {
-		return multierr.Combine(ErrNfTablesProcessor, err,
-			pkgErr.ErrDetails{Api: api})
-	}
-	beginRule().
-		drop().
-		applyRule(fwOutChain, tx.Conn)
-
-	fwInChain := tx.AddChain(&nftLib.Chain{
-		Name:  "FW-IN",
-		Table: tblMain,
-	})
-	/*//
-	err = tx.fillWithInRules(fwInChain, localRules, setTcpUdpProtos,
-		namesOfNetSets, namesOfPortSets)
-	if err != nil {
-		return multierr.Combine(ErrNfTablesProcessor, err,
-			pkgErr.ErrDetails{Api: api})
-	}
-	*/
-	beginRule().
-		drop().
-		applyRule(fwInChain, tx.Conn)
-
-	//nft commit
-	if err = tx.commit(); err != nil {
-		return multierr.Combine(ErrNfTablesProcessor, err,
-			pkgErr.ErrDetails{Api: api})
-	}
-
-	return nil
+	err = (&batch{}).execute(tx, tblMain, localRules)
+	return multierr.Combine(ErrNfTablesProcessor, err,
+		pkgErr.ErrDetails{Api: api})
 }
 
 // Close impl 'NfTablesProcessor'

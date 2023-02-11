@@ -2,6 +2,7 @@ package nft
 
 import (
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
+
 	nftlib "github.com/google/nftables"
 	. "github.com/google/nftables/binaryutil"
 	. "github.com/google/nftables/expr"
@@ -125,9 +126,7 @@ func (rb ruleBuilder) metaL4PROTO() ruleBuilder {
 }
 
 func (rb ruleBuilder) ipProto(tr model.NetworkTransport) ruleBuilder {
-
 	var t byte
-
 	switch tr {
 	case model.TCP:
 		t = unix.IPPROTO_TCP

@@ -1,16 +1,11 @@
 package nft
 
 import (
-	"math"
 	"net"
 	"sync"
 
-	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
-	model "github.com/H-BF/sgroups/internal/models/sgroups"
-
 	"github.com/c-robinson/iplib"
 	nftLib "github.com/google/nftables"
-	nftLibUtil "github.com/google/nftables/binaryutil"
 	"github.com/pkg/errors"
 	"github.com/vishvananda/netns"
 )
@@ -20,10 +15,8 @@ type nfTablesTx struct {
 	commitOnce sync.Once
 }
 
-type generatedSets map[string]*nftLib.Set
-
 func nfTx(netNS string) (*nfTablesTx, error) {
-	const api = "open nft tx"
+	const api = "connect to nft"
 
 	opts := []nftLib.ConnOption{nftLib.AsLasting()}
 	if len(netNS) > 0 {
@@ -42,290 +35,85 @@ func nfTx(netNS string) (*nfTablesTx, error) {
 	return &nfTablesTx{Conn: c}, nil
 }
 
-func (tx *nfTablesTx) applyNetSets(tbl *nftLib.Table, locals cases.LocalRules) (generatedSets, error) {
-	const (
-		api  = "ntf/apply-net-sets"
-		b32  = 32
-		b128 = 128
-	)
-	gn := make(generatedSets)
-	e := locals.IterateNetworks(func(sgName string, nets []net.IPNet, isV6 bool) error {
-		ipV := iplib.IP4Version
-		ty := nftLib.TypeIPAddr
-		if isV6 {
-			ipV = iplib.IP6Version
-			ty = nftLib.TypeIP6Addr
-		}
-		nameOfSet := nameUtils{}.nameOfNetSet(ipV, sgName)
-		if gn[nameOfSet] != nil {
-			return nil
-		}
-		var elements []nftLib.SetElement
-		for _, nw := range nets {
-			ones, _ := nw.Mask.Size()
-			netIf := iplib.NewNet(nw.IP, ones)
-			ipLast := iplib.NextIP(netIf.LastAddress())
-			switch ipV {
-			case iplib.IP4Version:
-				if ones < b32 {
-					ipLast = iplib.NextIP(ipLast)
-				}
-				elements = append(elements, nftLib.SetElement{
-					Key:    nw.IP,
-					KeyEnd: ipLast,
-				})
-			case iplib.IP6Version:
-				if ones < b128 {
-					ipLast = iplib.NextIP(ipLast)
-				}
-				elements = append(elements, nftLib.SetElement{
-					Key:    nw.IP,
-					KeyEnd: ipLast,
-				})
-			}
-		}
-		if len(elements) > 0 {
-			netSet := &nftLib.Set{
-				Table:    tbl,
-				KeyType:  ty,
-				Interval: true,
-				Name:     nameOfSet,
-			}
-			if err := tx.AddSet(netSet, elements); err != nil {
-				return errors.WithMessagef(err, "%s: add set", api)
-			}
-			gn[nameOfSet] = netSet
-		}
-		return nil
+// Close impl 'Closer'
+func (tx *nfTablesTx) Close() error {
+	c := tx.Conn
+	tx.commitOnce.Do(func() {
+		_ = c.CloseLasting()
 	})
-	return gn, e
-}
-
-func (tx *nfTablesTx) applyPortSets(tbl *nftLib.Table, rules cases.LocalRules) (generatedSets, error) {
-	const api = "ntf/apply-port-sets"
-
-	gn := make(generatedSets)
-
-	apply := func(nameOfSet string, pr model.PortRanges) error {
-		var (
-			be      = nftLibUtil.BigEndian
-			elemnts []nftLib.SetElement
-			err     error
-		)
-		pr.Iterate(func(r model.PortRange) bool {
-			a, b := r.Bounds()
-			b = b.AsExcluded()
-			aVal, _ := a.GetValue()
-			bVal, _ := b.GetValue()
-			if aVal > math.MaxUint16 || bVal > math.MaxUint16 {
-				err = ErrPortRange
-				return false //error
-			}
-			elemnts = append(elemnts,
-				nftLib.SetElement{
-					Key:    be.PutUint16(uint16(aVal)),
-					KeyEnd: be.PutUint16(uint16(bVal)),
-				},
-			)
-			return true
-		})
-		if err != nil {
-			return errors.WithMessage(err, api)
-		}
-		if len(elemnts) > 0 {
-			portSet := &nftLib.Set{
-				Table:    tbl,
-				Name:     nameOfSet,
-				KeyType:  nftLib.TypeInetService,
-				Interval: true,
-			}
-			if err = tx.AddSet(portSet, elemnts); err != nil {
-				return errors.WithMessagef(err, "%s: add set", api)
-			}
-			gn[nameOfSet] = portSet
-		}
-		return nil
-	}
-
-	for sgFrom, to := range rules.SgRules {
-		for sgTo, ports := range to {
-			name := nameUtils{}.nameOfPortSet(
-				sgFrom.Transport, sgFrom.SgName, sgTo, false,
-			)
-			if err := apply(name, ports.From); err != nil {
-				return gn, err
-			}
-			name = nameUtils{}.nameOfPortSet(
-				sgFrom.Transport, sgFrom.SgName, sgTo, true,
-			)
-			if err := apply(name, ports.To); err != nil {
-				return gn, err
-			}
-		}
-	}
-	return gn, nil
-}
-
-func (tx *nfTablesTx) fillWithOutRules(chn *nftLib.Chain, rules cases.LocalRules, tcpudp *nftLib.Set, nets, ports generatedSets) error {
-	const api = "nft/fill-chain-with-out-rules"
-
-	var names nameUtils
-	addrC := make(map[string]int)
-	e := rules.TemplatesOut(func(tr model.NetworkTransport, out string, in []string) error {
-		var outChainUsed bool
-		outChain := tx.AddChain(&nftLib.Chain{
-			Name:  "FW-OUT-" + out,
-			Table: chn.Table,
-		})
-		defer func() {
-			if !outChainUsed {
-				tx.DelChain(outChain)
-			} else {
-				beginRule().drop().applyRule(outChain, tx.Conn)
-			}
-		}()
-		for i := range in {
-			sport := names.nameOfPortSet(tr, out, in[i], false)
-			dport := names.nameOfPortSet(tr, out, in[i], true)
-			sportSet := ports[sport]
-			dportSet := ports[dport]
-			if !(sportSet != nil && dportSet != nil) {
-				continue
-			}
-			for _, ipV := range []int{iplib.IP4Version, iplib.IP6Version} {
-				saddr := names.nameOfNetSet(ipV, out)
-				daddr := names.nameOfNetSet(ipV, in[i])
-				saddrSet := nets[saddr]
-				daddrSet := nets[daddr]
-				if !(saddrSet != nil && daddrSet != nil) {
-					continue
-				}
-				addrC[saddr]++
-				addrC[daddr]++
-				switch ipV {
-				case iplib.IP4Version:
-					outChainUsed = true
-					if addrC[saddr] == 1 {
-						beginRule().
-							saddr4().inSet(saddrSet).
-							counter().
-							go2(outChain.Name).applyRule(chn, tx.Conn)
-					}
-					if addrC[daddr] == 1 {
-						beginRule().
-							metaL4PROTO().inSet(tcpudp).
-							daddr4().inSet(daddrSet).
-							metaNFTRACE(true).applyRule(outChain, tx.Conn)
-					}
-					beginRule().
-						ipProto(tr).daddr4().inSet(daddrSet).
-						ipProto(tr).dport().inSet(dportSet).
-						ipProto(tr).sport().inSet(sportSet).
-						counter().
-						accept().
-						applyRule(outChain, tx.Conn)
-				case iplib.IP6Version:
-					// TODO: to impl in future
-				}
-			}
-		}
-		return nil
-	})
-	return errors.WithMessage(e, api)
-}
-
-func (tx *nfTablesTx) fillWithInRules(chn *nftLib.Chain, rules cases.LocalRules, tcpudp *nftLib.Set, nets, ports generatedSets) error {
-	const api = "nft/fill-chain-with-in-rules"
-
-	saddrC := make(map[string]int)
-	daddrC := make(map[string]int)
-	var names nameUtils
-	e := rules.TemplatesIn(func(tr model.NetworkTransport, out []string, in string) error {
-		for i := range out {
-			sport := names.nameOfPortSet(tr, out[i], in, false)
-			dport := names.nameOfPortSet(tr, out[i], in, true)
-			sportSet := ports[sport]
-			dportSet := ports[dport]
-			if !(sportSet != nil && dportSet != nil) {
-				continue
-			}
-			for _, ipV := range []int{iplib.IP4Version, iplib.IP6Version} {
-				saddr := names.nameOfNetSet(ipV, out[i])
-				daddr := names.nameOfNetSet(ipV, in)
-				saddrSet := nets[saddr]
-				daddrSet := nets[daddr]
-				if saddrSet != nil {
-					saddrC[saddr]++
-				}
-				if daddrSet != nil {
-					daddrC[daddr]++
-				}
-				if !(saddrSet != nil && daddrSet != nil) {
-					continue
-				}
-				switch ipV {
-				case iplib.IP4Version:
-				case iplib.IP6Version:
-					// TODO: to impl in future
-				}
-			}
-		}
-		return nil
-	})
-
-	return errors.WithMessage(e, api)
-}
-
-func (tx *nfTablesTx) deleteTables(tbs ...*nftLib.Table) error {
-	const api = "ntf/del-tables"
-
-	if len(tbs) == 0 {
-		return nil
-	}
-	type key = struct {
-		Fam  nftLib.TableFamily
-		Name string
-	}
-	index := make(map[key]struct{})
-	for i := range tbs {
-		index[key{tbs[i].Family, tbs[i].Name}] = struct{}{}
-	}
-
-	tableList, err := tx.ListTables()
-	if err != nil {
-		return errors.WithMessagef(err, "%s: get list of tables", api)
-	}
-	for _, tbl := range tableList {
-		k := key{tbl.Family, tbl.Name}
-		if _, found := index[k]; found {
-			tx.DelTable(tbl)
-			delete(index, k)
-		}
-	}
 	return nil
 }
 
-func (tx *nfTablesTx) commit() error {
-	const api = "ntf/flush"
-
-	c := tx.Conn
-	var err error
-	var passed bool
-	tx.commitOnce.Do(func() {
-		err = c.Flush()
-		_ = c.CloseLasting()
-		passed = true
-	})
-	if passed {
-		return errors.WithMessage(err, api)
+// loadConfig it loads current config (experimental)
+func (tx *nfTablesTx) loadConfig() {
+	type (
+		tn = string
+		tk = struct {
+			nftLib.TableFamily
+			tn
+		}
+		chain = struct {
+			*nftLib.Chain
+			rules []*nftLib.Rule
+		}
+		sets   = dict[string, *nftLib.Set]
+		chains = dict[string, *chain]
+		table  = struct {
+			tbl *nftLib.Table
+			sets
+			chains
+		}
+		tables = dict[tk, *table]
+	)
+	var (
+		savedTables tables
+		chainList   []*nftLib.Chain
+		tableList   []*nftLib.Table
+		err         error
+	)
+	if chainList, err = tx.ListChains(); err == nil {
+		for _, chn := range chainList {
+			k := tk{chn.Table.Family, chn.Table.Name}
+			tb := savedTables.at(k)
+			if tb == nil {
+				tb = &table{
+					tbl: chn.Table,
+				}
+				savedTables.put(k, tb)
+			}
+			if cx := tb.chains.at(chn.Name); cx == nil {
+				cx := &chain{Chain: chn}
+				tb.chains.put(chn.Name, cx)
+			}
+		}
 	}
-	return errors.Errorf("%s: commit on closed", api)
-}
-
-func (tx *nfTablesTx) abort() {
-	c := tx.Conn
-	tx.commitOnce.Do(func() {
-		_ = c.CloseLasting()
+	if tableList, err = tx.ListTables(); err == nil {
+		for _, tb := range tableList {
+			k := tk{tb.Family, tb.Name}
+			if _, ok := savedTables.get(k); !ok {
+				savedTables.put(k, &table{
+					tbl: tb,
+				})
+			}
+		}
+	}
+	savedTables.iterate(func(k tk, t *table) bool {
+		sts, e := tx.GetSets(t.tbl)
+		if e != nil {
+			return false
+		}
+		for _, st := range sts {
+			t.sets.put(st.Name, st)
+		}
+		t.chains.iterate(func(_ string, chn *chain) bool {
+			rls, e1 := tx.GetRules(chn.Table, chn.Chain)
+			if e1 != nil {
+				return false
+			}
+			chn.rules = rls
+			return true
+		})
+		return true
 	})
 }
 

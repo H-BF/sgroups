@@ -3,7 +3,10 @@ package cases
 import (
 	"context"
 	"net"
+	"sort"
+	"strings"
 
+	"github.com/H-BF/corlib/pkg/slice"
 	sgAPI "github.com/H-BF/protos/pkg/api/sgroups"
 	conv "github.com/H-BF/sgroups/internal/api/sgroups"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
@@ -69,14 +72,16 @@ func (rules *LocalRules) Load(ctx context.Context, client SGClient, locals Local
 			if rule, err = conv.Proto2ModelSGRule(protoRule); err != nil {
 				return errors.WithMessage(err, api)
 			}
-			if loc := locals[rule.SgFrom.Name]; isFrom && loc != nil {
+			if isFrom {
 				rules.addRule(rule)
-				rules.LocalSGs[rule.SgFrom.Name] = loc
-			} else if loc := locals[rule.SgTo.Name]; !isFrom && loc != nil {
-				rules.addRule(rule)
-				rules.LocalSGs[rule.SgTo.Name] = loc
+				if loc := locals[rule.SgFrom.Name]; loc != nil {
+					rules.LocalSGs[rule.SgFrom.Name] = loc
+				}
 			} else {
-				continue
+				rules.addRule(rule)
+				if loc := locals[rule.SgTo.Name]; loc != nil {
+					rules.LocalSGs[rule.SgTo.Name] = loc
+				}
 			}
 			rules.UsedSGs[rule.SgFrom.Name] = rule.SgFrom
 			rules.UsedSGs[rule.SgTo.Name] = rule.SgTo
@@ -146,34 +151,42 @@ func (rules LocalRules) IterateNetworks(f func(sgName string, nets []net.IPNet, 
 }
 
 // TemplatesOut ...
-func (rules LocalRules) TemplatesOut(f func(tr model.NetworkTransport, out string, in []string) error) error {
+func (rules LocalRules) TemplatesOut(f func(out string, in []string) error) error {
+	ret := make(map[string][]string)
 	for from, to := range rules.SgRules {
 		if rules.LocalSGs[from.SgName] != nil {
-			var in []string
 			for toSg := range to {
-				in = append(in, toSg)
+				ret[from.SgName] = append(ret[from.SgName], toSg)
 			}
-			if e := f(from.Transport, from.SgName, in); e != nil {
-				return e
-			}
+		}
+	}
+	for out, in := range ret {
+		if e := f(out, in); e != nil {
+			return e
 		}
 	}
 	return nil
 }
 
 // TemplatesIn ...
-func (rules LocalRules) TemplatesIn(f func(tr model.NetworkTransport, in []string, out string) error) error {
-	data := make(map[SgFrom][]string)
+func (rules LocalRules) TemplatesIn(f func(out []string, in string) error) error {
+	data := make(map[string][]string)
 	for from, to := range rules.SgRules {
 		for toSg := range to {
 			if rules.LocalSGs[toSg] != nil {
-				k := SgFrom{SgName: from.SgName, Transport: from.Transport}
-				data[k] = append(data[k], toSg)
+				data[toSg] = append(data[toSg], from.SgName)
 			}
 		}
 	}
 	for in, out := range data {
-		if e := f(in.Transport, out, in.SgName); e != nil {
+		sort.Slice(out, func(i, j int) bool {
+			return !strings.EqualFold(out[i], out[j]) &&
+				strings.Compare(out[i], out[j]) < 0
+		})
+		_ = slice.DedupSlice(&out, func(i, j int) bool {
+			return strings.EqualFold(out[i], out[j])
+		})
+		if e := f(out, in); e != nil {
 			return e
 		}
 	}

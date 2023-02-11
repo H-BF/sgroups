@@ -28,7 +28,7 @@ func main() {
 	logger.SetLevel(zap.InfoLevel)
 	logger.Info(ctx, "-= HELLO =-")
 
-	if false {
+	if true {
 		//TODO: REMOVE THIS
 		os.Setenv("NFT_NETNS", "ns1")
 	}
