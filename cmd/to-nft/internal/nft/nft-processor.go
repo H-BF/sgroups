@@ -64,8 +64,11 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, conf NetConf) 
 		Family: nftLib.TableFamilyINet,
 	}
 	err = (&batch{}).execute(tx, tblMain, localRules)
-	return multierr.Combine(ErrNfTablesProcessor, err,
-		pkgErr.ErrDetails{Api: api})
+	if err != nil {
+		return multierr.Combine(ErrNfTablesProcessor, err,
+			pkgErr.ErrDetails{Api: api})
+	}
+	return nil
 }
 
 // Close impl 'NfTablesProcessor'
