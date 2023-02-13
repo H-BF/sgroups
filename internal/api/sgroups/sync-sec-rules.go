@@ -3,11 +3,12 @@ package sgroups
 import (
 	"context"
 
+	model "github.com/H-BF/sgroups/internal/models/sgroups"
+	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
+
 	"github.com/H-BF/corlib/pkg/ranges"
 	"github.com/H-BF/protos/pkg/api/common"
 	sg "github.com/H-BF/protos/pkg/api/sgroups"
-	model "github.com/H-BF/sgroups/internal/models/sgroups"
-	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -87,5 +88,13 @@ func (r sgRule) from(src *sg.Rule) error {
 	}
 	portsRange{PortRanges: &r.PortsFrom}.from(src.GetPortsFrom())
 	portsRange{PortRanges: &r.PortsTo}.from(src.GetPortsTo())
+	if r.PortsFrom.Len() == 0 {
+		return status.Errorf(codes.InvalidArgument,
+			"'portFrom' is empty in SG rule %s", r)
+	}
+	if r.PortsTo.Len() == 0 {
+		return status.Errorf(codes.InvalidArgument,
+			"'portTo' is empty in SG rule %s", r)
+	}
 	return nil
 }
