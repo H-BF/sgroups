@@ -374,7 +374,7 @@ func (bt *batch) addOutChains(rules cases.LocalRules) {
 						sportSet := bt.sets.at(sport)
 						dportSet := bt.sets.at(dport)
 						daddrSet := bt.sets.at(daddr)
-						if daddrSet == nil {
+						if daddrSet == nil || (sportSet == nil && dportSet == nil) {
 							return nil
 						}
 						chn := bt.chains.at(outSGchName)
@@ -467,7 +467,7 @@ func (bt *batch) addInChains(rules cases.LocalRules) {
 						sportSet := bt.sets.at(sport)
 						dportSet := bt.sets.at(dport)
 						saddrSet := bt.sets.at(saddr)
-						if saddrSet == nil {
+						if saddrSet == nil || (sportSet == nil && dportSet == nil) {
 							return nil
 						}
 						chn := bt.chains.at(inSGchName)
