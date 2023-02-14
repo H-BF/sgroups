@@ -88,13 +88,5 @@ func (r sgRule) from(src *sg.Rule) error {
 	}
 	portsRange{PortRanges: &r.PortsFrom}.from(src.GetPortsFrom())
 	portsRange{PortRanges: &r.PortsTo}.from(src.GetPortsTo())
-	if r.PortsFrom.Len() == 0 {
-		return status.Errorf(codes.InvalidArgument,
-			"'portFrom' is empty in SG rule %s", r)
-	}
-	if r.PortsTo.Len() == 0 {
-		return status.Errorf(codes.InvalidArgument,
-			"'portTo' is empty in SG rule %s", r)
-	}
 	return nil
 }

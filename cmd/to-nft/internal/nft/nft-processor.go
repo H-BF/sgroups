@@ -6,17 +6,27 @@ import (
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
 	pkgErr "github.com/H-BF/sgroups/pkg/errors"
 
+	"github.com/H-BF/corlib/logger"
 	sgAPI "github.com/H-BF/protos/pkg/api/sgroups"
 	nftLib "github.com/google/nftables"
 	"go.uber.org/multierr"
 )
 
 // NewNfTablesProcessor creates NfTablesProcessor from SGClient
-func NewNfTablesProcessor(_ context.Context, client SGClient, netNS string) NfTablesProcessor {
-	return &nfTablesProcessorImpl{
+func NewNfTablesProcessor(ctx context.Context, client SGClient, opts ...NfTablesProcessorOpt) NfTablesProcessor {
+	ret := &nfTablesProcessorImpl{
 		sgClient: client,
-		netNS:    netNS,
+		logger:   logger.FromContext(ctx),
 	}
+	for _, o := range opts {
+		switch t := o.(type) {
+		case WithNetNS:
+			ret.netNS = t.NetNS
+		case WithLoger:
+			ret.logger = t.Logger
+		}
+	}
+	return ret
 }
 
 type (
@@ -26,6 +36,7 @@ type (
 	nfTablesProcessorImpl struct {
 		sgClient SGClient
 		netNS    string
+		logger   logger.TypeOfLogger
 	}
 
 	ipVersion = int
@@ -63,7 +74,8 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, conf NetConf) 
 		Name:   "main",
 		Family: nftLib.TableFamilyINet,
 	}
-	err = (&batch{}).execute(tx, tblMain, localRules)
+
+	err = (&batch{log: impl.logger}).execute(tx, tblMain, localRules)
 	if err != nil {
 		return multierr.Combine(ErrNfTablesProcessor, err,
 			pkgErr.ErrDetails{Api: api})

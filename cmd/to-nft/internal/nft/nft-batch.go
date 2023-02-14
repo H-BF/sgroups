@@ -8,6 +8,7 @@ import (
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
+	"github.com/H-BF/corlib/logger"
 	"github.com/c-robinson/iplib"
 	nftLib "github.com/google/nftables"
 	nftLibUtil "github.com/google/nftables/binaryutil"
@@ -37,6 +38,7 @@ type (
 		chains dict[string, *nftLib.Chain]
 
 		jobs *list.List
+		log  logger.TypeOfLogger
 	}
 )
 
@@ -46,9 +48,11 @@ func (bt *batch) init(table *nftLib.Table, locals cases.LocalRules) {
 	bt.table = table
 
 	bt.addJob("", func(tx *nfTablesTx) error {
+		bt.log.Debugf("check and delete table '%s'", table.Name)
 		return delTables(tx, table)
 	})
 	bt.addJob("", func(tx *nfTablesTx) error {
+		bt.log.Debugf("add table '%s'", table.Name)
 		return addTables(tx, table)
 	})
 	bt.addJob("init root chains", func(tx *nfTablesTx) error {
@@ -60,11 +64,13 @@ func (bt *batch) init(table *nftLib.Table, locals cases.LocalRules) {
 			Hooknum:  nftLib.ChainHookForward,
 			Priority: nftLib.ChainPriorityFilter,
 		})
+		bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chnFORWARD)
 
 		fwInChain := tx.AddChain(&nftLib.Chain{
 			Name:  chnFWIN,
 			Table: table,
 		})
+		bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chnFWIN)
 		bt.chains.put(chnFWIN, fwInChain)
 		beginRule().metaNFTRACE(true).
 			applyRule(fwInChain, tx.Conn)
@@ -73,6 +79,7 @@ func (bt *batch) init(table *nftLib.Table, locals cases.LocalRules) {
 			Name:  chnFWOUT,
 			Table: table,
 		})
+		bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chnFWOUT)
 		bt.chains.put(chnFWOUT, fwOutChain)
 		beginRule().metaNFTRACE(true).
 			applyRule(fwOutChain, tx.Conn)
@@ -85,6 +92,7 @@ func (bt *batch) init(table *nftLib.Table, locals cases.LocalRules) {
 			Hooknum:  nftLib.ChainHookOutput,
 			Priority: nftLib.ChainPriorityFilter,
 		})
+		bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chnOUTPUT)
 		bt.chains.put(chnOUTPUT, chnOutput)
 		beginRule().oifname().neqS("lo").counter().
 			go2(chnFWOUT).applyRule(chnOutput, tx.Conn)
@@ -97,6 +105,7 @@ func (bt *batch) init(table *nftLib.Table, locals cases.LocalRules) {
 			Hooknum:  nftLib.ChainHookInput,
 			Priority: nftLib.ChainPriorityFilter,
 		})
+		bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chnINPUT)
 		bt.chains.put(chnINPUT, chnInput)
 		beginRule().
 			ctState(nfte.CtStateBitESTABLISHED|nfte.CtStateBitRELATED).
@@ -105,8 +114,8 @@ func (bt *batch) init(table *nftLib.Table, locals cases.LocalRules) {
 			go2(chnFWIN).applyRule(chnInput, tx.Conn)
 		return nil
 	})
-	bt.addNetSets(locals)
 	bt.addPortSets(locals)
+	bt.addNetSets(locals)
 	bt.addOutChains(locals)
 	bt.addInChains(locals)
 	bt.finalSteps()
@@ -186,42 +195,43 @@ func (bt *batch) addNetSets(locals cases.LocalRules) {
 	)
 
 	_ = locals.IterateNetworks(func(sgName string, nets []net.IPNet, isV6 bool) error {
-		bt.addJob(api, func(tx *nfTablesTx) error {
-			ipV := iplib.IP4Version
-			ty := nftLib.TypeIPAddr
-			if isV6 {
-				ipV = iplib.IP6Version
-				ty = nftLib.TypeIP6Addr
-			}
-			nameOfSet := nameUtils{}.nameOfNetSet(ipV, sgName)
-			if bt.sets.at(nameOfSet) != nil {
-				return nil
-			}
-			var elements []nftLib.SetElement
-			for _, nw := range nets {
-				ones, _ := nw.Mask.Size()
-				netIf := iplib.NewNet(nw.IP, ones)
-				ipLast := iplib.NextIP(netIf.LastAddress())
-				switch ipV {
-				case iplib.IP4Version:
-					if ones < b32 {
-						ipLast = iplib.NextIP(ipLast)
-					}
-					elements = append(elements, nftLib.SetElement{
-						Key:    nw.IP,
-						KeyEnd: ipLast,
-					})
-				case iplib.IP6Version:
-					if ones < b128 {
-						ipLast = iplib.NextIP(ipLast)
-					}
-					elements = append(elements, nftLib.SetElement{
-						Key:    nw.IP,
-						KeyEnd: ipLast,
-					})
+		ipV := iplib.IP4Version
+		ty := nftLib.TypeIPAddr
+		if isV6 {
+			ipV = iplib.IP6Version
+			ty = nftLib.TypeIP6Addr
+		}
+		nameOfSet := nameUtils{}.nameOfNetSet(ipV, sgName)
+		if bt.sets.at(nameOfSet) != nil {
+			return nil
+		}
+		var elements []nftLib.SetElement
+		for i := range nets {
+			nw := nets[i]
+			ones, _ := nw.Mask.Size()
+			netIf := iplib.NewNet(nw.IP, ones)
+			ipLast := iplib.NextIP(netIf.LastAddress())
+			switch ipV {
+			case iplib.IP4Version:
+				if ones < b32 {
+					ipLast = iplib.NextIP(ipLast)
 				}
+				elements = append(elements, nftLib.SetElement{
+					Key:    nw.IP,
+					KeyEnd: ipLast,
+				})
+			case iplib.IP6Version:
+				if ones < b128 {
+					ipLast = iplib.NextIP(ipLast)
+				}
+				elements = append(elements, nftLib.SetElement{
+					Key:    nw.IP,
+					KeyEnd: ipLast,
+				})
 			}
-			if len(elements) > 0 {
+		}
+		if len(elements) > 0 {
+			bt.addJob(api, func(tx *nfTablesTx) error {
 				netSet := &nftLib.Set{
 					Table:    bt.table,
 					KeyType:  ty,
@@ -231,10 +241,12 @@ func (bt *batch) addNetSets(locals cases.LocalRules) {
 				if err := tx.AddSet(netSet, elements); err != nil {
 					return err
 				}
+				bt.log.Debugf("add network(s) set '%s'/'%s'%s",
+					bt.table.Name, nameOfSet, nets)
 				bt.sets.put(netSet.Name, netSet)
-			}
-			return nil
-		})
+				return nil
+			})
+		}
 		return nil
 	})
 }
@@ -279,6 +291,8 @@ func (bt *batch) addPortSets(rules cases.LocalRules) {
 				if err = tx.AddSet(portSet, elemnts); err != nil {
 					return err
 				}
+				bt.log.Debugf("add port(s) set '%s'/%s'%s",
+					bt.table.Name, nameOfSet, pr)
 				bt.sets.put(nameOfSet, portSet)
 			}
 			return nil
@@ -311,6 +325,7 @@ func (bt *batch) addOutChains(rules cases.LocalRules) {
 				Table: bt.table,
 			})
 			bt.chains.put(outSGchName, chn)
+			bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, outSGchName)
 			return nil
 		})
 		defer func() {
@@ -318,6 +333,7 @@ func (bt *batch) addOutChains(rules cases.LocalRules) {
 				ch := bt.chains.at(outSGchName)
 				if !outChainUsed {
 					tx.DelChain(ch)
+					bt.log.Debugf("delete chain '%s'/'%s'", bt.table.Name, outSGchName)
 				} else {
 					beginRule().drop().applyRule(ch, tx.Conn)
 				}
@@ -358,17 +374,23 @@ func (bt *batch) addOutChains(rules cases.LocalRules) {
 						sportSet := bt.sets.at(sport)
 						dportSet := bt.sets.at(dport)
 						daddrSet := bt.sets.at(daddr)
-						if !(sportSet != nil && dportSet != nil) || daddrSet == nil {
+						if daddrSet == nil {
 							return nil
 						}
 						chn := bt.chains.at(outSGchName)
 						switch ipV {
 						case iplib.IP4Version:
-							beginRule().
-								ipProto(tr).daddr4().inSet(daddrSet).
-								ipProto(tr).dport().inSet(dportSet).
-								ipProto(tr).sport().inSet(sportSet).
-								counter().accept().
+							bt.log.Debugf("apply %s-rule(s) to chain '%s'/'%s'",
+								tr, bt.table.Name, outSGchName)
+							b := beginRule().
+								ipProto(tr).daddr4().inSet(daddrSet)
+							if dportSet != nil {
+								b = b.ipProto(tr).dport().inSet(dportSet)
+							}
+							if sportSet != nil {
+								b = b.ipProto(tr).sport().inSet(sportSet)
+							}
+							b.counter().accept().
 								applyRule(chn, tx.Conn)
 						case iplib.IP6Version:
 							// TODO: to impl in future
@@ -395,6 +417,7 @@ func (bt *batch) addInChains(rules cases.LocalRules) {
 				Table: bt.table,
 			})
 			bt.chains.put(inSGchName, chn)
+			bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, inSGchName)
 			return nil
 		})
 		defer func() {
@@ -402,6 +425,8 @@ func (bt *batch) addInChains(rules cases.LocalRules) {
 				ch := bt.chains.at(inSGchName)
 				if !inChainUsed {
 					tx.DelChain(ch)
+					bt.log.Debugf("delete chain '%s'/'%s'",
+						bt.table.Name, inSGchName)
 				} else {
 					beginRule().drop().applyRule(ch, tx.Conn)
 				}
@@ -442,17 +467,23 @@ func (bt *batch) addInChains(rules cases.LocalRules) {
 						sportSet := bt.sets.at(sport)
 						dportSet := bt.sets.at(dport)
 						saddrSet := bt.sets.at(saddr)
-						if !(sportSet != nil && dportSet != nil) || saddrSet == nil {
+						if saddrSet == nil {
 							return nil
 						}
 						chn := bt.chains.at(inSGchName)
 						switch ipV {
 						case iplib.IP4Version:
-							beginRule().
-								ipProto(tr).saddr4().inSet(saddrSet).
-								ipProto(tr).sport().inSet(sportSet).
-								ipProto(tr).dport().inSet(dportSet).
-								counter().accept().
+							bt.log.Debugf("apply %s-rule(s) to chain '%s'/'%s'",
+								tr, bt.table.Name, inSGchName)
+							b := beginRule().
+								ipProto(tr).saddr4().inSet(saddrSet)
+							if sportSet != nil {
+								b = b.ipProto(tr).sport().inSet(sportSet)
+							}
+							if dportSet != nil {
+								b = b.ipProto(tr).dport().inSet(dportSet)
+							}
+							b.counter().accept().
 								applyRule(chn, tx.Conn)
 						case iplib.IP6Version:
 							// TODO: to impl in future

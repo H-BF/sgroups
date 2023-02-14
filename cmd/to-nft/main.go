@@ -103,7 +103,15 @@ func runNftJob(ctx context.Context) error {
 	}
 	defer nlWatcher.Close()
 
-	nftProc = nft.NewNfTablesProcessor(ctx, sgClient, netNs)
+	namedLogger := logger.FromContext(ctx)
+	namedLogger.SugaredLogger = namedLogger.Named("nft")
+	var opts []nft.NfTablesProcessorOpt
+	if len(netNs) > 0 {
+		opts = append(opts, nft.WithNetNS{NetNS: netNs})
+		namedLogger.SugaredLogger = namedLogger.With("NetNS", netNs)
+	}
+	opts = append(opts, nft.WithLoger{Logger: namedLogger})
+	nftProc = nft.NewNfTablesProcessor(ctx, sgClient, opts...)
 	defer nftProc.Close()
 
 	var conf nft.NetConf
