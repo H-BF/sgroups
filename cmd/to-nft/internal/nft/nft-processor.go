@@ -13,17 +13,14 @@ import (
 )
 
 // NewNfTablesProcessor creates NfTablesProcessor from SGClient
-func NewNfTablesProcessor(ctx context.Context, client SGClient, opts ...NfTablesProcessorOpt) NfTablesProcessor {
+func NewNfTablesProcessor(client SGClient, opts ...NfTablesProcessorOpt) NfTablesProcessor {
 	ret := &nfTablesProcessorImpl{
 		sgClient: client,
-		logger:   logger.FromContext(ctx),
 	}
 	for _, o := range opts {
 		switch t := o.(type) {
 		case WithNetNS:
 			ret.netNS = t.NetNS
-		case WithLoger:
-			ret.logger = t.Logger
 		}
 	}
 	return ret
@@ -36,7 +33,6 @@ type (
 	nfTablesProcessorImpl struct {
 		sgClient SGClient
 		netNS    string
-		logger   logger.TypeOfLogger
 	}
 
 	ipVersion = int
@@ -75,7 +71,12 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, conf NetConf) 
 		Family: nftLib.TableFamilyINet,
 	}
 
-	err = (&batch{log: impl.logger}).execute(tx, tblMain, localRules)
+	log := logger.FromContext(ctx)
+	log.SugaredLogger = log.Named("nft")
+	if len(impl.netNS) > 0 {
+		log.SugaredLogger = log.SugaredLogger.With("NetNS", impl.netNS)
+	}
+	err = (&batch{log: log}).execute(tx, tblMain, localRules)
 	if err != nil {
 		return multierr.Combine(ErrNfTablesProcessor, err,
 			pkgErr.ErrDetails{Api: api})
