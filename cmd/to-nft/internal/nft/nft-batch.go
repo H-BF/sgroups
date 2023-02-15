@@ -2,8 +2,10 @@ package nft
 
 import (
 	"container/list"
+	"context"
 	"math"
 	"net"
+	"time"
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
@@ -33,12 +35,14 @@ type (
 	jobf = func(tx *nfTablesTx) error
 
 	batch struct {
+		log        logger.TypeOfLogger
+		txProvider func() (*nfTablesTx, error)
+		retries    int
+
 		table  *nftLib.Table
 		sets   dict[string, *nftLib.Set]
 		chains dict[string, *nftLib.Chain]
-
-		jobs *list.List
-		log  logger.TypeOfLogger
+		jobs   *list.List
 	}
 )
 
@@ -128,18 +132,37 @@ func (bt *batch) addJob(n string, job jobf) {
 	bt.jobs.PushBack(jobItem{name: n, jobf: job})
 }
 
-func (bt *batch) execute(tx *nfTablesTx, table *nftLib.Table, locals cases.LocalRules) error {
+func (bt *batch) execute(ctx context.Context, table *nftLib.Table, locals cases.LocalRules) error {
 	bt.init(table, locals)
-	var err error
-	var it jobItem
+	var (
+		err error
+		it  jobItem
+		tx  *nfTablesTx
+	)
+loop:
 	for el := bt.jobs.Front(); el != nil; el = bt.jobs.Front() {
-		bt.jobs.Remove(el)
-		it = el.Value.(jobItem)
-		if err = it.jobf(tx); err == nil {
-			err = tx.Flush()
-		}
-		if err != nil {
-			break
+		it = bt.jobs.Remove(el).(jobItem)
+		retries := bt.retries
+		for {
+			if tx, err = bt.txProvider(); err != nil {
+				return err
+			}
+			if err = it.jobf(tx); err != nil {
+				_ = tx.Close()
+				break loop
+			}
+			if err = tx.FlushAndClose(); err == nil {
+				break
+			}
+			if retries--; retries >= 0 {
+				select {
+				case <-ctx.Done():
+					err = ctx.Err()
+					break loop
+				case <-time.After(time.Second):
+					bt.log.Debugf("will retry '%s'", it.name)
+				}
+			}
 		}
 	}
 	if err != nil && len(it.name) > 0 {
@@ -291,7 +314,7 @@ func (bt *batch) addPortSets(rules cases.LocalRules) {
 				if err = tx.AddSet(portSet, elemnts); err != nil {
 					return err
 				}
-				bt.log.Debugf("add port(s) set '%s'/%s'%s",
+				bt.log.Debugf("add port(s) set '%s'/'%s'%s",
 					bt.table.Name, nameOfSet, pr)
 				bt.sets.put(nameOfSet, portSet)
 			}

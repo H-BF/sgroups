@@ -44,6 +44,17 @@ func (tx *nfTablesTx) Close() error {
 	return nil
 }
 
+// FlushAndClose does flush and close
+func (tx *nfTablesTx) FlushAndClose() error {
+	c := tx.Conn
+	err := net.ErrClosed
+	tx.commitOnce.Do(func() {
+		err = tx.Flush()
+		_ = c.CloseLasting()
+	})
+	return err
+}
+
 // loadConfig it loads current config (experimental)
 func (tx *nfTablesTx) loadConfig() {
 	type (

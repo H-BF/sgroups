@@ -46,7 +46,6 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, conf NetConf) 
 		err        error
 		localRules cases.LocalRules
 		localSGs   cases.LocalSGs
-		tx         *nfTablesTx
 	)
 
 	localIPsV4, loaclIPsV6 := conf.LocalIPs()
@@ -60,23 +59,23 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, conf NetConf) 
 			err, pkgErr.ErrDetails{Api: api})
 	}
 
-	if tx, err = nfTx(impl.netNS); err != nil { //start nft transaction
-		return multierr.Combine(ErrNfTablesProcessor, err,
-			pkgErr.ErrDetails{Api: api})
-	}
-	defer tx.Close()
-
 	tblMain := &nftLib.Table{
 		Name:   "main",
 		Family: nftLib.TableFamilyINet,
 	}
 
-	log := logger.FromContext(ctx)
-	log.SugaredLogger = log.Named("nft")
+	log := logger.FromContext(ctx).Named("nft")
 	if len(impl.netNS) > 0 {
-		log.SugaredLogger = log.SugaredLogger.With("NetNS", impl.netNS)
+		log = log.WithField("NetNS", impl.netNS)
 	}
-	err = (&batch{log: log}).execute(tx, tblMain, localRules)
+	btch := batch{
+		retries: 9,
+		log:     log,
+		txProvider: func() (*nfTablesTx, error) {
+			return nfTx(impl.netNS)
+		},
+	}
+	err = btch.execute(ctx, tblMain, localRules)
 	if err != nil {
 		return multierr.Combine(ErrNfTablesProcessor, err,
 			pkgErr.ErrDetails{Api: api})
