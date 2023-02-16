@@ -11,6 +11,7 @@ import (
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
 	"github.com/H-BF/corlib/logger"
+	"github.com/H-BF/corlib/pkg/backoff"
 	"github.com/c-robinson/iplib"
 	nftLib "github.com/google/nftables"
 	nftLibUtil "github.com/google/nftables/binaryutil"
@@ -37,91 +38,28 @@ type (
 	batch struct {
 		log        logger.TypeOfLogger
 		txProvider func() (*nfTablesTx, error)
-		retries    int
 
 		table  *nftLib.Table
+		rules  cases.LocalRules
 		sets   dict[string, *nftLib.Set]
 		chains dict[string, *nftLib.Chain]
 		jobs   *list.List
 	}
 )
 
-func (bt *batch) init(table *nftLib.Table, locals cases.LocalRules) {
+func (bt *batch) init(table *nftLib.Table, localRules cases.LocalRules) {
 	bt.sets.clear()
 	bt.chains.clear()
+	bt.jobs = nil
 	bt.table = table
+	bt.rules = localRules
 
-	bt.addJob("", func(tx *nfTablesTx) error {
-		bt.log.Debugf("check and delete table '%s'", table.Name)
-		return delTables(tx, table)
-	})
-	bt.addJob("", func(tx *nfTablesTx) error {
-		bt.log.Debugf("add table '%s'", table.Name)
-		return addTables(tx, table)
-	})
-	bt.addJob("init root chains", func(tx *nfTablesTx) error {
-		_ = tx.AddChain(&nftLib.Chain{
-			Name:     chnFORWARD,
-			Table:    table,
-			Type:     nftLib.ChainTypeFilter,
-			Policy:   val2ptr(nftLib.ChainPolicyAccept),
-			Hooknum:  nftLib.ChainHookForward,
-			Priority: nftLib.ChainPriorityFilter,
-		})
-		bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chnFORWARD)
-
-		fwInChain := tx.AddChain(&nftLib.Chain{
-			Name:  chnFWIN,
-			Table: table,
-		})
-		bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chnFWIN)
-		bt.chains.put(chnFWIN, fwInChain)
-		beginRule().metaNFTRACE(true).
-			applyRule(fwInChain, tx.Conn)
-
-		fwOutChain := tx.AddChain(&nftLib.Chain{
-			Name:  chnFWOUT,
-			Table: table,
-		})
-		bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chnFWOUT)
-		bt.chains.put(chnFWOUT, fwOutChain)
-		beginRule().metaNFTRACE(true).
-			applyRule(fwOutChain, tx.Conn)
-
-		chnOutput := tx.AddChain(&nftLib.Chain{
-			Name:     chnOUTPUT,
-			Table:    table,
-			Type:     nftLib.ChainTypeFilter,
-			Policy:   val2ptr(nftLib.ChainPolicyAccept),
-			Hooknum:  nftLib.ChainHookOutput,
-			Priority: nftLib.ChainPriorityFilter,
-		})
-		bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chnOUTPUT)
-		bt.chains.put(chnOUTPUT, chnOutput)
-		beginRule().oifname().neqS("lo").counter().
-			go2(chnFWOUT).applyRule(chnOutput, tx.Conn)
-
-		chnInput := tx.AddChain(&nftLib.Chain{
-			Name:     chnINPUT,
-			Table:    table,
-			Type:     nftLib.ChainTypeFilter,
-			Policy:   val2ptr(nftLib.ChainPolicyAccept),
-			Hooknum:  nftLib.ChainHookInput,
-			Priority: nftLib.ChainPriorityFilter,
-		})
-		bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chnINPUT)
-		bt.chains.put(chnINPUT, chnInput)
-		beginRule().
-			ctState(nfte.CtStateBitESTABLISHED|nfte.CtStateBitRELATED).
-			accept().applyRule(chnInput, tx.Conn)
-		beginRule().iifname().neqS("lo").counter().
-			go2(chnFWIN).applyRule(chnInput, tx.Conn)
-		return nil
-	})
-	bt.addPortSets(locals)
-	bt.addNetSets(locals)
-	bt.addOutChains(locals)
-	bt.addInChains(locals)
+	bt.initTable()
+	bt.addPortSets()
+	bt.addNetSets()
+	bt.initRootChains()
+	bt.addOutChains()
+	bt.addInChains()
 	bt.finalSteps()
 }
 
@@ -133,16 +71,21 @@ func (bt *batch) addJob(n string, job jobf) {
 }
 
 func (bt *batch) execute(ctx context.Context, table *nftLib.Table, locals cases.LocalRules) error {
-	bt.init(table, locals)
 	var (
 		err error
 		it  jobItem
 		tx  *nfTablesTx
 	)
+	bt.init(table, locals)
+	bkf := backoff.ExponentialBackoffBuilder().
+		WithMultiplier(1.3).
+		WithRandomizationFactor(0).
+		WithMaxElapsedThreshold(20 * time.Second).
+		Build()
 loop:
 	for el := bt.jobs.Front(); el != nil; el = bt.jobs.Front() {
 		it = bt.jobs.Remove(el).(jobItem)
-		retries := bt.retries
+		bkf.Reset()
 		for {
 			if tx, err = bt.txProvider(); err != nil {
 				return err
@@ -154,14 +97,16 @@ loop:
 			if err = tx.FlushAndClose(); err == nil {
 				break
 			}
-			if retries--; retries >= 0 {
-				select {
-				case <-ctx.Done():
-					err = ctx.Err()
-					break loop
-				case <-time.After(time.Second):
-					bt.log.Debugf("will retry '%s'", it.name)
-				}
+			d := bkf.NextBackOff()
+			if d <= 0 {
+				break loop
+			}
+			bt.log.Debugf("'%s' will retry after %s", it.name, d)
+			select {
+			case <-ctx.Done():
+				err = ctx.Err()
+				break loop
+			case <-time.After(d):
 			}
 		}
 	}
@@ -210,14 +155,87 @@ func addTables(tx *nfTablesTx, tbs ...*nftLib.Table) error {
 	return errors.WithMessage(tx.Flush(), api)
 }
 
-func (bt *batch) addNetSets(locals cases.LocalRules) {
+func (bt *batch) initTable() {
+	bt.addJob("", func(tx *nfTablesTx) error {
+		bt.log.Debugf("check and delete table '%s'", bt.table.Name)
+		return delTables(tx, bt.table)
+	})
+	bt.addJob("", func(tx *nfTablesTx) error {
+		bt.log.Debugf("add table '%s'", bt.table.Name)
+		return addTables(tx, bt.table)
+	})
+}
+
+func (bt *batch) initRootChains() {
+	bt.addJob("init root chains", func(tx *nfTablesTx) error {
+		_ = tx.AddChain(&nftLib.Chain{
+			Name:     chnFORWARD,
+			Table:    bt.table,
+			Type:     nftLib.ChainTypeFilter,
+			Policy:   val2ptr(nftLib.ChainPolicyAccept),
+			Hooknum:  nftLib.ChainHookForward,
+			Priority: nftLib.ChainPriorityFilter,
+		})
+		bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chnFORWARD)
+
+		fwInChain := tx.AddChain(&nftLib.Chain{
+			Name:  chnFWIN,
+			Table: bt.table,
+		})
+		bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chnFWIN)
+		bt.chains.put(chnFWIN, fwInChain)
+		beginRule().metaNFTRACE(true).
+			applyRule(fwInChain, tx.Conn)
+
+		fwOutChain := tx.AddChain(&nftLib.Chain{
+			Name:  chnFWOUT,
+			Table: bt.table,
+		})
+		bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chnFWOUT)
+		bt.chains.put(chnFWOUT, fwOutChain)
+		beginRule().metaNFTRACE(true).
+			applyRule(fwOutChain, tx.Conn)
+
+		chnOutput := tx.AddChain(&nftLib.Chain{
+			Name:     chnOUTPUT,
+			Table:    bt.table,
+			Type:     nftLib.ChainTypeFilter,
+			Policy:   val2ptr(nftLib.ChainPolicyAccept),
+			Hooknum:  nftLib.ChainHookOutput,
+			Priority: nftLib.ChainPriorityFilter,
+		})
+		bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chnOUTPUT)
+		bt.chains.put(chnOUTPUT, chnOutput)
+		beginRule().oifname().neqS("lo").counter().
+			go2(chnFWOUT).applyRule(chnOutput, tx.Conn)
+
+		chnInput := tx.AddChain(&nftLib.Chain{
+			Name:     chnINPUT,
+			Table:    bt.table,
+			Type:     nftLib.ChainTypeFilter,
+			Policy:   val2ptr(nftLib.ChainPolicyAccept),
+			Hooknum:  nftLib.ChainHookInput,
+			Priority: nftLib.ChainPriorityFilter,
+		})
+		bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chnINPUT)
+		bt.chains.put(chnINPUT, chnInput)
+		beginRule().
+			ctState(nfte.CtStateBitESTABLISHED|nfte.CtStateBitRELATED).
+			accept().applyRule(chnInput, tx.Conn)
+		beginRule().iifname().neqS("lo").counter().
+			go2(chnFWIN).applyRule(chnInput, tx.Conn)
+		return nil
+	})
+}
+
+func (bt *batch) addNetSets() {
 	const (
 		api  = "add-net-sets"
 		b32  = 32
 		b128 = 128
 	)
 
-	_ = locals.IterateNetworks(func(sgName string, nets []net.IPNet, isV6 bool) error {
+	_ = bt.rules.IterateNetworks(func(sgName string, nets []net.IPNet, isV6 bool) error {
 		ipV := iplib.IP4Version
 		ty := nftLib.TypeIPAddr
 		if isV6 {
@@ -274,9 +292,10 @@ func (bt *batch) addNetSets(locals cases.LocalRules) {
 	})
 }
 
-func (bt *batch) addPortSets(rules cases.LocalRules) {
+func (bt *batch) addPortSets() {
 	const api = "add-port-sets"
 
+	rules := bt.rules
 	apply := func(nameOfSet string, pr model.PortRanges) {
 		bt.addJob(api, func(tx *nfTablesTx) error {
 			var (
@@ -335,11 +354,11 @@ func (bt *batch) addPortSets(rules cases.LocalRules) {
 	}
 }
 
-func (bt *batch) addOutChains(rules cases.LocalRules) {
+func (bt *batch) addOutChains() {
 	const api = "make-out-chains"
 
 	var names nameUtils
-	_ = rules.TemplatesOut(func(outSG string, inSGs []string) error {
+	_ = bt.rules.TemplatesOut(func(outSG string, inSGs []string) error {
 		var outChainUsed bool
 		outSGchName := chnFWOUT + "-" + outSG
 		bt.addJob(api, func(tx *nfTablesTx) error {
@@ -427,11 +446,11 @@ func (bt *batch) addOutChains(rules cases.LocalRules) {
 	})
 }
 
-func (bt *batch) addInChains(rules cases.LocalRules) {
+func (bt *batch) addInChains() {
 	const api = "make-in-chains"
 
 	var names nameUtils
-	_ = rules.TemplatesIn(func(outSGs []string, inSG string) error {
+	_ = bt.rules.TemplatesIn(func(outSGs []string, inSG string) error {
 		var inChainUsed bool
 		inSGchName := chnFWIN + "-" + inSG
 		bt.addJob(api, func(tx *nfTablesTx) error {

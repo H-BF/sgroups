@@ -69,8 +69,7 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, conf NetConf) 
 		log = log.WithField("NetNS", impl.netNS)
 	}
 	btch := batch{
-		retries: 9,
-		log:     log,
+		log: log,
 		txProvider: func() (*nfTablesTx, error) {
 			return nfTx(impl.netNS)
 		},
