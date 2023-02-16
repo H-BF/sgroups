@@ -257,19 +257,25 @@ func (bt *batch) addNetSets() {
 				if ones < b32 {
 					ipLast = iplib.NextIP(ipLast)
 				}
-				elements = append(elements, nftLib.SetElement{
-					Key:    nw.IP,
-					KeyEnd: ipLast,
-				})
 			case iplib.IP6Version:
 				if ones < b128 {
 					ipLast = iplib.NextIP(ipLast)
 				}
-				elements = append(elements, nftLib.SetElement{
-					Key:    nw.IP,
-					KeyEnd: ipLast,
-				})
 			}
+			/*//TODO: need expert opinion
+			elements = append(elements, nftLib.SetElement{
+				Key:    nw.IP,
+				KeyEnd: ipLast,
+			})
+			*/
+			elements = append(elements,
+				nftLib.SetElement{
+					Key: nw.IP,
+				},
+				nftLib.SetElement{
+					IntervalEnd: true,
+					Key:         ipLast,
+				})
 		}
 		if len(elements) > 0 {
 			bt.addJob(api, func(tx *nfTablesTx) error {
@@ -312,10 +318,22 @@ func (bt *batch) addPortSets() {
 					err = ErrPortRange
 					return false //error
 				}
+				/*//TODO: need expert opinion
 				elemnts = append(elemnts,
 					nftLib.SetElement{
 						Key:    be.PutUint16(uint16(aVal)),
 						KeyEnd: be.PutUint16(uint16(bVal)),
+					},
+				)
+				*/
+				//TODO: explained by reverve test
+				elemnts = append(elemnts,
+					nftLib.SetElement{
+						Key: be.PutUint16(uint16(aVal)),
+					},
+					nftLib.SetElement{
+						IntervalEnd: true,
+						Key:         be.PutUint16(uint16(bVal)),
 					},
 				)
 				return true

@@ -55,10 +55,12 @@ linters:
     - nakedret
     - misspell
     - tagliatelle
+    - staticcheck
+    - gosimple
     #- wrapcheck
     #- gofmt
     # - goimports - your IDE should do this automatically as 'On save' action anyways
-    - megacheck # (staticcheck + gosimple + unused in one linter)
+    #- megacheck # (staticcheck + gosimple + unused in one linter)
 
 issues:
   exclude-use-default: false
