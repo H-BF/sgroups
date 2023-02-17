@@ -5,6 +5,7 @@ import (
 	"context"
 	"math"
 	"net"
+	"os"
 	"time"
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
@@ -25,6 +26,10 @@ const (
 	chnINPUT   = "INPUT"
 	chnFWIN    = "FW-IN"
 	chnFWOUT   = "FW-OUT"
+)
+
+const ( //TODO: it just for testing purpose
+	FWINS_ACCEPT = "ACCEPT_FWINS"
 )
 
 type (
@@ -76,6 +81,11 @@ func (bt *batch) execute(ctx context.Context, table *nftLib.Table, locals cases.
 		it  jobItem
 		tx  *nfTablesTx
 	)
+	defer func() {
+		if tx != nil {
+			_ = tx.Close()
+		}
+	}()
 	bt.init(table, locals)
 	bkf := backoff.ExponentialBackoffBuilder().
 		WithMultiplier(1.3).
@@ -87,16 +97,20 @@ loop:
 		it = bt.jobs.Remove(el).(jobItem)
 		bkf.Reset()
 		for {
-			if tx, err = bt.txProvider(); err != nil {
-				return err
+			if tx == nil {
+				tx, err = bt.txProvider()
+				if err != nil {
+					return err
+				}
 			}
 			if err = it.jobf(tx); err != nil {
-				_ = tx.Close()
 				break loop
 			}
-			if err = tx.FlushAndClose(); err == nil {
+			if err = tx.Flush(); err == nil {
 				break
 			}
+			_ = tx.Close()
+			tx = nil
 			d := bkf.NextBackOff()
 			if d <= 0 {
 				break loop
@@ -487,7 +501,7 @@ func (bt *batch) addInChains() {
 					tx.DelChain(ch)
 					bt.log.Debugf("delete chain '%s'/'%s'",
 						bt.table.Name, inSGchName)
-				} else {
+				} else if len(os.Getenv(FWINS_ACCEPT)) == 0 {
 					beginRule().drop().applyRule(ch, tx.Conn)
 				}
 				return nil
@@ -559,8 +573,10 @@ func (bt *batch) addInChains() {
 
 func (bt *batch) finalSteps() {
 	bt.addJob("final", func(tx *nfTablesTx) error {
-		beginRule().drop().
-			applyRule(bt.chains.at(chnFWIN), tx.Conn)
+		if len(os.Getenv(FWINS_ACCEPT)) == 0 {
+			beginRule().drop().
+				applyRule(bt.chains.at(chnFWIN), tx.Conn)
+		}
 		beginRule().drop().
 			applyRule(bt.chains.at(chnFWOUT), tx.Conn)
 		return nil
