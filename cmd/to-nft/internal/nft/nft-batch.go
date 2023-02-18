@@ -220,6 +220,9 @@ func (bt *batch) initRootChains() {
 		})
 		bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chnOUTPUT)
 		bt.chains.put(chnOUTPUT, chnOutput)
+		beginRule().
+			ctState(nfte.CtStateBitESTABLISHED|nfte.CtStateBitRELATED).
+			accept().applyRule(chnOutput, tx.Conn)
 		beginRule().oifname().neqS("lo").counter().
 			go2(chnFWOUT).applyRule(chnOutput, tx.Conn)
 
