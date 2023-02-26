@@ -13,9 +13,9 @@ func main() {
 				Schema:               details.SGroupsConfigSchema(),
 				ConfigureContextFunc: details.SGroupsConfigure,
 				ResourcesMap: map[string]*schema.Resource{
-					details.RcNetworksName: details.SGroupsRcNetworks(),
-					details.RcSGsName:      details.SGroupsRcSGs(),
-					details.RcRulesName:    details.SGroupsRcRules(),
+					details.RcLabelNetworks: details.SGroupsRcNetworks(),
+					details.RcLabelSGs:      details.SGroupsRcSGs(),
+					details.RcLabelRules:    details.SGroupsRcRules(),
 				},
 			}
 		},

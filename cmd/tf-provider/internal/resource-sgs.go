@@ -4,8 +4,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-// RcSGsName -
-const RcSGsName = "sec-groups"
+// RcLabelSGs -
+const RcLabelSGs = "sec-groups"
 
 // SGroupsRcSGs SGs resource
 func SGroupsRcSGs() *schema.Resource {

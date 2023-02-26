@@ -1,8 +1,9 @@
 package sgroups
 
 import (
-	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
+
+	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/pkg/errors"
 )
 
