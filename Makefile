@@ -114,3 +114,16 @@ endif
 	env GOOS=$(os) GOARCH=$(arch) \
 	$(GO) build -ldflags="$(LDFLAGS)" -o $(OUT) $(CURDIR)/cmd/$(APP) &&\
 	echo -=OK=- 
+
+
+.PHONY: tf-provider	
+tf-provider: | go-deps ##build SGroups Terraform provider
+tf-provider: APP=tf-provider
+tf-provider:
+	@echo build \"$(APP)\" for OS/ARCH=\"$(os)/$(arch)\" ... && \
+	echo into \"$(OUT)\" && \
+	env GOOS=$(os) GOARCH=$(arch) \
+	$(GO) build -ldflags="$(LDFLAGS)" -o $(OUT) $(CURDIR)/cmd/$(APP) &&\
+	echo -=OK=- 
+
+
