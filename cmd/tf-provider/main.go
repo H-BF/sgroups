@@ -1,13 +1,23 @@
 package main
 
 import (
+	"os"
+	"sync"
+
 	details "github.com/H-BF/sgroups/cmd/tf-provider/internal"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
 )
 
 func main() {
-	plugin.Serve(&plugin.ServeOpts{
+	logger := hclog.New(&hclog.LoggerOptions{
+		Level:      hclog.Debug,
+		JSONFormat: true,
+		Output:     os.Stdout,
+		Mutex:      new(sync.Mutex),
+	})
+	opts := &plugin.ServeOpts{
 		ProviderFunc: func() *schema.Provider {
 			return &schema.Provider{
 				Schema:               details.SGroupsConfigSchema(),
@@ -19,5 +29,8 @@ func main() {
 				},
 			}
 		},
-	})
+		NoLogOutputOverride: true,
+		Logger:              logger,
+	}
+	plugin.Serve(opts)
 }

@@ -15,31 +15,39 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-// RcLabelNetworks -
-const RcLabelNetworks = "networks"
+const (
+	// RcLabelNetworks -
+	RcLabelNetworks = "networks"
 
-// RcLabelItems -
-const RcLabelItems = "items"
+	// RcLabelItems -
+	RcLabelItems = "items"
 
-// RcLabelName -
-const RcLabelName = "name"
+	// RcLabelName -
+	RcLabelName = "name"
 
-// RcLabelCIDR -
-const RcLabelCIDR = "cidr"
+	// RcLabelCIDR -
+	RcLabelCIDR = "cidr"
+)
+
+/*// resource skeleton
+items:
+- name: nw1
+  cidr: 1.1.1.0/24
+- name: nw2
+  cidr: 2.2.2.0/24
+*/
 
 // SGroupsRcNetworks networks resource
 func SGroupsRcNetworks() *schema.Resource {
 	return &schema.Resource{
-		Description:   fmt.Sprintf("represent networks resource in '%s' provider", SGroupsProvider),
+		Description:   fmt.Sprintf("represents networks resource in '%s' provider", SGroupsProvider),
 		CreateContext: networksUpsert,
-		UpdateContext: networksUpsert,
+		//UpdateContext: networksUpsert,
 		DeleteContext: networksDelete,
 		Schema: map[string]*schema.Schema{
 			RcLabelItems: {
 				Description: "newtwork list",
 				Type:        schema.TypeList,
-				Required:    true,
-				MinItems:    1,
 				Elem: &schema.Resource{
 					Description: "network element",
 					Schema: map[string]*schema.Schema{
@@ -73,25 +81,28 @@ func SGroupsRcNetworks() *schema.Resource {
 }
 
 func networksUpsert(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
-	items := rd.Get(RcLabelItems).([]interface{})
+	raw, ok := rd.GetOk(RcLabelItems)
 	var names []string
 	var nws []*sgroupsAPI.Network
-	for _, item := range items {
-		it := item.(map[string]interface{})
-		name := it[RcLabelName].(string)
-		cidr := it[RcLabelCIDR].(string)
-		names = append(names, strings.ToLower(name))
-		nws = append(nws, &sgroupsAPI.Network{
-			Name:    name,
-			Network: &common.Networks_NetIP{CIDR: cidr},
+	if ok {
+		items := raw.([]interface{})
+		for _, item := range items {
+			it := item.(map[string]interface{})
+			name := it[RcLabelName].(string)
+			cidr := it[RcLabelCIDR].(string)
+			names = append(names, strings.ToLower(name))
+			nws = append(nws, &sgroupsAPI.Network{
+				Name:    name,
+				Network: &common.Networks_NetIP{CIDR: cidr},
+			})
+		}
+		sort.Strings(names)
+		_ = slice.DedupSlice(&names, func(i, j int) bool {
+			return names[i] == names[j]
 		})
 	}
-	sort.Strings(names)
-	_ = slice.DedupSlice(&names, func(i, j int) bool {
-		return names[i] == names[j]
-	})
 	req := sgroupsAPI.SyncReq{
-		SyncOp: sgroupsAPI.SyncReq_Upsert,
+		SyncOp: sgroupsAPI.SyncReq_FullSync,
 		Subject: &sgroupsAPI.SyncReq_Networks{
 			Networks: &sgroupsAPI.SyncNetworks{
 				Networks: nws,
@@ -103,12 +114,23 @@ func networksUpsert(ctx context.Context, rd *schema.ResourceData, i interface{})
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	rd.SetId(strings.Join(names, ";"))
+	if len(names) == 0 {
+		rd.SetId("<none>")
+	} else {
+		rd.SetId(strings.Join(names, ";"))
+	}
 	return nil
 }
 
 func networksDelete(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
-	items := rd.Get(RcLabelItems).([]interface{})
+	raw, ok := rd.GetOk(RcLabelItems)
+	if !ok {
+		return nil
+	}
+	items := raw.([]interface{})
+	if len(items) == 0 {
+		return nil
+	}
 	var nws []*sgroupsAPI.Network
 	for _, item := range items {
 		it := item.(map[string]interface{})
