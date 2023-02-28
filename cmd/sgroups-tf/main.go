@@ -4,7 +4,7 @@ import (
 	"os"
 	"sync"
 
-	details "github.com/H-BF/sgroups/cmd/tf-provider/internal"
+	details "github.com/H-BF/sgroups/cmd/sgroups-tf/internal"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"

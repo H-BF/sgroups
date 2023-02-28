@@ -116,10 +116,10 @@ endif
 	echo -=OK=- 
 
 
-.PHONY: tf-provider	
-tf-provider: | go-deps ##build SGroups Terraform provider
-tf-provider: APP=tf-provider
-tf-provider:
+.PHONY: sgroups-tf	
+sgroups-tf: | go-deps ##build SGroups Terraform provider
+sgroups-tf: APP=sgroups-tf
+sgroups-tf:
 	@echo build \"$(APP)\" for OS/ARCH=\"$(os)/$(arch)\" ... && \
 	echo into \"$(OUT)\" && \
 	env GOOS=$(os) GOARCH=$(arch) \
