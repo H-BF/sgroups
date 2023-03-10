@@ -12,19 +12,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-// RcLabelSGs -
-const RcLabelSGs = "sec-groups"
+// RcSGs -
+const RcSGs = SGroupsProvider + "_groups"
 
 /*// resource skeleton
 items:
 - name: sg1
-  networks:
-  - name: nw1
-  - name: nw2
+  networks: "nw1, nw2"
 - name: sg2
-  networks:
-  - name: nw3
-  - name: nw4
+  networks: "nw3"
 */
 
 // SGroupsRcSGs SGs resource
@@ -33,9 +29,14 @@ func SGroupsRcSGs() *schema.Resource {
 		Description:   fmt.Sprintf("represents SecurityGroups (SG) resource in '%s' provider", SGroupsProvider),
 		CreateContext: sgsUpsert,
 		DeleteContext: sgsDelete,
+		ReadContext: func(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+			return nil //TODO: Should implement
+		},
 		Schema: map[string]*schema.Schema{
 			RcLabelItems: {
-				Type: schema.TypeList,
+				Optional: true,
+				ForceNew: true,
+				Type:     schema.TypeList,
 				Elem: &schema.Resource{
 					Description: "SecurityGroup element",
 					Schema: map[string]*schema.Schema{
@@ -46,18 +47,8 @@ func SGroupsRcSGs() *schema.Resource {
 						},
 						RcLabelNetworks: {
 							Description: "associated set of network(s)",
-							Type:        schema.TypeList,
-							Required:    false,
-							Elem: &schema.Resource{
-								Description: "network item",
-								Schema: map[string]*schema.Schema{
-									RcLabelName: {
-										Description: "network name",
-										Type:        schema.TypeString,
-										Required:    true,
-									},
-								},
-							},
+							Type:        schema.TypeString,
+							Optional:    true,
 						},
 					},
 				},
@@ -78,6 +69,18 @@ func sgsUpsert(ctx context.Context, rd *schema.ResourceData, i interface{}) diag
 			}
 			names = append(names, sg.Name)
 			if raw, ok := it[RcLabelNetworks]; ok {
+				nwNames := strings.Split(raw.(string), ",")
+				for i := range nwNames {
+					if nwName := strings.TrimSpace(nwNames[i]); len(nwName) > 0 {
+						sg.Networks = append(sg.Networks,
+							&sgroupsAPI.Network{
+								Name: nwName,
+							})
+					}
+				}
+			}
+			/*//
+			if raw, ok := it[RcLabelNetworks]; ok {
 				for _, nwItem := range raw.([]interface{}) {
 					nw := nwItem.(map[string]interface{})
 					sg.Networks = append(sg.Networks,
@@ -87,6 +90,7 @@ func sgsUpsert(ctx context.Context, rd *schema.ResourceData, i interface{}) diag
 					)
 				}
 			}
+			*/
 			sgs = append(sgs, &sg)
 		}
 		sort.Strings(names)

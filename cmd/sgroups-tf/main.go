@@ -23,14 +23,16 @@ func main() {
 				Schema:               details.SGroupsConfigSchema(),
 				ConfigureContextFunc: details.SGroupsConfigure,
 				ResourcesMap: map[string]*schema.Resource{
-					details.RcLabelNetworks: details.SGroupsRcNetworks(),
-					details.RcLabelSGs:      details.SGroupsRcSGs(),
-					details.RcLabelRules:    details.SGroupsRcRules(),
+					details.RcNetworks: details.SGroupsRcNetworks(),
+					details.RcSGs:      details.SGroupsRcSGs(),
+					details.RcRules:    details.SGroupsRcRules(),
 				},
 			}
 		},
 		NoLogOutputOverride: true,
 		Logger:              logger,
+		//Debug:               true,
+		//ProviderAddr:        "registry.terraform.io/h-bf/sgroups",
 	}
 	plugin.Serve(opts)
 }

@@ -17,32 +17,32 @@ import (
 )
 
 const (
-	// RcLabelRules -
-	RcLabelRules = "sg-rules"
+	// RcRules -
+	RcRules = SGroupsProvider + "_rules"
 	// RcLabelSgFrom -
-	RcLabelSgFrom = "sg-from"
+	RcLabelSgFrom = "sg_from"
 	// RcLabelSgTo -
-	RcLabelSgTo = "sg-to"
+	RcLabelSgTo = "sg_to"
 	// RcLabelProto -
 	RcLabelProto = "proto"
 	// RcLabelPortsFrom -
-	RcLabelPortsFrom = "ports-from"
+	RcLabelPortsFrom = "ports_from"
 	// RcLabelPortsTo -
-	RcLabelPortsTo = "ports-to"
+	RcLabelPortsTo = "ports_to"
 )
 
 /*// respurce skeleton
 items:
 - proto: TCP
-  sg-from: sg1
-  sg-to: sg2
-  ports-from: 200-300 500-600 22 24
-  ports-to: 200-300 500-600 22 24
+  sg_from: sg1
+  sg_to: sg2
+  ports_from: 200-300 500-600 22 24
+  ports_to: 200-300 500-600 22 24
 - proto: UDP
-  sg-from: sg1
-  sg-to: sg2
-  ports-from: 200-300 500-600 22 24
-  ports-to: 200-300 500-600 22 24
+  sg_from: sg1
+  sg_to: sg2
+  ports_from: 200-300 500-600 22 24
+  ports_to: 200-300 500-600 22 24
 */
 
 // SGroupsRcRules sg-rules resource
@@ -52,11 +52,15 @@ func SGroupsRcRules() *schema.Resource {
 		CreateContext: rulesUpsert,
 		//UpdateContext: rulesUpsert,
 		DeleteContext: rulesDelete,
+		ReadContext: func(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+			return nil //TODO: Should implement
+		},
 		Schema: map[string]*schema.Schema{
 			RcLabelItems: {
+				Optional:    true,
+				ForceNew:    true,
 				Description: "SG rules list",
 				Type:        schema.TypeList,
-				Required:    true,
 				Elem: &schema.Resource{
 					Description: "SG rule element",
 					Schema: map[string]*schema.Schema{
@@ -92,11 +96,13 @@ func SGroupsRcRules() *schema.Resource {
 							Description:      "port ranges from",
 							Type:             schema.TypeString,
 							ValidateDiagFunc: validatePortRanges,
+							Optional:         true,
 						},
 						RcLabelPortsTo: {
 							Description:      "port ranges to",
 							Type:             schema.TypeString,
 							ValidateDiagFunc: validatePortRanges,
+							Optional:         true,
 						},
 					},
 				},
@@ -113,7 +119,7 @@ func rulesUpsert(ctx context.Context, rd *schema.ResourceData, i interface{}) di
 		items := raw.([]interface{})
 		for _, it := range items {
 			item := it.(map[string]interface{})
-			proto := common.Networks_NetIP_Transport_value[strings.ToUpper(item[RcLabelPortsFrom].(string))]
+			proto := common.Networks_NetIP_Transport_value[strings.ToUpper(item[RcLabelProto].(string))]
 			rule := sgroupsAPI.Rule{
 				Transport: common.Networks_NetIP_Transport(proto),
 				SgFrom: &sgroupsAPI.SecGroup{
@@ -195,7 +201,7 @@ func rulesDelete(ctx context.Context, rd *schema.ResourceData, i interface{}) di
 	var syncRules sgroupsAPI.SyncSGRules
 	for _, it := range items {
 		item := it.(map[string]interface{})
-		proto := common.Networks_NetIP_Transport_value[strings.ToUpper(item[RcLabelPortsFrom].(string))]
+		proto := common.Networks_NetIP_Transport_value[strings.ToUpper(item[RcLabelProto].(string))]
 		rule := sgroupsAPI.Rule{
 			Transport: common.Networks_NetIP_Transport(proto),
 			SgFrom: &sgroupsAPI.SecGroup{

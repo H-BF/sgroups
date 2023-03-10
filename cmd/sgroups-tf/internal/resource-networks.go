@@ -16,6 +16,9 @@ import (
 )
 
 const (
+	// RcNetworks -
+	RcNetworks = SGroupsProvider + "_networks"
+
 	// RcLabelNetworks -
 	RcLabelNetworks = "networks"
 
@@ -44,8 +47,13 @@ func SGroupsRcNetworks() *schema.Resource {
 		CreateContext: networksUpsert,
 		//UpdateContext: networksUpsert,
 		DeleteContext: networksDelete,
+		ReadContext: func(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+			return nil //TODO: Should implement
+		},
 		Schema: map[string]*schema.Schema{
 			RcLabelItems: {
+				Optional:    true,
+				ForceNew:    true,
 				Description: "newtwork list",
 				Type:        schema.TypeList,
 				Elem: &schema.Resource{
