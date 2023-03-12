@@ -79,18 +79,6 @@ func sgsUpsert(ctx context.Context, rd *schema.ResourceData, i interface{}) diag
 					}
 				}
 			}
-			/*//
-			if raw, ok := it[RcLabelNetworks]; ok {
-				for _, nwItem := range raw.([]interface{}) {
-					nw := nwItem.(map[string]interface{})
-					sg.Networks = append(sg.Networks,
-						&sgroupsAPI.Network{
-							Name: nw[RcLabelName].(string),
-						},
-					)
-				}
-			}
-			*/
 			sgs = append(sgs, &sg)
 		}
 		sort.Strings(names)

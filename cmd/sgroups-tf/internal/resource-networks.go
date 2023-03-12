@@ -110,7 +110,7 @@ func networksUpsert(ctx context.Context, rd *schema.ResourceData, i interface{})
 		})
 	}
 	req := sgroupsAPI.SyncReq{
-		SyncOp: sgroupsAPI.SyncReq_FullSync,
+		SyncOp: sgroupsAPI.SyncReq_Upsert,
 		Subject: &sgroupsAPI.SyncReq_Networks{
 			Networks: &sgroupsAPI.SyncNetworks{
 				Networks: nws,

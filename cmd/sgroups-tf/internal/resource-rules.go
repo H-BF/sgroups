@@ -167,7 +167,7 @@ func rulesUpsert(ctx context.Context, rd *schema.ResourceData, i interface{}) di
 		}
 	}
 	req := sgroupsAPI.SyncReq{
-		SyncOp: sgroupsAPI.SyncReq_FullSync,
+		SyncOp: sgroupsAPI.SyncReq_Upsert,
 		Subject: &sgroupsAPI.SyncReq_SgRules{
 			SgRules: &syncRules,
 		},
