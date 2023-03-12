@@ -45,15 +45,15 @@ func SGroupsRcNetworks() *schema.Resource {
 	return &schema.Resource{
 		Description:   fmt.Sprintf("represents networks resource in '%s' provider", SGroupsProvider),
 		CreateContext: networksUpsert,
-		//UpdateContext: networksUpsert,
+		UpdateContext: networksUpsert,
 		DeleteContext: networksDelete,
 		ReadContext: func(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
 			return nil //TODO: Should implement
 		},
 		Schema: map[string]*schema.Schema{
 			RcLabelItems: {
-				Optional:    true,
-				ForceNew:    true,
+				Optional: true,
+				//ForceNew:    true,
 				Description: "newtwork list",
 				Type:        schema.TypeList,
 				Elem: &schema.Resource{

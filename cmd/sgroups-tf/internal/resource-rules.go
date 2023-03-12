@@ -50,15 +50,15 @@ func SGroupsRcRules() *schema.Resource {
 	return &schema.Resource{
 		Description:   fmt.Sprintf("represents SG rules resource in '%s' provider", SGroupsProvider),
 		CreateContext: rulesUpsert,
-		//UpdateContext: rulesUpsert,
+		UpdateContext: rulesUpsert,
 		DeleteContext: rulesDelete,
 		ReadContext: func(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
 			return nil //TODO: Should implement
 		},
 		Schema: map[string]*schema.Schema{
 			RcLabelItems: {
-				Optional:    true,
-				ForceNew:    true,
+				Optional: true,
+				//ForceNew:    true,
 				Description: "SG rules list",
 				Type:        schema.TypeList,
 				Elem: &schema.Resource{

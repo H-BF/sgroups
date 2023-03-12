@@ -28,6 +28,7 @@ func SGroupsRcSGs() *schema.Resource {
 	return &schema.Resource{
 		Description:   fmt.Sprintf("represents SecurityGroups (SG) resource in '%s' provider", SGroupsProvider),
 		CreateContext: sgsUpsert,
+		UpdateContext: sgsUpsert,
 		DeleteContext: sgsDelete,
 		ReadContext: func(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
 			return nil //TODO: Should implement
@@ -35,8 +36,8 @@ func SGroupsRcSGs() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			RcLabelItems: {
 				Optional: true,
-				ForceNew: true,
-				Type:     schema.TypeList,
+				//ForceNew: true,
+				Type: schema.TypeList,
 				Elem: &schema.Resource{
 					Description: "SecurityGroup element",
 					Schema: map[string]*schema.Schema{
