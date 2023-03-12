@@ -119,6 +119,7 @@ endif
 .PHONY: sgroups-tf	
 sgroups-tf: | go-deps ##build SGroups Terraform provider
 sgroups-tf: APP=sgroups-tf
+sgroups-tf: OUT=$(CURDIR)/bin/terraform-provider-sgroups
 sgroups-tf:
 	@echo build \"$(APP)\" for OS/ARCH=\"$(os)/$(arch)\" ... && \
 	echo into \"$(OUT)\" && \

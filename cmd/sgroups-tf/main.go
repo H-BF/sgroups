@@ -12,7 +12,8 @@ import (
 
 func main() {
 	logger := hclog.New(&hclog.LoggerOptions{
-		Level:      hclog.Debug,
+		//Level:      hclog.Debug,
+		Level:      hclog.Error,
 		JSONFormat: true,
 		Output:     os.Stdout,
 		Mutex:      new(sync.Mutex),
@@ -29,8 +30,8 @@ func main() {
 				},
 			}
 		},
-		NoLogOutputOverride: true,
-		Logger:              logger,
+		Logger: logger,
+		//NoLogOutputOverride: true,
 		//Debug:               true,
 		//ProviderAddr:        "registry.terraform.io/h-bf/sgroups",
 	}
