@@ -19,6 +19,7 @@ func setupSgServer(ctx context.Context) (*server.APIServer, error) {
 	{
 		m, e := registry.NewMemDB(registry.TblSecGroups,
 			registry.TblSecRules, registry.TblNetworks,
+			registry.TblSyncStatus,
 			registry.IntegrityChecker4SG(),
 			registry.IntegrityChecker4Rules())
 		if e != nil {

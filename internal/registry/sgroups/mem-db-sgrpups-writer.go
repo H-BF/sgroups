@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"time"
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	"github.com/hashicorp/go-memdb"
@@ -34,22 +35,28 @@ func (wr sGroupsMemDbWriter) SyncNetworks(ctx context.Context, networks []model.
 	})
 
 	var deleted []model.Network
+	var changed bool
 	h := syncHelper[model.Network, string]{
 		delete: func(obj *model.Network) error {
 			e := wr.writer.Delete(TblNetworks, obj)
 			if e == nil || errors.Is(e, memdb.ErrNotFound) {
+				changed = true
 				deleted = append(deleted, *obj)
 			}
 			return e
 		},
 		upsert: func(obj *model.Network) error {
-			return wr.writer.Upsert(TblNetworks, obj)
+			e := wr.writer.Upsert(TblNetworks, obj)
+			changed = changed || e == nil
+			return e
 		},
 		postprocess: func() error {
 			return wr.afterDeleteNetworks(ctx, deleted)
 		},
 	}
-	err = h.doSync(networks, it, opts...)
+	if err = h.doSync(networks, it, opts...); err == nil && changed {
+		err = wr.updateSyncStatus(ctx)
+	}
 	return errors.WithMessage(err, api)
 }
 
@@ -71,13 +78,17 @@ func (wr sGroupsMemDbWriter) SyncSecurityGroups(ctx context.Context, sgs []model
 	})
 
 	var deleted []model.SecurityGroup
+	var changed bool
 	h := syncHelper[model.SecurityGroup, string]{
 		upsert: func(obj *model.SecurityGroup) error {
-			return wr.writer.Upsert(TblSecGroups, obj)
+			e := wr.writer.Upsert(TblSecGroups, obj)
+			changed = changed || e == nil
+			return e
 		},
 		delete: func(obj *model.SecurityGroup) error {
 			e := wr.writer.Delete(TblSecGroups, obj)
 			if e == nil || errors.Is(e, memdb.ErrNotFound) {
+				changed = true
 				deleted = append(deleted, *obj)
 			}
 			return e
@@ -86,12 +97,14 @@ func (wr sGroupsMemDbWriter) SyncSecurityGroups(ctx context.Context, sgs []model
 			return wr.afterDeleteSGs(ctx, deleted)
 		},
 	}
-	err = h.doSync(sgs, it, opts...)
+	if err = h.doSync(sgs, it, opts...); err == nil && changed {
+		err = wr.updateSyncStatus(ctx)
+	}
 	return errors.WithMessage(err, api)
 }
 
 //SyncSGRules impl Writer = update / delete security group rules
-func (wr sGroupsMemDbWriter) SyncSGRules(_ context.Context, rules []model.SGRule, scope Scope, opts ...Option) error {
+func (wr sGroupsMemDbWriter) SyncSGRules(ctx context.Context, rules []model.SGRule, scope Scope, opts ...Option) error {
 	const api = "mem-db/SyncSGRules"
 
 	it, err := wr.writer.Get(TblSecRules, indexID)
@@ -107,19 +120,25 @@ func (wr sGroupsMemDbWriter) SyncSGRules(_ context.Context, rules []model.SGRule
 		return !ft.invoke(r)
 	})
 
+	var changed bool
 	h := syncHelper[model.SGRule, string]{
 		delete: func(obj *model.SGRule) error {
 			e := wr.writer.Delete(TblSecRules, obj)
 			if errors.Is(e, memdb.ErrNotFound) {
 				return nil
 			}
+			changed = changed || e == nil
 			return e
 		},
 		upsert: func(obj *model.SGRule) error {
-			return wr.writer.Upsert(TblSecRules, obj)
+			e := wr.writer.Upsert(TblSecRules, obj)
+			changed = changed || e == nil
+			return e
 		},
 	}
-	err = h.doSync(rules, it, opts...)
+	if err = h.doSync(rules, it, opts...); err == nil && changed {
+		err = wr.updateSyncStatus(ctx)
+	}
 	return errors.WithMessage(err, api)
 }
 
@@ -187,6 +206,20 @@ func (wr sGroupsMemDbWriter) afterDeleteSGs(ctx context.Context, sgs []model.Sec
 		scope, SyncOmitInsert{}, SyncOmitUpdate{})
 
 	return errors.WithMessage(err, "delete related SGRule(s)")
+}
+
+func (wr sGroupsMemDbWriter) updateSyncStatus(_ context.Context) error {
+	x := syncStatus{
+		ID: 1,
+		SyncStatus: model.SyncStatus{
+			UpdatedAt: time.Now(),
+		},
+	}
+	err := wr.writer.Upsert(TblSyncStatus, x)
+	if isInvalidTableErr(err) {
+		err = nil
+	}
+	return err
 }
 
 type syncHelper[T any, TKey comparable] struct {

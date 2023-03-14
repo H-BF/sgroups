@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"testing"
+	"time"
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	"github.com/stretchr/testify/suite"
@@ -14,36 +15,39 @@ func Test_MemDB(t *testing.T) {
 }
 
 type memDbSuite struct {
-	db Registry
+	reg Registry
+	db  MemDB
 	suite.Suite
 }
 
 func (sui *memDbSuite) SetupTest() {
-	sui.Require().Nil(sui.db)
-	db, err := NewMemDB(TblNetworks, TblSecGroups, TblSecRules,
+	sui.Require().Nil(sui.reg)
+	db, err := NewMemDB(TblNetworks, TblSecGroups, TblSecRules, TblSyncStatus,
 		IntegrityChecker4SG(), IntegrityChecker4Rules())
 	sui.Require().NoError(err)
-	sui.db = NewRegistryFromMemDB(db)
+	sui.reg = NewRegistryFromMemDB(db)
+	sui.db = db
 }
 
 func (sui *memDbSuite) TearDownTest() {
-	if sui.db != nil {
-		e := sui.db.Close()
+	if sui.reg != nil {
+		e := sui.reg.Close()
 		sui.Require().NoError(e)
+		sui.reg = nil
 		sui.db = nil
 	}
 }
 
 func (sui *memDbSuite) regWriter() Writer {
 	ctx := context.TODO()
-	w, e := sui.db.Writer(ctx)
+	w, e := sui.reg.Writer(ctx)
 	sui.Require().NoError(e)
 	return w
 }
 
 func (sui *memDbSuite) regReader() Reader {
 	ctx := context.TODO()
-	r, e := sui.db.Reader(ctx)
+	r, e := sui.reg.Reader(ctx)
 	sui.Require().NoError(e)
 	return r
 }
@@ -75,6 +79,32 @@ func (sui *memDbSuite) newSGRule(sgFrom, sgTo model.SecurityGroup, t model.Netwo
 			SgFrom:    sgFrom,
 			SgTo:      sgTo,
 		}}
+}
+
+func (sui *memDbSuite) TestSyncStatus() {
+	ctx := context.TODO()
+	rd := sui.regReader()
+	v, e := rd.GetSyncStatus(ctx)
+	sui.Require().NoError(e)
+	sui.Require().Nil(v)
+	x := syncStatus{
+		ID: 1,
+		SyncStatus: model.SyncStatus{
+			UpdatedAt: time.Now(),
+		},
+	}
+
+	wr := sui.db.Writer()
+	e = wr.Upsert(TblSyncStatus, x)
+	sui.Require().NoError(e)
+	e = wr.Commit()
+	sui.Require().NoError(e)
+
+	rd = sui.regReader()
+	v, e = rd.GetSyncStatus(ctx)
+	sui.Require().NoError(e)
+	sui.Require().NotNil(v)
+	sui.Require().Equal(x.UpdatedAt, v.UpdatedAt)
 }
 
 func (sui *memDbSuite) TestSyncNetworks() {

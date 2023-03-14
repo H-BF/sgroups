@@ -2,6 +2,7 @@ package sgroups
 
 import (
 	"context"
+	"strings"
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	"github.com/hashicorp/go-memdb"
@@ -10,6 +11,37 @@ import (
 
 type sGroupsMemDbReader struct {
 	reader MemDbReader
+}
+
+type syncStatus struct {
+	ID int
+	model.SyncStatus
+}
+
+func isInvalidTableErr(e error) bool {
+	if e == nil {
+		return false
+	}
+	return strings.Contains(e.Error(), "invalid table")
+}
+
+//GetSyncStatus impl Reader
+func (rd sGroupsMemDbReader) GetSyncStatus(_ context.Context) (*model.SyncStatus, error) {
+	raw, err := rd.reader.First(TblSyncStatus, indexID)
+	if err != nil {
+		if isInvalidTableErr(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	switch v := raw.(type) {
+	case syncStatus:
+		ret := v.SyncStatus
+		return &ret, nil
+	case nil:
+		return nil, nil
+	}
+	panic("UB")
 }
 
 //ListNetworks impl Reader

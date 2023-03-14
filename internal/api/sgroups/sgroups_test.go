@@ -20,6 +20,7 @@ func Test_SGroupsService_MemDB(t *testing.T) {
 		regMaker: func() registry.Registry {
 			m, e := registry.NewMemDB(registry.TblSecGroups,
 				registry.TblSecRules, registry.TblNetworks,
+				registry.TblSyncStatus,
 				registry.IntegrityChecker4SG(),
 				registry.IntegrityChecker4Rules())
 			require.NoError(t, e)

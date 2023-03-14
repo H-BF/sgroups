@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"time"
 
 	"github.com/H-BF/corlib/pkg/ranges"
 )
@@ -49,6 +50,11 @@ type (
 	SGRule struct {
 		SGRuleIdentity
 		PortsFrom, PortsTo PortRanges
+	}
+
+	//SyncStatus succeeded sync - op status
+	SyncStatus struct {
+		UpdatedAt time.Time
 	}
 )
 

@@ -12,6 +12,7 @@ type (
 		ListNetworks(ctx context.Context, consume func(model.Network) error, scope Scope) error
 		ListSecurityGroups(ctx context.Context, consume func(model.SecurityGroup) error, scope Scope) error
 		ListSGRules(ctx context.Context, consume func(model.SGRule) error, scope Scope) error
+		GetSyncStatus(ctx context.Context) (*model.SyncStatus, error)
 	}
 
 	//Writer db writer abstract

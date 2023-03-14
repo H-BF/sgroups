@@ -12,6 +12,9 @@ const (
 
 	//TblSecRules table 'security rules'
 	TblSecRules
+
+	//TblSecRules table 'sync-status'
+	TblSyncStatus
 )
 
 //SchemaName database scheme name
@@ -19,14 +22,15 @@ const SchemaName = "sgroups"
 
 //String stringer interface impl
 func (tid TableID) String() string {
-	return [...]string{"tbl_network", "tbl_sg", "tbl_rule"}[tid]
+	return [...]string{"tbl_network", "tbl_sg", "tbl_rule", "tbl_sync_status"}[tid]
 }
 
 func (tid TableID) memDbSchema() MemDbSchemaInit {
 	return [...]MemDbSchemaInit{
 		memDbNetworksSchema,
 		memDbSecGroupsSchema,
-		memDbSgRulesSchema}[tid]
+		memDbSgRulesSchema,
+		memDbSyncStatusSchema}[tid]
 }
 
 func (TableID) privateMemDbOption() {}
