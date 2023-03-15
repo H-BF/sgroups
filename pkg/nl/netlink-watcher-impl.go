@@ -30,7 +30,7 @@ func NewNetlinkWatcher(opts ...WatcherOption) (NetlinkWatcher, error) {
 			id = t.WatcherID
 		case scopeOfUpdates:
 			sco |= t
-		case WithAgeOfMatutity:
+		case WithAgeOfMaturity:
 			age = t.Age
 		case WithNetns:
 			ns = t.Netns
@@ -133,9 +133,9 @@ type (
 		WatcherID
 	}
 
-	//WithAgeOfMatutity - every packet accumulates updates during some duration then
+	//WithAgeOfMaturity - every packet accumulates updates during some duration then
 	//it sends to consumer
-	WithAgeOfMatutity struct {
+	WithAgeOfMaturity struct {
 		WatcherOption
 		Age time.Duration
 	}

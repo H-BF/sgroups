@@ -58,7 +58,7 @@ type (
 	}
 )
 
-//PortRangeFactory ...
+// PortRangeFactory ...
 var PortRangeFactory = ranges.IntsFactory(PortNumber(0))
 
 const (
@@ -69,12 +69,12 @@ const (
 	UDP
 )
 
-//String impl Stringer
+// String impl Stringer
 func (nt NetworkTransport) String() string {
 	return [...]string{"tcp", "udp"}[nt]
 }
 
-//IdentityHash makes ID as hash for SGRule
+// IdentityHash makes ID as hash for SGRule
 func (sgRuleKey SGRuleIdentity) IdentityHash() string {
 	hasher := md5.New() //nolint:gosec
 	hasher.Write([]byte(sgRuleKey.SgFrom.Name))
@@ -83,13 +83,13 @@ func (sgRuleKey SGRuleIdentity) IdentityHash() string {
 	return strings.ToLower(hex.EncodeToString(hasher.Sum(nil)))
 }
 
-//String impl Stringer
+// String impl Stringer
 func (sgRuleKey SGRuleIdentity) String() string {
 	return fmt.Sprintf("'%s'('%s' - '%s')",
 		sgRuleKey.Transport, sgRuleKey.SgFrom.Name, sgRuleKey.SgTo.Name)
 }
 
-//ArePortRangesEq checks if two multi ranges are equal
+// ArePortRangesEq checks if two multi ranges are equal
 func ArePortRangesEq(l, r PortRanges) bool {
 	n := l.Len()
 	if n != r.Len() {
