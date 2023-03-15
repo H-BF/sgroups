@@ -19,7 +19,7 @@ extapi:
     sgroups:
 	  dial-duration: 3s #override default-connect-tmo
       address: tcp://127.0.0.1:9006
-	  check-changed: 20s #optional
+	  check-sync-status: 20s #mandatory
 */
 
 const (
