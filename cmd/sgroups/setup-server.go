@@ -2,16 +2,29 @@ package main
 
 import (
 	"context"
+	"net/http"
+
+	"github.com/H-BF/sgroups/internal/api/sgroups"
+	"github.com/H-BF/sgroups/internal/app"
+	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 
 	"github.com/H-BF/corlib/server"
 	"github.com/H-BF/corlib/server/interceptors"
 	serverPrometheusMetrics "github.com/H-BF/corlib/server/metrics/prometheus"
-	"github.com/H-BF/sgroups/internal/api/sgroups"
-	"github.com/H-BF/sgroups/internal/app"
-	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+)
+
+const (
+	// HandleMetrics -
+	HandleMetrics = "metrics"
+
+	// HandleHealthcheck -
+	HandleHealthcheck = "healthcheck"
+
+	// HandleDebug -
+	HandleDebug = "debug"
 )
 
 func setupSgServer(ctx context.Context) (*server.APIServer, error) {
@@ -56,12 +69,19 @@ func setupSgServer(ctx context.Context) (*server.APIServer, error) {
 			reg,
 			promhttp.HandlerFor(reg, promhttp.HandlerOpts{}),
 		)
-		//экспанируем метрики через '/metrics' обработчик
-		opts = append(opts, server.WithHttpHandler("/metrics", promHandler))
+		//экспанируем метрики через 'metrics' обработчик
+		opts = append(opts, server.WithHttpHandler("/"+HandleMetrics, promHandler))
 	})
 	if err != nil {
 		return nil, err
 	}
-	opts = append(opts, server.WithHttpHandler("/debug", app.PProfHandler()))
+	if hc, _ := HealthcheckEnable.Value(ctx); hc { // add healthcheck handler
+		h := http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
+			writer.Header().Add("Content-Type", "application/json")
+			_, _ = writer.Write([]byte("{}"))
+		})
+		opts = append(opts, server.WithHttpHandler("/"+HandleHealthcheck, h))
+	}
+	opts = append(opts, server.WithHttpHandler("/"+HandleDebug, app.PProfHandler()))
 	return server.NewAPIServer(opts...)
 }
