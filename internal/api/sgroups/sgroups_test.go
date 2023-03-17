@@ -22,7 +22,8 @@ func Test_SGroupsService_MemDB(t *testing.T) {
 				registry.TblSecRules, registry.TblNetworks,
 				registry.TblSyncStatus,
 				registry.IntegrityChecker4SG(),
-				registry.IntegrityChecker4Rules())
+				registry.IntegrityChecker4Rules(),
+				registry.IntegrityChecker4Networks())
 			require.NoError(t, e)
 			return registry.NewRegistryFromMemDB(m)
 		},

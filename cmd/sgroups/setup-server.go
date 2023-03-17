@@ -34,7 +34,8 @@ func setupSgServer(ctx context.Context) (*server.APIServer, error) {
 			registry.TblSecRules, registry.TblNetworks,
 			registry.TblSyncStatus,
 			registry.IntegrityChecker4SG(),
-			registry.IntegrityChecker4Rules())
+			registry.IntegrityChecker4Rules(),
+			registry.IntegrityChecker4Networks())
 		if e != nil {
 			return nil, errors.WithMessage(e, "create mem db")
 		}

@@ -107,6 +107,51 @@ func (sui *memDbSuite) TestSyncStatus() {
 	sui.Require().Equal(x.UpdatedAt, v.UpdatedAt)
 }
 
+func (sui *memDbSuite) TestCheckNetworksOverlap() {
+	ctx := context.TODO()
+	nws := []model.Network{ //not overlapped
+		sui.newNetwork("nw1", "10.10.10.1/24"),
+		sui.newNetwork("nw2", "10.10.11.2/24"),
+		sui.newNetwork("nw3", "10.10.12.3/24"),
+	}
+	w := sui.regWriter()
+	e := w.SyncNetworks(ctx, nws, NoScope)
+	sui.Require().NoError(e)
+	e = w.Commit()
+	sui.Require().NoError(e)
+
+	nws = []model.Network{ // overlapped
+		sui.newNetwork("nw1", "10.10.11.19/32"),
+		sui.newNetwork("nw2", "10.10.11.1/24"),
+		sui.newNetwork("nw3", "10.10.12.1/24"),
+	}
+	w = sui.regWriter()
+	e = w.SyncNetworks(ctx, nws, NoScope)
+	sui.Require().NoError(e)
+	e = w.Commit()
+	sui.Require().Error(e)
+
+	nws = []model.Network{ // not overlapped
+		sui.newNetwork("nw1", "10.10.11.0/32"),
+		sui.newNetwork("nw2", "10.10.11.1/32"),
+	}
+	w = sui.regWriter()
+	e = w.SyncNetworks(ctx, nws, NoScope)
+	sui.Require().NoError(e)
+	e = w.Commit()
+	sui.Require().NoError(e)
+
+	nws = []model.Network{ // overlapped
+		sui.newNetwork("nw1", "10.10.11.1/31"),
+		sui.newNetwork("nw2", "10.10.11.1/32"),
+	}
+	w = sui.regWriter()
+	e = w.SyncNetworks(ctx, nws, NoScope)
+	sui.Require().NoError(e)
+	e = w.Commit()
+	sui.Require().Error(e)
+}
+
 func (sui *memDbSuite) TestSyncNetworks() {
 	//1 full sync all networks
 	nws := []model.Network{

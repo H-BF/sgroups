@@ -137,21 +137,25 @@ func IntegrityChecker4Networks() IntegrityChecker {
 		}
 		for _, bds := range [][]bound{v4, v6} {
 			sort.Slice(bds, func(i, j int) bool {
-				return bds[i].val.Cmp(bds[j].val) < 0
+				l, r := bds[i], bds[j]
+				d := l.val.Cmp(r.val)
+				if d != 0 {
+					return d < 0
+				}
+				return l.isLeft && !r.isLeft
 			})
 			c := 0
-			var prevNet *model.Network
-			for _, b := range bds {
+			for i := range bds {
+				b := bds[i]
 				if b.isLeft {
 					c++
 				} else {
 					c--
 				}
-				if c > 1 || c < 0 {
+				if (i > 0) && (c > 1 || c < 0) {
 					return errors.Errorf("%s: networks %s and %s seem have overlapped region",
-						api, b.n, prevNet)
+						api, b.n, bds[i-1].n)
 				}
-				prevNet = b.n
 			}
 		}
 		return nil
