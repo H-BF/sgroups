@@ -90,7 +90,7 @@ func IntegrityChecker4SG() IntegrityChecker {
 	}
 }
 
-// IntegrityChecker4Networks checks if every networks do not overlaps
+// IntegrityChecker4Networks checks if every network does overlap another one
 func IntegrityChecker4Networks() IntegrityChecker {
 	const api = "Integrity-of-Networks"
 
