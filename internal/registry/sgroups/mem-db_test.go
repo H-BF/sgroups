@@ -23,7 +23,7 @@ type memDbSuite struct {
 func (sui *memDbSuite) SetupTest() {
 	sui.Require().Nil(sui.reg)
 	db, err := NewMemDB(TblNetworks, TblSecGroups, TblSecRules, TblSyncStatus,
-		IntegrityChecker4SG(), IntegrityChecker4Rules())
+		IntegrityChecker4SG(), IntegrityChecker4Rules(), IntegrityChecker4Networks())
 	sui.Require().NoError(err)
 	sui.reg = NewRegistryFromMemDB(db)
 	sui.db = db

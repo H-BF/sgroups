@@ -70,6 +70,11 @@ const (
 )
 
 // String impl Stringer
+func (nw Network) String() string {
+	return fmt.Sprintf("%s(%s)", nw.Name, &nw.Net)
+}
+
+// String impl Stringer
 func (nt NetworkTransport) String() string {
 	return [...]string{"tcp", "udp"}[nt]
 }
