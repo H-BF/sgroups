@@ -141,7 +141,7 @@ func rulesRead(ctx context.Context, rd *schema.ResourceData, i interface{}) diag
 	}
 	rd.Set(RcLabelItems, items)
 	if len(keys) == 0 {
-		rd.SetId("<>")
+		rd.SetId("<none>")
 	} else {
 		sort.Strings(keys)
 		rd.SetId(strings.Join(keys, ";"))
