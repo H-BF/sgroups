@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/H-BF/corlib v0.0.4
-	github.com/H-BF/protos v0.0.3
+	github.com/H-BF/protos v0.0.4
 	github.com/c-robinson/iplib v1.0.6
 	github.com/google/nftables v0.1.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
@@ -30,7 +30,7 @@ require (
 )
 
 //replace github.com/H-BF/corlib v0.0.1 => ../corlib
-//replace github.com/H-BF/protos v0.0.3 => ../protos
+//replace github.com/H-BF/protos v0.0.4 => ../protos
 
 require (
 	github.com/BurntSushi/toml v0.4.1 // indirect
