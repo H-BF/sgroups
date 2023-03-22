@@ -41,8 +41,7 @@ func SGroupsRcSGs() *schema.Resource {
 		Schema: map[string]*schema.Schema{
 			RcLabelItems: {
 				Optional: true,
-				//ForceNew: true,
-				Type: schema.TypeList,
+				Type:     schema.TypeList,
 				Elem: &schema.Resource{
 					Description: "SecurityGroup element",
 					Schema: map[string]*schema.Schema{
@@ -52,9 +51,11 @@ func SGroupsRcSGs() *schema.Resource {
 							Required:    true,
 						},
 						RcLabelNetworks: {
-							Description: "associated set of network(s)",
-							Type:        schema.TypeString,
-							Optional:    true,
+							DiffSuppressFunc:      sgsSuppressNetworksChanges,
+							DiffSuppressOnRefresh: true,
+							Description:           "associated set of network(s)",
+							Type:                  schema.TypeString,
+							Optional:              true,
 						},
 					},
 				},
@@ -175,4 +176,21 @@ func sgsDelete(ctx context.Context, rd *schema.ResourceData, i interface{}) diag
 	}
 	_, err := i.(SGClient).Sync(ctx, &req)
 	return diag.FromErr(err)
+}
+
+func sgsSuppressNetworksChanges(_, oldValue, newValue string, _ *schema.ResourceData) bool {
+	norm := func(s string) string {
+		var l []string
+		for _, item := range strings.Split(s, ",") {
+			if x := strings.TrimSpace(item); len(x) > 0 {
+				l = append(l, x)
+			}
+		}
+		sort.Strings(l)
+		_ = slice.DedupSlice(&l, func(i, j int) bool {
+			return l[i] == l[j]
+		})
+		return strings.Join(l, ",")
+	}
+	return norm(oldValue) == norm(newValue)
 }
