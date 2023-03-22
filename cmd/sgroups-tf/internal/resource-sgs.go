@@ -1,10 +1,13 @@
 package internal
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"sort"
 	"strings"
+
+	utils "github.com/H-BF/sgroups/internal/api/sgroups"
 
 	"github.com/H-BF/corlib/pkg/slice"
 	sgroupsAPI "github.com/H-BF/protos/pkg/api/sgroups"
@@ -26,13 +29,15 @@ items:
 // SGroupsRcSGs SGs resource
 func SGroupsRcSGs() *schema.Resource {
 	return &schema.Resource{
-		Description:   fmt.Sprintf("represents SecurityGroups (SG) resource in '%s' provider", SGroupsProvider),
-		CreateContext: sgsUpsert,
-		UpdateContext: sgsUpsert,
-		DeleteContext: sgsDelete,
-		ReadContext: func(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
-			return nil //TODO: Should implement
+		Description: fmt.Sprintf("represents SecurityGroups (SG) resource in '%s' provider", SGroupsProvider),
+		CreateContext: func(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+			return sgsUpd(ctx, rd, i, false)
 		},
+		UpdateContext: func(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+			return sgsUpd(ctx, rd, i, true)
+		},
+		DeleteContext: sgsDelete,
+		ReadContext:   sgsRead,
 		Schema: map[string]*schema.Schema{
 			RcLabelItems: {
 				Optional: true,
@@ -58,7 +63,40 @@ func SGroupsRcSGs() *schema.Resource {
 	}
 }
 
-func sgsUpsert(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+func sgsRead(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+	resp, err := i.(SGClient).ListSecurityGroups(ctx, new(sgroupsAPI.ListSecurityGroupsReq))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	var names []string
+	var items []any
+	buf := bytes.NewBuffer(nil)
+	for _, sg := range resp.GetGroups() {
+		buf.Reset()
+		m := utils.Proto2BriefModelSG(sg)
+		for _, n := range m.Networks {
+			if buf.Len() > 0 {
+				_ = buf.WriteByte(',')
+			}
+			_, _ = buf.WriteString(n.Name)
+		}
+		names = append(names, m.Name)
+		items = append(items, map[string]any{
+			RcLabelName:     m.Name,
+			RcLabelNetworks: buf.String(),
+		})
+	}
+	rd.Set(RcLabelItems, items)
+	if len(names) == 0 {
+		rd.SetId("<none>")
+	} else {
+		sort.Strings(names)
+		rd.SetId(strings.Join(names, ";"))
+	}
+	return nil
+}
+
+func sgsUpd(ctx context.Context, rd *schema.ResourceData, i interface{}, fullSync bool) diag.Diagnostics {
 	var sgs []*sgroupsAPI.SecGroup
 	var names []string
 	if raw, ok := rd.GetOk(RcLabelItems); ok {
@@ -82,27 +120,30 @@ func sgsUpsert(ctx context.Context, rd *schema.ResourceData, i interface{}) diag
 			}
 			sgs = append(sgs, &sg)
 		}
-		sort.Strings(names)
-		_ = slice.DedupSlice(&names, func(i, j int) bool {
-			return names[i] == names[j]
-		})
+	}
+	op := sgroupsAPI.SyncReq_Upsert
+	if fullSync {
+		op = sgroupsAPI.SyncReq_FullSync
 	}
 	req := sgroupsAPI.SyncReq{
-		SyncOp: sgroupsAPI.SyncReq_Upsert,
+		SyncOp: op,
 		Subject: &sgroupsAPI.SyncReq_Groups{
 			Groups: &sgroupsAPI.SyncSecurityGroups{
 				Groups: sgs,
 			},
 		},
 	}
-	c := i.(SGClient)
-	if _, err := c.Sync(ctx, &req); err != nil {
+	if _, err := i.(SGClient).Sync(ctx, &req); err != nil {
 		return diag.FromErr(err)
 	}
-	if len(names) > 0 {
-		rd.SetId(strings.Join(names, ";"))
-	} else {
+	if len(names) == 0 {
 		rd.SetId("<none>")
+	} else {
+		sort.Strings(names)
+		_ = slice.DedupSlice(&names, func(i, j int) bool {
+			return names[i] == names[j]
+		})
+		rd.SetId(strings.Join(names, ";"))
 	}
 	return nil
 }
@@ -132,7 +173,6 @@ func sgsDelete(ctx context.Context, rd *schema.ResourceData, i interface{}) diag
 			},
 		},
 	}
-	c := i.(SGClient)
-	_, err := c.Sync(ctx, &req)
+	_, err := i.(SGClient).Sync(ctx, &req)
 	return diag.FromErr(err)
 }

@@ -1,12 +1,16 @@
 package internal
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+
+	utils "github.com/H-BF/sgroups/internal/api/sgroups"
+	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
 	"github.com/H-BF/corlib/pkg/slice"
 	"github.com/H-BF/protos/pkg/api/common"
@@ -48,13 +52,15 @@ items:
 // SGroupsRcRules sg-rules resource
 func SGroupsRcRules() *schema.Resource {
 	return &schema.Resource{
-		Description:   fmt.Sprintf("represents SG rules resource in '%s' provider", SGroupsProvider),
-		CreateContext: rulesUpsert,
-		UpdateContext: rulesUpsert,
-		DeleteContext: rulesDelete,
-		ReadContext: func(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
-			return nil //TODO: Should implement
+		Description: fmt.Sprintf("represents SG rules resource in '%s' provider", SGroupsProvider),
+		CreateContext: func(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+			return rulesUpd(ctx, rd, i, false)
 		},
+		UpdateContext: func(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+			return rulesUpd(ctx, rd, i, true)
+		},
+		DeleteContext: rulesDelete,
+		ReadContext:   rulesRead,
 		Schema: map[string]*schema.Schema{
 			RcLabelItems: {
 				Optional: true,
@@ -111,7 +117,39 @@ func SGroupsRcRules() *schema.Resource {
 	}
 }
 
-func rulesUpsert(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+func rulesRead(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+	resp, err := i.(SGClient).FindRules(ctx, new(sgroupsAPI.FindRulesReq))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	var items []any
+	var keys []string
+	for _, rule := range resp.GetRules() {
+		var mr model.SGRule
+		if mr, err = utils.Proto2ModelSGRule(rule); err != nil {
+			return diag.FromErr(err)
+		}
+		items = append(items, map[string]any{
+			RcLabelSgFrom:    mr.SgFrom.Name,
+			RcLabelSgTo:      mr.SgTo.Name,
+			RcLabelProto:     mr.Transport.String(),
+			RcLabelPortsFrom: foldPorts(mr.PortsFrom),
+			RcLabelPortsTo:   foldPorts(mr.PortsTo),
+		})
+		keys = append(keys, fmt.Sprintf("%s:%s-%s",
+			strings.ToUpper(mr.Transport.String()), mr.SgFrom.Name, mr.SgTo.Name))
+	}
+	rd.Set(RcLabelItems, items)
+	if len(keys) == 0 {
+		rd.SetId("<>")
+	} else {
+		sort.Strings(keys)
+		rd.SetId(strings.Join(keys, ";"))
+	}
+	return nil
+}
+
+func rulesUpd(ctx context.Context, rd *schema.ResourceData, i interface{}, fullSync bool) diag.Diagnostics {
 	raw, ok := rd.GetOk(RcLabelItems)
 	var syncRules sgroupsAPI.SyncSGRules
 	var keys []string
@@ -166,14 +204,17 @@ func rulesUpsert(ctx context.Context, rd *schema.ResourceData, i interface{}) di
 				rule.Transport.String(), rule.SgFrom.Name, rule.SgTo.Name))
 		}
 	}
+	op := sgroupsAPI.SyncReq_Upsert
+	if fullSync {
+		op = sgroupsAPI.SyncReq_FullSync
+	}
 	req := sgroupsAPI.SyncReq{
-		SyncOp: sgroupsAPI.SyncReq_Upsert,
+		SyncOp: op,
 		Subject: &sgroupsAPI.SyncReq_SgRules{
 			SgRules: &syncRules,
 		},
 	}
-	c := i.(SGClient)
-	_, err := c.Sync(ctx, &req)
+	_, err := i.(SGClient).Sync(ctx, &req)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -286,6 +327,27 @@ func parsePorts(src string, f func(start, end uint16) error) error {
 		}
 	}
 	return nil
+}
+
+func foldPorts(ranges model.PortRanges) string {
+	buf := bytes.NewBuffer(nil)
+	ranges.Iterate(func(rng model.PortRange) bool {
+		if !rng.IsNull() {
+			if buf.Len() > 0 {
+				_ = buf.WriteByte(' ')
+			}
+			l, r := rng.Bounds()
+			r = r.AsIncluded()
+			v, _ := l.GetValue()
+			_, _ = fmt.Fprintf(buf, "%v", v)
+			if r.Cmp(l) != 0 {
+				v, _ := r.GetValue()
+				_, _ = fmt.Fprintf(buf, "-%v", v)
+			}
+		}
+		return true
+	})
+	return buf.String()
 }
 
 var (

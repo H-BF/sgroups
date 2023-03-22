@@ -32,6 +32,13 @@ func Proto2ModelSG(g *sg.SecGroup) (model.SecurityGroup, error) {
 	return ret.SecurityGroup, nil
 }
 
+// Proto2ModelSG conv SG (proto --> brief model)
+func Proto2BriefModelSG(g *sg.SecGroup) model.SecurityGroup {
+	var ret securityGroup
+	ret.from(g)
+	return ret.SecurityGroup
+}
+
 // Proto2ModelSGRule conv SGRule (proto --> model)
 func Proto2ModelSGRule(src *sg.Rule) (model.SGRule, error) {
 	const api = "proto2model-SGRule-conv"

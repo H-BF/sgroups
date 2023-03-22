@@ -7,6 +7,9 @@ import (
 	"sort"
 	"strings"
 
+	utils "github.com/H-BF/sgroups/internal/api/sgroups"
+	model "github.com/H-BF/sgroups/internal/models/sgroups"
+
 	"github.com/H-BF/corlib/pkg/slice"
 	"github.com/H-BF/protos/pkg/api/common"
 	sgroupsAPI "github.com/H-BF/protos/pkg/api/sgroups"
@@ -43,13 +46,15 @@ items:
 // SGroupsRcNetworks networks resource
 func SGroupsRcNetworks() *schema.Resource {
 	return &schema.Resource{
-		Description:   fmt.Sprintf("represents networks resource in '%s' provider", SGroupsProvider),
-		CreateContext: networksUpsert,
-		UpdateContext: networksUpsert,
-		DeleteContext: networksDelete,
-		ReadContext: func(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
-			return nil //TODO: Should implement
+		Description: fmt.Sprintf("represents networks resource in '%s' provider", SGroupsProvider),
+		CreateContext: func(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+			return networksUpd(ctx, rd, i, false)
 		},
+		UpdateContext: func(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+			return networksUpd(ctx, rd, i, true)
+		},
+		DeleteContext: networksDelete,
+		ReadContext:   networksRead,
 		Schema: map[string]*schema.Schema{
 			RcLabelItems: {
 				Optional: true,
@@ -88,7 +93,34 @@ func SGroupsRcNetworks() *schema.Resource {
 	}
 }
 
-func networksUpsert(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+func networksRead(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+	resp, err := i.(SGClient).ListNetworks(ctx, new(sgroupsAPI.ListNetworksReq))
+	if err != nil {
+		return diag.FromErr(err)
+	}
+	var items []any
+	var names []string
+	for _, n := range resp.GetNetworks() {
+		var nw model.Network
+		if nw, err = utils.Proto2ModelNetwork(n); err != nil {
+			return diag.FromErr(err)
+		}
+		items = append(items, map[string]any{
+			RcLabelName: nw.Name,
+			RcLabelCIDR: nw.Net.String(),
+		})
+		names = append(names, nw.Name)
+	}
+	rd.Set(RcLabelItems, items)
+	if len(names) == 0 {
+		rd.SetId("<none>")
+	} else {
+		rd.SetId(strings.Join(names, ";"))
+	}
+	return nil
+}
+
+func networksUpd(ctx context.Context, rd *schema.ResourceData, i interface{}, fullSync bool) diag.Diagnostics {
 	raw, ok := rd.GetOk(RcLabelItems)
 	var names []string
 	var nws []*sgroupsAPI.Network
@@ -109,16 +141,20 @@ func networksUpsert(ctx context.Context, rd *schema.ResourceData, i interface{})
 			return names[i] == names[j]
 		})
 	}
+
+	op := sgroupsAPI.SyncReq_Upsert
+	if fullSync {
+		op = sgroupsAPI.SyncReq_FullSync
+	}
 	req := sgroupsAPI.SyncReq{
-		SyncOp: sgroupsAPI.SyncReq_Upsert,
+		SyncOp: op,
 		Subject: &sgroupsAPI.SyncReq_Networks{
 			Networks: &sgroupsAPI.SyncNetworks{
 				Networks: nws,
 			},
 		},
 	}
-	c := i.(SGClient)
-	_, err := c.Sync(ctx, &req)
+	_, err := i.(SGClient).Sync(ctx, &req)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -154,7 +190,6 @@ func networksDelete(ctx context.Context, rd *schema.ResourceData, i interface{})
 			},
 		},
 	}
-	c := i.(SGClient)
-	_, err := c.Sync(ctx, &req)
+	_, err := i.(SGClient).Sync(ctx, &req)
 	return diag.FromErr(err)
 }
