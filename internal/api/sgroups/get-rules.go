@@ -3,10 +3,11 @@ package sgroups
 import (
 	"context"
 
-	"github.com/H-BF/protos/pkg/api/common"
-	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
+
+	"github.com/H-BF/protos/pkg/api/common"
+	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

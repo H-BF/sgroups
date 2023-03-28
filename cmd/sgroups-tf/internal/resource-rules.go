@@ -57,14 +57,13 @@ func SGroupsRcRules() *schema.Resource {
 			return rulesUpd(ctx, rd, i, false)
 		},
 		UpdateContext: func(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
-			return rulesUpd(ctx, rd, i, true)
+			return rulesUpd(ctx, rd, i, false)
 		},
 		DeleteContext: rulesDelete,
 		ReadContext:   rulesRead,
 		Schema: map[string]*schema.Schema{
 			RcLabelItems: {
-				Optional: true,
-				//ForceNew:    true,
+				Optional:    true,
 				Description: "SG rules list",
 				Type:        schema.TypeList,
 				Elem: &schema.Resource{
@@ -129,6 +128,9 @@ func rulesRead(ctx context.Context, rd *schema.ResourceData, i interface{}) diag
 		if mr, err = utils.Proto2ModelSGRule(rule); err != nil {
 			return diag.FromErr(err)
 		}
+		var mot model.NetworkTransport
+		_ = mot
+
 		items = append(items, map[string]any{
 			RcLabelSgFrom:    mr.SgFrom.Name,
 			RcLabelSgTo:      mr.SgTo.Name,

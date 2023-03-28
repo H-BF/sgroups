@@ -3,8 +3,9 @@ package sgroups
 import (
 	"context"
 
-	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
+
+	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"

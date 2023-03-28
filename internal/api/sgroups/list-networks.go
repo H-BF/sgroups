@@ -11,13 +11,17 @@ import (
 )
 
 // ListNetworks impl 'sgroups' service
-func (srv *sgService) ListNetworks(ctx context.Context, _ *sg.ListNetworksReq) (resp *sg.ListNetworksResp, err error) {
+func (srv *sgService) ListNetworks(ctx context.Context, req *sg.ListNetworksReq) (resp *sg.ListNetworksResp, err error) {
 	defer func() {
 		err = correctError(err)
 	}()
 	var reader registry.Reader
 	if reader, err = srv.registryReader(ctx); err != nil {
 		return resp, err
+	}
+	var scope registry.Scope = registry.NoScope
+	if nws := req.GetNeteworkNames(); len(nws) > 0 {
+		scope = registry.NetworkNames(nws[0], nws[1:]...)
 	}
 	resp = new(sg.ListNetworksResp)
 	err = reader.ListNetworks(ctx, func(nw sgroups.Network) error {
@@ -28,6 +32,6 @@ func (srv *sgService) ListNetworks(ctx context.Context, _ *sg.ListNetworksReq) (
 			},
 		})
 		return nil
-	}, registry.NoScope)
+	}, scope)
 	return resp, err
 }

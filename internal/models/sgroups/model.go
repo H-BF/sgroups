@@ -5,10 +5,12 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/H-BF/corlib/pkg/ranges"
+	"github.com/pkg/errors"
 )
 
 type (
@@ -61,6 +63,15 @@ type (
 // PortRangeFactory ...
 var PortRangeFactory = ranges.IntsFactory(PortNumber(0))
 
+var sgRuleIdentityRE = regexp.MustCompile(`^\s*(\w+)\s*:\s*'(` +
+	sgNameRePatt +
+	`)'\s*-\s*'(` +
+	sgNameRePatt + `)'`)
+
+const (
+	sgNameRePatt = `[\w\>\<\:\*\.\+\-\@\#\=\~\%\$\/\\]+`
+)
+
 const (
 	//TCP ...
 	TCP NetworkTransport = iota
@@ -79,6 +90,20 @@ func (nt NetworkTransport) String() string {
 	return [...]string{"tcp", "udp"}[nt]
 }
 
+// FromString init from string
+func (nt *NetworkTransport) FromString(s string) error {
+	const api = "NetworkTransport/FromString"
+	switch strings.ToLower(s) {
+	case "tcp":
+		*nt = TCP
+	case "udp":
+		*nt = UDP
+	default:
+		return errors.WithMessage(fmt.Errorf("unknown value '%s'", s), api)
+	}
+	return nil
+}
+
 // IdentityHash makes ID as hash for SGRule
 func (sgRuleKey SGRuleIdentity) IdentityHash() string {
 	hasher := md5.New() //nolint:gosec
@@ -90,8 +115,23 @@ func (sgRuleKey SGRuleIdentity) IdentityHash() string {
 
 // String impl Stringer
 func (sgRuleKey SGRuleIdentity) String() string {
-	return fmt.Sprintf("'%s'('%s' - '%s')",
+	return fmt.Sprintf("%s:'%s'-'%s'",
 		sgRuleKey.Transport, sgRuleKey.SgFrom.Name, sgRuleKey.SgTo.Name)
+}
+
+// FromString init from string
+func (sgRuleKey *SGRuleIdentity) FromString(s string) error {
+	const api = "SGRuleIdentity/FromString"
+	r := sgRuleIdentityRE.FindStringSubmatch(s)
+	if len(r) != 4 {
+		return errors.Errorf("%s: bad source(%s)", api, s)
+	}
+	if err := sgRuleKey.Transport.FromString(r[1]); err != nil {
+		return errors.WithMessage(err, api)
+	}
+	sgRuleKey.SgFrom.Name = r[2]
+	sgRuleKey.SgTo.Name = r[3]
+	return nil
 }
 
 // ArePortRangesEq checks if two multi ranges are equal

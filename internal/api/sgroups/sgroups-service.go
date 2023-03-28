@@ -4,10 +4,11 @@ import (
 	"context"
 	"net/url"
 
+	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
+
 	"github.com/H-BF/corlib/server"
 	sgPkg "github.com/H-BF/protos/pkg"
 	sg "github.com/H-BF/protos/pkg/api/sgroups"
-	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 	grpcRt "github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"

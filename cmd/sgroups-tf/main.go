@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	details "github.com/H-BF/sgroups/cmd/sgroups-tf/internal"
+
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
@@ -24,9 +25,9 @@ func main() {
 				Schema:               details.SGroupsConfigSchema(),
 				ConfigureContextFunc: details.SGroupsConfigure,
 				ResourcesMap: map[string]*schema.Resource{
-					details.RcNetworks: details.SGroupsRcNetworks(),
-					details.RcSGs:      details.SGroupsRcSGs(),
-					details.RcRules:    details.SGroupsRcRules(),
+					details.RcNetwork: details.SGroupsRcNetwork(),
+					details.RcSG:      details.SGroupsRcSG(),
+					details.RcRule:    details.SGroupsRcRule(),
 				},
 			}
 		},
@@ -37,3 +38,9 @@ func main() {
 	}
 	plugin.Serve(opts)
 }
+
+var ( //TODO: Remove this later
+	_, _ = details.RcNetworks, details.SGroupsRcNetworks
+	_, _ = details.RcSGs, details.SGroupsRcSGs
+	_, _ = details.RcRules, details.SGroupsRcRules
+)

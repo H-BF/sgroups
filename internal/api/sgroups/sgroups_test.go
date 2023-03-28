@@ -4,10 +4,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/H-BF/protos/pkg/api/common"
-	api "github.com/H-BF/protos/pkg/api/sgroups"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
+
+	"github.com/H-BF/protos/pkg/api/common"
+	api "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"google.golang.org/grpc/codes"

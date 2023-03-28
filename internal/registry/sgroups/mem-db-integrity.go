@@ -109,16 +109,16 @@ func IntegrityChecker4Networks() IntegrityChecker {
 			n := x.(*model.Network)
 			ones, _ := n.Net.Mask.Size()
 			nt := iplib.NewNet(n.Net.IP, ones)
-			ipF := nt.FirstAddress()
+			ipF := nt.IP()
 			ipL := nt.LastAddress()
 			var dest *[]bound
 			switch nt.Version() {
 			case iplib.IP4Version:
-				if ones < 32 {
+				if ones < 31 {
 					ipL = iplib.NextIP(ipL)
 				}
 				dest = &v4
-			case iplib.IP6Version:
+			case iplib.IP6Version: //TODO: Check it manually
 				if ones < 128 {
 					ipL = iplib.NextIP(ipL)
 				}

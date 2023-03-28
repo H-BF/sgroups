@@ -110,6 +110,11 @@ func (sui *memDbSuite) TestSyncStatus() {
 func (sui *memDbSuite) TestCheckNetworksOverlap() {
 	ctx := context.TODO()
 	nws := []model.Network{ //not overlapped
+		//sui.newNetwork("nwa", "10.100.0.10/32"),
+		//sui.newNetwork("nwb", "10.100.0.10/31"),
+		//sui.newNetwork("nwc", "10.100.0.10/30"),
+		//sui.newNetwork("nwd", "10.100.0.10/24"),
+
 		sui.newNetwork("nw1", "10.10.10.1/24"),
 		sui.newNetwork("nw2", "10.10.11.2/24"),
 		sui.newNetwork("nw3", "10.10.12.3/24"),
@@ -121,6 +126,8 @@ func (sui *memDbSuite) TestCheckNetworksOverlap() {
 	sui.Require().NoError(e)
 
 	nws = []model.Network{ // overlapped
+		sui.newNetwork("nwc", "10.100.0.0/32"),
+		sui.newNetwork("nwd", "10.100.0.0/24"),
 		sui.newNetwork("nw1", "10.10.11.19/32"),
 		sui.newNetwork("nw2", "10.10.11.1/24"),
 		sui.newNetwork("nw3", "10.10.12.1/24"),

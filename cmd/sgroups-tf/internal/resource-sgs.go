@@ -34,7 +34,7 @@ func SGroupsRcSGs() *schema.Resource {
 			return sgsUpd(ctx, rd, i, false)
 		},
 		UpdateContext: func(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
-			return sgsUpd(ctx, rd, i, true)
+			return sgsUpd(ctx, rd, i, false)
 		},
 		DeleteContext: sgsDelete,
 		ReadContext:   sgsRead,

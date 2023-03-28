@@ -50,6 +50,10 @@ type sgRule struct {
 	*model.SGRule
 }
 
+type sgRuleIdentity struct {
+	*model.SGRuleIdentity
+}
+
 type networkTransport struct {
 	*model.NetworkTransport
 }
@@ -78,15 +82,19 @@ func (r portsRange) from(src []*common.Networks_NetIP_PortRange) {
 	*r.PortRanges = x
 }
 
-func (r sgRule) from(src *sg.Rule) error {
-	r.SgFrom.Name = src.GetSgFrom().GetName()
-	r.SgTo.Name = src.GetSgTo().GetName()
-	err := networkTransport{NetworkTransport: &r.Transport}.
+func (ri sgRuleIdentity) from(src *sg.Rule) error {
+	ri.SgFrom.Name = src.GetSgFrom().GetName()
+	ri.SgTo.Name = src.GetSgTo().GetName()
+	return networkTransport{NetworkTransport: &ri.Transport}.
 		from(src.GetTransport())
-	if err != nil {
-		return err
+}
+
+func (r sgRule) from(src *sg.Rule) error {
+	err := sgRuleIdentity{SGRuleIdentity: &r.SGRuleIdentity}.
+		from(src)
+	if err == nil {
+		portsRange{PortRanges: &r.PortsFrom}.from(src.GetPortsFrom())
+		portsRange{PortRanges: &r.PortsTo}.from(src.GetPortsTo())
 	}
-	portsRange{PortRanges: &r.PortsFrom}.from(src.GetPortsFrom())
-	portsRange{PortRanges: &r.PortsTo}.from(src.GetPortsTo())
-	return nil
+	return err
 }
