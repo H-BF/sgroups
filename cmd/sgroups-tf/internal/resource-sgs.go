@@ -1,15 +1,10 @@
 package internal
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"sort"
 	"strings"
 
-	utils "github.com/H-BF/sgroups/internal/api/sgroups"
-
-	"github.com/H-BF/corlib/pkg/slice"
 	sgroupsAPI "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -29,15 +24,11 @@ items:
 // SGroupsRcSGs SGs resource
 func SGroupsRcSGs() *schema.Resource {
 	return &schema.Resource{
-		Description: fmt.Sprintf("represents SecurityGroups (SG) resource in '%s' provider", SGroupsProvider),
-		CreateContext: func(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
-			return sgsUpd(ctx, rd, i, false)
-		},
-		UpdateContext: func(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
-			return sgsUpd(ctx, rd, i, false)
-		},
-		DeleteContext: sgsDelete,
-		ReadContext:   sgsRead,
+		Description:   fmt.Sprintf("represents SecurityGroups (SG) resource in '%s' provider", SGroupsProvider),
+		CreateContext: sgsC,
+		UpdateContext: sgsU,
+		DeleteContext: sgsD,
+		ReadContext:   sgsR,
 		Schema: map[string]*schema.Schema{
 			RcLabelItems: {
 				Optional: true,
@@ -51,7 +42,11 @@ func SGroupsRcSGs() *schema.Resource {
 							Required:    true,
 						},
 						RcLabelNetworks: {
-							DiffSuppressFunc:      sgsSuppressNetworksChanges,
+							DiffSuppressFunc: func(_, oldValue, newValue string, _ *schema.ResourceData) bool {
+								a := strings.Join(splitNetNames(oldValue), ",")
+								b := strings.Join(splitNetNames(newValue), ",")
+								return a == b
+							},
 							DiffSuppressOnRefresh: true,
 							Description:           "associated set of network(s)",
 							Type:                  schema.TypeString,
@@ -64,133 +59,91 @@ func SGroupsRcSGs() *schema.Resource {
 	}
 }
 
-func sgsRead(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
-	resp, err := i.(SGClient).ListSecurityGroups(ctx, new(sgroupsAPI.ListSecurityGroupsReq))
+type crudSGs = listedRcCRUD[sgroupsAPI.SecGroup]
+
+func sgsR(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+	var h listedResource[sgroupsAPI.SecGroup]
+	h.init("", ";")
+	items, _ := rd.Get(RcLabelItems).([]any)
+	if err := h.addlist(items, tf2protoSG); err != nil {
+		return diag.FromErr(err)
+	}
+	if len(h.mapped) == 0 {
+		rd.SetId(noneID)
+		return nil
+	}
+	var req sgroupsAPI.ListSecurityGroupsReq
+	h.walk(func(k string, _ *sgroupsAPI.SecGroup) bool {
+		req.SgNames = append(req.SgNames, k)
+		h.set(k, nil)
+		return true
+	})
+	resp, err := i.(SGClient).ListSecurityGroups(ctx, &req)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	var names []string
-	var items []any
-	buf := bytes.NewBuffer(nil)
-	for _, sg := range resp.GetGroups() {
-		buf.Reset()
-		m := utils.Proto2BriefModelSG(sg)
-		for _, n := range m.Networks {
-			if buf.Len() > 0 {
-				_ = buf.WriteByte(',')
+	for _, n := range resp.GetGroups() {
+		h.set(n.GetName(), n)
+	}
+	items = items[:0]
+	var e1 error
+	h.walk(func(k string, sg *sgroupsAPI.SecGroup) bool {
+		if sg != nil {
+			o, e := protoSG2tf(sg)
+			if e != nil {
+				e1 = e
+				return false
 			}
-			_, _ = buf.WriteString(n.Name)
+			items = append(items, o)
 		}
-		names = append(names, m.Name)
-		items = append(items, map[string]any{
-			RcLabelName:     m.Name,
-			RcLabelNetworks: buf.String(),
-		})
+		return true
+	})
+	if e1 != nil {
+		return diag.FromErr(e1)
 	}
-	rd.Set(RcLabelItems, items)
-	if len(names) == 0 {
-		rd.SetId("<none>")
-	} else {
-		sort.Strings(names)
-		rd.SetId(strings.Join(names, ";"))
-	}
-	return nil
+	rd.SetId(h.id(noneID))
+	return diag.FromErr(
+		rd.Set(RcLabelItems, items),
+	)
 }
 
-func sgsUpd(ctx context.Context, rd *schema.ResourceData, i interface{}, fullSync bool) diag.Diagnostics {
-	var sgs []*sgroupsAPI.SecGroup
-	var names []string
-	if raw, ok := rd.GetOk(RcLabelItems); ok {
-		items := raw.([]interface{})
-		for _, item := range items {
-			it := item.(map[string]interface{})
-			sg := sgroupsAPI.SecGroup{
-				Name: it[RcLabelName].(string),
-			}
-			names = append(names, sg.Name)
-			if raw, ok := it[RcLabelNetworks]; ok {
-				nwNames := strings.Split(raw.(string), ",")
-				for i := range nwNames {
-					if nwName := strings.TrimSpace(nwNames[i]); len(nwName) > 0 {
-						sg.Networks = append(sg.Networks,
-							&sgroupsAPI.Network{
-								Name: nwName,
-							})
-					}
-				}
-			}
-			sgs = append(sgs, &sg)
-		}
-	}
-	op := sgroupsAPI.SyncReq_Upsert
-	if fullSync {
-		op = sgroupsAPI.SyncReq_FullSync
-	}
-	req := sgroupsAPI.SyncReq{
-		SyncOp: op,
-		Subject: &sgroupsAPI.SyncReq_Groups{
-			Groups: &sgroupsAPI.SyncSecurityGroups{
-				Groups: sgs,
-			},
-		},
-	}
-	if _, err := i.(SGClient).Sync(ctx, &req); err != nil {
-		return diag.FromErr(err)
-	}
-	if len(names) == 0 {
-		rd.SetId("<none>")
-	} else {
-		sort.Strings(names)
-		_ = slice.DedupSlice(&names, func(i, j int) bool {
-			return names[i] == names[j]
-		})
-		rd.SetId(strings.Join(names, ";"))
-	}
-	return nil
+func sgsU(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+	crud := crudSGs{tf2proto: tf2protoSG, labelItems: RcLabelItems, client: i.(SGClient)}
+	return diag.FromErr(crud.update(ctx, rd))
 }
 
-func sgsDelete(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
-	raw, ok := rd.GetOk(RcLabelItems)
-	if !ok {
-		return nil
-	}
-	items := raw.([]interface{})
-	if len(items) == 0 {
-		return nil
-	}
-	var sgs []*sgroupsAPI.SecGroup
-	for _, item := range items {
-		it := item.(map[string]interface{})
-		sg := sgroupsAPI.SecGroup{
-			Name: it[RcLabelName].(string),
-		}
-		sgs = append(sgs, &sg)
-	}
-	req := sgroupsAPI.SyncReq{
-		SyncOp: sgroupsAPI.SyncReq_Delete,
-		Subject: &sgroupsAPI.SyncReq_Groups{
-			Groups: &sgroupsAPI.SyncSecurityGroups{
-				Groups: sgs,
-			},
-		},
-	}
-	_, err := i.(SGClient).Sync(ctx, &req)
-	return diag.FromErr(err)
+func sgsC(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+	crud := crudSGs{tf2proto: tf2protoSG, labelItems: RcLabelItems, client: i.(SGClient)}
+	return diag.FromErr(crud.create(ctx, rd))
 }
 
-func sgsSuppressNetworksChanges(_, oldValue, newValue string, _ *schema.ResourceData) bool {
-	norm := func(s string) string {
-		var l []string
-		for _, item := range strings.Split(s, ",") {
-			if x := strings.TrimSpace(item); len(x) > 0 {
-				l = append(l, x)
-			}
-		}
-		sort.Strings(l)
-		_ = slice.DedupSlice(&l, func(i, j int) bool {
-			return l[i] == l[j]
-		})
-		return strings.Join(l, ",")
+func sgsD(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+	crud := crudSGs{tf2proto: tf2protoSG, labelItems: RcLabelItems, client: i.(SGClient)}
+	return diag.FromErr(crud.delete(ctx, rd))
+}
+
+func tf2protoSG(raw any) (string, *sgroupsAPI.SecGroup, error) {
+	it := raw.(map[string]any)
+	sg := sgroupsAPI.SecGroup{
+		Name: it[RcLabelName].(string),
 	}
-	return norm(oldValue) == norm(newValue)
+	nws, _ := it[RcLabelNetworks].(string)
+	for _, nw := range splitNetNames(nws) {
+		sg.Networks = append(sg.Networks,
+			&sgroupsAPI.Network{
+				Name: nw,
+			})
+	}
+	return sg.Name, &sg, nil
+}
+
+func protoSG2tf(sg *sgroupsAPI.SecGroup) (map[string]any, error) {
+	var nws []string
+	for _, nw := range sg.GetNetworks() {
+		nws = append(nws, nw.GetName())
+	}
+	return map[string]any{
+		RcLabelName:     sg.GetName(),
+		RcLabelNetworks: strings.Join(nws, ","),
+	}, nil
 }

@@ -28,6 +28,10 @@ func main() {
 					details.RcNetwork: details.SGroupsRcNetwork(),
 					details.RcSG:      details.SGroupsRcSG(),
 					details.RcRule:    details.SGroupsRcRule(),
+
+					details.RcNetworks: details.SGroupsRcNetworks(),
+					details.RcSGs:      details.SGroupsRcSGs(),
+					details.RcRules:    details.SGroupsRcRules(),
 				},
 			}
 		},
@@ -38,9 +42,3 @@ func main() {
 	}
 	plugin.Serve(opts)
 }
-
-var ( //TODO: Remove this later
-	_, _ = details.RcNetworks, details.SGroupsRcNetworks
-	_, _ = details.RcSGs, details.SGroupsRcSGs
-	_, _ = details.RcRules, details.SGroupsRcRules
-)

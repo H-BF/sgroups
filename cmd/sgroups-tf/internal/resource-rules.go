@@ -5,19 +5,18 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 
 	utils "github.com/H-BF/sgroups/internal/api/sgroups"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
-	"github.com/H-BF/corlib/pkg/slice"
 	"github.com/H-BF/protos/pkg/api/common"
 	sgroupsAPI "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -52,15 +51,11 @@ items:
 // SGroupsRcRules sg-rules resource
 func SGroupsRcRules() *schema.Resource {
 	return &schema.Resource{
-		Description: fmt.Sprintf("represents SG rules resource in '%s' provider", SGroupsProvider),
-		CreateContext: func(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
-			return rulesUpd(ctx, rd, i, false)
-		},
-		UpdateContext: func(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
-			return rulesUpd(ctx, rd, i, false)
-		},
-		DeleteContext: rulesDelete,
-		ReadContext:   rulesRead,
+		Description:   fmt.Sprintf("represents SG rules resource in '%s' provider", SGroupsProvider),
+		CreateContext: rulesC,
+		UpdateContext: rulesU,
+		DeleteContext: rulesD,
+		ReadContext:   rulesR,
 		Schema: map[string]*schema.Schema{
 			RcLabelItems: {
 				Optional:    true,
@@ -102,12 +97,14 @@ func SGroupsRcRules() *schema.Resource {
 							Type:             schema.TypeString,
 							ValidateDiagFunc: validatePortRanges,
 							Optional:         true,
+							DiffSuppressFunc: portRangesNoDiff,
 						},
 						RcLabelPortsTo: {
 							Description:      "port ranges to",
 							Type:             schema.TypeString,
 							ValidateDiagFunc: validatePortRanges,
 							Optional:         true,
+							DiffSuppressFunc: portRangesNoDiff,
 						},
 					},
 				},
@@ -116,160 +113,71 @@ func SGroupsRcRules() *schema.Resource {
 	}
 }
 
-func rulesRead(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
-	resp, err := i.(SGClient).FindRules(ctx, new(sgroupsAPI.FindRulesReq))
+type crudRules = listedRcCRUD[sgroupsAPI.Rule]
+
+func rulesR(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+	items, _ := rd.Get(RcLabelItems).([]any)
+	var h listedResource[sgroupsAPI.Rule]
+	h.init("", ";")
+	if err := h.addlist(items, tf2protoRule); err != nil {
+		return diag.FromErr(err)
+	}
+	if len(h.mapped) == 0 {
+		rd.SetId(noneID)
+		return nil
+	}
+	var req sgroupsAPI.FindRulesReq
+	h.walk(func(k string, r *sgroupsAPI.Rule) bool {
+		req.SgFrom = append(req.SgFrom, r.GetSgFrom().GetName())
+		req.SgTo = append(req.SgTo, r.GetSgTo().GetName())
+		return true
+	})
+	resp, err := i.(SGClient).FindRules(ctx, &req)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	var items []any
-	var keys []string
+	var h1 listedResource[model.SGRule]
+	h1.init(strings.Join(h.source, h.sep), h.sep)
 	for _, rule := range resp.GetRules() {
 		var mr model.SGRule
 		if mr, err = utils.Proto2ModelSGRule(rule); err != nil {
 			return diag.FromErr(err)
 		}
-		var mot model.NetworkTransport
-		_ = mot
-
-		items = append(items, map[string]any{
-			RcLabelSgFrom:    mr.SgFrom.Name,
-			RcLabelSgTo:      mr.SgTo.Name,
-			RcLabelProto:     mr.Transport.String(),
-			RcLabelPortsFrom: foldPorts(mr.PortsFrom),
-			RcLabelPortsTo:   foldPorts(mr.PortsTo),
-		})
-		keys = append(keys, fmt.Sprintf("%s:%s-%s",
-			strings.ToUpper(mr.Transport.String()), mr.SgFrom.Name, mr.SgTo.Name))
-	}
-	rd.Set(RcLabelItems, items)
-	if len(keys) == 0 {
-		rd.SetId("<none>")
-	} else {
-		sort.Strings(keys)
-		rd.SetId(strings.Join(keys, ";"))
-	}
-	return nil
-}
-
-func rulesUpd(ctx context.Context, rd *schema.ResourceData, i interface{}, fullSync bool) diag.Diagnostics {
-	raw, ok := rd.GetOk(RcLabelItems)
-	var syncRules sgroupsAPI.SyncSGRules
-	var keys []string
-	if ok {
-		items := raw.([]interface{})
-		for _, it := range items {
-			item := it.(map[string]interface{})
-			proto := common.Networks_NetIP_Transport_value[strings.ToUpper(item[RcLabelProto].(string))]
-			rule := sgroupsAPI.Rule{
-				Transport: common.Networks_NetIP_Transport(proto),
-				SgFrom: &sgroupsAPI.SecGroup{
-					Name: item[RcLabelSgFrom].(string),
-				},
-				SgTo: &sgroupsAPI.SecGroup{
-					Name: item[RcLabelSgTo].(string),
-				},
-			}
-			if raw, ok = item[RcLabelPortsFrom]; ok {
-				portsFrom := raw.(string)
-				err := parsePorts(portsFrom, func(start, end uint16) error {
-					rule.PortsFrom = append(rule.PortsFrom, &common.Networks_NetIP_PortRange{
-						From: uint32(start),
-						To:   uint32(end),
-					})
-					return nil
-				})
-				if err != nil {
-					return diag.Diagnostics{{
-						Severity: diag.Error,
-						Summary:  fmt.Sprintf("ports-from '%s', %s", portsFrom, err.Error()),
-					}}
-				}
-			}
-			if raw, ok = item[RcLabelPortsTo]; ok {
-				portsTo := raw.(string)
-				err := parsePorts(portsTo, func(start, end uint16) error {
-					rule.PortsTo = append(rule.PortsTo, &common.Networks_NetIP_PortRange{
-						From: uint32(start),
-						To:   uint32(end),
-					})
-					return nil
-				})
-				if err != nil {
-					return diag.Diagnostics{{
-						Severity: diag.Error,
-						Summary:  fmt.Sprintf("ports-to '%s', %s", portsTo, err.Error()),
-					}}
-				}
-			}
-			syncRules.Rules = append(syncRules.Rules, &rule)
-			keys = append(keys, fmt.Sprintf("%s:%s-%s",
-				rule.Transport.String(), rule.SgFrom.Name, rule.SgTo.Name))
+		if id := mr.String(); h.mapped[id] != nil {
+			_ = h1.set(id, &mr)
 		}
 	}
-	op := sgroupsAPI.SyncReq_Upsert
-	if fullSync {
-		op = sgroupsAPI.SyncReq_FullSync
-	}
-	req := sgroupsAPI.SyncReq{
-		SyncOp: op,
-		Subject: &sgroupsAPI.SyncReq_SgRules{
-			SgRules: &syncRules,
-		},
-	}
-	_, err := i.(SGClient).Sync(ctx, &req)
-	if err != nil {
-		return diag.FromErr(err)
-	}
-	if len(keys) == 0 {
-		rd.SetId("<none>")
-	} else {
-		sort.Strings(keys)
-		_ = slice.DedupSlice(&keys, func(i, j int) bool {
-			return keys[i] == keys[j]
-		})
-		rd.SetId(strings.Join(keys, ";"))
-	}
-	return nil
+	items = items[:0]
+	h1.walk(func(_ string, mr *model.SGRule) bool {
+		if mr != nil {
+			items = append(items, modelRule2tf(mr))
+		}
+		return true
+	})
+	rd.SetId(h1.id(noneID))
+	return diag.FromErr(
+		rd.Set(RcLabelItems, items),
+	)
 }
 
-func rulesDelete(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
-	raw, ok := rd.GetOk(RcLabelItems)
-	if !ok {
-		return nil
-	}
-	items := raw.([]interface{})
-	if len(items) == 0 {
-		return nil
-	}
-	var syncRules sgroupsAPI.SyncSGRules
-	for _, it := range items {
-		item := it.(map[string]interface{})
-		proto := common.Networks_NetIP_Transport_value[strings.ToUpper(item[RcLabelProto].(string))]
-		rule := sgroupsAPI.Rule{
-			Transport: common.Networks_NetIP_Transport(proto),
-			SgFrom: &sgroupsAPI.SecGroup{
-				Name: item[RcLabelSgFrom].(string),
-			},
-			SgTo: &sgroupsAPI.SecGroup{
-				Name: item[RcLabelSgTo].(string),
-			},
-		}
-		syncRules.Rules = append(syncRules.Rules, &rule)
-	}
-	req := sgroupsAPI.SyncReq{
-		SyncOp: sgroupsAPI.SyncReq_Delete,
-		Subject: &sgroupsAPI.SyncReq_SgRules{
-			SgRules: &syncRules,
-		},
-	}
-	c := i.(SGClient)
-	_, err := c.Sync(ctx, &req)
-	return diag.FromErr(err)
+func rulesU(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+	crud := crudRules{tf2proto: tf2protoRule, labelItems: RcLabelItems, client: i.(SGClient)}
+	return diag.FromErr(crud.update(ctx, rd))
+}
+
+func rulesC(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+	crud := crudRules{tf2proto: tf2protoRule, labelItems: RcLabelItems, client: i.(SGClient)}
+	return diag.FromErr(crud.create(ctx, rd))
+}
+
+func rulesD(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+	crud := crudRules{tf2proto: tf2protoRule, labelItems: RcLabelItems, client: i.(SGClient)}
+	return diag.FromErr(crud.delete(ctx, rd))
 }
 
 func validatePortRanges(i interface{}, p cty.Path) diag.Diagnostics {
 	src := i.(string)
-	if isPortRangesValid(src) {
+	if arePortRangesValid(src) {
 		return nil
 	}
 	return diag.Diagnostics{{
@@ -279,8 +187,8 @@ func validatePortRanges(i interface{}, p cty.Path) diag.Diagnostics {
 	}}
 }
 
-func isPortRangesValid(src string) bool {
-	var count int
+func arePortRangesValid(src string) bool {
+	src = strings.TrimSpace(src)
 	for len(src) > 0 {
 		m := parsePortsRE.FindStringSubmatch(src)
 		if len(m) < 4 {
@@ -293,9 +201,8 @@ func isPortRangesValid(src string) bool {
 		if a, b := len(m[2]), len(m[3]); !(a|b == 0 || a*b != 0) {
 			return false
 		}
-		count++
 	}
-	return count > 0
+	return true
 }
 
 func parsePorts(src string, f func(start, end uint16) error) error {
@@ -303,6 +210,7 @@ func parsePorts(src string, f func(start, end uint16) error) error {
 		l, r uint64
 		err  error
 	)
+	src = strings.TrimSpace(src)
 	for len(src) > 0 {
 		m := parsePortsRE.FindStringSubmatch(src)
 		if len(m) < 4 {
@@ -350,6 +258,62 @@ func foldPorts(ranges model.PortRanges) string {
 		return true
 	})
 	return buf.String()
+}
+
+func modelRule2tf(mr *model.SGRule) map[string]any {
+	return map[string]any{
+		RcLabelSgFrom:    mr.SgFrom.Name,
+		RcLabelSgTo:      mr.SgTo.Name,
+		RcLabelProto:     mr.Transport.String(),
+		RcLabelPortsFrom: foldPorts(mr.PortsFrom),
+		RcLabelPortsTo:   foldPorts(mr.PortsTo),
+	}
+}
+
+func tf2protoRule(raw any) (string, *sgroupsAPI.Rule, error) {
+	item := raw.(map[string]any)
+	proto, ok := common.Networks_NetIP_Transport_value[strings.ToUpper(item[RcLabelProto].(string))]
+	if !ok {
+		return "", nil, errors.Errorf("bad proto '%s'", item[RcLabelProto].(string))
+	}
+	rule := &sgroupsAPI.Rule{
+		Transport: common.Networks_NetIP_Transport(proto),
+		SgFrom: &sgroupsAPI.SecGroup{
+			Name: item[RcLabelSgFrom].(string),
+		},
+		SgTo: &sgroupsAPI.SecGroup{
+			Name: item[RcLabelSgTo].(string),
+		},
+	}
+	id, err := utils.Proto2ModelSGRuleIdentity(rule)
+	if err != nil {
+		return "", nil, err
+	}
+	if portsFrom, ok := item[RcLabelPortsFrom].(string); ok {
+		err := parsePorts(portsFrom, func(start, end uint16) error {
+			rule.PortsFrom = append(rule.PortsFrom, &common.Networks_NetIP_PortRange{
+				From: uint32(start),
+				To:   uint32(end),
+			})
+			return nil
+		})
+		if err != nil {
+			return "", nil, errors.Errorf("ports-from '%s', %s", portsFrom, err.Error())
+		}
+	}
+	if portsTo, ok := item[RcLabelPortsTo].(string); ok {
+		err := parsePorts(portsTo, func(start, end uint16) error {
+			rule.PortsTo = append(rule.PortsTo, &common.Networks_NetIP_PortRange{
+				From: uint32(start),
+				To:   uint32(end),
+			})
+			return nil
+		})
+		if err != nil {
+			return "", nil, errors.Errorf("ports-to '%s', %s", portsTo, err.Error())
+		}
+	}
+	return id.String(), rule, nil
 }
 
 var (

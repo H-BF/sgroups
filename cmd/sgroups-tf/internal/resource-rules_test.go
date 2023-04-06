@@ -6,14 +6,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+/*//
+func Test0(t *testing.T) {
+	f, _ := os.OpenFile(os.Getenv("HOME")+"/ttt.txt", os.O_CREATE|os.O_RDWR|os.O_APPEND, 0666)
+	if f != nil {
+		fmt.Fprintf(f, "'%s' '%s' '%s'\n", "K", "oldValue", "newValue")
+		_ = f.Close()
+	}
+}
+*/
+
 func Test_isPortRangesValid(t *testing.T) {
 	type tc struct {
 		src   string
 		valid bool
 	}
 	cases := []tc{
-		{"", false},
-		{" ", false},
+		{"", true},
+		{" ", true},
 		{" 10 ", true},
 		{" 10-15 ", true},
 		{" 10  - 15 10 ", true},
@@ -23,7 +33,7 @@ func Test_isPortRangesValid(t *testing.T) {
 		{" - 10  - 15 10 12  ", false},
 	}
 	for i, c := range cases {
-		v := isPortRangesValid(c.src)
+		v := arePortRangesValid(c.src)
 		require.Equalf(t, c.valid, v, "test-on %v: '%s'", i, c.src)
 	}
 }
