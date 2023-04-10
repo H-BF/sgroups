@@ -23,7 +23,7 @@ func (srv *sgService) GetSgSubnets(ctx context.Context, req *sg.GetSgSubnetsReq)
 	}
 	sgName := req.GetSgName()
 	if len(sgName) == 0 {
-		status.Error(codes.InvalidArgument, "security group name is not provided by request")
+		return nil, status.Error(codes.InvalidArgument, "security group name is not provided by request")
 	}
 	err = reader.ListSecurityGroups(ctx, func(group model.SecurityGroup) error {
 		resp = new(sg.GetSgSubnetsResp)
