@@ -72,11 +72,8 @@ test: ##run tests
 
 
 platform?=$(shell $(GO) env GOOS)/$(shell $(GO) env GOARCH)
-parts=$(subst /, ,$(platform))
-os:=$(strip $(filter linux darwin,$(word 1,$(parts))))
-arch:=$(strip $(filter amd64 arm64,$(word 2,$(parts))))
-platform=
-parts=
+os?=$(strip $(filter linux darwin,$(word 1,$(subst /, ,$(platform)))))
+arch?=$(strip $(filter amd64 arm64,$(word 2,$(subst /, ,$(platform)))))
 OUT?=$(CURDIR)/bin/$(APP)
 APP_IDENTITY?=github.com/H-BF/corlib/app/identity
 LDFLAGS?=-X '$(APP_IDENTITY).Name=$(APP_NAME)'\
@@ -97,13 +94,12 @@ endif
 	$(GO) build -ldflags="$(LDFLAGS)" -o $(OUT) $(CURDIR)/cmd/$(APP) &&\
 	echo -=OK=-
 
-
 .PHONY: to-nft
 to-nft: | go-deps ##build NFT processor. Usage: make to-nft [platform=linux/<amd64|arm64>]
 to-nft: APP=to-nft
 to-nft: os=linux
 to-nft: 
-ifneq ($(os),linux)
+ifneq ('$(os)','linux')
 	$(error 'os' should be 'linux')
 endif
 ifeq ($(and $(os),$(arch)),)

@@ -21,6 +21,10 @@ func (srv *sgService) GetSgSubnets(ctx context.Context, req *sg.GetSgSubnetsReq)
 	if reader, err = srv.registryReader(ctx); err != nil {
 		return nil, err
 	}
+	sgName := req.GetSgName()
+	if len(sgName) == 0 {
+		status.Error(codes.InvalidArgument, "security group name is not provided by request")
+	}
 	err = reader.ListSecurityGroups(ctx, func(group model.SecurityGroup) error {
 		resp = new(sg.GetSgSubnetsResp)
 		for _, n := range group.Networks {
@@ -33,18 +37,18 @@ func (srv *sgService) GetSgSubnets(ctx context.Context, req *sg.GetSgSubnetsReq)
 				})
 		}
 		return errSuccess
-	}, registry.SG(req.GetSgName()))
+	}, registry.SG(sgName))
 
 	if err != nil && !errors.Is(err, errSuccess) {
 		return nil, status.Errorf(codes.Internal, "reason: %v", err)
 	}
 	if resp == nil {
 		return nil, status.Errorf(codes.NotFound,
-			"SG '%s' not found", req.GetSgName())
+			"SG '%s' not found", sgName)
 	}
 	if len(resp.GetNetworks()) == 0 {
 		return nil, status.Errorf(codes.NotFound,
-			"no any subnet found for SG '%s'", req.GetSgName())
+			"no any subnet found for SG '%s'", sgName)
 	}
 	return resp, nil
 }

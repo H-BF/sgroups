@@ -24,13 +24,17 @@ func (snc syncRules) process(ctx context.Context) error {
 	for _, rl := range snc.rules {
 		var item model.SGRule
 		if err := (sgRule{SGRule: &item}).from(rl); err != nil {
-			return err
+			return status.Error(codes.InvalidArgument, err.Error())
+		}
+		if len(item.SgFrom.Name) == 0 || len(item.SgTo.Name) == 0 {
+			return status.Errorf(codes.InvalidArgument,
+				"rule '%s' is incompleted", item.SGRuleIdentity)
 		}
 		rules = append(rules, item)
 	}
 	var opts []registry.Option
 	if err := syncOptionsFromProto(snc.ops, &opts); err != nil {
-		return err
+		return status.Error(codes.InvalidArgument, err.Error())
 	}
 	var sc registry.Scope = registry.NoScope
 	if snc.ops != sg.SyncReq_FullSync {
