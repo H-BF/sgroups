@@ -2,6 +2,7 @@ package grpc_client
 
 import (
 	"context"
+	"net/url"
 	"time"
 
 	"github.com/H-BF/corlib/pkg/backoff"
@@ -121,13 +122,17 @@ func (bld clientConnBuilder) New(ctx context.Context) (*grpc.ClientConn, error) 
 
 func (bld *clientConnBuilder) endpoint() (string, error) {
 	ep, err := netPkg.ParseEndpoint(bld.addr)
-	if err != nil {
-		return "", errors.WithMessagef(err, "bad address (%s)", bld.addr)
+	if err == nil {
+		if ep.IsUnixDomain() {
+			return ep.FQN(), nil
+		}
+		var ret string
+		if ret, err = ep.Address(); err == nil {
+			return ret, nil
+		}
 	}
-	if ep.IsUnixDomain() {
-		return ep.FQN(), nil
+	if _, err = url.Parse(bld.addr); err == nil {
+		return bld.addr, nil
 	}
-	var ret string
-	ret, err = ep.Address()
-	return ret, errors.WithMessagef(err, "bad address (%s)", bld.addr)
+	return "", errors.WithMessagef(err, "bad address (%s)", bld.addr)
 }

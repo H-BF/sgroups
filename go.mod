@@ -3,7 +3,7 @@ module github.com/H-BF/sgroups
 go 1.18
 
 require (
-	github.com/H-BF/corlib v0.0.4
+	github.com/H-BF/corlib v0.0.5
 	github.com/H-BF/protos v0.0.5
 	github.com/c-robinson/iplib v1.0.6
 	github.com/google/nftables v0.1.0
@@ -29,7 +29,7 @@ require (
 	google.golang.org/protobuf v1.28.1
 )
 
-//replace github.com/H-BF/corlib v0.0.1 => ../corlib
+//replace github.com/H-BF/corlib v0.0.5 => ../corlib
 //replace github.com/H-BF/protos v0.0.5 => ../protos
 
 require (
