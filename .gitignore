@@ -1,5 +1,9 @@
 vendor
 .idea
 .vscode
-bin
+bin/*
 deploy/rpm/artifacts
+src/github.com/H-BF/sgroups/_output/*
+
+go.sum
+go.mod

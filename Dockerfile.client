@@ -1,0 +1,13 @@
+FROM ubuntu:22.10
+
+ENV PATH $PATH:/usr/local/go/bin
+
+WORKDIR /app
+COPY . /app
+RUN apt update && apt install wget nftables make git curl -y
+RUN wget https://go.dev/dl/go1.19.8.linux-amd64.tar.gz
+RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.19.8.linux-amd64.tar.gz
+
+RUN /bin/bash -c "make to-nft"
+
+CMD [ "/bin/bash", "-c", "./bin/to-nft", "-config", "hack/configs/agent.yaml" ]

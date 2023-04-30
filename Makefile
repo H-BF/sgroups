@@ -124,3 +124,9 @@ sgroups-tf:
 	echo -=OK=- 
 
 
+.PHONY: release
+release: | go-deps ##bulild all binary with rpm/deb packages
+release:
+	bash hack/release-bin.tar.gz.sh && \
+	bash hack/release-package.sh
+

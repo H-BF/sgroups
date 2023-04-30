@@ -1,0 +1,18 @@
+[Unit]
+Description=hbf SERVER
+Documentation=https://docs.hbf.fraima.io
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/hbf-server -config /etc/default/hbf-server.yaml
+Restart=always
+RestartSec=5
+Delegate=yes
+KillMode=process
+OOMScoreAdjust=-999
+LimitNOFILE=1048576
+LimitNPROC=infinity
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target
