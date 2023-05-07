@@ -72,13 +72,62 @@ func (sui *memDbSuite) newSG(name string, nws ...model.Network) model.SecurityGr
 	return ret
 }
 
-func (sui *memDbSuite) newSGRule(sgFrom, sgTo model.SecurityGroup, t model.NetworkTransport) model.SGRule {
+func (sui *memDbSuite) newRulePorts(s, d model.PortSource) model.SGRulePorts {
+	a, e1 := s.ToPortRange()
+	sui.Require().NoError(e1)
+	b, e2 := d.ToPortRange()
+	sui.Require().NoError(e2)
+	return model.SGRulePorts{S: a, D: b}
+}
+
+func (sui *memDbSuite) newSGRule(sgFrom, sgTo model.SecurityGroup, t model.NetworkTransport, ports ...model.SGRulePorts) model.SGRule {
 	return model.SGRule{
 		SGRuleIdentity: model.SGRuleIdentity{
 			Transport: t,
 			SgFrom:    sgFrom,
 			SgTo:      sgTo,
-		}}
+		},
+		Ports: ports,
+	}
+}
+
+func (sui *memDbSuite) TestSGRuleIsEq() {
+	r := func(from, to string, t model.NetworkTransport, ports ...model.SGRulePorts) model.SGRule {
+		return model.SGRule{
+			SGRuleIdentity: model.SGRuleIdentity{
+				SgFrom:    model.SecurityGroup{Name: from},
+				SgTo:      model.SecurityGroup{Name: from},
+				Transport: t,
+			},
+			Ports: ports,
+		}
+	}
+
+	p := func(s, d model.PortSource) model.SGRulePorts {
+		return sui.newRulePorts(s, d)
+	}
+	type item = struct {
+		r1   model.SGRule
+		r2   model.SGRule
+		isEq bool
+	}
+	cases := []item{
+		{r("a", "b", model.TCP), r("a", "b", model.TCP), true},
+		{r("a", "b", model.TCP), r("a", "b", model.UDP), false},
+		{r("a", "b", model.TCP), r("a", "b", model.TCP, p("10", "10")), false},
+		{r("a", "b", model.TCP, p("10", "10")), r("a", "b", model.TCP), false},
+		{r("a", "b", model.TCP, p("10", "10")), r("a", "b", model.TCP, p("10", "10")), true},
+		{r("a", "b", model.TCP, p("10-10", "10")), r("a", "b", model.TCP, p("10-10", "10")), true},
+		{r("a", "b", model.TCP, p("10-20", "10"), p("30-40", "10")),
+			r("a", "b", model.TCP, p("30-40", "10"), p("10-20", "10")), true},
+		{r("a", "b", model.TCP, p("10-20", "20"), p("30-40", "10")),
+			r("a", "b", model.TCP, p("30-40", "20"), p("10-20", "10")), false},
+	}
+	for i := range cases {
+		c := cases[i]
+		eq := c.r1.IsEq(c.r2)
+		sui.Require().Equalf(c.isEq, eq, "test case #%v", i)
+	}
 }
 
 func (sui *memDbSuite) TestSyncStatus() {

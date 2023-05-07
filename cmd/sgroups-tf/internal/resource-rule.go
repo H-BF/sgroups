@@ -13,15 +13,17 @@ import (
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-	"github.com/pkg/errors"
 )
 
 /*// respurce skeleton
 proto: TCP
 sg_from: sg1
 sg_to: sg2
-ports_from: 200-300 500-600 22 24
-ports_to: 200-300 500-600 22 24
+ports:
+- s: 10
+  d: 200-210
+- s: 100-110
+  d: 100
 */
 
 // RcRule -
@@ -51,7 +53,7 @@ func SGroupsRcRule() *schema.Resource {
 					if ok {
 						return nil
 					}
-					return diag.FromErr(fmt.Errorf("bad proto: '%s'", s))
+					return diag.Errorf("bad proto: '%s'", s)
 				},
 			},
 			RcLabelSgFrom: {
@@ -64,19 +66,27 @@ func SGroupsRcRule() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 			},
-			RcLabelPortsFrom: {
-				Description:      "port ranges from",
-				Type:             schema.TypeString,
-				ValidateDiagFunc: validatePortRanges,
+			RcLabelRulePorts: {
+				Description:      "access ports",
+				Type:             schema.TypeList,
 				Optional:         true,
-				DiffSuppressFunc: portRangesNoDiff,
-			},
-			RcLabelPortsTo: {
-				Description:      "port ranges to",
-				Type:             schema.TypeString,
-				ValidateDiagFunc: validatePortRanges,
-				Optional:         true,
-				DiffSuppressFunc: portRangesNoDiff,
+				DiffSuppressFunc: diffSuppressSGRulePorts,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						RcLabelSPorts: {
+							Description:      "source port or ports range",
+							Type:             schema.TypeString,
+							ValidateDiagFunc: validatePortOrRange,
+							Optional:         true,
+						},
+						RcLabelDPorts: {
+							Description:      "dest port or poprts range",
+							Type:             schema.TypeString,
+							ValidateDiagFunc: validatePortOrRange,
+							Optional:         true,
+						},
+					},
+				},
 			},
 		},
 	}
@@ -100,19 +110,18 @@ func ruleR(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Dia
 			return diag.FromErr(err)
 		}
 		if mr.Transport == tp {
-			attrs := []struct {
-				name string
-				val  any
-			}{
-				{RcLabelSgFrom, mr.SgFrom.Name},
-				{RcLabelSgTo, mr.SgTo.Name},
-				{RcLabelProto, mr.Transport.String()},
-				{RcLabelPortsFrom, foldPorts(mr.PortsFrom)},
-				{RcLabelPortsTo, foldPorts(mr.PortsTo)},
+			rc, err := modelRule2tf(&mr)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			attrs := []string{
+				RcLabelSgFrom, RcLabelSgTo, RcLabelProto, RcLabelRulePorts,
 			}
 			for _, a := range attrs {
-				if err = rd.Set(a.name, a.val); err != nil {
-					return diag.FromErr(err)
+				if v, ok := rc[a]; ok {
+					if err = rd.Set(a, v); err != nil {
+						return diag.FromErr(err)
+					}
 				}
 			}
 			rd.SetId(mr.SGRuleIdentity.String())
@@ -181,56 +190,18 @@ func ruleUD(ctx context.Context, rd *schema.ResourceData, i interface{}, upd boo
 }
 
 func rd2protoRule(rd *schema.ResourceData, withPorts bool) (*sgroupsAPI.Rule, error) {
-	proto := common.Networks_NetIP_Transport_value[strings.ToUpper(rd.Get(RcLabelProto).(string))]
-	rule := sgroupsAPI.Rule{
-		Transport: common.Networks_NetIP_Transport(proto),
-		SgFrom: &sgroupsAPI.SecGroup{
-			Name: rd.Get(RcLabelSgFrom).(string),
-		},
-		SgTo: &sgroupsAPI.SecGroup{
-			Name: rd.Get(RcLabelSgTo).(string),
-		},
+	attrs := []string{
+		RcLabelSgFrom, RcLabelSgTo, RcLabelProto,
 	}
 	if withPorts {
-		var err error
-		if rule.PortsFrom, err = rd2protoPortsRanges(RcLabelPortsFrom, rd); err != nil {
-			return nil, errors.WithMessage(err, "ports-from")
-		}
-		if rule.PortsTo, err = rd2protoPortsRanges(RcLabelPortsTo, rd); err != nil {
-			return nil, errors.WithMessage(err, "ports-to")
+		attrs = append(attrs, RcLabelRulePorts)
+	}
+	raw := make(map[string]any)
+	for _, a := range attrs {
+		if v, ok := rd.GetOk(a); ok {
+			raw[a] = v
 		}
 	}
-	return &rule, nil
-}
-
-func str2protoPortsRanges(portsSrc string) ([]*common.Networks_NetIP_PortRange, error) {
-	var ret []*common.Networks_NetIP_PortRange
-	err := parsePorts(portsSrc, func(start, end uint16) error {
-		ret = append(ret, &common.Networks_NetIP_PortRange{
-			From: uint32(start),
-			To:   uint32(end),
-		})
-		return nil
-	})
-	return ret, errors.WithMessagef(err, "bad port range '%s'", portsSrc)
-}
-
-func rd2protoPortsRanges(k string, rd *schema.ResourceData) ([]*common.Networks_NetIP_PortRange, error) {
-	var ret []*common.Networks_NetIP_PortRange
-	var err error
-	if raw, ok := rd.GetOk(k); ok {
-		ret, err = str2protoPortsRanges(raw.(string))
-	}
+	_, ret, err := tf2protoRule(raw)
 	return ret, err
-}
-
-func portRangesNoDiff(_, oldValue, newValue string, _ *schema.ResourceData) bool {
-	l, e1 := str2protoPortsRanges(oldValue)
-	r, e2 := str2protoPortsRanges(newValue)
-	if e1 != nil || e2 != nil {
-		return false
-	}
-	rrL := utils.Proto2ModelPortRanges(l)
-	rrR := utils.Proto2ModelPortRanges(r)
-	return model.ArePortRangesEq(rrL, rrR)
 }

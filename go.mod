@@ -4,8 +4,9 @@ go 1.18
 
 require (
 	github.com/H-BF/corlib v0.0.5
-	github.com/H-BF/protos v0.0.5
+	github.com/H-BF/protos v0.1.0
 	github.com/c-robinson/iplib v1.0.6
+	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/google/nftables v0.1.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.2
@@ -29,8 +30,8 @@ require (
 	google.golang.org/protobuf v1.28.1
 )
 
-//replace github.com/H-BF/corlib v0.0.5 => ../corlib
-//replace github.com/H-BF/protos v0.0.5 => ../protos
+//replace github.com/H-BF/corlib v0.0.1 => ../corlib
+//replace github.com/H-BF/protos v0.1.0 => ../protos
 
 require (
 	github.com/BurntSushi/toml v0.4.1 // indirect

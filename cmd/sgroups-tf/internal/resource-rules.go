@@ -1,11 +1,8 @@
 package internal
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"regexp"
-	"strconv"
 	"strings"
 
 	utils "github.com/H-BF/sgroups/internal/api/sgroups"
@@ -28,10 +25,12 @@ const (
 	RcLabelSgTo = "sg_to"
 	// RcLabelProto -
 	RcLabelProto = "proto"
-	// RcLabelPortsFrom -
-	RcLabelPortsFrom = "ports_from"
-	// RcLabelPortsTo -
-	RcLabelPortsTo = "ports_to"
+	// RcLabelSPorts -
+	RcLabelSPorts = "s"
+	// RcLabelDPorts -
+	RcLabelDPorts = "d"
+	//RcLabelRulePorts -
+	RcLabelRulePorts = "ports"
 )
 
 /*// respurce skeleton
@@ -39,13 +38,19 @@ items:
 - proto: TCP
   sg_from: sg1
   sg_to: sg2
-  ports_from: 200-300 500-600 22 24
-  ports_to: 200-300 500-600 22 24
+  ports:
+  - s: 10
+    d: 200-210
+  - s: 100-110
+    d: 100
 - proto: UDP
   sg_from: sg1
   sg_to: sg2
-  ports_from: 200-300 500-600 22 24
-  ports_to: 200-300 500-600 22 24
+  ports:
+  - s: 10
+    d: 200-210
+  - s: 100-110
+    d: 100
 */
 
 // SGroupsRcRules sg-rules resource
@@ -75,11 +80,7 @@ func SGroupsRcRules() *schema.Resource {
 								if ok {
 									return nil
 								}
-								return diag.Diagnostics{{
-									Severity:      diag.Error,
-									AttributePath: p,
-									Summary:       fmt.Sprintf("bad proto: '%s'", s),
-								}}
+								return diag.Errorf("bad proto: '%s'", s)
 							},
 						},
 						RcLabelSgFrom: {
@@ -92,19 +93,27 @@ func SGroupsRcRules() *schema.Resource {
 							Type:        schema.TypeString,
 							Required:    true,
 						},
-						RcLabelPortsFrom: {
-							Description:      "port ranges from",
-							Type:             schema.TypeString,
-							ValidateDiagFunc: validatePortRanges,
+						RcLabelRulePorts: {
+							Description:      "access ports",
+							Type:             schema.TypeList,
 							Optional:         true,
-							DiffSuppressFunc: portRangesNoDiff,
-						},
-						RcLabelPortsTo: {
-							Description:      "port ranges to",
-							Type:             schema.TypeString,
-							ValidateDiagFunc: validatePortRanges,
-							Optional:         true,
-							DiffSuppressFunc: portRangesNoDiff,
+							DiffSuppressFunc: diffSuppressSGRulePorts,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									RcLabelSPorts: {
+										Description:      "source port or ports range",
+										Type:             schema.TypeString,
+										ValidateDiagFunc: validatePortOrRange,
+										Optional:         true,
+									},
+									RcLabelDPorts: {
+										Description:      "dest port or poprts range",
+										Type:             schema.TypeString,
+										ValidateDiagFunc: validatePortOrRange,
+										Optional:         true,
+									},
+								},
+							},
 						},
 					},
 				},
@@ -128,8 +137,8 @@ func rulesR(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Di
 	}
 	var req sgroupsAPI.FindRulesReq
 	h.walk(func(k string, r *sgroupsAPI.Rule) bool {
-		req.SgFrom = append(req.SgFrom, r.GetSgFrom().GetName())
-		req.SgTo = append(req.SgTo, r.GetSgTo().GetName())
+		req.SgFrom = append(req.SgFrom, r.GetSgFrom())
+		req.SgTo = append(req.SgTo, r.GetSgTo())
 		return true
 	})
 	resp, err := i.(SGClient).FindRules(ctx, &req)
@@ -150,10 +159,17 @@ func rulesR(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Di
 	items = items[:0]
 	h1.walk(func(_ string, mr *model.SGRule) bool {
 		if mr != nil {
-			items = append(items, modelRule2tf(mr))
+			var item any
+			if item, err = modelRule2tf(mr); err != nil {
+				return false
+			}
+			items = append(items, item)
 		}
 		return true
 	})
+	if err != nil {
+		return diag.FromErr(err)
+	}
 	rd.SetId(h1.id(noneID))
 	return diag.FromErr(
 		rd.Set(RcLabelItems, items),
@@ -175,99 +191,45 @@ func rulesD(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Di
 	return diag.FromErr(crud.delete(ctx, rd))
 }
 
-func validatePortRanges(i interface{}, p cty.Path) diag.Diagnostics {
+func validatePortOrRange(i interface{}, _ cty.Path) diag.Diagnostics {
 	src := i.(string)
-	if arePortRangesValid(src) {
+	if model.PortSource(src).IsValid() {
 		return nil
 	}
-	return diag.Diagnostics{{
-		Severity:      diag.Error,
-		Summary:       fmt.Sprintf("bad port ranges: '%s'", src),
-		AttributePath: p,
-	}}
+	return diag.FromErr(errors.Errorf("bad port or range: '%s'", src))
 }
 
-func arePortRangesValid(src string) bool {
-	src = strings.TrimSpace(src)
-	for len(src) > 0 {
-		m := parsePortsRE.FindStringSubmatch(src)
-		if len(m) < 4 {
-			return false
-		}
-		src = src[len(m[0]):]
-		if len(m[1]) == 0 {
-			return false
-		}
-		if a, b := len(m[2]), len(m[3]); !(a|b == 0 || a*b != 0) {
-			return false
-		}
-	}
-	return true
-}
-
-func parsePorts(src string, f func(start, end uint16) error) error {
-	var (
-		l, r uint64
-		err  error
-	)
-	src = strings.TrimSpace(src)
-	for len(src) > 0 {
-		m := parsePortsRE.FindStringSubmatch(src)
-		if len(m) < 4 {
-			return errIncorrectPortsSource
-		}
-		src = src[len(m[0]):]
-		if a, b := len(m[2]), len(m[3]); a*b != 0 {
-			l, err = strconv.ParseUint(m[2], 10, 16)
-			if err == nil {
-				r, err = strconv.ParseUint(m[3], 10, 16)
-			}
-		} else {
-			l, err = strconv.ParseUint(m[1], 10, 16)
-			r = l
-		}
+func modelRule2tf(mr *model.SGRule) (map[string]any, error) {
+	var ports []any
+	for _, p := range mr.Ports {
+		var s, d model.PortSource
+		err := s.FromPortRange(p.S)
 		if err == nil {
-			if uint16(r) < uint16(l) {
-				return errIncorrectPortsSource
-			}
-			err = f(uint16(l), uint16(r))
+			err = d.FromPortRange(p.D)
 		}
 		if err != nil {
-			return err
+			return nil, err
+		}
+		itm := make(map[string]any)
+		if len(s) > 0 {
+			itm[RcLabelSPorts] = string(s)
+		}
+		if len(d) > 0 {
+			itm[RcLabelDPorts] = string(d)
+		}
+		if len(itm) > 0 {
+			ports = append(ports, itm)
 		}
 	}
-	return nil
-}
-
-func foldPorts(ranges model.PortRanges) string {
-	buf := bytes.NewBuffer(nil)
-	ranges.Iterate(func(rng model.PortRange) bool {
-		if !rng.IsNull() {
-			if buf.Len() > 0 {
-				_ = buf.WriteByte(' ')
-			}
-			l, r := rng.Bounds()
-			r = r.AsIncluded()
-			v, _ := l.GetValue()
-			_, _ = fmt.Fprintf(buf, "%v", v)
-			if r.Cmp(l) != 0 {
-				v, _ := r.GetValue()
-				_, _ = fmt.Fprintf(buf, "-%v", v)
-			}
-		}
-		return true
-	})
-	return buf.String()
-}
-
-func modelRule2tf(mr *model.SGRule) map[string]any {
-	return map[string]any{
-		RcLabelSgFrom:    mr.SgFrom.Name,
-		RcLabelSgTo:      mr.SgTo.Name,
-		RcLabelProto:     mr.Transport.String(),
-		RcLabelPortsFrom: foldPorts(mr.PortsFrom),
-		RcLabelPortsTo:   foldPorts(mr.PortsTo),
+	ret := map[string]any{
+		RcLabelSgFrom: mr.SgFrom.Name,
+		RcLabelSgTo:   mr.SgTo.Name,
+		RcLabelProto:  mr.Transport.String(),
 	}
+	if len(ports) > 0 {
+		ret[RcLabelRulePorts] = ports
+	}
+	return ret, nil
 }
 
 func tf2protoRule(raw any) (string, *sgroupsAPI.Rule, error) {
@@ -278,45 +240,63 @@ func tf2protoRule(raw any) (string, *sgroupsAPI.Rule, error) {
 	}
 	rule := &sgroupsAPI.Rule{
 		Transport: common.Networks_NetIP_Transport(proto),
-		SgFrom: &sgroupsAPI.SecGroup{
-			Name: item[RcLabelSgFrom].(string),
-		},
-		SgTo: &sgroupsAPI.SecGroup{
-			Name: item[RcLabelSgTo].(string),
-		},
+		SgFrom:    item[RcLabelSgFrom].(string),
+		SgTo:      item[RcLabelSgTo].(string),
 	}
 	id, err := utils.Proto2ModelSGRuleIdentity(rule)
 	if err != nil {
 		return "", nil, err
 	}
-	if portsFrom, ok := item[RcLabelPortsFrom].(string); ok {
-		err := parsePorts(portsFrom, func(start, end uint16) error {
-			rule.PortsFrom = append(rule.PortsFrom, &common.Networks_NetIP_PortRange{
-				From: uint32(start),
-				To:   uint32(end),
-			})
-			return nil
-		})
-		if err != nil {
-			return "", nil, errors.Errorf("ports-from '%s', %s", portsFrom, err.Error())
-		}
-	}
-	if portsTo, ok := item[RcLabelPortsTo].(string); ok {
-		err := parsePorts(portsTo, func(start, end uint16) error {
-			rule.PortsTo = append(rule.PortsTo, &common.Networks_NetIP_PortRange{
-				From: uint32(start),
-				To:   uint32(end),
-			})
-			return nil
-		})
-		if err != nil {
-			return "", nil, errors.Errorf("ports-to '%s', %s", portsTo, err.Error())
+	ports, _ := item[RcLabelRulePorts].([]any)
+	for _, p := range ports {
+		if rp, _ := p.(map[string]any); rp != nil {
+			s, _ := rp[RcLabelSPorts].(string)
+			d, _ := rp[RcLabelDPorts].(string)
+			if len(s) > 0 || len(d) > 0 {
+				rule.Ports = append(rule.Ports, &sgroupsAPI.Rule_Ports{
+					S: s,
+					D: d,
+				})
+			}
 		}
 	}
 	return id.String(), rule, nil
 }
 
-var (
-	errIncorrectPortsSource = fmt.Errorf("incorrect port range(s) source")
-	parsePortsRE            = regexp.MustCompile(`^\s*((?:(\d+)\s*-\s*(\d+))|\d+)\s*`)
-)
+func diffSuppressSGRulePorts(k, _, _ string, rd *schema.ResourceData) bool {
+	f := func(raw []any) ([]model.SGRulePorts, bool) {
+		if len(raw) == 0 {
+			return nil, true
+		}
+		var ret []model.SGRulePorts
+		for _, r := range raw {
+			if p, _ := r.(map[string]any); p != nil {
+				s, _ := p[RcLabelSPorts].(string)
+				d, _ := p[RcLabelDPorts].(string)
+				r1, _ := model.PortSource(s).ToPortRange()
+				r2, _ := model.PortSource(d).ToPortRange()
+				x := model.SGRulePorts{
+					S: r1, D: r2,
+				}
+				if x.Validate() != nil {
+					return nil, false
+				}
+				ret = append(ret, x)
+			}
+		}
+		return ret, true
+	}
+	if i := strings.Index(k, RcLabelRulePorts); i >= 0 {
+		k1 := k[:i] + RcLabelRulePorts
+		if rd.HasChange(k1) {
+			v1, v2 := rd.GetChange(k1)
+			p1, ok1 := f(v1.([]any))
+			p2, ok2 := f(v2.([]any))
+			if !(ok1 && ok2) {
+				return false
+			}
+			return model.AreRulePortsEq(p1, p2)
+		}
+	}
+	return false
+}

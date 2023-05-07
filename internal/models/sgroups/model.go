@@ -15,7 +15,7 @@ import (
 
 type (
 	//PortNumber net port num
-	PortNumber = uint32
+	PortNumber = uint16
 
 	//PortRanges net port ranges
 	PortRanges = ranges.MultiRange[PortNumber]
@@ -38,7 +38,7 @@ type (
 	//SecurityGroup security group for networks(s)
 	SecurityGroup struct {
 		Name     string
-		Networks []Network
+		Networks []NetworkName
 	}
 
 	//SGRuleIdentity security rule ID as key
@@ -48,13 +48,19 @@ type (
 		Transport NetworkTransport
 	}
 
+	//SGRulePorts source and destination port ranges
+	SGRulePorts struct {
+		S PortRange
+		D PortRange
+	}
+
 	//SGRule security rule for From-To security groups
 	SGRule struct {
 		SGRuleIdentity
-		PortsFrom, PortsTo PortRanges
+		Ports []SGRulePorts
 	}
 
-	//SyncStatus succeeded sync - op status
+	//SyncStatus succeeded sync-op status
 	SyncStatus struct {
 		UpdatedAt time.Time
 	}
@@ -62,6 +68,9 @@ type (
 
 // PortRangeFactory ...
 var PortRangeFactory = ranges.IntsFactory(PortNumber(0))
+
+// PortRangeFull port range [0, 65535]
+var PortRangeFull = PortRangeFactory.Range(0, false, ^PortNumber(0), false)
 
 var sgRuleIdentityRE = regexp.MustCompile(`^\s*(\w+)\s*:\s*'(` +
 	sgNameRePatt +
@@ -134,22 +143,22 @@ func (sgRuleKey *SGRuleIdentity) FromString(s string) error {
 	return nil
 }
 
-// ArePortRangesEq checks if two multi ranges are equal
-func ArePortRangesEq(l, r PortRanges) bool {
-	n := l.Len()
-	if n != r.Len() {
-		return false
+// IsEq -
+func (rule SGRule) IsEq(other SGRule) bool {
+	return rule.IdentityHash() == other.IdentityHash() &&
+		AreRulePortsEq(rule.Ports, other.Ports)
+}
+
+// ArePortsValid -
+func (rule SGRule) ArePortsValid() bool {
+	rr := make([]PortRange, 0, len(rule.Ports))
+	for _, p := range rule.Ports {
+		if p.S == nil {
+			return len(rule.Ports) == 1
+		}
+		rr = append(rr, p.S)
 	}
-	rr := make([]PortRange, 0, 2*n)
-	l.Iterate(func(r PortRange) bool {
-		rr = append(rr, r)
-		return true
-	})
-	r.Iterate(func(r PortRange) bool {
-		rr = append(rr, r)
-		return true
-	})
 	x := ranges.NewMultiRange(PortRangeFactory)
-	x.Update(ranges.CombineExclude, rr...)
-	return x.Len() == 0
+	x.Update(ranges.CombineMerge, rr...)
+	return len(rr) == x.Len()
 }

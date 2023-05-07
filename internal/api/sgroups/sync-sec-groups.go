@@ -45,7 +45,5 @@ type securityGroup struct {
 
 func (n *securityGroup) from(g *sg.SecGroup) {
 	n.Name = g.GetName()
-	for _, nw := range g.GetNetworks() {
-		n.Networks = append(n.Networks, model.Network{Name: nw.GetName()})
-	}
+	n.Networks = g.GetNetworks()
 }

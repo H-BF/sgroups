@@ -66,7 +66,7 @@ func sgRead(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Di
 				if buf.Len() > 0 {
 					_ = buf.WriteByte(',')
 				}
-				_, _ = buf.WriteString(n.Name)
+				_, _ = buf.WriteString(n)
 			}
 			err = rd.Set(RcLabelNetworks, buf.String())
 		}
@@ -80,12 +80,8 @@ func sgC(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagn
 	name := rd.Get(RcLabelName).(string)
 	nwList, _ := rd.Get(RcLabelNetworks).(string)
 	sg := &sgroupsAPI.SecGroup{
-		Name: name,
-	}
-	for _, p := range splitNetNames(nwList) {
-		sg.Networks = append(sg.Networks, &sgroupsAPI.Network{
-			Name: p,
-		})
+		Name:     name,
+		Networks: splitNetNames(nwList),
 	}
 	req := sgroupsAPI.SyncReq{
 		SyncOp: sgroupsAPI.SyncReq_Upsert,
@@ -112,11 +108,7 @@ func sgUD(ctx context.Context, rd *schema.ResourceData, i interface{}, upd bool)
 	}
 	if upd {
 		nwList, _ := rd.Get(RcLabelNetworks).(string)
-		for _, p := range splitNetNames(nwList) {
-			sg.Networks = append(sg.Networks, &sgroupsAPI.Network{
-				Name: p,
-			})
-		}
+		sg.Networks = splitNetNames(nwList)
 	}
 	op := sgroupsAPI.SyncReq_Upsert
 	if !upd {

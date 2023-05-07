@@ -1,15 +1,16 @@
 package sgroups
 
 import (
+	"bytes"
 	"context"
+	"net"
 	"reflect"
-	"sort"
-	"strings"
 	"time"
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	"github.com/hashicorp/go-memdb"
 	"github.com/pkg/errors"
+	"go.uber.org/multierr"
 )
 
 type sGroupsMemDbWriter struct {
@@ -167,9 +168,9 @@ func (wr sGroupsMemDbWriter) afterDeleteNetworks(ctx context.Context, nw []model
 	//get related SG(s)
 	err := wr.ListSecurityGroups(ctx, func(sg model.SecurityGroup) error {
 		nws := sg.Networks[:0]
-		for _, n := range sg.Networks {
-			if !nwSet[n.Name] {
-				nws = append(nws, n)
+		for _, nwName := range sg.Networks {
+			if !nwSet[nwName] {
+				nws = append(nws, nwName)
 			}
 		}
 		if len(nws) != len(sg.Networks) {
@@ -322,35 +323,33 @@ func (h syncHelper[T, TKey]) extractKey(obj T) (TKey, error) {
 
 func (h syncHelper[T, TKey]) isEQ(l, r T) bool {
 	switch lt := interface{}(l).(type) {
+	case net.IPNet:
+		rt := interface{}(r).(net.IPNet)
+		return lt.IP.Equal(rt.IP) &&
+			bytes.Equal(lt.Mask, rt.Mask)
 	case model.Network:
 		rt := interface{}(r).(model.Network)
-		return lt.Net.IP.Equal(rt.Net.IP) &&
-			lt.Net.Mask.String() == rt.Net.Mask.String()
+		var h syncHelper[net.IPNet, string]
+		return h.isEQ(lt.Net, rt.Net)
 	case model.SecurityGroup:
 		rt := interface{}(r).(model.SecurityGroup)
-		if len(lt.Networks) != len(rt.Networks) {
-			return false
-		}
-		sort.Slice(lt.Networks, func(i, j int) bool {
-			return strings.Compare(lt.Networks[i].Name, lt.Networks[j].Name) < 0
-		})
-		sort.Slice(rt.Networks, func(i, j int) bool {
-			return strings.Compare(rt.Networks[i].Name, rt.Networks[j].Name) < 0
-		})
-		var h1 syncHelper[model.Network, string]
-		for i := range lt.Networks {
-			if eq := h1.isEQ(lt.Networks[i], rt.Networks[i]); !eq {
+		if len(lt.Networks) == len(rt.Networks) {
+			a := make(map[model.NetworkName]bool, len(lt.Networks))
+			for _, nwName := range lt.Networks {
+				a[nwName] = true
+			}
+			for _, nwName := range rt.Networks {
+				if ok := a[nwName]; ok {
+					delete(a, nwName)
+					continue
+				}
 				return false
 			}
-			if lt.Networks[i].Name != rt.Networks[i].Name {
-				return false
-			}
+			return len(a) == 0
 		}
-		return true
 	case model.SGRule:
 		rt := interface{}(r).(model.SGRule)
-		return model.ArePortRangesEq(lt.PortsFrom, rt.PortsFrom) &&
-			model.ArePortRangesEq(lt.PortsTo, rt.PortsTo)
+		return lt.IsEq(rt)
 	default:
 	}
 	return false
@@ -368,16 +367,21 @@ func (h syncHelper[T, TKey]) doSync(newValues []T, curValIt MemDbIterator, opts 
 		return err
 	}
 	upd, ins, del := h.diff(opts...)
-	ups := append(upd, ins...)
-	for i := range ups {
-		obj := &ups[i]
-		if err = h.upsert(obj); err != nil {
+	for i := range del {
+		if err = h.delete(&del[i]); err != nil {
 			return err
 		}
 	}
-	for i := range del {
-		obj := &del[i]
-		if err = h.delete(obj); err != nil {
+	ups := append(upd, ins...)
+	for i := range ups {
+		obj := &ups[i]
+		if v, ok := any(obj).(model.Validatable); ok {
+			err = v.Validate()
+			if err != nil {
+				return multierr.Combine(ErrValidate, err)
+			}
+		}
+		if err = h.upsert(obj); err != nil {
 			return err
 		}
 	}

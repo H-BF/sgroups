@@ -128,22 +128,13 @@ func tf2protoSG(raw any) (string, *sgroupsAPI.SecGroup, error) {
 		Name: it[RcLabelName].(string),
 	}
 	nws, _ := it[RcLabelNetworks].(string)
-	for _, nw := range splitNetNames(nws) {
-		sg.Networks = append(sg.Networks,
-			&sgroupsAPI.Network{
-				Name: nw,
-			})
-	}
+	sg.Networks = splitNetNames(nws)
 	return sg.Name, &sg, nil
 }
 
 func protoSG2tf(sg *sgroupsAPI.SecGroup) (map[string]any, error) {
-	var nws []string
-	for _, nw := range sg.GetNetworks() {
-		nws = append(nws, nw.GetName())
-	}
 	return map[string]any{
 		RcLabelName:     sg.GetName(),
-		RcLabelNetworks: strings.Join(nws, ","),
+		RcLabelNetworks: strings.Join(sg.GetNetworks(), ","),
 	}, nil
 }

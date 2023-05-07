@@ -207,6 +207,6 @@ func (c listedRcCRUD[T]) update(ctx context.Context, rd *schema.ResourceData) er
 	return nil
 }
 
-func (c listedRcCRUD[T]) read(_ context.Context, _ *schema.ResourceData) error {
-	panic("do not use it")
-}
+//func (c listedRcCRUD[T]) read(_ context.Context, _ *schema.ResourceData) error {
+//	panic("do not use it")
+//}

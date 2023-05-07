@@ -87,17 +87,17 @@ func (rd sGroupsMemDbReader) ListSGRules(_ context.Context, consume func(model.S
 func (rd sGroupsMemDbReader) fillSG(sg *model.SecurityGroup) error {
 	nw := sg.Networks[:0]
 	seen := make(map[model.NetworkName]bool)
-	for _, n := range sg.Networks {
-		if seen[n.Name] {
+	for _, nwName := range sg.Networks {
+		if seen[nwName] {
 			continue
 		}
-		seen[n.Name] = true
-		x, e := rd.reader.First(TblNetworks, indexID, n.Name)
+		seen[nwName] = true
+		x, e := rd.reader.First(TblNetworks, indexID, nwName)
 		if e != nil {
 			return errors.WithMessage(e, "db error")
 		}
 		if x != nil {
-			nw = append(nw, *x.(*model.Network))
+			nw = append(nw, x.(*model.Network).Name)
 		}
 	}
 	sg.Networks = nw

@@ -13,55 +13,37 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-//nolint:nakedret
-func sgRule2proto(src model.SGRule) (ret sg.Rule, err error) {
-	switch a := src.Transport; a {
+func netTranport2proto(src model.NetworkTransport) (common.Networks_NetIP_Transport, error) {
+	switch src {
 	case model.TCP:
-		ret.Transport = common.Networks_NetIP_TCP
+		return common.Networks_NetIP_TCP, nil
 	case model.UDP:
-		ret.Transport = common.Networks_NetIP_UDP
-	default:
-		err = errors.Errorf("bad net transport (%v)", a)
-		return
+		return common.Networks_NetIP_UDP, nil
 	}
-	ret.SgFrom, ret.SgTo = new(sg.SecGroup), new(sg.SecGroup)
-	srcGroups := []*model.SecurityGroup{&src.SgFrom, &src.SgTo}
-	dstGroups := []*sg.SecGroup{ret.SgFrom, ret.SgTo}
-	for i := range srcGroups {
-		gSrc, gDst := srcGroups[i], dstGroups[i]
-		gDst.Name = gSrc.Name
-		var dstNetworks []*sg.Network
-		for _, srcNetwork := range gSrc.Networks {
-			dstNetworks = append(dstNetworks,
-				&sg.Network{
-					Name: srcNetwork.Name,
-					Network: &common.Networks_NetIP{
-						CIDR: srcNetwork.Net.String(),
-					},
-				})
+	return 0, errors.Errorf("bad net transport (%v)", src)
+}
+
+func sgRule2proto(src model.SGRule) (sg.Rule, error) {
+	var ret sg.Rule
+	if t, e := netTranport2proto(src.Transport); e != nil {
+		return ret, e
+	} else {
+		ret.Transport = t
+	}
+	ret.SgFrom = src.SgFrom.Name
+	ret.SgTo = src.SgTo.Name
+	ret.Ports = make([]*sg.Rule_Ports, 0, len(src.Ports))
+	for _, p := range src.Ports {
+		var s, d model.PortSource
+		if err := s.FromPortRange(p.S); err != nil {
+			return ret, errors.Wrapf(err, "bad 'S' ports value '%s'", p.S)
 		}
-		gDst.Networks = dstNetworks
+		if err := d.FromPortRange(p.D); err != nil {
+			return ret, errors.Wrapf(err, "bad 'D' ports value '%s'", p.D)
+		}
+		ret.Ports = append(ret.Ports, &sg.Rule_Ports{S: string(s), D: string(d)})
 	}
-	portsSrc := []*model.PortRanges{&src.PortsFrom, &src.PortsTo}
-	portsDst := []*[]*common.Networks_NetIP_PortRange{&ret.PortsFrom, &ret.PortsTo}
-	for i := range portsSrc {
-		portsSrc[i].Iterate(func(portRange model.PortRange) bool {
-			var ex0 bool
-			var ex1 bool
-			var item common.Networks_NetIP_PortRange
-			l, u := portRange.Bounds()
-			item.From, ex0 = l.AsIncluded().GetValue()
-			item.To, ex1 = u.AsIncluded().GetValue()
-			if ex0 || ex1 {
-				err = errors.New("bad port range")
-				return false
-			}
-			d := portsDst[i]
-			*d = append(*d, &item)
-			return true
-		})
-	}
-	return
+	return ret, nil
 }
 
 func (srv *sgService) GetRules(ctx context.Context, req *sg.GetRulesReq) (resp *sg.RulesResp, err error) {

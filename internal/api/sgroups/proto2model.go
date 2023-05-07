@@ -3,7 +3,6 @@ package sgroups
 import (
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
-	"github.com/H-BF/protos/pkg/api/common"
 	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/pkg/errors"
 )
@@ -18,18 +17,9 @@ func Proto2ModelNetwork(protoNw *sg.Network) (model.Network, error) {
 
 // Proto2ModelSG conv SG (proto --> model)
 func Proto2ModelSG(g *sg.SecGroup) (model.SecurityGroup, error) {
-	const api = "proto2model-SG-conv"
-
+	//const api = "proto2model-SG-conv"
 	var ret securityGroup
 	ret.from(g)
-	ret.Networks = ret.Networks[:0]
-	for _, nw := range g.GetNetworks() {
-		n, e := Proto2ModelNetwork(nw)
-		if e != nil {
-			return ret.SecurityGroup, errors.WithMessage(e, api)
-		}
-		ret.Networks = append(ret.Networks, n)
-	}
 	return ret.SecurityGroup, nil
 }
 
@@ -54,21 +44,12 @@ func Proto2ModelSGRule(src *sg.Rule) (model.SGRule, error) {
 
 	var ret model.SGRule
 	err := sgRule{SGRule: &ret}.from(src)
-	if err != nil {
-		return ret, errors.WithMessage(err, api)
-	}
-	if ret.SgFrom, err = Proto2ModelSG(src.GetSgFrom()); err != nil {
-		return ret, errors.WithMessage(err, api)
-	}
-	if ret.SgTo, err = Proto2ModelSG(src.GetSgTo()); err != nil {
-		return ret, errors.WithMessage(err, api)
-	}
-	return ret, nil
+	return ret, errors.WithMessage(err, api)
 }
 
 // Proto2ModelPortRanges -
-func Proto2ModelPortRanges(src []*common.Networks_NetIP_PortRange) model.PortRanges {
-	var ret model.PortRanges
-	portsRange{PortRanges: &ret}.from(src)
-	return ret
+func Proto2ModelPortRanges(src []*sg.Rule_Ports) ([]model.SGRulePorts, error) {
+	var ret rulePorts
+	err := ret.from(src)
+	return []model.SGRulePorts(ret), err
 }

@@ -6,7 +6,6 @@ import (
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 
-	"github.com/H-BF/corlib/pkg/ranges"
 	"github.com/H-BF/protos/pkg/api/common"
 	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	"google.golang.org/grpc/codes"
@@ -26,10 +25,6 @@ func (snc syncRules) process(ctx context.Context) error {
 		if err := (sgRule{SGRule: &item}).from(rl); err != nil {
 			return status.Error(codes.InvalidArgument, err.Error())
 		}
-		if len(item.SgFrom.Name) == 0 || len(item.SgTo.Name) == 0 {
-			return status.Errorf(codes.InvalidArgument,
-				"rule '%s' is incompleted", item.SGRuleIdentity)
-		}
 		rules = append(rules, item)
 	}
 	var opts []registry.Option
@@ -46,9 +41,7 @@ func (snc syncRules) process(ctx context.Context) error {
 	return snc.wr.SyncSGRules(ctx, rules, sc, opts...)
 }
 
-type portsRange struct {
-	*model.PortRanges
-}
+type rulePorts []model.SGRulePorts
 
 type sgRule struct {
 	*model.SGRule
@@ -75,20 +68,26 @@ func (nt networkTransport) from(src common.Networks_NetIP_Transport) error {
 	return nil
 }
 
-func (r portsRange) from(src []*common.Networks_NetIP_PortRange) {
-	rgs := make([]model.PortRange, 0, len(src))
-	for _, s := range src {
-		rgs = append(rgs,
-			model.PortRangeFactory.Range(s.GetFrom(), false, s.GetTo(), false))
+func (r *rulePorts) from(src []*sg.Rule_Ports) error {
+	for _, p := range src {
+		var item model.SGRulePorts
+		var e error
+		if item.S, e = model.PortSource(p.S).ToPortRange(); e != nil {
+			return e
+		}
+		if item.D, e = model.PortSource(p.D).ToPortRange(); e != nil {
+			return e
+		}
+		if item.D != nil || item.S != nil {
+			*r = append(*r, item)
+		}
 	}
-	x := ranges.NewMultiRange(model.PortRangeFactory)
-	x.Update(ranges.CombineMerge, rgs...)
-	*r.PortRanges = x
+	return nil
 }
 
 func (ri sgRuleIdentity) from(src *sg.Rule) error {
-	ri.SgFrom.Name = src.GetSgFrom().GetName()
-	ri.SgTo.Name = src.GetSgTo().GetName()
+	ri.SgFrom.Name = src.GetSgFrom()
+	ri.SgTo.Name = src.GetSgTo()
 	return networkTransport{NetworkTransport: &ri.Transport}.
 		from(src.GetTransport())
 }
@@ -97,8 +96,10 @@ func (r sgRule) from(src *sg.Rule) error {
 	err := sgRuleIdentity{SGRuleIdentity: &r.SGRuleIdentity}.
 		from(src)
 	if err == nil {
-		portsRange{PortRanges: &r.PortsFrom}.from(src.GetPortsFrom())
-		portsRange{PortRanges: &r.PortsTo}.from(src.GetPortsTo())
+		var p rulePorts
+		if err = p.from(src.GetPorts()); err == nil {
+			r.Ports = p
+		}
 	}
 	return err
 }

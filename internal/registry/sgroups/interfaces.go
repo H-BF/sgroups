@@ -4,6 +4,7 @@ import (
 	"context"
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
+	"github.com/pkg/errors"
 )
 
 type (
@@ -32,3 +33,6 @@ type (
 		Close() error
 	}
 )
+
+// ErrValidate validation failure
+var ErrValidate = errors.New("validation failure")

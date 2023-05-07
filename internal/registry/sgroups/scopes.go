@@ -230,26 +230,8 @@ type metaInfo = map[reflect.Type]reflect.Value
 
 func (p scopedIPs) meta() metaInfo {
 	return metaInfo{
-		reflect.TypeOf((*model.SecurityGroup)(nil)).Elem(): reflect.ValueOf(p.inSG),
-
 		reflect.TypeOf((*model.Network)(nil)).Elem(): reflect.ValueOf(p.inNetwork),
-
-		reflect.TypeOf((*model.SGRule)(nil)).Elem(): reflect.ValueOf(p.inSGRule),
 	}
-}
-
-func (p *scopedIPs) inSGRule(rule model.SGRule) bool {
-	return p.inSG(rule.SgFrom) ||
-		p.inSG(rule.SgTo)
-}
-
-func (p *scopedIPs) inSG(sg model.SecurityGroup) bool {
-	for _, nw := range sg.Networks {
-		if p.inNetwork(nw) {
-			return true
-		}
-	}
-	return false
 }
 
 func (p *scopedIPs) inNetwork(network model.Network) bool {
@@ -276,7 +258,7 @@ func (p *scopedNetworks) inNetwork(network model.Network) bool {
 
 func (p *scopedNetworks) inSG(sg model.SecurityGroup) bool {
 	for i := range sg.Networks {
-		if _, ok := p.Names[sg.Networks[i].Name]; ok {
+		if _, ok := p.Names[sg.Networks[i]]; ok {
 			return true
 		}
 	}
