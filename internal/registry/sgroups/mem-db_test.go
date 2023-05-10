@@ -67,7 +67,7 @@ func (sui *memDbSuite) newSG(name string, nws ...model.Network) model.SecurityGr
 	sui.Require().NotEmpty(name)
 	ret := model.SecurityGroup{Name: name}
 	for i := range nws {
-		ret.Networks = append(ret.Networks, nws[i])
+		ret.Networks = append(ret.Networks, nws[i].Name)
 	}
 	return ret
 }
