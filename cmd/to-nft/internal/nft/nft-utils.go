@@ -16,19 +16,15 @@ func (nameUtils) nameOfNetSet(ipV ipVersion, sgName string) string {
 	return fmt.Sprintf("NetIPv%v-%s", ipV, sgName)
 }
 
-func (nameUtils) nameOfPortSet(tp model.NetworkTransport, sgFrom, sgTo string, isDest bool) string {
+func (nameUtils) nameOfPortSet(tp model.NetworkTransport, sgFrom, sgTo string) string {
 	if sgFrom = strings.TrimSpace(sgFrom); len(sgFrom) == 0 {
 		panic("no 'SGFrom' name in arguments")
 	}
 	if sgTo = strings.TrimSpace(sgTo); len(sgTo) == 0 {
 		panic("no 'SGTo' name in arguments")
 	}
-	dir := 's'
-	if isDest {
-		dir = 'd'
-	}
-	//                 [s:d]-[tcp|udp]-sgFrom-sgTo
-	return fmt.Sprintf("%c-%s-%s-%s", dir, tp, sgFrom, sgTo)
+	//                 [tcp|udp]-sgFrom-sgTo
+	return fmt.Sprintf("%s-%s-%s", tp, sgFrom, sgTo)
 }
 
 func val2ptr[T any](val T) *T {

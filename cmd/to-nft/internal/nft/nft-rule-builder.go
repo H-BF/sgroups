@@ -61,12 +61,14 @@ func (rb ruleBuilder) counter() ruleBuilder {
 }
 
 func (rb ruleBuilder) inSet(s *nftlib.Set) ruleBuilder {
-	rb.exprs = append(rb.exprs,
-		&Lookup{
-			SourceRegister: 1,
-			SetName:        s.Name,
-			SetID:          s.ID,
-		})
+	if s != nil {
+		rb.exprs = append(rb.exprs,
+			&Lookup{
+				SourceRegister: 1,
+				SetName:        s.Name,
+				SetID:          s.ID,
+			})
+	}
 	return rb
 }
 
