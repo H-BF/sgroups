@@ -473,8 +473,6 @@ func (bt *batch) addOutChains() {
 									tr, bt.table.Name, outSGchName)
 							case iplib.IP6Version:
 								// TODO: to impl in future
-							default:
-								panic("UB")
 							}
 						}
 						return nil
@@ -519,8 +517,8 @@ func (bt *batch) addInChains() {
 		for i := range ipVers {
 			ipV := ipVers[i]
 			bt.addJob(api, func(tx *nfTablesTx) error {
-				daddr := names.nameOfNetSet(ipV, inSG)
-				daddrSet := bt.sets.at(daddr)
+				daddrSetName := names.nameOfNetSet(ipV, inSG)
+				daddrSet := bt.sets.at(daddrSetName)
 				if daddrSet == nil {
 					return nil
 				}
@@ -543,32 +541,32 @@ func (bt *batch) addInChains() {
 				for k := range tps {
 					tr := tps[k]
 					bt.addJob(api, func(tx *nfTablesTx) error {
-						saddr := names.nameOfNetSet(ipV, outSG)
-						sport := names.nameOfPortSet(tr, outSG, inSG, false)
-						dport := names.nameOfPortSet(tr, outSG, inSG, true)
-						sportSet := bt.sets.at(sport)
-						dportSet := bt.sets.at(dport)
-						saddrSet := bt.sets.at(saddr)
-						if saddrSet == nil || (sportSet == nil && dportSet == nil) {
+						saddrSetName := names.nameOfNetSet(ipV, outSG)
+						saddrSet := bt.sets.at(saddrSetName)
+						if saddrSet == nil {
 							return nil
 						}
-						chn := bt.chains.at(inSGchName)
-						switch ipV {
-						case iplib.IP4Version:
-							bt.log.Debugf("apply %s-rule(s) to chain '%s'/'%s'",
-								tr, bt.table.Name, inSGchName)
-							b := beginRule().
-								ipProto(tr).saddr4().inSet(saddrSet)
-							if sportSet != nil {
-								b = b.ipProto(tr).sport().inSet(sportSet)
+						chnApplyTo := bt.chains.at(inSGchName)
+						portSetsName := names.nameOfPortSet(tr, outSG, inSG)
+						portSets := bt.portset.at(portSetsName)
+						for i := range portSets {
+							switch ipV {
+							case iplib.IP4Version:
+								b := beginRule().
+									ipProto(tr).saddr4().inSet(saddrSet)
+								if d := portSets[i].d; d != nil {
+									b = b.ipProto(tr).dport().inSet(d)
+								}
+								if s := portSets[i].s; s != nil {
+									b = b.ipProto(tr).sport().inSet(s)
+								}
+								b.counter().accept().
+									applyRule(chnApplyTo, tx.Conn)
+								bt.log.Debugf("apply %s-rule(s) to chain '%s'/'%s'",
+									tr, bt.table.Name, inSGchName)
+							case iplib.IP6Version:
+								// TODO: to impl in future
 							}
-							if dportSet != nil {
-								b = b.ipProto(tr).dport().inSet(dportSet)
-							}
-							b.counter().accept().
-								applyRule(chn, tx.Conn)
-						case iplib.IP6Version:
-							// TODO: to impl in future
 						}
 						return nil
 					})
