@@ -25,15 +25,18 @@ type (
 	//SgName is a type alias
 	SgName = string
 
-	//SG is a type alias
-	SG = model.SecurityGroup
+	//SG is a security gorups
+	SG = struct {
+		Name     string
+		Networks []Network
+	}
 
 	//SGClient is a type alias
 	SGClient = sgAPI.SecGroupServiceClient
 
 	// LocalSG ...
 	LocalSG struct {
-		SG
+		SgName
 		IPsV4, IPsV6 iplib.ByIP
 	}
 
@@ -62,7 +65,7 @@ func (loc *LocalSGs) Load(ctx context.Context, client SGClient, srcIPs []net.IP)
 			}
 			return err
 		}
-		var sg SG
+		var sg model.SecurityGroup
 		if sg, err = conv.Proto2ModelSG(resp); err != nil {
 			return err
 		}
@@ -71,7 +74,7 @@ func (loc *LocalSGs) Load(ctx context.Context, client SGClient, srcIPs []net.IP)
 		it := (*loc)[sg.Name]
 		if it == nil {
 			it = new(LocalSG)
-			it.SG = sg
+			it.SgName = sg.Name
 			(*loc)[sg.Name] = it
 		}
 		switch len(srcIP) {

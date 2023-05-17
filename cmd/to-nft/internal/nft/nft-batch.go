@@ -318,7 +318,7 @@ func (bt *batch) addNetSets() {
 	})
 }
 
-func (bt *batch) addPortSets() {
+func (bt *batch) addPortSets() { //TODO: Refactor
 	const api = "add-port-sets"
 
 	rules := bt.rules
@@ -378,6 +378,9 @@ func (bt *batch) addPortSets() {
 			return nil
 		})
 	}
+	_ = rules //TODO: Refactor
+	_ = apply //TODO: Refactor
+	/*//TODO: Refactor
 	for sgFrom, to := range rules.SgRules {
 		for sgTo, ports := range to {
 			name := nameUtils{}.nameOfPortSet(
@@ -390,6 +393,7 @@ func (bt *batch) addPortSets() {
 			apply(name, ports.To)
 		}
 	}
+	*/
 }
 
 func (bt *batch) addOutChains() {

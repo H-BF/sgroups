@@ -6,12 +6,15 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/H-BF/corlib/pkg/slice"
-	sgAPI "github.com/H-BF/protos/pkg/api/sgroups"
 	conv "github.com/H-BF/sgroups/internal/api/sgroups"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
+	"github.com/H-BF/corlib/pkg/parallel"
+	"github.com/H-BF/corlib/pkg/slice"
+	sgAPI "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type (
@@ -26,15 +29,13 @@ type (
 	SgRules = map[SgFrom]SgTo
 
 	// RulePorts ...
-	RulePorts = struct {
-		From, To model.PortRanges
-	}
+	RulePorts = []model.SGRulePorts
 
 	// LocalRules ...
 	LocalRules struct {
 		SgRules
 		LocalSGs LocalSGs
-		UsedSGs  map[SgName]SG
+		UsedSGs  map[SgName]*SG
 	}
 
 	// SgNetworks ...
@@ -52,7 +53,8 @@ func (rules *LocalRules) Load(ctx context.Context, client SGClient, locals Local
 
 	rules.SgRules = make(SgRules)
 	rules.LocalSGs = make(LocalSGs)
-	rules.UsedSGs = make(map[SgName]SG)
+	rules.UsedSGs = make(map[SgName]*SG)
+	var sgNames []string
 
 	localSgNames := locals.Names()
 	if len(localSgNames) == 0 {
@@ -83,11 +85,34 @@ func (rules *LocalRules) Load(ctx context.Context, client SGClient, locals Local
 					rules.LocalSGs[rule.SgTo.Name] = loc
 				}
 			}
-			rules.UsedSGs[rule.SgFrom.Name] = rule.SgFrom
-			rules.UsedSGs[rule.SgTo.Name] = rule.SgTo
+			for _, n := range []string{rule.SgFrom.Name, rule.SgTo.Name} {
+				if rules.UsedSGs[n] == nil {
+					rules.UsedSGs[n] = &SG{Name: n}
+					sgNames = append(sgNames, n)
+				}
+			}
 		}
 	}
-	return nil
+
+	err := parallel.ExecAbstract(len(sgNames), 7, func(i int) error {
+		rq := sgAPI.GetSgSubnetsReq{SgName: sgNames[i]}
+		resp, e := client.GetSgSubnets(ctx, &rq)
+		if e == nil {
+			for _, nw := range resp.GetNetworks() {
+				m, e := conv.Proto2ModelNetwork(nw)
+				if e != nil {
+					return e
+				}
+				o := rules.UsedSGs[sgNames[i]]
+				o.Networks = append(o.Networks, m)
+			}
+		}
+		if status.Code(errors.Cause(e)) == codes.NotFound {
+			e = nil
+		}
+		return e
+	})
+	return errors.WithMessage(err, api)
 }
 
 func (rules *LocalRules) addRule(rule model.SGRule) {
@@ -100,10 +125,7 @@ func (rules *LocalRules) addRule(rule model.SGRule) {
 		sgTo = make(SgTo)
 		rules.SgRules[sgFrom] = sgTo
 	}
-	sgTo[rule.SgTo.Name] = RulePorts{
-		From: rule.PortsFrom,
-		To:   rule.PortsTo,
-	}
+	sgTo[rule.SgTo.Name] = rule.Ports
 }
 
 // IterateNetworks ...
