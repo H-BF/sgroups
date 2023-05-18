@@ -1,0 +1,6 @@
+FROM ubuntu:22.10
+
+WORKDIR /app
+COPY bin/sgroups /app/bin/sgroups
+
+CMD [ "/bin/bash", "-c", "./bin/sgroups", "-config", "hack/configs/sgroups.yaml" ]

@@ -1,0 +1,118 @@
+site_name: Рой
+
+theme:
+  palette: 
+
+    # Palette toggle for light mode
+    - scheme: deep orange
+      primary: indigo
+      toggle:
+        icon: material/brightness-7 
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  # logo: pictures/logo2.jpg
+  # favicon: pictures/logo.jpg
+  icon:
+    repo: fontawesome/brands/github
+  name: material
+  language: en
+  font:
+    # text: Shantell Sans
+    text: Raleway
+  features:
+    - content.tabs.link
+    - content.code.copy
+    - content.code.select
+    - content.code.annotate 
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.tracking
+    - navigation.instant
+    # - header.autohide
+    - navigation.footer
+    # - content.action.edit
+extra:
+  homepage: https://docs.hbf.fraima.io
+  version:
+    provider: mike
+
+repo_url: https://github.com/fraima/roy
+repo_name: fraima/roy
+
+copyright: >
+  Copyright &copy; 2022 - 2023 Dobry_kot
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      use_pygments: true
+      auto_title: true
+
+  - toc:
+      permalink: true
+      title: На этой странице
+      permalink_title: Anchor link to this section for reference
+      toc_depth: 3
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg   
+  - tables
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tabbed:
+      alternate_style: true 
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+plugins:
+  - swagger-ui-tag
+  - search
+  # Добавляет в конце страницы информацию по дате создания и обновлению
+  # - git-revision-date-localized:
+  #     enable_creation_date: true
+
+nav:
+
+  - "Информация": 
+    - "О продукте": index.md
+    - "Выбор инструмента": toolset.md
+    - "Архитектура": 
+      - "Абстракции": architecture_abstractions.md
+      - "Компоненты": architecture_components.md
+  
+  - "Настройка": 
+    - "Установка": 
+      - "Системные требования": quick_installation_req.md
+      - "Сервер": quick_installation_server.md
+      - "Агент": quick_installation_agent.md
+      - "Terraform": quick_installation_terraform.md
+    - "Как пользоваться": quick_start.md
+    - "Отладка": trubleshooting.md
+    
+  - Swagger: swagger.md
+  
+
+extra_css:
+  - stylesheets/extra.css
+
+
+extra:
+  version:
+    default: latest
+    provider: mike
