@@ -1,8 +1,11 @@
 package nft
 
 import (
+	"bytes"
 	"fmt"
+	"math/rand"
 	"strings"
+	"sync/atomic"
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 )
@@ -27,6 +30,36 @@ func (nameUtils) nameOfPortSet(tp model.NetworkTransport, sgFrom, sgTo string) s
 	return fmt.Sprintf("%s-%s-%s", tp, sgFrom, sgTo)
 }
 
+type stringer func() string
+
+func (s stringer) String() string {
+	return s()
+}
+
+func tern[t1 any, t2 any](cond bool, a1 t1, a2 t2) any {
+	if cond {
+		return a1
+	}
+	return a2
+}
+
+func slice2stringer[t any](ar ...t) fmt.Stringer {
+	return stringer(func() string {
+		b := bytes.NewBuffer(nil)
+		for i, o := range ar {
+			if i > 0 {
+				_, _ = b.WriteString("; ")
+			}
+			s, _ := interface{}(o).(fmt.Stringer)
+			if s == nil {
+				s, _ = interface{}(&o).(fmt.Stringer)
+			}
+			_, _ = fmt.Fprintf(b, "%v", tern(s != nil, s, o))
+		}
+		return b.String()
+	})
+}
+
 func val2ptr[T any](val T) *T {
 	return &val
 }
@@ -41,3 +74,9 @@ func zeroEndedS(s string) string {
 	}
 	return s + z
 }
+
+func nextSetID() uint32 {
+	return atomic.AddUint32(&setID, 1)
+}
+
+var setID = rand.Uint32()

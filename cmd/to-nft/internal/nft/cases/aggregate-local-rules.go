@@ -174,15 +174,33 @@ func (rules LocalRules) IterateNetworks(f func(sgName string, nets []net.IPNet, 
 
 // TemplatesOut ...
 func (rules LocalRules) TemplatesOut(f func(out string, in []string) error) error {
+	type idT = struct {
+		tr           model.NetworkTransport
+		sgfrom, sgto string
+	}
+	seen := make(map[idT]bool)
 	ret := make(map[string][]string)
 	for from, to := range rules.SgRules {
+		id := idT{sgfrom: from.SgName, tr: from.Transport}
 		if rules.LocalSGs[from.SgName] != nil {
 			for toSg := range to {
-				ret[from.SgName] = append(ret[from.SgName], toSg)
+				id.sgto = toSg
+				if !seen[id] {
+					seen[id] = true
+					ret[from.SgName] = append(ret[from.SgName], toSg)
+				}
 			}
 		}
 	}
 	for out, in := range ret {
+		/*//
+		sort.Slice(in, func(i, j int) bool {
+			return strings.Compare(in[i], in[j]) < 0
+		})
+		n := slice.DedupSlice(in, func(i, j int) bool {
+			return in[i] == in[j]
+		})
+		*/
 		if e := f(out, in); e != nil {
 			return e
 		}
@@ -202,13 +220,12 @@ func (rules LocalRules) TemplatesIn(f func(out []string, in string) error) error
 	}
 	for in, out := range data {
 		sort.Slice(out, func(i, j int) bool {
-			return !strings.EqualFold(out[i], out[j]) &&
-				strings.Compare(out[i], out[j]) < 0
+			return strings.Compare(out[i], out[j]) < 0
 		})
-		_ = slice.DedupSlice(&out, func(i, j int) bool {
-			return strings.EqualFold(out[i], out[j])
+		n := slice.DedupSlice(out, func(i, j int) bool {
+			return out[i] == out[j]
 		})
-		if e := f(out, in); e != nil {
+		if e := f(out[:n], in); e != nil {
 			return e
 		}
 	}

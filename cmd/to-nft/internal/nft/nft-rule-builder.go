@@ -211,14 +211,36 @@ func (rb ruleBuilder) neqS(s string) ruleBuilder {
 	return rb
 }
 
+func (rb ruleBuilder) eqU16(val uint16) ruleBuilder {
+	return rb.cmpU16(CmpOpEq, val)
+}
+func (rb ruleBuilder) leU16(val uint16) ruleBuilder {
+	return rb.cmpU16(CmpOpLte, val)
+}
+func (rb ruleBuilder) ltU16(val uint16) ruleBuilder {
+	return rb.cmpU16(CmpOpLt, val)
+}
+func (rb ruleBuilder) geU16(val uint16) ruleBuilder {
+	return rb.cmpU16(CmpOpGte, val)
+}
+func (rb ruleBuilder) gtU16(val uint16) ruleBuilder {
+	return rb.cmpU16(CmpOpGt, val)
+}
+func (rb ruleBuilder) cmpU16(op CmpOp, val uint16) ruleBuilder {
+	rb.exprs = append(rb.exprs, &Cmp{
+		Register: 1,
+		Op:       op,
+		Data:     BigEndian.PutUint16(val),
+	})
+	return rb
+}
+
 func (rb ruleBuilder) eqS(s string) ruleBuilder {
-	rb.exprs = append(rb.exprs,
-		&Cmp{
-			Register: 1,
-			Op:       CmpOpEq,
-			Data:     PutString(zeroEndedS(s)),
-		},
-	)
+	rb.exprs = append(rb.exprs, &Cmp{
+		Register: 1,
+		Op:       CmpOpEq,
+		Data:     PutString(zeroEndedS(s)),
+	})
 	return rb
 }
 
