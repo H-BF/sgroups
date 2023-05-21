@@ -12,6 +12,7 @@ import (
 	"github.com/H-BF/corlib/pkg/parallel"
 	"github.com/H-BF/corlib/pkg/slice"
 	sgAPI "github.com/H-BF/protos/pkg/api/sgroups"
+	"github.com/ahmetb/go-linq/v3"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -30,6 +31,30 @@ type (
 
 	// RulePorts ...
 	RulePorts = []model.SGRulePorts
+
+	// RuleIdentity -
+	RuleIdentity = struct {
+		SgFrom, SgTo string
+		Proto        model.NetworkTransport
+	}
+
+	// RulesOutTempalte -
+	RulesOutTemplate struct {
+		SgOut string
+		In    []struct {
+			Sg    string
+			Proto model.NetworkTransport
+		}
+	}
+
+	// RulesInTempalte -
+	RulesInTemplate struct {
+		SgIn string
+		Out  []struct {
+			Sg    string
+			Proto model.NetworkTransport
+		}
+	}
 
 	// LocalRules ...
 	LocalRules struct {
@@ -172,40 +197,44 @@ func (rules LocalRules) IterateNetworks(f func(sgName string, nets []net.IPNet, 
 	return nil
 }
 
-// TemplatesOut ...
-func (rules LocalRules) TemplatesOut(f func(out string, in []string) error) error {
-	type idT = struct {
-		tr           model.NetworkTransport
-		sgfrom, sgto string
+// TemplatesOutRules -
+func (rules LocalRules) TemplatesOutRules() []RulesOutTemplate {
+	type groupped = struct {
+		Sg    string
+		Proto model.NetworkTransport
 	}
-	seen := make(map[idT]bool)
-	ret := make(map[string][]string)
+	var data []RuleIdentity
 	for from, to := range rules.SgRules {
-		id := idT{sgfrom: from.SgName, tr: from.Transport}
+		id := RuleIdentity{SgFrom: from.SgName, Proto: from.Transport}
 		if rules.LocalSGs[from.SgName] != nil {
 			for toSg := range to {
-				id.sgto = toSg
-				if !seen[id] {
-					seen[id] = true
-					ret[from.SgName] = append(ret[from.SgName], toSg)
-				}
+				id.SgTo = toSg
+				data = append(data, id)
 			}
 		}
 	}
-	for out, in := range ret {
-		/*//
-		sort.Slice(in, func(i, j int) bool {
-			return strings.Compare(in[i], in[j]) < 0
-		})
-		n := slice.DedupSlice(in, func(i, j int) bool {
-			return in[i] == in[j]
-		})
-		*/
-		if e := f(out, in); e != nil {
-			return e
+	groups := make([]linq.Group, 0, len(data))
+	linq.From(data).
+		GroupByT(
+			func(o RuleIdentity) string {
+				return o.SgFrom
+			},
+			func(o RuleIdentity) groupped {
+				return groupped{
+					Sg:    o.SgTo,
+					Proto: o.Proto,
+				}
+			},
+		).ToSlice(&groups)
+	ret := make([]RulesOutTemplate, 0, len(groups))
+	for _, g := range groups {
+		item := RulesOutTemplate{SgOut: g.Key.(string)}
+		if len(g.Group) > 0 {
+			linq.From(g.Group).Distinct().ToSlice(&item.In)
 		}
+		ret = append(ret, item)
 	}
-	return nil
+	return ret
 }
 
 // TemplatesIn ...

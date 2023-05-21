@@ -1,8 +1,11 @@
 package nft
 
 import (
+	"fmt"
+
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
+	"github.com/c-robinson/iplib"
 	nftlib "github.com/google/nftables"
 	. "github.com/google/nftables/binaryutil"
 	. "github.com/google/nftables/expr"
@@ -70,6 +73,36 @@ func (rb ruleBuilder) inSet(s *nftlib.Set) ruleBuilder {
 			})
 	}
 	return rb
+}
+
+func (rb ruleBuilder) saddr(ipVer int) ruleBuilder {
+	switch ipVer {
+	case iplib.IP4Version:
+		return rb.saddr4()
+	case iplib.IP6Version:
+		return rb.saddr6()
+	default:
+		panic(fmt.Errorf("unsuppoeted proto ver '%v'", ipVer))
+	}
+}
+
+func (rb ruleBuilder) daddr(ipVer int) ruleBuilder {
+	switch ipVer {
+	case iplib.IP4Version:
+		return rb.daddr4()
+	case iplib.IP6Version:
+		return rb.daddr6()
+	default:
+		panic(fmt.Errorf("unsuppoeted proto ver '%v'", ipVer))
+	}
+}
+
+func (rb ruleBuilder) saddr6() ruleBuilder {
+	panic("not impl")
+}
+
+func (rb ruleBuilder) daddr6() ruleBuilder {
+	panic("not impl")
 }
 
 func (rb ruleBuilder) saddr4() ruleBuilder {

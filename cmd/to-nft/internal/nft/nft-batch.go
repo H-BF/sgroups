@@ -6,7 +6,6 @@ package nft
 import (
 	"container/list"
 	"context"
-	"fmt"
 	"net"
 	"os"
 	"time"
@@ -18,7 +17,6 @@ import (
 	"github.com/H-BF/corlib/pkg/backoff"
 	"github.com/c-robinson/iplib"
 	nftLib "github.com/google/nftables"
-	nftLibUtil "github.com/google/nftables/binaryutil"
 	nfte "github.com/google/nftables/expr"
 	"github.com/pkg/errors"
 )
@@ -44,8 +42,6 @@ type (
 	jobf = func(tx *nfTablesTx) error
 
 	accports struct {
-		s  *nftLib.Set
-		d  *nftLib.Set
 		sp *[2]model.PortNumber
 		dp *[2]model.PortNumber
 	}
@@ -63,26 +59,28 @@ type (
 	}
 )
 
-func (ap accports) S(rb ruleBuilder) ruleBuilder {
+func (ap accports) S(rb ruleBuilder, tr model.NetworkTransport) ruleBuilder {
 	p := ap.sp
 	if p == nil {
 		return rb
 	}
-	if p[0] == p[1] {
+	rb = rb.ipProto(tr).sport()
+	if (*p)[0] == (*p)[1] {
 		return rb.eqU16(p[0])
 	}
-	return rb.geU16(p[0]).leU16(p[1])
+	return rb.geU16((*p)[0]).leU16((*p)[1])
 }
 
-func (ap accports) D(rb ruleBuilder) ruleBuilder {
+func (ap accports) D(rb ruleBuilder, tr model.NetworkTransport) ruleBuilder {
 	p := ap.dp
 	if p == nil {
 		return rb
 	}
-	if p[0] == p[1] {
-		return rb.eqU16(p[0])
+	rb = rb.ipProto(tr).dport()
+	if (*p)[0] == (*p)[1] {
+		return rb.eqU16((*p)[0])
 	}
-	return rb.geU16(p[0]).leU16(p[1])
+	return rb.geU16((*p)[0]).leU16((*p)[1])
 }
 
 func (bt *batch) init(table *nftLib.Table, localRules cases.LocalRules) {
@@ -353,88 +351,13 @@ func (bt *batch) addNetSets() {
 	})
 }
 
-func (bt *batch) addPortSets() { //TODO: Refactor
-	const api = "add-port-sets"
-
-	portRange2nftElems := func(pr model.PortRange) (ret []nftLib.SetElement) {
-		if !(pr == nil || pr.IsNull()) {
-			be := nftLibUtil.BigEndian
-			a, b := pr.Bounds()
-			left, _ := a.AsIncluded().GetValue()
-			right, _ := b.AsExcluded().GetValue()
-			ret = append(ret, nftLib.SetElement{
-				Key: be.PutUint16(left),
-			})
-			if a.Cmp(b) != 0 {
-				ret = append(ret, nftLib.SetElement{
-					Key:         be.PutUint16(right),
-					IntervalEnd: true,
-				})
-			}
-		}
-		return ret
-	}
-	for sgFrom, to := range bt.rules.SgRules {
-		for sgTo, ports := range to {
-			sgTo := sgTo
-			ports := ports
-			sgFrom := sgFrom
-			bt.addJob(api, func(tx *nfTablesTx) error {
-				var pts []accports
-				setsName := nameUtils{}.nameOfPortSet(sgFrom.Transport, sgFrom.SgName, sgTo)
-				for i, p := range ports {
-					var accp accports
-					if elms := portRange2nftElems(p.S); len(elms) > 0 {
-						accp.s = &nftLib.Set{
-							ID:        nextSetID(),
-							Anonymous: true,
-							Table:     bt.table,
-							Name:      fmt.Sprintf("s:%s:%v", setsName, i),
-							Constant:  true,
-							KeyType:   nftLib.TypeInetService,
-							Interval:  len(elms) > 1,
-						}
-						if e := tx.AddSet(accp.s, elms); e != nil {
-							return e
-						}
-					}
-					if elms := portRange2nftElems(p.D); len(elms) > 0 {
-						accp.d = &nftLib.Set{
-							ID:        nextSetID(),
-							Anonymous: true,
-							Table:     bt.table,
-							Name:      fmt.Sprintf("d:%s:%v", setsName, i),
-							Constant:  true,
-							KeyType:   nftLib.TypeInetService,
-							Interval:  len(elms) > 1,
-						}
-						if e := tx.AddSet(accp.d, elms); e != nil {
-							return e
-						}
-					}
-					if !(accp.s == nil && accp.d == nil) {
-						pts = append(pts, accp)
-					}
-				}
-				if len(pts) == 0 {
-					pts = append(pts, accports{})
-				} else {
-					bt.log.Debugf("add port set(s) '%s' into table '%s'", setsName, bt.table.Name)
-				}
-				bt.portset.put(setsName, pts)
-				return nil
-			})
-		}
-	}
-}
-
 func (bt *batch) initPortSets() {
 	portRange2elems := func(pr model.PortRange) (ret *[2]model.PortNumber) {
 		if !(pr == nil || pr.IsNull()) {
 			ret = new([2]model.PortNumber)
 			a, b := pr.Bounds()
-			ret[0], _ = a.AsIncluded().GetValue()
-			ret[1], _ = b.AsIncluded().GetValue()
+			(*ret)[0], _ = a.AsIncluded().GetValue()
+			(*ret)[1], _ = b.AsIncluded().GetValue()
 		}
 		return ret
 	}
@@ -462,94 +385,71 @@ func (bt *batch) initPortSets() {
 func (bt *batch) addOutChains() {
 	const api = "make-out-chains"
 
-	var names nameUtils
-	_ = bt.rules.TemplatesOut(func(outSG string, inSGs []string) error {
-		var outChainUsed bool
-		outSGchName := chnFWOUT + "-" + outSG
+	outTmpls := bt.rules.TemplatesOutRules()
+	for i := range outTmpls {
+		tmpl := outTmpls[i]
+		outSGchName := chnFWOUT + "-" + tmpl.SgOut
 		bt.addJob(api, func(tx *nfTablesTx) error {
-			chn := tx.AddChain(&nftLib.Chain{
-				Name:  outSGchName,
-				Table: bt.table,
-			})
+			chn := tx.AddChain(&nftLib.Chain{Name: outSGchName, Table: bt.table})
 			bt.chains.put(outSGchName, chn)
-			bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, outSGchName)
+			bt.log.Debugf("add chain '%s' into table '%s'", outSGchName, bt.table.Name)
 			return nil
 		})
-		defer func() {
+		ipVerions := []int{iplib.IP4Version, iplib.IP6Version}
+		for j := range ipVerions {
+			j := j
+			ipV := ipVerions[j]
 			bt.addJob(api, func(tx *nfTablesTx) error {
-				ch := bt.chains.at(outSGchName)
-				if !outChainUsed {
-					tx.DelChain(ch)
-					bt.log.Debugf("delete chain '%s'/'%s'", bt.table.Name, outSGchName)
-				} else {
-					beginRule().drop().applyRule(ch, tx.Conn)
-				}
-				return nil
-			})
-		}()
-
-		for _, ipV := range []int{iplib.IP4Version, iplib.IP6Version} {
-			ipV := ipV
-			bt.addJob(api, func(tx *nfTablesTx) error {
-				saddrSetName := names.nameOfNetSet(ipV, outSG)
+				saddrSetName := nameUtils{}.nameOfNetSet(ipV, tmpl.SgOut)
 				saddrSet := bt.sets.at(saddrSetName)
 				if saddrSet == nil {
 					return nil
 				}
 				output := bt.chains.at(chnFWOUT)
-				switch ipV {
-				case iplib.IP4Version:
-					outChainUsed = true
-					beginRule().
-						saddr4().inSet(saddrSet).
-						counter().
-						go2(outSGchName).applyRule(output, tx.Conn)
-				case iplib.IP6Version:
-					// TODO: to impl in future
-					fallthrough
-				default:
-					panic("UB")
-				}
+				beginRule().
+					saddr(ipV).inSet(saddrSet).counter().
+					go2(outSGchName).applyRule(output, tx.Conn)
 				return nil
 			})
-			for _, inSG := range inSGs {
-				inSG := inSG
-				for _, tr := range []model.NetworkTransport{model.TCP, model.UDP} {
-					tr := tr
-					bt.addJob(api, func(tx *nfTablesTx) error {
-						daddrSetName := names.nameOfNetSet(ipV, inSG)
-						daddrSet := bt.sets.at(daddrSetName)
-						if daddrSet == nil {
-							return nil
-						}
-						chnApplyTo := bt.chains.at(outSGchName)
-						portSetsName := names.nameOfPortSet(tr, outSG, inSG)
-						portSets := bt.portset.at(portSetsName)
-						for _, ps := range portSets {
-							b := beginRule()
-							switch ipV {
-							case iplib.IP4Version:
-								b = b.ipProto(tr).daddr4().inSet(daddrSet)
-							case iplib.IP6Version:
-								// TODO: to impl in future
-								fallthrough
-							default:
-								panic("UB")
+			for k := range tmpl.In {
+				k := k
+				in := tmpl.In[k]
+				bt.addJob(api, func(tx *nfTablesTx) error {
+					daddrSetName := nameUtils{}.nameOfNetSet(ipV, in.Sg)
+					daddrSet := bt.sets.at(daddrSetName)
+
+					chnApplyTo := bt.chains.at(outSGchName)
+					portSetsName := nameUtils{}.nameOfPortSet(in.Proto, tmpl.SgOut, in.Sg)
+					portSets := bt.portset.at(portSetsName)
+					for n := range portSets {
+						ports := portSets[n]
+						fin := k+1 == len(tmpl.In) && j+1 == len(ipVerions) && n+1 == len(portSets)
+						n := n
+						bt.addJob(api, func(tx *nfTablesTx) error {
+							if daddrSet != nil {
+								ports.D(
+									ports.S(
+										beginRule().ipProto(in.Proto).daddr(ipV).inSet(daddrSet),
+										in.Proto,
+									),
+									in.Proto,
+								).counter().accept().
+									applyRule(chnApplyTo, tx.Conn)
+
+								bt.log.Debugf("add '%s' rule (%v / %v) to chain '%s'/'%s'",
+									in.Proto, n+1, len(portSets), bt.table.Name, outSGchName)
 							}
-							b = ps.S(b)
-							b = ps.D(b)
-							b.counter().accept().
-								applyRule(chnApplyTo, tx.Conn)
-						}
-						bt.log.Debugf("add '%s' rule to chain '%s'/'%s'",
-							tr, bt.table.Name, outSGchName)
-						return nil
-					})
-				}
+							if fin {
+								beginRule().drop().applyRule(chnApplyTo, tx.Conn)
+							}
+							return nil
+						})
+					}
+					return nil
+				})
 			}
 		}
-		return nil
-	})
+	}
 }
 
 func (bt *batch) addInChains() {
@@ -618,16 +518,17 @@ func (bt *batch) addInChains() {
 						portSetsName := names.nameOfPortSet(tr, outSG, inSG)
 						portSets := bt.portset.at(portSetsName)
 						for i := range portSets {
+							_ = i
 							switch ipV {
 							case iplib.IP4Version:
 								b := beginRule().
 									ipProto(tr).saddr4().inSet(saddrSet)
-								if d := portSets[i].d; d != nil {
-									b = b.ipProto(tr).dport().inSet(d)
-								}
-								if s := portSets[i].s; s != nil {
-									b = b.ipProto(tr).sport().inSet(s)
-								}
+								//if d := portSets[i].d; d != nil {
+								//	b = b.ipProto(tr).dport().inSet(d)
+								//}
+								//if s := portSets[i].s; s != nil {
+								//	b = b.ipProto(tr).sport().inSet(s)
+								//}
 								b.counter().accept().
 									applyRule(chnApplyTo, tx.Conn)
 							case iplib.IP6Version:
