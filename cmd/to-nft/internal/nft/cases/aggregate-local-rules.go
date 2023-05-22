@@ -116,12 +116,13 @@ func (rules *LocalRules) Load(ctx context.Context, client SGClient, locals Local
 		}
 	}
 
-	err := parallel.ExecAbstract(len(sgNames), 7, func(i int) error {
+	err := parallel.ExecAbstract(len(sgNames), 7, func(i int) error { //nolint:gomnd
 		rq := sgAPI.GetSgSubnetsReq{SgName: sgNames[i]}
 		resp, e := client.GetSgSubnets(ctx, &rq)
 		if e == nil {
 			for _, nw := range resp.GetNetworks() {
-				m, e := conv.Proto2ModelNetwork(nw)
+				var m model.Network
+				m, e = conv.Proto2ModelNetwork(nw)
 				if e != nil {
 					return e
 				}

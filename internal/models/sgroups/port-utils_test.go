@@ -57,7 +57,7 @@ func Test_PortSource(t *testing.T) {
 	}
 }
 
-func mkRanges(ss ...string) []PortRange {
+func mkRanges(ss ...string) []PortRange { //nolint:unused
 	var ret []PortRange
 	for _, s := range ss {
 		if len(strings.TrimSpace(s)) == 0 {

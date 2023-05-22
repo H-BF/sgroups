@@ -17,7 +17,7 @@ func (ps PortSource) IsValid() bool {
 		return true
 	}
 	n := len(parsePortsRE.FindStringSubmatch(string(ps)))
-	return n == 4
+	return n == 4 //nolint:gomnd
 }
 
 // FromPortRange inits from PortRange
@@ -57,7 +57,7 @@ func (ps PortSource) ToPortRange() (PortRange, error) {
 		l, r uint64
 	)
 	m := parsePortsRE.FindStringSubmatch(string(ps))
-	if len(m) != 4 {
+	if len(m) != 4 { //nolint:gomnd
 		if ps.isEmpry() {
 			return nil, nil
 		}

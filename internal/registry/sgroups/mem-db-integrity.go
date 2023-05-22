@@ -108,12 +108,12 @@ func IntegrityChecker4Networks() IntegrityChecker {
 			var dest *[]bound
 			switch nt.Version() {
 			case iplib.IP4Version:
-				if ones < 31 {
+				if ones < 31 { //nolint:gomnd
 					ipL = iplib.NextIP(ipL)
 				}
 				dest = &v4
 			case iplib.IP6Version: //TODO: Check it manually
-				if ones < 128 {
+				if ones < 128 { //nolint:gomnd
 					ipL = iplib.NextIP(ipL)
 				}
 				dest = &v6

@@ -16,7 +16,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-//NewSGroupsService creates service
+// NewSGroupsService creates service
 func NewSGroupsService(ctx context.Context, r registry.Registry) server.APIService {
 	return &sgService{
 		appCtx: ctx,
@@ -42,18 +42,18 @@ var (
 	errSuccess = errors.New("success")
 )
 
-//Description impl server.APIService
+// Description impl server.APIService
 func (srv *sgService) Description() grpc.ServiceDesc {
 	return sg.SecGroupService_ServiceDesc
 }
 
-//RegisterGRPC impl server.APIService
+// RegisterGRPC impl server.APIService
 func (srv *sgService) RegisterGRPC(_ context.Context, s *grpc.Server) error {
 	sg.RegisterSecGroupServiceServer(s, srv)
 	return nil
 }
 
-//RegisterProxyGW impl server.APIGatewayProxy
+// RegisterProxyGW impl server.APIGatewayProxy
 func (srv *sgService) RegisterProxyGW(ctx context.Context, mux *grpcRt.ServeMux, c *grpc.ClientConn) error {
 	return sg.RegisterSecGroupServiceHandler(ctx, mux, c)
 }

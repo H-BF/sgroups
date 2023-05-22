@@ -25,7 +25,7 @@ func isInvalidTableErr(e error) bool {
 	return strings.Contains(e.Error(), "invalid table")
 }
 
-//GetSyncStatus impl Reader
+// GetSyncStatus impl Reader
 func (rd sGroupsMemDbReader) GetSyncStatus(_ context.Context) (*model.SyncStatus, error) {
 	raw, err := rd.reader.First(TblSyncStatus, indexID)
 	if err != nil {
@@ -44,12 +44,12 @@ func (rd sGroupsMemDbReader) GetSyncStatus(_ context.Context) (*model.SyncStatus
 	panic("UB")
 }
 
-//ListNetworks impl Reader
+// ListNetworks impl Reader
 func (rd sGroupsMemDbReader) ListNetworks(_ context.Context, consume func(model.Network) error, scope Scope) error {
 	return memDbListObjects(rd.reader, scope, TblNetworks, consume)
 }
 
-//ListSecurityGroups impl Reader
+// ListSecurityGroups impl Reader
 func (rd sGroupsMemDbReader) ListSecurityGroups(_ context.Context, consume func(model.SecurityGroup) error, scope Scope) error {
 	var f filterTree[model.SecurityGroup]
 	if !f.init(scope) {
@@ -66,7 +66,7 @@ func (rd sGroupsMemDbReader) ListSecurityGroups(_ context.Context, consume func(
 	})
 }
 
-//ListSGRules impl Reader
+// ListSGRules impl Reader
 func (rd sGroupsMemDbReader) ListSGRules(_ context.Context, consume func(model.SGRule) error, scope Scope) error {
 	var f filterTree[model.SGRule]
 	if !f.init(scope) {

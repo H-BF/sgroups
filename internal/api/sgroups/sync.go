@@ -12,7 +12,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-//Sync impl service
+// Sync impl service
 func (srv *sgService) Sync(ctx context.Context, req *sg.SyncReq) (ret *emptypb.Empty, err error) {
 	ret = new(emptypb.Empty)
 	var wr registry.Writer

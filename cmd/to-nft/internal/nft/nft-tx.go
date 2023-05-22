@@ -73,10 +73,10 @@ func (tx *nfTablesTx) loadConfig() {
 		}
 		sets   = dict[string, *set]
 		chains = dict[string, *chain]
-		flows  = dict[string, *nftLib.Flowtable]
+		flows  = dict[string, *nftLib.Flowtable] //nolint:unused
 		table  = struct {
-			tbl *nftLib.Table
-			flows
+			tbl   *nftLib.Table
+			flows //nolint:unused
 			sets
 			chains
 		}

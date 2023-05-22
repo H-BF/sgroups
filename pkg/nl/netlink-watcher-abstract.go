@@ -11,22 +11,22 @@ import (
 )
 
 type (
-	//Link is type alias
+	// Link is type alias
 	Link = netlink.Link
 
-	//WatcherMsg abstract message def
+	// WatcherMsg abstract message def
 	WatcherMsg interface {
 		isNetlinkWatcherMsg()
 	}
 
-	//LinkUpdateMsg network link update message
+	// LinkUpdateMsg network link update message
 	LinkUpdateMsg struct {
 		WID     WatcherID
 		Link    Link
 		Deleted bool
 	}
 
-	//AddrUpdateMsg address update message
+	// AddrUpdateMsg address update message
 	AddrUpdateMsg struct {
 		WID       WatcherID
 		Address   net.IPNet
@@ -34,27 +34,27 @@ type (
 		Deleted   bool
 	}
 
-	//ErrMsg ...
+	// ErrMsg ...
 	ErrMsg struct {
 		WID WatcherID
 		Err error
 	}
 
-	//NetlinkWatcher netlink watch streamer
+	// NetlinkWatcher netlink watch streamer
 	NetlinkWatcher interface {
 		Stream() <-chan []WatcherMsg
 		Close() error
 	}
 
-	//WatcherID is a watcher ID
+	// WatcherID is a watcher ID
 	WatcherID = string
 )
 
 var (
-	//ErrUnexpectedlyStopped it setds when 'netlink' unextectedly fails
+	// ErrUnexpectedlyStopped it setds when 'netlink' unextectedly fails
 	ErrUnexpectedlyStopped = errors.New("net-watcher is stopped unexpectedly")
 
-	//ErrUnsupportedOption used unsupported option
+	// ErrUnsupportedOption used unsupported option
 	ErrUnsupportedOption = errors.New("net-watcher unsupported option")
 )
 

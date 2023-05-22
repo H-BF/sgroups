@@ -41,7 +41,7 @@ func SGroupsRcRule() *schema.Resource {
 		DeleteContext: func(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
 			return ruleUD(ctx, rd, i, false)
 		},
-		Schema: map[string]*schema.Schema{
+		Schema: map[string]*schema.Schema{ //nolint:dupl
 			RcLabelProto: {
 				Description: "ip-proto tcp|udp",
 				Type:        schema.TypeString,

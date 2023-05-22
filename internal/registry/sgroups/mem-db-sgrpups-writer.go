@@ -18,7 +18,7 @@ type sGroupsMemDbWriter struct {
 	writer MemDbWriter
 }
 
-//SyncNetworks impl Writer = update / delete networks
+// SyncNetworks impl Writer = update / delete networks
 func (wr sGroupsMemDbWriter) SyncNetworks(ctx context.Context, networks []model.Network, scope Scope, opts ...Option) error {
 	const api = "mem-db/SyncNetworks"
 
@@ -61,7 +61,7 @@ func (wr sGroupsMemDbWriter) SyncNetworks(ctx context.Context, networks []model.
 	return errors.WithMessage(err, api)
 }
 
-//SyncSecurityGroups impl Writer = update / delete security groups
+// SyncSecurityGroups impl Writer = update / delete security groups
 func (wr sGroupsMemDbWriter) SyncSecurityGroups(ctx context.Context, sgs []model.SecurityGroup, scope Scope, opts ...Option) error {
 	const api = "mem-db/SyncSecurityGroups"
 
@@ -104,7 +104,7 @@ func (wr sGroupsMemDbWriter) SyncSecurityGroups(ctx context.Context, sgs []model
 	return errors.WithMessage(err, api)
 }
 
-//SyncSGRules impl Writer = update / delete security group rules
+// SyncSGRules impl Writer = update / delete security group rules
 func (wr sGroupsMemDbWriter) SyncSGRules(ctx context.Context, rules []model.SGRule, scope Scope, opts ...Option) error {
 	const api = "mem-db/SyncSGRules"
 
@@ -143,12 +143,12 @@ func (wr sGroupsMemDbWriter) SyncSGRules(ctx context.Context, rules []model.SGRu
 	return errors.WithMessage(err, api)
 }
 
-//Commit impl Writer
+// Commit impl Writer
 func (wr sGroupsMemDbWriter) Commit() error {
 	return wr.writer.Commit()
 }
 
-//Abort impl Writer
+// Abort impl Writer
 func (wr sGroupsMemDbWriter) Abort() {
 	wr.writer.Abort()
 }
@@ -268,7 +268,7 @@ func (h syncHelper[T, TKey]) addCurrent(v T) error {
 	return h.add(v, true)
 }
 
-func (h syncHelper[T, TKey]) diff(opts ...Option) (upd, ins, del []T) {
+func (h syncHelper[T, TKey]) diff(opts ...Option) (upd, ins, del []T) { //nolint:gocyclo
 	i, u, d := true, true, true
 	for n := range opts {
 		switch opts[n].(type) {

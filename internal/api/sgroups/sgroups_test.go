@@ -325,7 +325,6 @@ func (sui *sGroupServiceTests) Test_GetSgSubnets() {
 			sui.Require().Equalf(t.expNet, nws[0].GetName(), "when do test #%v", i)
 		}
 	}
-
 }
 
 func (sui *sGroupServiceTests) Test_GetRules() {

@@ -30,7 +30,7 @@ GOLANGCI_BIN:=$(GOBIN)/golangci-lint
 GOLANGCI_REPO=https://github.com/golangci/golangci-lint
 GOLANGCI_LATEST_VERSION:= $(shell git ls-remote --tags --refs --sort='v:refname' $(GOLANGCI_REPO)|tail -1|egrep -o "v[0-9]+.*")
 ifneq ($(wildcard $(GOLANGCI_BIN)),)
-	GOLANGCI_CUR_VERSION=v$(shell $(GOLANGCI_BIN) --version|sed -E 's/.* version (.*) built from .* on .*/\1/g')
+	GOLANGCI_CUR_VERSION=v$(shell $(GOLANGCI_BIN) --version|sed -E 's/.*version (.*) built.*/\1/g')	
 else
 	GOLANGCI_CUR_VERSION=
 endif
@@ -50,7 +50,7 @@ lint: | go-deps ##run full lint
 	@echo full lint... && \
 	$(MAKE) install-linter && \
 	$(GOLANGCI_BIN) cache clean && \
-	$(GOLANGCI_BIN) run --config=$(CURDIR)/.golangci.yaml -v $(CURDIR)/... &&\
+	$(GOLANGCI_BIN) run --timeout=120s --config=$(CURDIR)/.golangci.yaml -v $(CURDIR)/... &&\
 	echo -=OK=-
 
 

@@ -54,25 +54,25 @@ type (
 	}
 )
 
-//NoScope no any scope
+// NoScope no any scope
 var NoScope noScope
 
-//And logical and cope
+// And logical and cope
 func And(t1 Scope, t2 Scope) Scope {
 	return scopedAnd{L: t1, R: t2}
 }
 
-//Or logical or scope
+// Or logical or scope
 func Or(t1 Scope, t2 Scope) Scope {
 	return scopedOr{L: t1, R: t2}
 }
 
-//Not negate scope
+// Not negate scope
 func Not(t Scope) Scope {
 	return scopedNot{Scope: t}
 }
 
-//SGFrom makes sec-group-'From' name scope used in Sg rules
+// SGFrom makes sec-group-'From' name scope used in Sg rules
 func SGFrom(one string, other ...string) Scope {
 	ret := scopedSGFrom{
 		one: {},
@@ -83,7 +83,7 @@ func SGFrom(one string, other ...string) Scope {
 	return ret
 }
 
-//SGTo makes sec-group-'To' name scope used in Sg rules
+// SGTo makes sec-group-'To' name scope used in Sg rules
 func SGTo(one string, other ...string) Scope {
 	ret := scopedSGTo{
 		one: {},
@@ -94,7 +94,7 @@ func SGTo(one string, other ...string) Scope {
 	return ret
 }
 
-//SG maks security group name(s) scope
+// SG maks security group name(s) scope
 func SG(one string, other ...string) Scope {
 	ret := scopedSG{
 		one: {},
@@ -105,7 +105,7 @@ func SG(one string, other ...string) Scope {
 	return ret
 }
 
-//IPs makes IP(s) scope
+// IPs makes IP(s) scope
 func IPs(one net.IP, all bool, other ...net.IP) Scope {
 	return scopedIPs{
 		All: all,
@@ -113,7 +113,7 @@ func IPs(one net.IP, all bool, other ...net.IP) Scope {
 	}
 }
 
-//NetworkNames makes networks name(s) scope
+// NetworkNames makes networks name(s) scope
 func NetworkNames(one model.NetworkName, other ...model.NetworkName) Scope {
 	ret := scopedNetworks{
 		Names: map[model.NetworkName]struct{}{
@@ -126,7 +126,7 @@ func NetworkNames(one model.NetworkName, other ...model.NetworkName) Scope {
 	return ret
 }
 
-//SGRule makes SG rule scope
+// SGRule makes SG rule scope
 func SGRule(others ...model.SGRule) Scope {
 	ret := scopedSGRuleIdentity{}
 	for i := range others {
@@ -165,7 +165,7 @@ func (ft filterTree[filterArgT]) invoke(arg filterArgT) bool {
 	return ret
 }
 
-func (ft *filterTree[filterArgT]) init(sc Scope) bool {
+func (ft *filterTree[filterArgT]) init(sc Scope) bool { //nolint:gocyclo
 	var ret bool
 	var x filterTree[filterArgT]
 	switch t := sc.(type) {

@@ -1,6 +1,6 @@
 package sgroups
 
-//TableID memory table ID
+// TableID memory table ID
 type TableID int
 
 const (
@@ -17,10 +17,10 @@ const (
 	TblSyncStatus
 )
 
-//SchemaName database scheme name
+// SchemaName database scheme name
 const SchemaName = "sgroups"
 
-//String stringer interface impl
+// String stringer interface impl
 func (tid TableID) String() string {
 	return [...]string{"tbl_network", "tbl_sg", "tbl_rule", "tbl_sync_status"}[tid]
 }

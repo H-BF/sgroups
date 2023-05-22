@@ -23,10 +23,10 @@ func netTranport2proto(src model.NetworkTransport) (common.Networks_NetIP_Transp
 	return 0, errors.Errorf("bad net transport (%v)", src)
 }
 
-func sgRule2proto(src model.SGRule) (sg.Rule, error) {
+func sgRule2proto(src model.SGRule) (*sg.Rule, error) {
 	var ret sg.Rule
 	if t, e := netTranport2proto(src.Transport); e != nil {
-		return ret, e
+		return nil, e
 	} else {
 		ret.Transport = t
 	}
@@ -36,14 +36,14 @@ func sgRule2proto(src model.SGRule) (sg.Rule, error) {
 	for _, p := range src.Ports {
 		var s, d model.PortSource
 		if err := s.FromPortRange(p.S); err != nil {
-			return ret, errors.Wrapf(err, "bad 'S' ports value '%s'", p.S)
+			return nil, errors.Wrapf(err, "bad 'S' ports value '%s'", p.S)
 		}
 		if err := d.FromPortRange(p.D); err != nil {
-			return ret, errors.Wrapf(err, "bad 'D' ports value '%s'", p.D)
+			return nil, errors.Wrapf(err, "bad 'D' ports value '%s'", p.D)
 		}
 		ret.Ports = append(ret.Ports, &sg.Rule_Ports{S: string(s), D: string(d)})
 	}
-	return ret, nil
+	return &ret, nil
 }
 
 func (srv *sgService) GetRules(ctx context.Context, req *sg.GetRulesReq) (resp *sg.RulesResp, err error) {
@@ -60,7 +60,7 @@ func (srv *sgService) GetRules(ctx context.Context, req *sg.GetRulesReq) (resp *
 		if e != nil {
 			return errors.WithMessagef(e, "on convert SGRule '%s' to proto", rule)
 		}
-		resp.Rules = append(resp.Rules, &r)
+		resp.Rules = append(resp.Rules, r)
 		return nil
 	}, registry.And(
 		registry.SGFrom(req.GetSgFrom()), registry.SGTo(req.GetSgTo()),

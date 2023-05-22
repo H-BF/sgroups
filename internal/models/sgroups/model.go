@@ -132,7 +132,7 @@ func (sgRuleKey SGRuleIdentity) String() string {
 func (sgRuleKey *SGRuleIdentity) FromString(s string) error {
 	const api = "SGRuleIdentity/FromString"
 	r := sgRuleIdentityRE.FindStringSubmatch(s)
-	if len(r) != 4 {
+	if len(r) != 4 { //nolint:gomnd
 		return errors.Errorf("%s: bad source(%s)", api, s)
 	}
 	if err := sgRuleKey.Transport.FromString(r[1]); err != nil {

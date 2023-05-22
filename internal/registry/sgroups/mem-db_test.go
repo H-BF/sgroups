@@ -96,7 +96,7 @@ func (sui *memDbSuite) TestSGRuleIsEq() {
 		return model.SGRule{
 			SGRuleIdentity: model.SGRuleIdentity{
 				SgFrom:    model.SecurityGroup{Name: from},
-				SgTo:      model.SecurityGroup{Name: from},
+				SgTo:      model.SecurityGroup{Name: to},
 				Transport: t,
 			},
 			Ports: ports,

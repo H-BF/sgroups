@@ -13,7 +13,6 @@ import (
 )
 
 func Test_FromDefaultValuesConf(t *testing.T) {
-
 	const (
 		b  ValueT[bool]          = "values/bool"
 		s  ValueT[string]        = "values/string"
@@ -90,7 +89,6 @@ func Test_FromEnvConf(t *testing.T) {
 }
 
 func Test_SourceConf(t *testing.T) {
-
 	const data = `
 values:
    bool: true

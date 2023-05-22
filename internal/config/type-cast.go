@@ -10,7 +10,7 @@ import (
 	"go.uber.org/multierr"
 )
 
-//KnownValueTypes ...
+// KnownValueTypes ...
 type KnownValueTypes interface {
 	time.Time |
 
@@ -120,5 +120,4 @@ func init() {
 
 	regTypeCastFunc(cast.ToDurationE)
 	regTypeCastFunc(cast.ToTimeE)
-
 }

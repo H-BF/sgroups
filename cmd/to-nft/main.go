@@ -83,7 +83,7 @@ func main() {
 	logger.Info(ctx, "-= BYE =-")
 }
 
-func runNftJob(ctx context.Context) error {
+func runNftJob(ctx context.Context) error { //nolint:gocyclo
 	var (
 		err       error
 		sgClient  SGClient
@@ -142,8 +142,8 @@ func runNftJob(ctx context.Context) error {
 	var appliedCount int
 loop0:
 	for needApply := false; ; needApply = false {
-		choosen, val, succ := reflect.Select(sel)
-		switch choosen {
+		chosen, val, succ := reflect.Select(sel)
+		switch chosen {
 		case 0: //Done() from ctx
 			break loop0
 		case 1: //messages from NetWatcher

@@ -65,10 +65,10 @@ func (ap accports) S(rb ruleBuilder, tr model.NetworkTransport) ruleBuilder {
 		return rb
 	}
 	rb = rb.ipProto(tr).sport()
-	if (*p)[0] == (*p)[1] {
+	if p[0] == p[1] {
 		return rb.eqU16(p[0])
 	}
-	return rb.geU16((*p)[0]).leU16((*p)[1])
+	return rb.geU16(p[0]).leU16(p[1])
 }
 
 func (ap accports) D(rb ruleBuilder, tr model.NetworkTransport) ruleBuilder {
@@ -77,10 +77,10 @@ func (ap accports) D(rb ruleBuilder, tr model.NetworkTransport) ruleBuilder {
 		return rb
 	}
 	rb = rb.ipProto(tr).dport()
-	if (*p)[0] == (*p)[1] {
-		return rb.eqU16((*p)[0])
+	if p[0] == p[1] {
+		return rb.eqU16(p[0])
 	}
-	return rb.geU16((*p)[0]).leU16((*p)[1])
+	return rb.geU16(p[0]).leU16((*p)[1])
 }
 
 func (bt *batch) init(table *nftLib.Table, localRules cases.LocalRules) {
@@ -119,9 +119,9 @@ func (bt *batch) execute(ctx context.Context, table *nftLib.Table, locals cases.
 	}()
 	bt.init(table, locals)
 	bkf := backoff.ExponentialBackoffBuilder().
-		WithMultiplier(1.3).
-		WithRandomizationFactor(0).
-		WithMaxElapsedThreshold(20 * time.Second).
+		WithMultiplier(1.3).                       //nolint:gomnd
+		WithRandomizationFactor(0).                //nolint:gomnd
+		WithMaxElapsedThreshold(20 * time.Second). //nolint:gomnd
 		Build()
 loop:
 	for el := bt.jobs.Front(); el != nil; el = bt.jobs.Front() {
@@ -353,8 +353,8 @@ func (bt *batch) initPortSets() {
 		if !(pr == nil || pr.IsNull()) {
 			ret = new([2]model.PortNumber)
 			a, b := pr.Bounds()
-			(*ret)[0], _ = a.AsIncluded().GetValue()
-			(*ret)[1], _ = b.AsIncluded().GetValue()
+			ret[0], _ = a.AsIncluded().GetValue()
+			ret[1], _ = b.AsIncluded().GetValue()
 		}
 		return ret
 	}

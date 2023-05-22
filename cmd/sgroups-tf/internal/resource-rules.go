@@ -68,7 +68,7 @@ func SGroupsRcRules() *schema.Resource {
 				Type:        schema.TypeList,
 				Elem: &schema.Resource{
 					Description: "SG rule element",
-					Schema: map[string]*schema.Schema{
+					Schema: map[string]*schema.Schema{ //nolint:dupl
 						RcLabelProto: {
 							Description: "ip-proto tcp|udp",
 							Type:        schema.TypeString,

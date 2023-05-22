@@ -33,7 +33,7 @@ func (srv *sgService) FindRules(ctx context.Context, req *sg.FindRulesReq) (resp
 		if e != nil {
 			return errors.WithMessagef(e, "convert SGRule '%s' to proto", rule)
 		}
-		resp.Rules = append(resp.Rules, &r)
+		resp.Rules = append(resp.Rules, r)
 		return nil
 	}, registry.And(sc1, sc2))
 	if err != nil {

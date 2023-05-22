@@ -3,7 +3,7 @@ package internal
 import (
 	"bytes"
 	"context"
-	"crypto/md5"
+	"crypto/md5" //nolint:gosec
 	"encoding/hex"
 	"strings"
 
@@ -36,7 +36,7 @@ func (rk *listedResource[T]) id(defVal string) string {
 		return true
 	})
 	if buf.Len() > 0 {
-		h := md5.Sum(buf.Bytes())
+		h := md5.Sum(buf.Bytes()) //nolint:gosec
 		return hex.EncodeToString(h[:])
 	}
 	return defVal

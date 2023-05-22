@@ -52,7 +52,7 @@ func slice2stringer[t any](ar ...t) fmt.Stringer {
 			}
 			s, _ := interface{}(o).(fmt.Stringer)
 			if s == nil {
-				s, _ = interface{}(&o).(fmt.Stringer)
+				s, _ = interface{}(&o).(fmt.Stringer) //nolint:gosec
 			}
 			_, _ = fmt.Fprintf(b, "%v", tern(s != nil, s, o))
 		}
@@ -79,4 +79,4 @@ func nextSetID() uint32 {
 	return atomic.AddUint32(&setID, 1)
 }
 
-var setID = rand.Uint32()
+var setID = rand.Uint32() //nolint:gosec

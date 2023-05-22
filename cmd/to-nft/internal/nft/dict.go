@@ -1,6 +1,6 @@
 package nft
 
-type dictItem[Tk comparable, Tv any] struct {
+type dictItem[Tk comparable, Tv any] struct { //nolint:unused
 	k Tk
 	v Tv
 }
@@ -9,7 +9,7 @@ type dict[Tk comparable, Tv any] struct {
 	data map[Tk]Tv
 }
 
-func (d *dict[Tk, Tv]) del(ks ...Tk) *dict[Tk, Tv] {
+func (d *dict[Tk, Tv]) del(ks ...Tk) *dict[Tk, Tv] { //nolint:unused
 	if len(ks) > 0 && d.len() > 0 {
 		for i := range ks {
 			delete(d.data, ks[i])
@@ -21,7 +21,7 @@ func (d *dict[Tk, Tv]) del(ks ...Tk) *dict[Tk, Tv] {
 	return d
 }
 
-func (d *dict[Tk, Tv]) putItems(its ...dictItem[Tk, Tv]) *dict[Tk, Tv] {
+func (d *dict[Tk, Tv]) putItems(its ...dictItem[Tk, Tv]) *dict[Tk, Tv] { //nolint:unused
 	if len(its) > 0 {
 		d.ensureinited()
 		for _, it := range its {

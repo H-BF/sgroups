@@ -44,7 +44,7 @@ func (rb ruleBuilder) drop() ruleBuilder {
 	return rb
 }
 
-func (rb ruleBuilder) jump(chain string) ruleBuilder {
+func (rb ruleBuilder) jump(chain string) ruleBuilder { //nolint:unused
 	rb.exprs = append(rb.exprs,
 		&Verdict{Kind: VerdictJump, Chain: chain},
 	)
@@ -110,8 +110,8 @@ func (rb ruleBuilder) saddr4() ruleBuilder {
 		&Payload{
 			DestRegister: 1,
 			Base:         PayloadBaseNetworkHeader,
-			Offset:       uint32(12),
-			Len:          uint32(4),
+			Offset:       uint32(12), //nolint:gomnd
+			Len:          uint32(4),  //nolint:gomnd
 		}, //saddr
 	)
 	return rb
@@ -122,8 +122,8 @@ func (rb ruleBuilder) daddr4() ruleBuilder {
 		&Payload{
 			DestRegister: 1,
 			Base:         PayloadBaseNetworkHeader,
-			Offset:       uint32(16),
-			Len:          uint32(4),
+			Offset:       uint32(16), //nolint:gomnd
+			Len:          uint32(4),  //nolint:gomnd
 		}, //daddr
 	)
 	return rb
@@ -180,11 +180,11 @@ func (rb ruleBuilder) ipProto(tr model.NetworkTransport) ruleBuilder {
 	return rb
 }
 
-func (rb ruleBuilder) udp() ruleBuilder {
+func (rb ruleBuilder) udp() ruleBuilder { //nolint:unused
 	return rb.ipProto(model.UDP)
 }
 
-func (rb ruleBuilder) tcp() ruleBuilder {
+func (rb ruleBuilder) tcp() ruleBuilder { //nolint:unused
 	return rb.ipProto(model.TCP)
 }
 
@@ -250,13 +250,13 @@ func (rb ruleBuilder) eqU16(val uint16) ruleBuilder {
 func (rb ruleBuilder) leU16(val uint16) ruleBuilder {
 	return rb.cmpU16(CmpOpLte, val)
 }
-func (rb ruleBuilder) ltU16(val uint16) ruleBuilder {
+func (rb ruleBuilder) ltU16(val uint16) ruleBuilder { //nolint:unused
 	return rb.cmpU16(CmpOpLt, val)
 }
 func (rb ruleBuilder) geU16(val uint16) ruleBuilder {
 	return rb.cmpU16(CmpOpGte, val)
 }
-func (rb ruleBuilder) gtU16(val uint16) ruleBuilder {
+func (rb ruleBuilder) gtU16(val uint16) ruleBuilder { //nolint:unused
 	return rb.cmpU16(CmpOpGt, val)
 }
 func (rb ruleBuilder) cmpU16(op CmpOp, val uint16) ruleBuilder {
@@ -268,7 +268,7 @@ func (rb ruleBuilder) cmpU16(op CmpOp, val uint16) ruleBuilder {
 	return rb
 }
 
-func (rb ruleBuilder) eqS(s string) ruleBuilder {
+func (rb ruleBuilder) eqS(s string) ruleBuilder { //nolint:unused
 	rb.exprs = append(rb.exprs, &Cmp{
 		Register: 1,
 		Op:       CmpOpEq,

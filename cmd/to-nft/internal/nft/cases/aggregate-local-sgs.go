@@ -85,7 +85,7 @@ func (loc *LocalSGs) Load(ctx context.Context, client SGClient, srcIPs []net.IP)
 		}
 		return nil
 	}
-	if err := parallel.ExecAbstract(len(srcIPs), 8, job); err != nil {
+	if err := parallel.ExecAbstract(len(srcIPs), 8, job); err != nil { //nolint:gomnd
 		return errors.WithMessage(err, api)
 	}
 	for _, it := range *loc {

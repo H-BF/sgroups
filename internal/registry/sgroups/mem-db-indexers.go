@@ -20,7 +20,7 @@ type (
 	SGRuleIdIndexer struct{} //nolint:revive
 )
 
-//FromObject impl Indexer
+// FromObject impl Indexer
 func (idx IPNetIndexer) FromObject(obj interface{}) (bool, []byte, error) {
 	if idx.DataAccessor == nil {
 		return false, nil, nil
@@ -30,7 +30,7 @@ func (idx IPNetIndexer) FromObject(obj interface{}) (bool, []byte, error) {
 	return len(val) != 0, val, err
 }
 
-//FromArgs impl Indexer
+// FromArgs impl Indexer
 func (idx IPNetIndexer) FromArgs(args ...interface{}) ([]byte, error) {
 	if len(args) != 1 {
 		return nil, errors.New("must provide only a single argument")
@@ -52,13 +52,13 @@ func (idx IPNetIndexer) FromArgs(args ...interface{}) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-//FromObject impl Indexer
+// FromObject impl Indexer
 func (idx SGRuleIdIndexer) FromObject(obj interface{}) (bool, []byte, error) {
 	val, err := idx.FromArgs(obj)
 	return len(val) != 0, val, err
 }
 
-//FromArgs impl Indexer
+// FromArgs impl Indexer
 func (idx SGRuleIdIndexer) FromArgs(args ...interface{}) ([]byte, error) {
 	if len(args) != 1 {
 		return nil, errors.New("must provide only a single argument")

@@ -37,7 +37,7 @@ func (srv *sgService) GetSecGroupForAddress(ctx context.Context, req *sg.GetSecG
 	}
 	if ip == nil {
 		return nil,
-			status.Error(codes.InvalidArgument, "invalid request: no adress is provided")
+			status.Error(codes.InvalidArgument, "invalid request: no address is provided")
 	}
 	var reader registry.Reader
 	if reader, err = srv.registryReader(ctx); err != nil {

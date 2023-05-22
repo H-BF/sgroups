@@ -34,7 +34,7 @@ func setupMetrics() error {
 	return err
 }
 
-//WhenHaveMetricsRegistry ...
+// WhenHaveMetricsRegistry ...
 func WhenHaveMetricsRegistry(f func(reg *prometheus.Registry)) {
 	r, _ := appPromRegistry.Load().(*prometheus.Registry)
 	if r != nil && f != nil {

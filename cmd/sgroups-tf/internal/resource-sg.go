@@ -17,7 +17,7 @@ import (
 // RcSG -
 const RcSG = SGroupsProvider + "_group"
 
-//SGroupsRcSG SG resource
+// SGroupsRcSG SG resource
 func SGroupsRcSG() *schema.Resource {
 	return &schema.Resource{
 		Description:   "SecurityGroup resource",

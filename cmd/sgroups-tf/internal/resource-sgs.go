@@ -89,12 +89,7 @@ func sgsR(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diag
 	var e1 error
 	h.walk(func(k string, sg *sgroupsAPI.SecGroup) bool {
 		if sg != nil {
-			o, e := protoSG2tf(sg)
-			if e != nil {
-				e1 = e
-				return false
-			}
-			items = append(items, o)
+			items = append(items, protoSG2tf(sg))
 		}
 		return true
 	})
@@ -132,9 +127,9 @@ func tf2protoSG(raw any) (string, *sgroupsAPI.SecGroup, error) {
 	return sg.Name, &sg, nil
 }
 
-func protoSG2tf(sg *sgroupsAPI.SecGroup) (map[string]any, error) {
+func protoSG2tf(sg *sgroupsAPI.SecGroup) map[string]any {
 	return map[string]any{
 		RcLabelName:     sg.GetName(),
 		RcLabelNetworks: strings.Join(sg.GetNetworks(), ","),
-	}, nil
+	}
 }
