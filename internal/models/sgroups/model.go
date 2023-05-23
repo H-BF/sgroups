@@ -14,53 +14,53 @@ import (
 )
 
 type (
-	//PortNumber net port num
+	// PortNumber net port num
 	PortNumber = uint16
 
-	//PortRanges net port ranges
+	// PortRanges net port ranges
 	PortRanges = ranges.MultiRange[PortNumber]
 
-	//PortRange net port range
+	// PortRange net port range
 	PortRange = ranges.Range[PortNumber]
 
-	//NetworkTransport net transport
+	// NetworkTransport net transport
 	NetworkTransport uint8
 
-	//NetworkName net nam
+	// NetworkName net nam
 	NetworkName = string
 
-	//Network is IP network
+	// Network is IP network
 	Network struct {
 		Net  net.IPNet
 		Name NetworkName
 	}
 
-	//SecurityGroup security group for networks(s)
+	// SecurityGroup security group for networks(s)
 	SecurityGroup struct {
 		Name     string
 		Networks []NetworkName
 	}
 
-	//SGRuleIdentity security rule ID as key
+	// SGRuleIdentity security rule ID as key
 	SGRuleIdentity struct {
 		SgFrom    SecurityGroup
 		SgTo      SecurityGroup
 		Transport NetworkTransport
 	}
 
-	//SGRulePorts source and destination port ranges
+	// SGRulePorts source and destination port ranges
 	SGRulePorts struct {
 		S PortRange
 		D PortRange
 	}
 
-	//SGRule security rule for From-To security groups
+	// SGRule security rule for From-To security groups
 	SGRule struct {
 		SGRuleIdentity
 		Ports []SGRulePorts
 	}
 
-	//SyncStatus succeeded sync-op status
+	// SyncStatus succeeded sync-op status
 	SyncStatus struct {
 		UpdatedAt time.Time
 	}
@@ -82,10 +82,10 @@ const (
 )
 
 const (
-	//TCP ...
+	// TCP ...
 	TCP NetworkTransport = iota
 
-	//UDP ...
+	// UDP ...
 	UDP
 )
 
