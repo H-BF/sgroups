@@ -203,9 +203,9 @@ func modelRule2tf(mr *model.SGRule) (map[string]any, error) {
 	var ports []any
 	for _, p := range mr.Ports {
 		var s, d model.PortSource
-		err := s.FromPortRange(p.S)
+		err := s.FromPortRanges(p.S)
 		if err == nil {
-			err = d.FromPortRange(p.D)
+			err = d.FromPortRanges(p.D)
 		}
 		if err != nil {
 			return nil, err
@@ -273,8 +273,8 @@ func diffSuppressSGRulePorts(k, _, _ string, rd *schema.ResourceData) bool {
 			if p, _ := r.(map[string]any); p != nil {
 				s, _ := p[RcLabelSPorts].(string)
 				d, _ := p[RcLabelDPorts].(string)
-				r1, _ := model.PortSource(s).ToPortRange()
-				r2, _ := model.PortSource(d).ToPortRange()
+				r1, _ := model.PortSource(s).ToPortRanges()
+				r2, _ := model.PortSource(d).ToPortRanges()
 				x := model.SGRulePorts{
 					S: r1, D: r2,
 				}
