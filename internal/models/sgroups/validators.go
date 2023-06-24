@@ -9,8 +9,6 @@ import (
 // ErrSPortsAreOverlapped -
 var ErrSPortsAreOverlapped = errors.New("source ports have overlapped regions")
 
-type arraySGRulePorts []SGRulePorts
-
 // Validatable is a alias to oz.Validatable
 type Validatable = oz.Validatable
 
@@ -69,12 +67,10 @@ func (sgRuleKey SGRuleIdentity) Validate() error {
 
 // Validate -
 func (ports SGRulePorts) Validate() error {
-	return oz.ValidateStruct(&ports,
-		oz.Field(&ports.D, oz.Required.When(ports.S == nil || ports.S.IsNull()).
-			Error("D ports are required when S ports are not provided")),
-		oz.Field(&ports.S, oz.Required.When(ports.D == nil || ports.D.IsNull()).
-			Error("S ports are required when D ports are not provided")),
-	)
+	if ports.S.Len()+ports.D.Len() <= 0 {
+		return errors.Errorf("no any 'S' and 'D' port are present")
+	}
+	return nil
 }
 
 // Validate validates security group rule
@@ -82,34 +78,27 @@ func (rule SGRule) Validate() error {
 	return oz.ValidateStruct(&rule,
 		oz.Field(&rule.SGRuleIdentity),
 		oz.Field(&rule.Ports,
-			//oz.Required.Error("ports are required"),
-			oz.By(func(_ any) error {
-				return arraySGRulePorts(rule.Ports).Validate()
+			oz.Required.Error("required"),
+			oz.By(func(v any) error {
+				var rr []PortRange
+				for _, p := range v.([]SGRulePorts) {
+					if p.S.Len() == 0 {
+						rr = append(rr, PortRangeFull)
+					} else {
+						p.S.Iterate(func(r PortRange) bool {
+							rr = append(rr, r)
+							return true
+						})
+					}
+				}
+				x := NewPortRarnges()
+				x.Update(ranges.CombineMerge, rr...)
+				if len(rr) != x.Len() {
+					return ErrSPortsAreOverlapped
+				}
+				return nil
 			}),
-			oz.Skip,
+			//oz.Skip,
 		),
 	)
-}
-
-func (a arraySGRulePorts) Validate() error {
-	rr := make([]PortRange, 0, len(a))
-	e := oz.Validate([]SGRulePorts(a),
-		oz.Each(oz.By(func(value any) error {
-			if p := value.(SGRulePorts); p.S == nil {
-				rr = append(rr, PortRangeFull)
-			} else {
-				rr = append(rr, p.S)
-			}
-			return nil
-		})),
-		oz.Skip,
-	)
-	if e == nil {
-		x := ranges.NewMultiRange(PortRangeFactory)
-		x.Update(ranges.CombineMerge, rr...)
-		if len(rr) != x.Len() {
-			e = ErrSPortsAreOverlapped
-		}
-	}
-	return e
 }

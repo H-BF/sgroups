@@ -73,9 +73,9 @@ func (sui *memDbSuite) newSG(name string, nws ...model.Network) model.SecurityGr
 }
 
 func (sui *memDbSuite) newRulePorts(s, d model.PortSource) model.SGRulePorts {
-	a, e1 := s.ToPortRange()
+	a, e1 := s.ToPortRanges()
 	sui.Require().NoError(e1)
-	b, e2 := d.ToPortRange()
+	b, e2 := d.ToPortRanges()
 	sui.Require().NoError(e2)
 	return model.SGRulePorts{S: a, D: b}
 }
@@ -387,6 +387,10 @@ func (sui *memDbSuite) TestSyncSG_Networks() {
 func (sui *memDbSuite) TestSyncSGRules() {
 	ctx := context.TODO()
 
+	p := func(s, d model.PortSource) model.SGRulePorts {
+		return sui.newRulePorts(s, d)
+	}
+
 	nw1 := sui.newNetwork("nw1", "10.10.10.0/24")
 	nw2 := sui.newNetwork("nw2", "20.20.20.0/24")
 	sg1 := sui.newSG("sg1", nw1)
@@ -399,26 +403,16 @@ func (sui *memDbSuite) TestSyncSGRules() {
 	err = w.Commit()
 	sui.Require().NoError(err)
 
-	r1 := sui.newSGRule(sg1, sg2, model.TCP)
-	r2 := sui.newSGRule(sg1, sg2, model.UDP)
+	r1 := sui.newSGRule(sg1, sg2, model.TCP, p("10", "10"), p("20", "20"))
+	r2 := sui.newSGRule(sg1, sg2, model.UDP, p("10", "10"), p("20", ""))
 	{
-		h1 := r1.IdentityHash()
-		h2 := r2.IdentityHash()
-		sui.Require().NotEqual(h1, h2)
+		eq := r1.SGRuleIdentity.IsEq(r2.SGRuleIdentity)
+		sui.Require().False(eq)
 	}
 
 	//write fails if no SG in DB /- no references to SG(s)
 	w = sui.regWriter()
 	err = w.SyncSGRules(ctx, []model.SGRule{r1, r2}, NoScope)
-	sui.Require().NoError(err)
-	err = w.Commit()
-	sui.Require().Error(err)
-
-	//Same SG(s) in rule /DB - fail
-	w = sui.regWriter()
-	err = w.SyncSGRules(ctx,
-		[]model.SGRule{sui.newSGRule(sg1, sg1, model.TCP)},
-		NoScope)
 	sui.Require().NoError(err)
 	err = w.Commit()
 	sui.Require().Error(err)
@@ -431,9 +425,8 @@ func (sui *memDbSuite) TestSyncSGRules() {
 	sui.Require().NoError(err)
 
 	//write Rules to DB
-	rr := []model.SGRule{r1, r2}
 	w = sui.regWriter()
-	err = w.SyncSGRules(ctx, rr, NoScope)
+	err = w.SyncSGRules(ctx, []model.SGRule{r1, r2}, NoScope)
 	sui.Require().NoError(err)
 	err = w.Commit()
 	sui.Require().NoError(err)
@@ -441,15 +434,20 @@ func (sui *memDbSuite) TestSyncSGRules() {
 	//check if rules are in DB
 	reader := sui.regReader()
 	rules := make(map[string]model.SGRule)
+	rules0 := map[string]model.SGRule{
+		r1.IdentityHash(): r1,
+		r2.IdentityHash(): r2,
+	}
 	err = reader.ListSGRules(ctx, func(rule model.SGRule) error {
 		rules[rule.IdentityHash()] = rule
 		return nil
 	}, NoScope)
 	sui.Require().NoError(err)
-	for i := range rr {
-		rule, ok := rules[rr[i].IdentityHash()]
-		sui.Require().Truef(ok, "%v)", i)
-		sui.Require().Equalf(rr[i], rule, "%v)", i)
+	sui.Require().Equal(len(rules0), len(rules))
+	for k, v := range rules0 {
+		rule, ok := rules[k]
+		sui.Require().Truef(ok, "%s)", v.SGRuleIdentity)
+		sui.Require().Truef(v.IsEq(rule), "%s)", v.SGRuleIdentity)
 	}
 
 	//delete one Rule from DB

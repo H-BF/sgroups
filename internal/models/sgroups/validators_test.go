@@ -114,8 +114,8 @@ func TestValidate_SGRuleIdentity(t *testing.T) {
 }
 
 func TestValidate_SGRulePorts(t *testing.T) {
-	pr := func(s string) PortRange {
-		ret, e := PortSource(s).ToPortRange()
+	pr := func(s string) PortRanges {
+		ret, e := PortSource(s).ToPortRanges()
 		require.NoError(t, e)
 		return ret
 	}
@@ -129,6 +129,8 @@ func TestValidate_SGRulePorts(t *testing.T) {
 		{SGRulePorts{D: pr("10")}, false},
 		{SGRulePorts{S: pr("10"), D: pr("10")}, false},
 		{SGRulePorts{S: pr("10"), D: pr("")}, false},
+		{SGRulePorts{S: pr(""), D: pr("10")}, false},
+		{SGRulePorts{S: pr(""), D: pr("")}, true},
 	}
 	for i := range cases {
 		c := cases[i]
@@ -141,45 +143,11 @@ func TestValidate_SGRulePorts(t *testing.T) {
 	}
 }
 
-func TestValidate_arraySGRulePorts(t *testing.T) {
-	pr := func(s, d string) SGRulePorts {
-		p1, e1 := PortSource(s).ToPortRange()
-		require.NoError(t, e1)
-		p2, e2 := PortSource(d).ToPortRange()
-		require.NoError(t, e2)
-		return SGRulePorts{S: p1, D: p2}
-	}
-	type pp = []SGRulePorts
-	type item = struct {
-		ports pp
-		fail  bool
-	}
-	cases := []item{
-		{pp{}, false},
-		{pp{pr("", "10")}, false},
-		{pp{pr("10", "10"), pr("20", "20")}, false},
-		{pp{pr("", "10"), pr("20", "20")}, true},
-		{pp{pr("10-20", "10"), pr("20", "20")}, true},
-		{pp{pr("10-20", "10"), pr("10", "20")}, true},
-		{pp{pr("10-20", "10"), pr("9", "20")}, false},
-		{pp{pr("10-20", "10"), pr("21", "20")}, false},
-	}
-	for i := range cases {
-		c := cases[i]
-		e := arraySGRulePorts(c.ports).Validate()
-		if !c.fail {
-			require.NoErrorf(t, e, "test case #%v", i)
-		} else {
-			require.Errorf(t, e, "test case #%v", i)
-		}
-	}
-}
-
 func TestValidate_SGRule(t *testing.T) {
 	rp := func(s, d string) SGRulePorts {
-		p1, e1 := PortSource(s).ToPortRange()
+		p1, e1 := PortSource(s).ToPortRanges()
 		require.NoError(t, e1)
-		p2, e2 := PortSource(d).ToPortRange()
+		p2, e2 := PortSource(d).ToPortRanges()
 		require.NoError(t, e2)
 		return SGRulePorts{S: p1, D: p2}
 	}
@@ -204,7 +172,8 @@ func TestValidate_SGRule(t *testing.T) {
 		fail bool
 	}
 	cases := []item{
-		{r(sg("sg1"), sg("sg2"), TCP), false},
+		{r(sg("sg1"), sg("sg2"), TCP), true},
+		{r(sg("sg1", ""), sg("sg2"), TCP, rp("", "")), true},
 		{r(sg("sg1", ""), sg("sg2"), TCP, rp("10", "10")), false},
 		{r(sg("", ""), sg("sg2", ""), TCP, rp("10", "10")), true},
 		{r(sg("sg1"), sg(""), TCP, rp("10", "10")), true},

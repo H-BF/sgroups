@@ -35,10 +35,10 @@ func sgRule2proto(src model.SGRule) (*sg.Rule, error) {
 	ret.Ports = make([]*sg.Rule_Ports, 0, len(src.Ports))
 	for _, p := range src.Ports {
 		var s, d model.PortSource
-		if err := s.FromPortRange(p.S); err != nil {
+		if err := s.FromPortRanges(p.S); err != nil {
 			return nil, errors.Wrapf(err, "bad 'S' ports value '%s'", p.S)
 		}
-		if err := d.FromPortRange(p.D); err != nil {
+		if err := d.FromPortRanges(p.D); err != nil {
 			return nil, errors.Wrapf(err, "bad 'D' ports value '%s'", p.D)
 		}
 		ret.Ports = append(ret.Ports, &sg.Rule_Ports{S: string(s), D: string(d)})

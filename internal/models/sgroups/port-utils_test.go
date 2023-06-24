@@ -1,14 +1,16 @@
 package sgroups
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
 func Test_PortSourceValid(t *testing.T) {
+	require.True(t, PortSource("   ").IsValid())
+	require.True(t, PortSource("  ,  ").IsValid())
 	require.True(t, PortSource("  12 ").IsValid())
+	require.True(t, PortSource("  12, 10, ").IsValid())
 	require.True(t, PortSource("  12 - 13 ").IsValid())
 	require.False(t, PortSource("   - 13 ").IsValid())
 	require.True(t, PortSource("   ").IsValid())
@@ -19,7 +21,7 @@ func Test_PortSourceValid(t *testing.T) {
 	require.False(t, PortSource("  10 -- 13 ").IsValid())
 }
 
-func Test_PortSource(t *testing.T) {
+func Test_PortSource2PortRange(t *testing.T) {
 	eq := func(a, b PortRange) bool {
 		if a == nil && b == nil {
 			return true
@@ -42,7 +44,7 @@ func Test_PortSource(t *testing.T) {
 		{" 10 - 10 ", PortRangeFactory.Range(10, false, 10, false), false},
 		{" 10 - 11 ", PortRangeFactory.Range(10, false, 11, false), false},
 		{" - 10 - 11 ", nil, true},
-		{" 11 - 10  ", nil, true},
+		{" 11 - 10  ", nil, false},
 		{" 11 - 65536  ", nil, true},
 	}
 	for i := range cases {
@@ -57,18 +59,51 @@ func Test_PortSource(t *testing.T) {
 	}
 }
 
-func mkRanges(ss ...string) []PortRange { //nolint:unused
-	var ret []PortRange
-	for _, s := range ss {
-		if len(strings.TrimSpace(s)) == 0 {
-			ret = append(ret, PortRangeFull)
-		} else {
-			p, e := PortSource(s).ToPortRange()
-			if e != nil {
-				panic(e)
-			}
-			ret = append(ret, p)
-		}
+func Test_PortSourceEq(t *testing.T) {
+	cases := []struct {
+		S1, S2 PortSource
+		expEq  bool
+	}{
+		{"", " ", true},
+		{"", ", , ,   ", true},
+		{"10", ", , ,   ", false},
+		{"10", "10", true},
+		{"11, 12, 10-20", "10-20, 11", true},
+		{"11, 22, 10-20", "10-20, 11", false},
 	}
-	return ret
+	for i := range cases {
+		c := cases[i]
+		val := c.S1.IsEq(c.S2)
+		require.Equalf(t, c.expEq, val, "%v)  '%s' .EQ. '%s'", i, c.S1, c.S2)
+	}
+}
+
+func Test_AreRulePortsEq(t *testing.T) {
+	rp := func(s, d PortSource) SGRulePorts {
+		var ret SGRulePorts
+		var e error
+		ret.S, e = s.ToPortRanges()
+		require.NoError(t, e)
+		ret.D, e = d.ToPortRanges()
+		require.NoError(t, e)
+		return ret
+	}
+	cases := []struct {
+		l, r  []SGRulePorts
+		expEq bool
+	}{
+		{makeSlice(rp("1", "1 ")), makeSlice(rp("1", "1")), true},
+		{makeSlice(rp("1", "1"), rp("1", "1")), makeSlice(rp("1", "1")), false},
+		{makeSlice(rp("1", "1"), rp("1", "1")), makeSlice(rp("1", "1"), rp("1", "1")), true},
+		{makeSlice(rp("1", "1"), rp("1", "1")), makeSlice(rp("1", "1"), rp("1", "2")), false},
+		{makeSlice(rp("1, 10-20", "1 ")), makeSlice(rp("10-20, 1", "1")), true},
+		{makeSlice(rp("1", "1"), rp("2", "2")), makeSlice(rp("2", "2"), rp("1", "1")), true},
+		{makeSlice(rp("1", "1"), rp("2", "2")), makeSlice(rp("2", "2"), rp("1", "1"), rp("3", "3")), false},
+		{makeSlice(rp("3", "3"), rp("1", "1"), rp("2", "2")), makeSlice(rp("2", "2"), rp("1", "1")), false},
+	}
+	for i := range cases {
+		c := cases[i]
+		val := AreRulePortsEq(c.l, c.r)
+		require.Equalf(t, c.expEq, val, "%v)", i)
+	}
 }

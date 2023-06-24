@@ -72,15 +72,13 @@ func (r *rulePorts) from(src []*sg.Rule_Ports) error {
 	for _, p := range src {
 		var item model.SGRulePorts
 		var e error
-		if item.S, e = model.PortSource(p.S).ToPortRange(); e != nil {
+		if item.S, e = model.PortSource(p.S).ToPortRanges(); e != nil {
 			return e
 		}
-		if item.D, e = model.PortSource(p.D).ToPortRange(); e != nil {
+		if item.D, e = model.PortSource(p.D).ToPortRanges(); e != nil {
 			return e
 		}
-		if item.D != nil || item.S != nil {
-			*r = append(*r, item)
-		}
+		*r = append(*r, item)
 	}
 	return nil
 }

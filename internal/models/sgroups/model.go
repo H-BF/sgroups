@@ -50,8 +50,8 @@ type (
 
 	// SGRulePorts source and destination port ranges
 	SGRulePorts struct {
-		S PortRange
-		D PortRange
+		S PortRanges
+		D PortRanges
 	}
 
 	// SGRule security rule for From-To security groups
@@ -89,6 +89,11 @@ const (
 	UDP
 )
 
+// NewPortRarnges is a port rarnges constructor
+func NewPortRarnges() PortRanges {
+	return ranges.NewMultiRange(PortRangeFactory)
+}
+
 // String impl Stringer
 func (nw Network) String() string {
 	return fmt.Sprintf("%s(%s)", nw.Name, &nw.Net)
@@ -122,6 +127,13 @@ func (sgRuleKey SGRuleIdentity) IdentityHash() string {
 	return strings.ToLower(hex.EncodeToString(hasher.Sum(nil)))
 }
 
+// IsEq -
+func (sgRuleKey SGRuleIdentity) IsEq(other SGRuleIdentity) bool {
+	return sgRuleKey.SgFrom.Name == other.SgFrom.Name &&
+		sgRuleKey.SgTo.Name == other.SgTo.Name &&
+		sgRuleKey.Transport == other.Transport
+}
+
 // String impl Stringer
 func (sgRuleKey SGRuleIdentity) String() string {
 	return fmt.Sprintf("%s:'%s'-'%s'",
@@ -145,20 +157,6 @@ func (sgRuleKey *SGRuleIdentity) FromString(s string) error {
 
 // IsEq -
 func (rule SGRule) IsEq(other SGRule) bool {
-	return rule.IdentityHash() == other.IdentityHash() &&
+	return rule.SGRuleIdentity.IsEq(other.SGRuleIdentity) &&
 		AreRulePortsEq(rule.Ports, other.Ports)
-}
-
-// ArePortsValid -
-func (rule SGRule) ArePortsValid() bool {
-	rr := make([]PortRange, 0, len(rule.Ports))
-	for _, p := range rule.Ports {
-		if p.S == nil {
-			return len(rule.Ports) == 1
-		}
-		rr = append(rr, p.S)
-	}
-	x := ranges.NewMultiRange(PortRangeFactory)
-	x.Update(ranges.CombineMerge, rr...)
-	return len(rr) == x.Len()
 }
