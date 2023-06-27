@@ -17,7 +17,9 @@ import (
 	"github.com/H-BF/corlib/pkg/backoff"
 	"github.com/c-robinson/iplib"
 	nftLib "github.com/google/nftables"
+	util "github.com/google/nftables/binaryutil"
 	nfte "github.com/google/nftables/expr"
+
 	"github.com/pkg/errors"
 )
 
@@ -42,8 +44,8 @@ type (
 	jobf = func(tx *nfTablesTx) error
 
 	accports struct {
-		sp *[2]model.PortNumber
-		dp *[2]model.PortNumber
+		sp [][2]model.PortNumber
+		dp [][2]model.PortNumber
 	}
 
 	batch struct {
@@ -60,27 +62,77 @@ type (
 )
 
 func (ap accports) S(rb ruleBuilder, tr model.NetworkTransport) ruleBuilder {
-	p := ap.sp
-	if p == nil {
-		return rb
+	if n := len(ap.sp); n == 1 {
+		p := ap.sp[0]
+		rb = rb.ipProto(tr).sport()
+		if p[0] == p[1] {
+			rb = rb.eqU16(p[0])
+		} else {
+			rb = rb.geU16(p[0]).leU16(p[1])
+		}
+	} else if n > 1 { //add anonimous port set
+		set := &nftLib.Set{
+			ID:        nextSetID(),
+			Name:      "__set%d",
+			Interval:  true,
+			Anonymous: true,
+			Constant:  true,
+			KeyType:   nftLib.TypeInetService,
+		}
+		elements := make([]nftLib.SetElement, 0, 2*n)
+		for _, p := range ap.sp {
+			elements = append(elements,
+				nftLib.SetElement{
+					Key: util.BigEndian.PutUint16(p[0]),
+				},
+				nftLib.SetElement{
+					Key:         util.BigEndian.PutUint16(p[1] + 1),
+					IntervalEnd: true,
+				},
+			)
+		}
+		rb = rb.ipProto(tr).sport().inSet(set)
+		rb.sets.put(set.ID, set)
+		rb.setElems.put(set.ID, elements)
 	}
-	rb = rb.ipProto(tr).sport()
-	if p[0] == p[1] {
-		return rb.eqU16(p[0])
-	}
-	return rb.geU16(p[0]).leU16(p[1])
+	return rb
 }
 
 func (ap accports) D(rb ruleBuilder, tr model.NetworkTransport) ruleBuilder {
-	p := ap.dp
-	if p == nil {
-		return rb
+	if n := len(ap.dp); n == 1 {
+		p := ap.sp[0]
+		rb = rb.ipProto(tr).dport()
+		if p[0] == p[1] {
+			rb = rb.eqU16(p[0])
+		} else {
+			rb = rb.geU16(p[0]).leU16(p[1])
+		}
+	} else if n > 1 { //add anonimous port set
+		set := &nftLib.Set{
+			ID:        nextSetID(),
+			Name:      "__set%d",
+			Interval:  true,
+			Anonymous: true,
+			Constant:  true,
+			KeyType:   nftLib.TypeInetService,
+		}
+		elements := make([]nftLib.SetElement, 0, 2*n)
+		for _, p := range ap.sp {
+			elements = append(elements,
+				nftLib.SetElement{
+					Key: util.BigEndian.PutUint16(p[0]),
+				},
+				nftLib.SetElement{
+					Key:         util.BigEndian.PutUint16(p[1] + 1),
+					IntervalEnd: true,
+				},
+			)
+		}
+		rb = rb.ipProto(tr).dport().inSet(set)
+		rb.sets.put(set.ID, set)
+		rb.setElems.put(set.ID, elements)
 	}
-	rb = rb.ipProto(tr).dport()
-	if p[0] == p[1] {
-		return rb.eqU16(p[0])
-	}
-	return rb.geU16(p[0]).leU16((*p)[1])
+	return rb
 }
 
 func (bt *batch) init(table *nftLib.Table, localRules cases.LocalRules) {
@@ -349,31 +401,33 @@ func (bt *batch) addNetSets() {
 }
 
 func (bt *batch) initPortSets() {
-	portRange2elems := func(pr model.PortRange) (ret *[2]model.PortNumber) {
-		if !(pr == nil || pr.IsNull()) {
-			ret = new([2]model.PortNumber)
-			a, b := pr.Bounds()
-			ret[0], _ = a.AsIncluded().GetValue()
-			ret[1], _ = b.AsIncluded().GetValue()
-		}
+	portRange2elems := func(pr model.PortRanges) (ret [][2]model.PortNumber) {
+		pr.Iterate(func(r model.PortRange) bool {
+			a, b := r.Bounds()
+			var x [2]model.PortNumber
+			x[0], _ = a.AsIncluded().GetValue()
+			x[1], _ = b.AsIncluded().GetValue()
+			ret = append(ret, x)
+			return true
+		})
 		return ret
 	}
 	for sgFrom, to := range bt.rules.SgRules {
 		for sgTo, ports := range to {
-			var pts []accports
-			setsName := nameUtils{}.nameOfPortSet(sgFrom.Transport, sgFrom.SgName, sgTo)
+			pts := make([]accports, 0, len(ports))
 			for _, p := range ports {
 				accp := accports{
 					dp: portRange2elems(p.D),
 					sp: portRange2elems(p.S),
 				}
-				if !(accp.sp == nil && accp.dp == nil) {
+				if !(len(accp.sp) == 0 && len(accp.dp) == 0) {
 					pts = append(pts, accp)
 				}
 			}
 			if len(pts) == 0 {
 				pts = append(pts, accports{})
 			}
+			setsName := nameUtils{}.nameOfPortSet(sgFrom.Transport, sgFrom.SgName, sgTo)
 			bt.portset.put(setsName, pts)
 		}
 	}

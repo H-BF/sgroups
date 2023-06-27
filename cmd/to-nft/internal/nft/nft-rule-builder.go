@@ -17,11 +17,23 @@ func beginRule() ruleBuilder {
 }
 
 type ruleBuilder struct {
-	exprs []Any
+	sets     dict[uint32, *nftlib.Set]
+	setElems dict[uint32, []nftlib.SetElement]
+	exprs    []Any
 }
 
 func (rb ruleBuilder) applyRule(chn *nftlib.Chain, c *nftlib.Conn) {
 	if len(rb.exprs) > 0 {
+		rb.sets.iterate(func(id uint32, s *nftlib.Set) bool {
+			if setElems, ok := rb.setElems.get(id); ok {
+				s.Table = chn.Table
+				e := c.AddSet(s, setElems)
+				if e != nil {
+					panic(e)
+				}
+			}
+			return true
+		})
 		_ = c.AddRule(&nftlib.Rule{
 			Table: chn.Table,
 			Chain: chn,
@@ -65,10 +77,14 @@ func (rb ruleBuilder) counter() ruleBuilder {
 
 func (rb ruleBuilder) inSet(s *nftlib.Set) ruleBuilder {
 	if s != nil {
+		n := s.Name
+		if s.Anonymous {
+			n = fmt.Sprintf(s.Name, s.ID)
+		}
 		rb.exprs = append(rb.exprs,
 			&Lookup{
 				SourceRegister: 1,
-				SetName:        s.Name,
+				SetName:        n,
 				SetID:          s.ID,
 			})
 	}

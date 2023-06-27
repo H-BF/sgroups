@@ -78,7 +78,7 @@ func (rule SGRule) Validate() error {
 	return oz.ValidateStruct(&rule,
 		oz.Field(&rule.SGRuleIdentity),
 		oz.Field(&rule.Ports,
-			oz.Required.Error("required"),
+			//oz.Required.Error("required"),
 			oz.By(func(v any) error {
 				var rr []PortRange
 				for _, p := range v.([]SGRulePorts) {
