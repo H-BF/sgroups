@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-PROJECT="github.com/fraima/sgroups"
+PROJECT="github.com/fraima/swarm"
 VERSION=$(git describe --abbrev=0 --tag)
 
 TOOLS_ROOT="$GOPATH/src/$PROJECT"
@@ -22,6 +22,10 @@ make $DST_PACKAGE
 
 if [[ "$DST_PACKAGE" == "sgroups-tf" ]]; then
   DST_PACKAGE="terraform-provider-sgroups"
+fi
+
+if [[ "$DST_PACKAGE" == "sg-service" ]]; then
+  DST_PACKAGE="sgroups"
 fi
 
 tar -czvf "$OUTPUTDIR/$DST_PACKAGE-$VERSION-$OS-$ARCH.tar.gz" bin/$DST_PACKAGE
