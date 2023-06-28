@@ -100,7 +100,7 @@ func (ap accports) S(rb ruleBuilder, tr model.NetworkTransport) ruleBuilder {
 
 func (ap accports) D(rb ruleBuilder, tr model.NetworkTransport) ruleBuilder {
 	if n := len(ap.dp); n == 1 {
-		p := ap.sp[0]
+		p := ap.dp[0]
 		rb = rb.ipProto(tr).dport()
 		if p[0] == p[1] {
 			rb = rb.eqU16(p[0])
@@ -117,7 +117,7 @@ func (ap accports) D(rb ruleBuilder, tr model.NetworkTransport) ruleBuilder {
 			KeyType:   nftLib.TypeInetService,
 		}
 		elements := make([]nftLib.SetElement, 0, 2*n)
-		for _, p := range ap.sp {
+		for _, p := range ap.dp {
 			elements = append(elements,
 				nftLib.SetElement{
 					Key: util.BigEndian.PutUint16(p[0]),

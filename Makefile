@@ -90,7 +90,7 @@ ifeq ($(and $(os),$(arch)),)
 endif
 	@echo build '$(APP)' for OS/ARCH='$(os)'/'$(arch)' ... && \
 	echo into '$(OUT)' && \
-	env GOOS=$(os) GOARCH=$(arch) \
+	env GOOS=$(os) GOARCH=$(arch) CGO_ENABLED=0 \
 	$(GO) build -ldflags="$(LDFLAGS)" -o $(OUT) $(CURDIR)/cmd/$(APP) &&\
 	echo -=OK=-
 
@@ -107,7 +107,7 @@ ifeq ($(and $(os),$(arch)),)
 endif
 	@echo build \"$(APP)\" for OS/ARCH=\"$(os)/$(arch)\" ... && \
 	echo into \"$(OUT)\" && \
-	env GOOS=$(os) GOARCH=$(arch) \
+	env GOOS=$(os) GOARCH=$(arch) CGO_ENABLED=0 \
 	$(GO) build -ldflags="$(LDFLAGS)" -o $(OUT) $(CURDIR)/cmd/$(APP) &&\
 	echo -=OK=- 
 
@@ -119,7 +119,7 @@ sgroups-tf: OUT=$(CURDIR)/bin/terraform-provider-sgroups
 sgroups-tf:
 	@echo build \"$(APP)\" for OS/ARCH=\"$(os)/$(arch)\" ... && \
 	echo into \"$(OUT)\" && \
-	env GOOS=$(os) GOARCH=$(arch) \
+	env GOOS=$(os) GOARCH=$(arch) CGO_ENABLED=0 \
 	$(GO) build -ldflags="$(LDFLAGS)" -o $(OUT) $(CURDIR)/cmd/$(APP) &&\
 	echo -=OK=- 
 
