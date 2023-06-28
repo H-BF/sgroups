@@ -7,6 +7,6 @@ src/github.com/H-BF/sgroups/_output/*
 
 go.sum
 go.mod
-src/github.com/fraima/sgroups/_output/*
+src/github.com/fraima/swarm/_output/*
 release-notes.md
 site/assets/

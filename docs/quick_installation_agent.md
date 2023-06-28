@@ -46,7 +46,7 @@
     export VERSION=1.0.4
     export ARCH=amd64
     export PACKAGE_TYPE=deb
-    export URL=https://github.com/fraima/sgroups/releases/download
+    export URL=https://github.com/fraima/swarm/releases/download
     export RELEASE=$VERSION/to-nft_$VERSION-0_$ARCH.$PACKAGE_TYPE
 
     sudo wget -O /tmp/to-nft $URL/$RELEASE
@@ -61,7 +61,7 @@
     export VERSION=1.0.4
     export ARCH=x86_64
     export PACKAGE_TYPE=rpm
-    export URL=https://github.com/fraima/sgroups/releases/download
+    export URL=https://github.com/fraima/swarm/releases/download
     export RELEASE=$VERSION/to-nft_$VERSION-0_$ARCH.$PACKAGE_TYPE
 
     sudo wget -O /tmp/to-nft $URL/$RELEASE
@@ -77,7 +77,7 @@
     export HBF_SERVER=example.com:80
 
     ## INSTALL SERVER
-    git clone https://github.com/fraima/sgroups.git
+    git clone https://github.com/fraima/swarm.git
     cd sgroups
     make to-nft
     cp bin/to-nft /usr/bin/to-nft

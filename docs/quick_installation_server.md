@@ -44,7 +44,7 @@
     export VERSION=1.0.4
     export ARCH=amd64
     export PACKAGE_TYPE=deb
-    export URL=https://github.com/fraima/sgroups/releases/download
+    export URL=https://github.com/fraima/swarm/releases/download
     export RELEASE=$VERSION/sgroups_$VERSION-0_$ARCH.$PACKAGE_TYPE
 
     sudo wget -O /tmp/sgroups $URL/$RELEASE
@@ -59,7 +59,7 @@
     export VERSION=1.0.4
     export ARCH=x86_64
     export PACKAGE_TYPE=rpm
-    export URL=https://github.com/fraima/sgroups/releases/download
+    export URL=https://github.com/fraima/swarm/releases/download
     export RELEASE=$VERSION/sgroups_$VERSION-0_$ARCH.$PACKAGE_TYPE
 
     sudo wget -O /tmp/sgroups $URL/$RELEASE
@@ -72,7 +72,7 @@
 
     ``` bash
     ## INSTALL SERVER
-    git clone https://github.com/fraima/sgroups.git
+    git clone https://github.com/fraima/swarm.git
     cd sgroups
     make sg-service
     cp bin/sg-service /usr/bin/hbf-server

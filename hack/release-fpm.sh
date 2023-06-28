@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 VERSION=$(git describe --abbrev=0 --tag)
-PROJECT="github.com/fraima/sgroups"
+PROJECT="github.com/fraima/swarm"
 DST_PACKAGES=("sgroups" "to-nft")
 DST_PACKAGE_TYPES=("rpm" "deb")
 MAINTAINER="Dobry-kot <dlputilin@dobry-kot.ru>"

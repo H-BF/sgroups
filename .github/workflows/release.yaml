@@ -30,7 +30,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
-          path: src/github.com/fraima/sgroups
+          path: src/github.com/fraima/swarm
 
       - run: |
           sudo apt-get install ruby-dev build-essential && sudo gem i fpm -f && make release
@@ -38,15 +38,15 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
           DOCKER_LOGIN: ${{ secrets.DOCKER_LOGIN }}
-        working-directory: src/github.com/fraima/sgroups
+        working-directory: src/github.com/fraima/swarm
 
       - uses: ncipollo/release-action@v1
         with:
           allowUpdates: true
-          artifacts: src/github.com/fraima/sgroups/_output/releases/*
-          bodyFile: src/github.com/fraima/sgroups/release-notes.md
+          artifacts: src/github.com/fraima/swarm/_output/releases/*
+          bodyFile: src/github.com/fraima/swarm/release-notes.md
 
       - uses: actions/upload-artifact@v2
         with:
           name: build-artifacts
-          path: src/github.com/fraima/sgroups/_output
+          path: src/github.com/fraima/swarm/_output
