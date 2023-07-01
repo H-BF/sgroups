@@ -196,14 +196,6 @@ func (rb ruleBuilder) ipProto(tr model.NetworkTransport) ruleBuilder {
 	return rb
 }
 
-func (rb ruleBuilder) udp() ruleBuilder { //nolint:unused
-	return rb.ipProto(model.UDP)
-}
-
-func (rb ruleBuilder) tcp() ruleBuilder { //nolint:unused
-	return rb.ipProto(model.TCP)
-}
-
 func (rb ruleBuilder) ip4() ruleBuilder {
 	rb.exprs = append(rb.exprs,
 		&Meta{Key: MetaKeyNFPROTO, Register: 1},

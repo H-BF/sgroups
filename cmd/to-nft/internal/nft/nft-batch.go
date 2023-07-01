@@ -61,10 +61,11 @@ type (
 	}
 )
 
-func (ap accports) S(rb ruleBuilder, tr model.NetworkTransport) ruleBuilder {
+func (ap accports) S(rb ruleBuilder, _ model.NetworkTransport) ruleBuilder {
 	if n := len(ap.sp); n == 1 {
 		p := ap.sp[0]
-		rb = rb.ipProto(tr).sport()
+		//rb = rb.ipProto(tr).sport()
+		rb = rb.sport()
 		if p[0] == p[1] {
 			rb = rb.eqU16(p[0])
 		} else {
@@ -91,17 +92,19 @@ func (ap accports) S(rb ruleBuilder, tr model.NetworkTransport) ruleBuilder {
 				},
 			)
 		}
-		rb = rb.ipProto(tr).sport().inSet(set)
+		//rb = rb.ipProto(tr).sport().inSet(set)
+		rb = rb.sport().inSet(set)
 		rb.sets.put(set.ID, set)
 		rb.setElems.put(set.ID, elements)
 	}
 	return rb
 }
 
-func (ap accports) D(rb ruleBuilder, tr model.NetworkTransport) ruleBuilder {
+func (ap accports) D(rb ruleBuilder, _ model.NetworkTransport) ruleBuilder {
 	if n := len(ap.dp); n == 1 {
 		p := ap.dp[0]
-		rb = rb.ipProto(tr).dport()
+		//rb = rb.ipProto(tr).dport()
+		rb = rb.dport()
 		if p[0] == p[1] {
 			rb = rb.eqU16(p[0])
 		} else {
@@ -128,7 +131,8 @@ func (ap accports) D(rb ruleBuilder, tr model.NetworkTransport) ruleBuilder {
 				},
 			)
 		}
-		rb = rb.ipProto(tr).dport().inSet(set)
+		//rb = rb.ipProto(tr).dport().inSet(set)
+		rb = rb.dport().inSet(set)
 		rb.sets.put(set.ID, set)
 		rb.setElems.put(set.ID, elements)
 	}
@@ -478,7 +482,8 @@ func (bt *batch) addOutChains() {
 								cAddedRules++
 								ports.D(
 									ports.S(
-										beginRule().ipProto(in.Proto).daddr(ipV).inSet(daddrSet),
+										//beginRule().ipProto(in.Proto).daddr(ipV).inSet(daddrSet),
+										beginRule().daddr(ipV).inSet(daddrSet).ipProto(in.Proto),
 										in.Proto,
 									),
 									in.Proto,
@@ -549,7 +554,8 @@ func (bt *batch) addInChains() {
 								cAddedRules++
 								ports.S(
 									ports.D(
-										beginRule().ipProto(outSG.Proto).saddr(ipV).inSet(saddrSet),
+										//beginRule().ipProto(outSG.Proto).saddr(ipV).inSet(saddrSet),
+										beginRule().saddr(ipV).inSet(saddrSet).ipProto(outSG.Proto),
 										outSG.Proto,
 									), outSG.Proto,
 								).counter().accept().
