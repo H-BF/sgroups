@@ -3,11 +3,11 @@ package sgroups
 import (
 	"context"
 
-	"github.com/H-BF/corlib/pkg/ranges"
-	"github.com/H-BF/protos/pkg/api/common"
-	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
+
+	"github.com/H-BF/protos/pkg/api/common"
+	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -23,13 +23,13 @@ func (snc syncRules) process(ctx context.Context) error {
 	for _, rl := range snc.rules {
 		var item model.SGRule
 		if err := (sgRule{SGRule: &item}).from(rl); err != nil {
-			return err
+			return status.Error(codes.InvalidArgument, err.Error())
 		}
 		rules = append(rules, item)
 	}
 	var opts []registry.Option
 	if err := syncOptionsFromProto(snc.ops, &opts); err != nil {
-		return err
+		return status.Error(codes.InvalidArgument, err.Error())
 	}
 	var sc registry.Scope = registry.NoScope
 	if snc.ops != sg.SyncReq_FullSync {
@@ -41,12 +41,14 @@ func (snc syncRules) process(ctx context.Context) error {
 	return snc.wr.SyncSGRules(ctx, rules, sc, opts...)
 }
 
-type portsRange struct {
-	*model.PortRanges
-}
+type rulePorts []model.SGRulePorts
 
 type sgRule struct {
 	*model.SGRule
+}
+
+type sgRuleIdentity struct {
+	*model.SGRuleIdentity
 }
 
 type networkTransport struct {
@@ -66,26 +68,36 @@ func (nt networkTransport) from(src common.Networks_NetIP_Transport) error {
 	return nil
 }
 
-func (r portsRange) from(src []*common.Networks_NetIP_PortRange) {
-	rgs := make([]model.PortRange, 0, len(src))
-	for _, s := range src {
-		rgs = append(rgs,
-			model.PortRangeFactory.Range(s.GetFrom(), false, s.GetTo(), false))
+func (r *rulePorts) from(src []*sg.Rule_Ports) error {
+	for _, p := range src {
+		var item model.SGRulePorts
+		var e error
+		if item.S, e = model.PortSource(p.S).ToPortRanges(); e != nil {
+			return e
+		}
+		if item.D, e = model.PortSource(p.D).ToPortRanges(); e != nil {
+			return e
+		}
+		*r = append(*r, item)
 	}
-	x := ranges.NewMultiRange(model.PortRangeFactory)
-	x.Update(ranges.CombineMerge, rgs...)
-	*r.PortRanges = x
+	return nil
+}
+
+func (ri sgRuleIdentity) from(src *sg.Rule) error {
+	ri.SgFrom.Name = src.GetSgFrom()
+	ri.SgTo.Name = src.GetSgTo()
+	return networkTransport{NetworkTransport: &ri.Transport}.
+		from(src.GetTransport())
 }
 
 func (r sgRule) from(src *sg.Rule) error {
-	r.SgFrom.Name = src.GetSgFrom().GetName()
-	r.SgTo.Name = src.GetSgTo().GetName()
-	err := networkTransport{NetworkTransport: &r.Transport}.
-		from(src.GetTransport())
-	if err != nil {
-		return err
+	err := sgRuleIdentity{SGRuleIdentity: &r.SGRuleIdentity}.
+		from(src)
+	if err == nil {
+		var p rulePorts
+		if err = p.from(src.GetPorts()); err == nil {
+			r.Ports = p
+		}
 	}
-	portsRange{PortRanges: &r.PortsFrom}.from(src.GetPortsFrom())
-	portsRange{PortRanges: &r.PortsTo}.from(src.GetPortsTo())
-	return nil
+	return err
 }

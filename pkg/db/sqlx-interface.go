@@ -87,8 +87,10 @@ type (
 		Unsafe() SqlxNamedStatement
 		Close() error
 
-		//Rebind(string) string
-		//BindNamed(string, interface{}) (string, []interface{}, error)
+		/*//
+		Rebind(string) string
+		BindNamed(string, interface{}) (string, []interface{}, error)
+		*/
 
 		QueryRow(arg interface{}) *SqlxRow
 		QueryRowContext(ctx context.Context, arg interface{}) *SqlxRow
@@ -142,4 +144,3 @@ type (
 		End(doCommit bool) error
 	}
 )
-

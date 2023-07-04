@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"testing"
+	"time"
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	"github.com/stretchr/testify/suite"
@@ -14,36 +15,39 @@ func Test_MemDB(t *testing.T) {
 }
 
 type memDbSuite struct {
-	db Registry
+	reg Registry
+	db  MemDB
 	suite.Suite
 }
 
 func (sui *memDbSuite) SetupTest() {
-	sui.Require().Nil(sui.db)
-	db, err := NewMemDB(TblNetworks, TblSecGroups, TblSecRules,
-		IntegrityChecker4SG(), IntegrityChecker4Rules())
+	sui.Require().Nil(sui.reg)
+	db, err := NewMemDB(TblNetworks, TblSecGroups, TblSecRules, TblSyncStatus,
+		IntegrityChecker4SG(), IntegrityChecker4Rules(), IntegrityChecker4Networks())
 	sui.Require().NoError(err)
-	sui.db = NewRegistryFromMemDB(db)
+	sui.reg = NewRegistryFromMemDB(db)
+	sui.db = db
 }
 
 func (sui *memDbSuite) TearDownTest() {
-	if sui.db != nil {
-		e := sui.db.Close()
+	if sui.reg != nil {
+		e := sui.reg.Close()
 		sui.Require().NoError(e)
+		sui.reg = nil
 		sui.db = nil
 	}
 }
 
 func (sui *memDbSuite) regWriter() Writer {
 	ctx := context.TODO()
-	w, e := sui.db.Writer(ctx)
+	w, e := sui.reg.Writer(ctx)
 	sui.Require().NoError(e)
 	return w
 }
 
 func (sui *memDbSuite) regReader() Reader {
 	ctx := context.TODO()
-	r, e := sui.db.Reader(ctx)
+	r, e := sui.reg.Reader(ctx)
 	sui.Require().NoError(e)
 	return r
 }
@@ -63,18 +67,145 @@ func (sui *memDbSuite) newSG(name string, nws ...model.Network) model.SecurityGr
 	sui.Require().NotEmpty(name)
 	ret := model.SecurityGroup{Name: name}
 	for i := range nws {
-		ret.Networks = append(ret.Networks, nws[i])
+		ret.Networks = append(ret.Networks, nws[i].Name)
 	}
 	return ret
 }
 
-func (sui *memDbSuite) newSGRule(sgFrom, sgTo model.SecurityGroup, t model.NetworkTransport) model.SGRule {
+func (sui *memDbSuite) newRulePorts(s, d model.PortSource) model.SGRulePorts {
+	a, e1 := s.ToPortRanges()
+	sui.Require().NoError(e1)
+	b, e2 := d.ToPortRanges()
+	sui.Require().NoError(e2)
+	return model.SGRulePorts{S: a, D: b}
+}
+
+func (sui *memDbSuite) newSGRule(sgFrom, sgTo model.SecurityGroup, t model.NetworkTransport, ports ...model.SGRulePorts) model.SGRule {
 	return model.SGRule{
 		SGRuleIdentity: model.SGRuleIdentity{
 			Transport: t,
 			SgFrom:    sgFrom,
 			SgTo:      sgTo,
-		}}
+		},
+		Ports: ports,
+	}
+}
+
+func (sui *memDbSuite) TestSGRuleIsEq() {
+	r := func(from, to string, t model.NetworkTransport, ports ...model.SGRulePorts) model.SGRule {
+		return model.SGRule{
+			SGRuleIdentity: model.SGRuleIdentity{
+				SgFrom:    model.SecurityGroup{Name: from},
+				SgTo:      model.SecurityGroup{Name: to},
+				Transport: t,
+			},
+			Ports: ports,
+		}
+	}
+
+	p := func(s, d model.PortSource) model.SGRulePorts {
+		return sui.newRulePorts(s, d)
+	}
+	type item = struct {
+		r1   model.SGRule
+		r2   model.SGRule
+		isEq bool
+	}
+	cases := []item{
+		{r("a", "b", model.TCP), r("a", "b", model.TCP), true},
+		{r("a", "b", model.TCP), r("a", "b", model.UDP), false},
+		{r("a", "b", model.TCP), r("a", "b", model.TCP, p("10", "10")), false},
+		{r("a", "b", model.TCP, p("10", "10")), r("a", "b", model.TCP), false},
+		{r("a", "b", model.TCP, p("10", "10")), r("a", "b", model.TCP, p("10", "10")), true},
+		{r("a", "b", model.TCP, p("10-10", "10")), r("a", "b", model.TCP, p("10-10", "10")), true},
+		{r("a", "b", model.TCP, p("10-20", "10"), p("30-40", "10")),
+			r("a", "b", model.TCP, p("30-40", "10"), p("10-20", "10")), true},
+		{r("a", "b", model.TCP, p("10-20", "20"), p("30-40", "10")),
+			r("a", "b", model.TCP, p("30-40", "20"), p("10-20", "10")), false},
+	}
+	for i := range cases {
+		c := cases[i]
+		eq := c.r1.IsEq(c.r2)
+		sui.Require().Equalf(c.isEq, eq, "test case #%v", i)
+	}
+}
+
+func (sui *memDbSuite) TestSyncStatus() {
+	ctx := context.TODO()
+	rd := sui.regReader()
+	v, e := rd.GetSyncStatus(ctx)
+	sui.Require().NoError(e)
+	sui.Require().Nil(v)
+	x := syncStatus{
+		ID: 1,
+		SyncStatus: model.SyncStatus{
+			UpdatedAt: time.Now(),
+		},
+	}
+
+	wr := sui.db.Writer()
+	e = wr.Upsert(TblSyncStatus, x)
+	sui.Require().NoError(e)
+	e = wr.Commit()
+	sui.Require().NoError(e)
+
+	rd = sui.regReader()
+	v, e = rd.GetSyncStatus(ctx)
+	sui.Require().NoError(e)
+	sui.Require().NotNil(v)
+	sui.Require().Equal(x.UpdatedAt, v.UpdatedAt)
+}
+
+func (sui *memDbSuite) TestCheckNetworksOverlap() {
+	ctx := context.TODO()
+	nws := []model.Network{ //not overlapped
+		//sui.newNetwork("nwa", "10.100.0.10/32"),
+		//sui.newNetwork("nwb", "10.100.0.10/31"),
+		//sui.newNetwork("nwc", "10.100.0.10/30"),
+		//sui.newNetwork("nwd", "10.100.0.10/24"),
+
+		sui.newNetwork("nw1", "10.10.10.1/24"),
+		sui.newNetwork("nw2", "10.10.11.2/24"),
+		sui.newNetwork("nw3", "10.10.12.3/24"),
+	}
+	w := sui.regWriter()
+	e := w.SyncNetworks(ctx, nws, NoScope)
+	sui.Require().NoError(e)
+	e = w.Commit()
+	sui.Require().NoError(e)
+
+	nws = []model.Network{ // overlapped
+		sui.newNetwork("nwc", "10.100.0.0/32"),
+		sui.newNetwork("nwd", "10.100.0.0/24"),
+		sui.newNetwork("nw1", "10.10.11.19/32"),
+		sui.newNetwork("nw2", "10.10.11.1/24"),
+		sui.newNetwork("nw3", "10.10.12.1/24"),
+	}
+	w = sui.regWriter()
+	e = w.SyncNetworks(ctx, nws, NoScope)
+	sui.Require().NoError(e)
+	e = w.Commit()
+	sui.Require().Error(e)
+
+	nws = []model.Network{ // not overlapped
+		sui.newNetwork("nw1", "10.10.11.0/32"),
+		sui.newNetwork("nw2", "10.10.11.1/32"),
+	}
+	w = sui.regWriter()
+	e = w.SyncNetworks(ctx, nws, NoScope)
+	sui.Require().NoError(e)
+	e = w.Commit()
+	sui.Require().NoError(e)
+
+	nws = []model.Network{ // overlapped
+		sui.newNetwork("nw1", "10.10.11.1/31"),
+		sui.newNetwork("nw2", "10.10.11.1/32"),
+	}
+	w = sui.regWriter()
+	e = w.SyncNetworks(ctx, nws, NoScope)
+	sui.Require().NoError(e)
+	e = w.Commit()
+	sui.Require().Error(e)
 }
 
 func (sui *memDbSuite) TestSyncNetworks() {
@@ -256,6 +387,10 @@ func (sui *memDbSuite) TestSyncSG_Networks() {
 func (sui *memDbSuite) TestSyncSGRules() {
 	ctx := context.TODO()
 
+	p := func(s, d model.PortSource) model.SGRulePorts {
+		return sui.newRulePorts(s, d)
+	}
+
 	nw1 := sui.newNetwork("nw1", "10.10.10.0/24")
 	nw2 := sui.newNetwork("nw2", "20.20.20.0/24")
 	sg1 := sui.newSG("sg1", nw1)
@@ -268,26 +403,16 @@ func (sui *memDbSuite) TestSyncSGRules() {
 	err = w.Commit()
 	sui.Require().NoError(err)
 
-	r1 := sui.newSGRule(sg1, sg2, model.TCP)
-	r2 := sui.newSGRule(sg1, sg2, model.UDP)
+	r1 := sui.newSGRule(sg1, sg2, model.TCP, p("10", "10"), p("20", "20"))
+	r2 := sui.newSGRule(sg1, sg2, model.UDP, p("10", "10"), p("20", ""))
 	{
-		h1 := r1.IdentityHash()
-		h2 := r2.IdentityHash()
-		sui.Require().NotEqual(h1, h2)
+		eq := r1.SGRuleIdentity.IsEq(r2.SGRuleIdentity)
+		sui.Require().False(eq)
 	}
 
 	//write fails if no SG in DB /- no references to SG(s)
 	w = sui.regWriter()
 	err = w.SyncSGRules(ctx, []model.SGRule{r1, r2}, NoScope)
-	sui.Require().NoError(err)
-	err = w.Commit()
-	sui.Require().Error(err)
-
-	//Same SG(s) in rule /DB - fail
-	w = sui.regWriter()
-	err = w.SyncSGRules(ctx,
-		[]model.SGRule{sui.newSGRule(sg1, sg1, model.TCP)},
-		NoScope)
 	sui.Require().NoError(err)
 	err = w.Commit()
 	sui.Require().Error(err)
@@ -300,9 +425,8 @@ func (sui *memDbSuite) TestSyncSGRules() {
 	sui.Require().NoError(err)
 
 	//write Rules to DB
-	rr := []model.SGRule{r1, r2}
 	w = sui.regWriter()
-	err = w.SyncSGRules(ctx, rr, NoScope)
+	err = w.SyncSGRules(ctx, []model.SGRule{r1, r2}, NoScope)
 	sui.Require().NoError(err)
 	err = w.Commit()
 	sui.Require().NoError(err)
@@ -310,15 +434,20 @@ func (sui *memDbSuite) TestSyncSGRules() {
 	//check if rules are in DB
 	reader := sui.regReader()
 	rules := make(map[string]model.SGRule)
+	rules0 := map[string]model.SGRule{
+		r1.IdentityHash(): r1,
+		r2.IdentityHash(): r2,
+	}
 	err = reader.ListSGRules(ctx, func(rule model.SGRule) error {
 		rules[rule.IdentityHash()] = rule
 		return nil
 	}, NoScope)
 	sui.Require().NoError(err)
-	for i := range rr {
-		rule, ok := rules[rr[i].IdentityHash()]
-		sui.Require().Truef(ok, "%v)", i)
-		sui.Require().Equalf(rr[i], rule, "%v)", i)
+	sui.Require().Equal(len(rules0), len(rules))
+	for k, v := range rules0 {
+		rule, ok := rules[k]
+		sui.Require().Truef(ok, "%s)", v.SGRuleIdentity)
+		sui.Require().Truef(v.IsEq(rule), "%s)", v.SGRuleIdentity)
 	}
 
 	//delete one Rule from DB

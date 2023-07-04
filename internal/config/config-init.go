@@ -54,7 +54,7 @@ func configStore() *viper.Viper {
 	return ret
 }
 
-//InitGlobalConfig init global config
+// InitGlobalConfig init global config
 func InitGlobalConfig(opts ...Option) error {
 	const api = "InitGlobalConfig"
 

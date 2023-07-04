@@ -1,14 +1,16 @@
 package sgroups
 
 import (
+	"bytes"
 	"context"
+	"net"
 	"reflect"
-	"sort"
-	"strings"
+	"time"
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	"github.com/hashicorp/go-memdb"
 	"github.com/pkg/errors"
+	"go.uber.org/multierr"
 )
 
 type sGroupsMemDbWriter struct {
@@ -16,7 +18,7 @@ type sGroupsMemDbWriter struct {
 	writer MemDbWriter
 }
 
-//SyncNetworks impl Writer = update / delete networks
+// SyncNetworks impl Writer = update / delete networks
 func (wr sGroupsMemDbWriter) SyncNetworks(ctx context.Context, networks []model.Network, scope Scope, opts ...Option) error {
 	const api = "mem-db/SyncNetworks"
 
@@ -34,26 +36,32 @@ func (wr sGroupsMemDbWriter) SyncNetworks(ctx context.Context, networks []model.
 	})
 
 	var deleted []model.Network
+	var changed bool
 	h := syncHelper[model.Network, string]{
 		delete: func(obj *model.Network) error {
 			e := wr.writer.Delete(TblNetworks, obj)
 			if e == nil || errors.Is(e, memdb.ErrNotFound) {
+				changed = true
 				deleted = append(deleted, *obj)
 			}
 			return e
 		},
 		upsert: func(obj *model.Network) error {
-			return wr.writer.Upsert(TblNetworks, obj)
+			e := wr.writer.Upsert(TblNetworks, obj)
+			changed = changed || e == nil
+			return e
 		},
 		postprocess: func() error {
 			return wr.afterDeleteNetworks(ctx, deleted)
 		},
 	}
-	err = h.doSync(networks, it, opts...)
+	if err = h.doSync(networks, it, opts...); err == nil && changed {
+		err = wr.updateSyncStatus(ctx)
+	}
 	return errors.WithMessage(err, api)
 }
 
-//SyncSecurityGroups impl Writer = update / delete security groups
+// SyncSecurityGroups impl Writer = update / delete security groups
 func (wr sGroupsMemDbWriter) SyncSecurityGroups(ctx context.Context, sgs []model.SecurityGroup, scope Scope, opts ...Option) error {
 	const api = "mem-db/SyncSecurityGroups"
 
@@ -71,13 +79,17 @@ func (wr sGroupsMemDbWriter) SyncSecurityGroups(ctx context.Context, sgs []model
 	})
 
 	var deleted []model.SecurityGroup
+	var changed bool
 	h := syncHelper[model.SecurityGroup, string]{
 		upsert: func(obj *model.SecurityGroup) error {
-			return wr.writer.Upsert(TblSecGroups, obj)
+			e := wr.writer.Upsert(TblSecGroups, obj)
+			changed = changed || e == nil
+			return e
 		},
 		delete: func(obj *model.SecurityGroup) error {
 			e := wr.writer.Delete(TblSecGroups, obj)
 			if e == nil || errors.Is(e, memdb.ErrNotFound) {
+				changed = true
 				deleted = append(deleted, *obj)
 			}
 			return e
@@ -86,12 +98,14 @@ func (wr sGroupsMemDbWriter) SyncSecurityGroups(ctx context.Context, sgs []model
 			return wr.afterDeleteSGs(ctx, deleted)
 		},
 	}
-	err = h.doSync(sgs, it, opts...)
+	if err = h.doSync(sgs, it, opts...); err == nil && changed {
+		err = wr.updateSyncStatus(ctx)
+	}
 	return errors.WithMessage(err, api)
 }
 
-//SyncSGRules impl Writer = update / delete security group rules
-func (wr sGroupsMemDbWriter) SyncSGRules(_ context.Context, rules []model.SGRule, scope Scope, opts ...Option) error {
+// SyncSGRules impl Writer = update / delete security group rules
+func (wr sGroupsMemDbWriter) SyncSGRules(ctx context.Context, rules []model.SGRule, scope Scope, opts ...Option) error {
 	const api = "mem-db/SyncSGRules"
 
 	it, err := wr.writer.Get(TblSecRules, indexID)
@@ -107,28 +121,34 @@ func (wr sGroupsMemDbWriter) SyncSGRules(_ context.Context, rules []model.SGRule
 		return !ft.invoke(r)
 	})
 
+	var changed bool
 	h := syncHelper[model.SGRule, string]{
 		delete: func(obj *model.SGRule) error {
 			e := wr.writer.Delete(TblSecRules, obj)
 			if errors.Is(e, memdb.ErrNotFound) {
 				return nil
 			}
+			changed = changed || e == nil
 			return e
 		},
 		upsert: func(obj *model.SGRule) error {
-			return wr.writer.Upsert(TblSecRules, obj)
+			e := wr.writer.Upsert(TblSecRules, obj)
+			changed = changed || e == nil
+			return e
 		},
 	}
-	err = h.doSync(rules, it, opts...)
+	if err = h.doSync(rules, it, opts...); err == nil && changed {
+		err = wr.updateSyncStatus(ctx)
+	}
 	return errors.WithMessage(err, api)
 }
 
-//Commit impl Writer
+// Commit impl Writer
 func (wr sGroupsMemDbWriter) Commit() error {
 	return wr.writer.Commit()
 }
 
-//Abort impl Writer
+// Abort impl Writer
 func (wr sGroupsMemDbWriter) Abort() {
 	wr.writer.Abort()
 }
@@ -148,9 +168,9 @@ func (wr sGroupsMemDbWriter) afterDeleteNetworks(ctx context.Context, nw []model
 	//get related SG(s)
 	err := wr.ListSecurityGroups(ctx, func(sg model.SecurityGroup) error {
 		nws := sg.Networks[:0]
-		for _, n := range sg.Networks {
-			if !nwSet[n.Name] {
-				nws = append(nws, n)
+		for _, nwName := range sg.Networks {
+			if !nwSet[nwName] {
+				nws = append(nws, nwName)
 			}
 		}
 		if len(nws) != len(sg.Networks) {
@@ -187,6 +207,20 @@ func (wr sGroupsMemDbWriter) afterDeleteSGs(ctx context.Context, sgs []model.Sec
 		scope, SyncOmitInsert{}, SyncOmitUpdate{})
 
 	return errors.WithMessage(err, "delete related SGRule(s)")
+}
+
+func (wr sGroupsMemDbWriter) updateSyncStatus(_ context.Context) error {
+	x := syncStatus{
+		ID: 1,
+		SyncStatus: model.SyncStatus{
+			UpdatedAt: time.Now(),
+		},
+	}
+	err := wr.writer.Upsert(TblSyncStatus, x)
+	if isInvalidTableErr(err) {
+		err = nil
+	}
+	return err
 }
 
 type syncHelper[T any, TKey comparable] struct {
@@ -234,7 +268,7 @@ func (h syncHelper[T, TKey]) addCurrent(v T) error {
 	return h.add(v, true)
 }
 
-func (h syncHelper[T, TKey]) diff(opts ...Option) (upd, ins, del []T) {
+func (h syncHelper[T, TKey]) diff(opts ...Option) (upd, ins, del []T) { //nolint:gocyclo
 	i, u, d := true, true, true
 	for n := range opts {
 		switch opts[n].(type) {
@@ -289,35 +323,33 @@ func (h syncHelper[T, TKey]) extractKey(obj T) (TKey, error) {
 
 func (h syncHelper[T, TKey]) isEQ(l, r T) bool {
 	switch lt := interface{}(l).(type) {
+	case net.IPNet:
+		rt := interface{}(r).(net.IPNet)
+		return lt.IP.Equal(rt.IP) &&
+			bytes.Equal(lt.Mask, rt.Mask)
 	case model.Network:
 		rt := interface{}(r).(model.Network)
-		return lt.Net.IP.Equal(rt.Net.IP) &&
-			lt.Net.Mask.String() == rt.Net.Mask.String()
+		var h syncHelper[net.IPNet, string]
+		return h.isEQ(lt.Net, rt.Net)
 	case model.SecurityGroup:
 		rt := interface{}(r).(model.SecurityGroup)
-		if len(lt.Networks) != len(rt.Networks) {
-			return false
-		}
-		sort.Slice(lt.Networks, func(i, j int) bool {
-			return strings.Compare(lt.Networks[i].Name, lt.Networks[j].Name) < 0
-		})
-		sort.Slice(rt.Networks, func(i, j int) bool {
-			return strings.Compare(rt.Networks[i].Name, rt.Networks[j].Name) < 0
-		})
-		var h1 syncHelper[model.Network, string]
-		for i := range lt.Networks {
-			if eq := h1.isEQ(lt.Networks[i], rt.Networks[i]); !eq {
+		if len(lt.Networks) == len(rt.Networks) {
+			a := make(map[model.NetworkName]bool, len(lt.Networks))
+			for _, nwName := range lt.Networks {
+				a[nwName] = true
+			}
+			for _, nwName := range rt.Networks {
+				if ok := a[nwName]; ok {
+					delete(a, nwName)
+					continue
+				}
 				return false
 			}
-			if lt.Networks[i].Name != rt.Networks[i].Name {
-				return false
-			}
+			return len(a) == 0
 		}
-		return true
 	case model.SGRule:
 		rt := interface{}(r).(model.SGRule)
-		return model.ArePortRangesEq(lt.PortsFrom, rt.PortsFrom) &&
-			model.ArePortRangesEq(lt.PortsTo, rt.PortsTo)
+		return lt.IsEq(rt)
 	default:
 	}
 	return false
@@ -335,16 +367,21 @@ func (h syncHelper[T, TKey]) doSync(newValues []T, curValIt MemDbIterator, opts 
 		return err
 	}
 	upd, ins, del := h.diff(opts...)
-	ups := append(upd, ins...)
-	for i := range ups {
-		obj := &ups[i]
-		if err = h.upsert(obj); err != nil {
+	for i := range del {
+		if err = h.delete(&del[i]); err != nil {
 			return err
 		}
 	}
-	for i := range del {
-		obj := &del[i]
-		if err = h.delete(obj); err != nil {
+	ups := append(upd, ins...)
+	for i := range ups {
+		obj := &ups[i]
+		if v, ok := any(obj).(model.Validatable); ok {
+			err = v.Validate()
+			if err != nil {
+				return multierr.Combine(ErrValidate, err)
+			}
+		}
+		if err = h.upsert(obj); err != nil {
 			return err
 		}
 	}

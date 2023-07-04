@@ -3,14 +3,16 @@ package sgroups
 import (
 	"context"
 
-	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
+
+	sg "github.com/H-BF/protos/pkg/api/sgroups"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-//Sync impl service
+// Sync impl service
 func (srv *sgService) Sync(ctx context.Context, req *sg.SyncReq) (ret *emptypb.Empty, err error) {
 	ret = new(emptypb.Empty)
 	var wr registry.Writer
@@ -40,7 +42,10 @@ func (srv *sgService) Sync(ctx context.Context, req *sg.SyncReq) (ret *emptypb.E
 		err = syncRules{wr: wr, ops: ops, rules: rules}.
 			process(ctx)
 	default:
-		err = status.Error(codes.InvalidArgument, "unsupported type subject")
+		err = status.Error(codes.InvalidArgument, "unsupported subject type")
+	}
+	if errors.Is(err, registry.ErrValidate) {
+		err = status.Errorf(codes.InvalidArgument, "%s", err.Error())
 	}
 	return ret, err
 }

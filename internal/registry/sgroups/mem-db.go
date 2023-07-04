@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//IndexID alias to string
+// IndexID alias to string
 type IndexID = string
 
 const ( //indexes
@@ -66,7 +66,7 @@ type (
 	}
 )
 
-//NewMemDB creates memory db instance
+// NewMemDB creates memory db instance
 func NewMemDB(opts ...MemDbOption) (MemDB, error) {
 	sch := &memdb.DBSchema{Tables: make(map[string]*memdb.TableSchema)}
 	for i := range opts {
@@ -88,7 +88,6 @@ func NewMemDB(opts ...MemDbOption) (MemDB, error) {
 		}
 	}
 	return ret, err
-
 }
 
 var _ MemDB = (*memDb)(nil)

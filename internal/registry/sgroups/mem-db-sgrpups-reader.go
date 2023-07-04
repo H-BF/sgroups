@@ -2,6 +2,7 @@ package sgroups
 
 import (
 	"context"
+	"strings"
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	"github.com/hashicorp/go-memdb"
@@ -12,12 +13,43 @@ type sGroupsMemDbReader struct {
 	reader MemDbReader
 }
 
-//ListNetworks impl Reader
+type syncStatus struct {
+	ID int
+	model.SyncStatus
+}
+
+func isInvalidTableErr(e error) bool {
+	if e == nil {
+		return false
+	}
+	return strings.Contains(e.Error(), "invalid table")
+}
+
+// GetSyncStatus impl Reader
+func (rd sGroupsMemDbReader) GetSyncStatus(_ context.Context) (*model.SyncStatus, error) {
+	raw, err := rd.reader.First(TblSyncStatus, indexID)
+	if err != nil {
+		if isInvalidTableErr(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	switch v := raw.(type) {
+	case syncStatus:
+		ret := v.SyncStatus
+		return &ret, nil
+	case nil:
+		return nil, nil
+	}
+	panic("UB")
+}
+
+// ListNetworks impl Reader
 func (rd sGroupsMemDbReader) ListNetworks(_ context.Context, consume func(model.Network) error, scope Scope) error {
 	return memDbListObjects(rd.reader, scope, TblNetworks, consume)
 }
 
-//ListSecurityGroups impl Reader
+// ListSecurityGroups impl Reader
 func (rd sGroupsMemDbReader) ListSecurityGroups(_ context.Context, consume func(model.SecurityGroup) error, scope Scope) error {
 	var f filterTree[model.SecurityGroup]
 	if !f.init(scope) {
@@ -34,7 +66,7 @@ func (rd sGroupsMemDbReader) ListSecurityGroups(_ context.Context, consume func(
 	})
 }
 
-//ListSGRules impl Reader
+// ListSGRules impl Reader
 func (rd sGroupsMemDbReader) ListSGRules(_ context.Context, consume func(model.SGRule) error, scope Scope) error {
 	var f filterTree[model.SGRule]
 	if !f.init(scope) {
@@ -55,17 +87,17 @@ func (rd sGroupsMemDbReader) ListSGRules(_ context.Context, consume func(model.S
 func (rd sGroupsMemDbReader) fillSG(sg *model.SecurityGroup) error {
 	nw := sg.Networks[:0]
 	seen := make(map[model.NetworkName]bool)
-	for _, n := range sg.Networks {
-		if seen[n.Name] {
+	for _, nwName := range sg.Networks {
+		if seen[nwName] {
 			continue
 		}
-		seen[n.Name] = true
-		x, e := rd.reader.First(TblNetworks, indexID, n.Name)
+		seen[nwName] = true
+		x, e := rd.reader.First(TblNetworks, indexID, nwName)
 		if e != nil {
 			return errors.WithMessage(e, "db error")
 		}
 		if x != nil {
-			nw = append(nw, *x.(*model.Network))
+			nw = append(nw, x.(*model.Network).Name)
 		}
 	}
 	sg.Networks = nw

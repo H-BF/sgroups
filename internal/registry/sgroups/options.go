@@ -1,6 +1,6 @@
 package sgroups
 
-//Option sync option
+// Option sync option
 type Option interface {
 	privateOption()
 }

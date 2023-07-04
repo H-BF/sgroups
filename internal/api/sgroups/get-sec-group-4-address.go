@@ -6,10 +6,10 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/H-BF/protos/pkg/api/common"
-	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
+
+	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -23,7 +23,7 @@ func (srv *sgService) GetSecGroupForAddress(ctx context.Context, req *sg.GetSecG
 	queryAddress, err = url.PathUnescape(req.GetAddress())
 	if err != nil {
 		return nil,
-			status.Errorf(codes.InvalidArgument, "reason: %v", err)
+			status.Errorf(codes.InvalidArgument, "reason: %s", err.Error())
 	}
 	var ip net.IP
 	if strings.Contains(queryAddress, "/") {
@@ -33,36 +33,35 @@ func (srv *sgService) GetSecGroupForAddress(ctx context.Context, req *sg.GetSecG
 	}
 	if err != nil {
 		return nil,
-			status.Errorf(codes.InvalidArgument, "reason: %v", err)
+			status.Errorf(codes.InvalidArgument, "reason: %s", err.Error())
 	}
 	if ip == nil {
 		return nil,
-			status.Error(codes.InvalidArgument, "invalid request")
+			status.Error(codes.InvalidArgument, "invalid request: no address is provided")
 	}
 	var reader registry.Reader
 	if reader, err = srv.registryReader(ctx); err != nil {
 		return nil, err
 	}
-	err = reader.ListSecurityGroups(ctx, func(group model.SecurityGroup) error {
-		resp = new(sg.SecGroup)
-		resp.Name = group.Name
-		for _, nw := range group.Networks {
-			resp.Networks = append(resp.Networks,
-				&sg.Network{
-					Name: nw.Name,
-					Network: &common.Networks_NetIP{
-						CIDR: nw.Net.String(),
-					},
-				})
-		}
-		return errSuccess
+	var nwName string
+	err = reader.ListNetworks(ctx, func(n model.Network) error {
+		nwName = n.Name
+		return reader.ListSecurityGroups(ctx, func(g model.SecurityGroup) error {
+			resp = &sg.SecGroup{
+				Name:     g.Name,
+				Networks: g.Networks,
+			}
+			return errSuccess
+		}, registry.NetworkNames(nwName))
 	}, registry.IPs(ip, true))
-	if err != nil && !errors.Is(err, errSuccess) {
-		return nil, status.Errorf(codes.Internal,
-			"reason: %v", err)
+	if errors.Is(err, errSuccess) {
+		return resp, nil
 	}
-	if resp == nil {
-		return nil, status.Error(codes.NotFound, "not found")
+	if err == nil {
+		if len(nwName) == 0 {
+			return nil, status.Error(codes.NotFound, "not found any subnet")
+		}
+		return nil, status.Error(codes.NotFound, "not found any SG")
 	}
-	return resp, nil
+	return nil, status.Errorf(codes.Internal, "reason: %s", err.Error())
 }

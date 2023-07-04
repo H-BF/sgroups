@@ -6,7 +6,7 @@ import (
 	"net/http/pprof"
 )
 
-//PProfHandler pprof http handler
+// PProfHandler pprof http handler
 func PProfHandler() http.Handler {
 	const (
 		pprofs = "/pprof"

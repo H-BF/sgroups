@@ -4,9 +4,10 @@ import (
 	"context"
 	"net"
 
-	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
+
+	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -23,7 +24,8 @@ type network struct {
 
 func (n *network) from(protoNw *sg.Network) error {
 	n.Name = protoNw.GetName()
-	_, nt, err := net.ParseCIDR(protoNw.GetNetwork().GetCIDR())
+	c := protoNw.GetNetwork().GetCIDR()
+	_, nt, err := net.ParseCIDR(c)
 	if err != nil {
 		return err
 	}
@@ -38,7 +40,7 @@ func (snc syncNetworks) process(ctx context.Context) error {
 		if snc.ops != sg.SyncReq_Delete {
 			var item network
 			if e := item.from(src); e != nil {
-				return status.Errorf(codes.InvalidArgument, "when convert (%s) network", src)
+				return status.Error(codes.InvalidArgument, e.Error())
 			}
 			networks = append(networks, item.Network)
 		}

@@ -30,7 +30,7 @@ GOLANGCI_BIN:=$(GOBIN)/golangci-lint
 GOLANGCI_REPO=https://github.com/golangci/golangci-lint
 GOLANGCI_LATEST_VERSION:= $(shell git ls-remote --tags --refs --sort='v:refname' $(GOLANGCI_REPO)|tail -1|egrep -o "v[0-9]+.*")
 ifneq ($(wildcard $(GOLANGCI_BIN)),)
-	GOLANGCI_CUR_VERSION=v$(shell $(GOLANGCI_BIN) --version|sed -E 's/.* version (.*) built from .* on .*/\1/g')
+	GOLANGCI_CUR_VERSION=v$(shell $(GOLANGCI_BIN) --version|sed -E 's/.*version (.*) built.*/\1/g')	
 else
 	GOLANGCI_CUR_VERSION=
 endif
@@ -50,7 +50,7 @@ lint: | go-deps ##run full lint
 	@echo full lint... && \
 	$(MAKE) install-linter && \
 	$(GOLANGCI_BIN) cache clean && \
-	$(GOLANGCI_BIN) run --config=$(CURDIR)/.golangci.yaml -v $(CURDIR)/... &&\
+	$(GOLANGCI_BIN) run --timeout=120s --config=$(CURDIR)/.golangci.yaml -v $(CURDIR)/... &&\
 	echo -=OK=-
 
 
@@ -72,28 +72,55 @@ test: ##run tests
 
 
 platform?=$(shell $(GO) env GOOS)/$(shell $(GO) env GOARCH)
-parts=$(subst /, ,$(platform))
-os:=$(strip $(filter linux darwin,$(word 1,$(parts))))
-arch:=$(strip $(filter amd64 arm64,$(word 2,$(parts))))
-platform=
-parts=
+os?=$(strip $(filter linux darwin,$(word 1,$(subst /, ,$(platform)))))
+arch?=$(strip $(filter amd64 arm64,$(word 2,$(subst /, ,$(platform)))))
 OUT?=$(CURDIR)/bin/$(APP)
-APP_IDENTITY:=github.com/H-BF/corlib/app/identity
-LDFLAGS:=-X '$(APP_IDENTITY).Name=$(APP_NAME)'\
+APP_IDENTITY?=github.com/H-BF/corlib/app/identity
+LDFLAGS?=-X '$(APP_IDENTITY).Name=$(APP_NAME)'\
          -X '$(APP_IDENTITY).Version=$(APP_VERSION)'\
          -X '$(APP_IDENTITY).BuildTS=$(BUILD_TS)'\
          -X '$(APP_IDENTITY).BuildBranch=$(GIT_BRANCH)'\
          -X '$(APP_IDENTITY).BuildHash=$(GIT_HASH)'\
          -X '$(APP_IDENTITY).BuildTag=$(GIT_TAG)'\
 
-.PHONY: build
-build: ##build app. Usage: make build [no-lint=1] [platform=<linux|darwin>/<amd64|arm64>]
+.PHONY: sg-service
+sg-service: | go-deps ##build sg service. Usage: make sg-service [platform=<linux|darwin>/<amd64|arm64>]
 ifeq ($(and $(os),$(arch)),)
-	$(error bad param 'platform'; usage: platform=os/arch; where os: linux|darwin arch: amd64|arm64)
+	$(error bad param 'platform'; usage: platform=<os>/<arch>; where <os> = linux|darwin ; <arch> = amd64|arm64)
 endif
 	@echo build '$(APP)' for OS/ARCH='$(os)'/'$(arch)' ... && \
 	echo into '$(OUT)' && \
-	env GOOS=$(os) GOARCH=$(arch) \
+	env GOOS=$(os) GOARCH=$(arch) CGO_ENABLED=0 \
 	$(GO) build -ldflags="$(LDFLAGS)" -o $(OUT) $(CURDIR)/cmd/$(APP) &&\
 	echo -=OK=-
+
+.PHONY: to-nft
+to-nft: | go-deps ##build NFT processor. Usage: make to-nft [platform=linux/<amd64|arm64>]
+to-nft: APP=to-nft
+to-nft: os=linux
+to-nft: 
+ifneq ('$(os)','linux')
+	$(error 'os' should be 'linux')
+endif
+ifeq ($(and $(os),$(arch)),)
+	$(error bad param 'platform'; usage: platform=linux/<arch>; where <arch> = amd64|arm64)
+endif
+	@echo build \"$(APP)\" for OS/ARCH=\"$(os)/$(arch)\" ... && \
+	echo into \"$(OUT)\" && \
+	env GOOS=$(os) GOARCH=$(arch) CGO_ENABLED=0 \
+	$(GO) build -ldflags="$(LDFLAGS)" -o $(OUT) $(CURDIR)/cmd/$(APP) &&\
+	echo -=OK=- 
+
+
+.PHONY: sgroups-tf	
+sgroups-tf: | go-deps ##build SGroups Terraform provider
+sgroups-tf: APP=sgroups-tf
+sgroups-tf: OUT=$(CURDIR)/bin/terraform-provider-sgroups
+sgroups-tf:
+	@echo build \"$(APP)\" for OS/ARCH=\"$(os)/$(arch)\" ... && \
+	echo into \"$(OUT)\" && \
+	env GOOS=$(os) GOARCH=$(arch) CGO_ENABLED=0 \
+	$(GO) build -ldflags="$(LDFLAGS)" -o $(OUT) $(CURDIR)/cmd/$(APP) &&\
+	echo -=OK=- 
+
 

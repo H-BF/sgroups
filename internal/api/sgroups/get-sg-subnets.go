@@ -2,12 +2,13 @@ package sgroups
 
 import (
 	"context"
+	"errors"
+
+	model "github.com/H-BF/sgroups/internal/models/sgroups"
+	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 
 	"github.com/H-BF/protos/pkg/api/common"
 	sg "github.com/H-BF/protos/pkg/api/sgroups"
-	model "github.com/H-BF/sgroups/internal/models/sgroups"
-	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
-	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -20,30 +21,37 @@ func (srv *sgService) GetSgSubnets(ctx context.Context, req *sg.GetSgSubnetsReq)
 	if reader, err = srv.registryReader(ctx); err != nil {
 		return nil, err
 	}
+	sgName := req.GetSgName()
+	if len(sgName) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "SG name is not provided by request")
+	}
 	err = reader.ListSecurityGroups(ctx, func(group model.SecurityGroup) error {
 		resp = new(sg.GetSgSubnetsResp)
-		for _, n := range group.Networks {
-			resp.Networks = append(resp.Networks,
-				&sg.Network{
-					Name: n.Name,
-					Network: &common.Networks_NetIP{
-						CIDR: n.Net.String(),
-					},
-				})
+		if len(group.Networks) > 0 {
+			e := reader.ListNetworks(ctx, func(n model.Network) error {
+				resp.Networks = append(resp.Networks,
+					&sg.Network{
+						Name: n.Name,
+						Network: &common.Networks_NetIP{
+							CIDR: n.Net.String(),
+						},
+					})
+				return nil
+			}, registry.NetworkNames(group.Networks[0], group.Networks[1:]...))
+			if e != nil {
+				return e
+			}
 		}
 		return errSuccess
-	}, registry.SG(req.GetSgName()))
-
-	if err != nil && !errors.Is(err, errSuccess) {
-		return nil, status.Errorf(codes.Internal, "reason: %v", err)
+	}, registry.SG(sgName))
+	if errors.Is(err, errSuccess) {
+		if len(resp.Networks) == 0 {
+			return nil, status.Errorf(codes.NotFound, "no any subnet found for SG '%s'", sgName)
+		}
+		return resp, nil
 	}
-	if resp == nil {
-		return nil, status.Errorf(codes.Internal,
-			"SG '%s' not found", req.GetSgName())
+	if err == nil {
+		return nil, status.Errorf(codes.NotFound, "SG '%s' is not found", sgName)
 	}
-	if len(resp.GetNetworks()) == 0 {
-		return nil, status.Errorf(codes.NotFound,
-			"no any subnet found for SG '%s'", req.GetSgName())
-	}
-	return resp, nil
+	return nil, status.Errorf(codes.Internal, "reason: %s", err.Error())
 }

@@ -14,27 +14,27 @@ type (
 
 var _ Value[int] = (*ValueT[int])(nil)
 
-//String2ValueT ...
+// String2ValueT ...
 func String2ValueT[T any](s string) ValueT[T] {
 	return ValueT[T](s)
 }
 
-//OptDefaulter ...
+// OptDefaulter ...
 func (v ValueT[T]) OptDefaulter(f func() (T, error)) ValueOpt[T] {
 	return Defaulter[T]{Def: f}
 }
 
-//OptSink ...
+// OptSink ...
 func (v ValueT[T]) OptSink(f func(T) error) ValueOpt[T] {
 	return Sink[T]{In: f}
 }
 
-//String stringer impl
+// String stringer impl
 func (v ValueT[T]) String() string {
 	return string(v)
 }
 
-//MustValue gets value or panics
+// MustValue gets value or panics
 func (v ValueT[T]) MustValue(ctx context.Context, opts ...ValueOpt[T]) T {
 	ret, err := v.Value(ctx, opts...)
 	if err != nil {
@@ -43,7 +43,7 @@ func (v ValueT[T]) MustValue(ctx context.Context, opts ...ValueOpt[T]) T {
 	return ret
 }
 
-//Value ...
+// Value ...
 func (v ValueT[T]) Value(_ context.Context, opts ...ValueOpt[T]) (T, error) {
 	const api = "config/Value"
 

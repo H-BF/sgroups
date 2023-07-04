@@ -54,3 +54,17 @@ func memDbSgRulesSchema(schema *MemDbSchema) {
 		},
 	}
 }
+
+func memDbSyncStatusSchema(schema *MemDbSchema) {
+	tbl := TblSyncStatus.String()
+	schema.Tables[tbl] = &MemDbTableSchema{
+		Name: tbl,
+		Indexes: map[string]*MemDbIndexSchema{
+			indexID: {
+				Name:    indexID,
+				Unique:  true,
+				Indexer: &MemDbStringFieldIndex{Field: "ID"},
+			},
+		},
+	}
+}

@@ -4,7 +4,7 @@ import (
 	"flag"
 )
 
-//ConfigFile file with actual app config
+// ConfigFile file with actual app config
 var ConfigFile string
 
 func init() {

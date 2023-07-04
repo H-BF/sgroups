@@ -3,9 +3,10 @@ package sgroups
 import (
 	"context"
 
-	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
+
+	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -32,7 +33,7 @@ func (srv *sgService) FindRules(ctx context.Context, req *sg.FindRulesReq) (resp
 		if e != nil {
 			return errors.WithMessagef(e, "convert SGRule '%s' to proto", rule)
 		}
-		resp.Rules = append(resp.Rules, &r)
+		resp.Rules = append(resp.Rules, r)
 		return nil
 	}, registry.And(sc1, sc2))
 	if err != nil {

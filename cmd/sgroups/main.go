@@ -23,6 +23,7 @@ func main() {
 		config.WithSourceFile{FileName: ConfigFile},
 		config.WithDefValue{Key: LoggerLevel, Val: "DEBUG"},
 		config.WithDefValue{Key: MetricsEnable, Val: true},
+		config.WithDefValue{Key: HealthcheckEnable, Val: true},
 		config.WithDefValue{Key: ServerGracefulShutdown, Val: "10s"},
 		config.WithDefValue{Key: ServerEndpoint, Val: "tcp://127.0.0.1:9000"},
 	)

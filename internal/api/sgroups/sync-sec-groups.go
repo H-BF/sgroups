@@ -3,9 +3,10 @@ package sgroups
 import (
 	"context"
 
-	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
+
+	sg "github.com/H-BF/protos/pkg/api/sgroups"
 )
 
 type syncGroups struct {
@@ -44,7 +45,5 @@ type securityGroup struct {
 
 func (n *securityGroup) from(g *sg.SecGroup) {
 	n.Name = g.GetName()
-	for _, nw := range g.GetNetworks() {
-		n.Networks = append(n.Networks, model.Network{Name: nw.GetName()})
-	}
+	n.Networks = g.GetNetworks()
 }
