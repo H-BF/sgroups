@@ -56,7 +56,7 @@ func (tx *nfTablesTx) FlushAndClose() error {
 }
 
 // loadConfig it loads current config (experimental)
-func (tx *nfTablesTx) loadConfig() {
+func (tx *nfTablesTx) loadConfig() { //nolint:unused
 	type (
 		tn = string
 		tk = struct {
