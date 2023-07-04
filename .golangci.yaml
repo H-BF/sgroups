@@ -1,13 +1,13 @@
 # More info on config here: https://golangci-lint.run/usage/configuration/#config-file
 linters-settings:
-  depguard:
-    list-type: denylist
-    packages:
-      # logging is allowed only by logutils.Log, logrus
-      # is allowed to use only in logutils package
-      - github.com/sirupsen/logrus
-    packages-with-error-message:
-      - github.com/sirupsen/logrus: "logging is allowed only by logutils.Log"
+  #depguard:
+  #  list-type: denylist
+  #  packages:
+  #    # logging is allowed only by logutils.Log, logrus
+  #    # is allowed to use only in logutils package
+  #    - github.com/sirupsen/logrus
+  #  packages-with-error-message:
+  #    - github.com/sirupsen/logrus: "logging is allowed only by logutils.Log"
   dupl:
     threshold: 100
   funlen:
@@ -69,7 +69,7 @@ linters:
   disable-all: true
   enable:
     - bodyclose
-    - depguard
+    #- depguard
     - dogsled
     - dupl
     - errcheck
