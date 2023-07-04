@@ -61,12 +61,11 @@ type (
 	}
 )
 
-func (ap accports) S(rb ruleBuilder, _ model.NetworkTransport) ruleBuilder {
-	if n := len(ap.sp); n == 1 {
-		p := ap.sp[0]
-		//rb = rb.ipProto(tr).sport()
-		rb = rb.sport()
-		if p[0] == p[1] {
+func (ap accports) sourceOrDestPort(rb ruleBuilder, isSource bool) ruleBuilder {
+	src := tern(isSource, ap.sp, ap.dp)
+	if n := len(src); n == 1 {
+		rb = tern(isSource, rb.sport, rb.dport)()
+		if p := src[0]; p[0] == p[1] {
 			rb = rb.eqU16(p[0])
 		} else {
 			rb = rb.geU16(p[0]).leU16(p[1])
@@ -81,7 +80,7 @@ func (ap accports) S(rb ruleBuilder, _ model.NetworkTransport) ruleBuilder {
 			KeyType:   nftLib.TypeInetService,
 		}
 		elements := make([]nftLib.SetElement, 0, 2*n)
-		for _, p := range ap.sp {
+		for _, p := range src {
 			elements = append(elements,
 				nftLib.SetElement{
 					Key: util.BigEndian.PutUint16(p[0]),
@@ -92,51 +91,21 @@ func (ap accports) S(rb ruleBuilder, _ model.NetworkTransport) ruleBuilder {
 				},
 			)
 		}
-		//rb = rb.ipProto(tr).sport().inSet(set)
-		rb = rb.sport().inSet(set)
+		rb = tern(isSource, rb.sport, rb.dport)().inSet(set)
 		rb.sets.put(set.ID, set)
 		rb.setElems.put(set.ID, elements)
 	}
 	return rb
 }
 
-func (ap accports) D(rb ruleBuilder, _ model.NetworkTransport) ruleBuilder {
-	if n := len(ap.dp); n == 1 {
-		p := ap.dp[0]
-		//rb = rb.ipProto(tr).dport()
-		rb = rb.dport()
-		if p[0] == p[1] {
-			rb = rb.eqU16(p[0])
-		} else {
-			rb = rb.geU16(p[0]).leU16(p[1])
-		}
-	} else if n > 1 { //add anonimous port set
-		set := &nftLib.Set{
-			ID:        nextSetID(),
-			Name:      "__set%d",
-			Interval:  true,
-			Anonymous: true,
-			Constant:  true,
-			KeyType:   nftLib.TypeInetService,
-		}
-		elements := make([]nftLib.SetElement, 0, 2*n)
-		for _, p := range ap.dp {
-			elements = append(elements,
-				nftLib.SetElement{
-					Key: util.BigEndian.PutUint16(p[0]),
-				},
-				nftLib.SetElement{
-					Key:         util.BigEndian.PutUint16(p[1] + 1),
-					IntervalEnd: true,
-				},
-			)
-		}
-		//rb = rb.ipProto(tr).dport().inSet(set)
-		rb = rb.dport().inSet(set)
-		rb.sets.put(set.ID, set)
-		rb.setElems.put(set.ID, elements)
-	}
-	return rb
+// S - means 'sports'
+func (ap accports) S(rb ruleBuilder) ruleBuilder {
+	return ap.sourceOrDestPort(rb, true)
+}
+
+// S - means 'dports'
+func (ap accports) D(rb ruleBuilder) ruleBuilder {
+	return ap.sourceOrDestPort(rb, false)
 }
 
 func (bt *batch) init(table *nftLib.Table, localRules cases.LocalRules) {
@@ -482,11 +451,8 @@ func (bt *batch) addOutChains() {
 								cAddedRules++
 								ports.D(
 									ports.S(
-										//beginRule().ipProto(in.Proto).daddr(ipV).inSet(daddrSet),
 										beginRule().daddr(ipV).inSet(daddrSet).ipProto(in.Proto),
-										in.Proto,
 									),
-									in.Proto,
 								).counter().accept().
 									applyRule(chnApplyTo, tx.Conn)
 							}
@@ -554,10 +520,8 @@ func (bt *batch) addInChains() {
 								cAddedRules++
 								ports.S(
 									ports.D(
-										//beginRule().ipProto(outSG.Proto).saddr(ipV).inSet(saddrSet),
 										beginRule().saddr(ipV).inSet(saddrSet).ipProto(outSG.Proto),
-										outSG.Proto,
-									), outSG.Proto,
+									),
 								).counter().accept().
 									applyRule(chnApplyTo, tx.Conn)
 							}

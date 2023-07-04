@@ -36,7 +36,14 @@ func (s stringer) String() string {
 	return s()
 }
 
-func tern[t1 any, t2 any](cond bool, a1 t1, a2 t2) any {
+func ternAny[t1 any, t2 any](cond bool, a1 t1, a2 t2) any {
+	if cond {
+		return a1
+	}
+	return a2
+}
+
+func tern[T any](cond bool, a1, a2 T) T {
 	if cond {
 		return a1
 	}
@@ -54,7 +61,7 @@ func slice2stringer[t any](ar ...t) fmt.Stringer {
 			if s == nil {
 				s, _ = interface{}(&o).(fmt.Stringer) //nolint:gosec
 			}
-			_, _ = fmt.Fprintf(b, "%v", tern(s != nil, s, o))
+			_, _ = fmt.Fprintf(b, "%v", ternAny(s != nil, s, o))
 		}
 		return b.String()
 	})

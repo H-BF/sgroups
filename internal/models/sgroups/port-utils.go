@@ -2,7 +2,7 @@ package sgroups
 
 import (
 	"bytes"
-	"crypto/md5"
+	"crypto/md5" //nolint:gosec
 	"fmt"
 	"io"
 	"regexp"
@@ -210,7 +210,7 @@ func AreRulePortsEq(l, r []SGRulePorts) bool {
 		for _, pr := range item {
 			buf.Reset()
 			packSGRulePorts(pr, buf)
-			d[md5.Sum(buf.Bytes())]++
+			d[md5.Sum(buf.Bytes())]++ //nolint:gosec
 		}
 	}
 	if len(ld) != len(rd) {
