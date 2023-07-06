@@ -1,6 +1,6 @@
 module github.com/H-BF/sgroups
 
-go 1.19
+go 1.20
 
 require (
 	github.com/H-BF/corlib v0.0.5
