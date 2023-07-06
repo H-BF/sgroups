@@ -1,0 +1,6 @@
+FROM ubuntu:22.10
+
+WORKDIR /app
+COPY bin/to-nft /app/bin/to-nft
+
+CMD [ "/bin/bash", "-c", "./bin/to-nft", "-config", "hack/configs/to-nft.yaml" ]

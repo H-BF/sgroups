@@ -1,5 +1,12 @@
 vendor
 .idea
 .vscode
-bin
+bin/*
 deploy/rpm/artifacts
+src/github.com/H-BF/sgroups/_output/*
+
+go.sum
+go.mod
+src/github.com/fraima/swarm/_output/*
+release-notes.md
+site/assets/
