@@ -130,34 +130,27 @@ func (rd *pgDbReader) ListSecurityGroups(ctx context.Context, consume func(model
 	return err
 }
 
-// ListSGRules impl Reader interface
-func (rd *pgDbReader) ListSGRules(ctx context.Context, consume func(model.SGRule) error, scope Scope) error {
-	const (
-		fnRuleList = "sgroups.list_sg_rule"
-		sel        = "select sg_from, sg_to, proto, ports from"
-	)
-	args := []any{pgx.QueryExecModeDescribeExec, nil, nil}
-	var from string
+func (rd *pgDbReader) argsForListSGRules(scope Scope) ([]any, error) {
 	var fromSg []string
 	var toSg []string
 	var badScope bool
+	args := []any{pgx.QueryExecModeDescribeExec, nil, nil}
 	switch sc := scope.(type) {
 	case scopedAnd:
-		from = fmt.Sprintf(`%s($1, $2)`, fnRuleList)
 		for _, x := range []any{sc.L, sc.R} {
 			switch a := x.(type) {
 			case scopedSGFrom:
+				if fromSg == nil {
+					fromSg = make([]string, 0, len(a))
+				}
 				for s := range a {
-					if fromSg == nil {
-						fromSg = make([]string, 0, len(a))
-					}
 					fromSg = append(fromSg, s)
 				}
 			case scopedSGTo:
+				if toSg == nil {
+					toSg = make([]string, 0, len(a))
+				}
 				for s := range a {
-					if toSg == nil {
-						toSg = make([]string, 0, len(a))
-					}
 					toSg = append(toSg, s)
 				}
 			case noScope:
@@ -175,14 +168,26 @@ func (rd *pgDbReader) ListSGRules(ctx context.Context, consume func(model.SGRule
 		badScope = true
 	}
 	if badScope {
-		return errors.WithMessagef(ErrUnexpectedScope, "%#v", scope)
+		return nil, errors.WithMessagef(ErrUnexpectedScope, "%#v", scope)
+	}
+	return args, nil
+}
+
+// ListSGRules impl Reader interface
+func (rd *pgDbReader) ListSGRules(ctx context.Context, consume func(model.SGRule) error, scope Scope) error {
+	const (
+		qry = "select sg_from, sg_to, proto, ports from sgroups.list_sg_rule($1, $2)"
+	)
+	args, err := rd.argsForListSGRules(scope)
+	if err != nil {
+		return err
 	}
 	conn, err := rd.conn()
 	if err != nil {
 		return err
 	}
 	var rows pgx.Rows
-	if rows, err = conn.Query(ctx, fmt.Sprintf(`%s %s`, sel, from), args...); err != nil {
+	if rows, err = conn.Query(ctx, qry, args...); err != nil {
 		return err
 	}
 	scanner := pgx.RowToStructByName[pg.SGRule]
