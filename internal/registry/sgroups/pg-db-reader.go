@@ -6,16 +6,17 @@ import (
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	"github.com/H-BF/sgroups/internal/registry/sgroups/pg"
-	"github.com/pkg/errors"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/pkg/errors"
 )
 
 var _ Reader = (*pgDbReader)(nil)
 
 type pgDbReader struct {
-	conn  func() (*pgx.Conn, error)
-	close func()
+	conn      func() (*pgx.Conn, error)
+	close     func()
+	getStatus func() *model.SyncStatus
 }
 
 // Close impl Reader interface
@@ -48,33 +49,36 @@ func (rd *pgDbReader) ListNetworks(ctx context.Context, consume func(model.Netwo
 		sel           = `select "name", network from`
 	)
 	var from string
-	var args pgx.NamedArgs
+	args := []any{pgx.QueryExecModeDescribeExec}
 	switch sc := scope.(type) {
 	case scopedIPs:
-		from = fmt.Sprintf(`%s(@ips)`, fnNetworkFind)
-		args = pgx.NamedArgs{
-			"ips": sc.IPs,
+		//from = fmt.Sprintf(`%s($1)`, fnNetworkFind)
+		//args = append(args, sc.IPs)// <-- TODO: Why it does not work
+		from = fmt.Sprintf(`%s($1)`, fnNetworkFind)
+		ips := make([]string, 0, len(sc.IPs))
+		for _, ip := range sc.IPs {
+			ips = append(ips, ip.String())
 		}
+		args = append(args, ips)
 	case scopedNetworks:
-		from = fmt.Sprintf(`%s(@names)`, fnNetworkList)
-		if n := len(sc.Names); n > 0 {
-			nwNames := make([]string, 0, n)
-			for n := range sc.Names {
-				nwNames = append(nwNames, n)
-			}
-			args = pgx.NamedArgs{"names": nwNames}
+		from = fmt.Sprintf(`%s($1)`, fnNetworkList)
+		nwNames := make([]string, 0, len(sc.Names))
+		for n := range sc.Names {
+			nwNames = append(nwNames, n)
 		}
+		args = append(args, nwNames)
 	case noScope:
 		from = fmt.Sprintf(`%s()`, fnNetworkList)
 	default:
-		return errors.WithMessagef(ErrUnexpectedScope, "%Т", scope)
+		return errors.WithMessagef(ErrUnexpectedScope, "%#v", scope)
 	}
 	conn, err := rd.conn()
 	if err != nil {
 		return err
 	}
 	var rows pgx.Rows
-	if rows, err = conn.Query(ctx, fmt.Sprintf(`%s %s`, sel, from), args); err != nil {
+	rows, err = conn.Query(ctx, fmt.Sprintf(`%s %s`, sel, from), args...)
+	if err != nil {
 		return err
 	}
 	scanner := pgx.RowToStructByName[pg.Network]
@@ -92,35 +96,33 @@ func (rd *pgDbReader) ListSecurityGroups(ctx context.Context, consume func(model
 		sel      = `select "name", networks from`
 	)
 	var from string
-	var args pgx.NamedArgs
+	args := []any{pgx.QueryExecModeDescribeExec}
 	switch sc := scope.(type) {
 	case scopedSG:
-		from = fmt.Sprintf(`%s(@names)`, fnSgList)
-		if n := len(sc); n > 0 {
-			sgNames := make([]string, 0, n)
-			for sgName := range sc {
-				sgNames = append(sgNames, sgName)
-			}
-			args = pgx.NamedArgs{"names": sgNames}
+		from = fmt.Sprintf(`%s($1)`, fnSgList)
+		sgNames := make([]string, 0, len(sc))
+		for sgName := range sc {
+			sgNames = append(sgNames, sgName)
 		}
+		args = append(args, sgNames)
 	case scopedNetworks:
 		nws := make([]string, 0, len(sc.Names))
 		for n := range sc.Names {
 			nws = append(nws, n)
 		}
-		from = fmt.Sprintf(`%s(@networks)`, fnSgFind)
-		args = pgx.NamedArgs{"networks": nws}
+		from = fmt.Sprintf(`%s($1)`, fnSgFind)
+		args = append(args, nws)
 	case noScope:
 		from = fmt.Sprintf(`%s()`, fnSgList)
 	default:
-		return errors.WithMessagef(ErrUnexpectedScope, "%Т", scope)
+		return errors.WithMessagef(ErrUnexpectedScope, "%#v", scope)
 	}
 	conn, err := rd.conn()
 	if err != nil {
 		return err
 	}
 	var rows pgx.Rows
-	if rows, err = conn.Query(ctx, fmt.Sprintf(`%s %s`, sel, from), args); err != nil {
+	if rows, err = conn.Query(ctx, fmt.Sprintf(`%s %s`, sel, from), args...); err != nil {
 		return err
 	}
 	scanner := pgx.RowToStructByName[model.SecurityGroup]
@@ -133,45 +135,54 @@ func (rd *pgDbReader) ListSGRules(ctx context.Context, consume func(model.SGRule
 	const (
 		fnRuleList = "sgroups.list_sg_rule"
 		sel        = "select sg_from, sg_to, proto, ports from"
-
-		argSgFrom = "sgfrom"
-		argSgTo   = "sgto"
 	)
+	args := []any{pgx.QueryExecModeDescribeExec, nil, nil}
 	var from string
-	args := pgx.NamedArgs{
-		argSgFrom: nil,
-		argSgTo:   nil,
-	}
+	var fromSg []string
+	var toSg []string
+	var badScope bool
 	switch sc := scope.(type) {
 	case scopedAnd:
-		from = fmt.Sprintf(`%s(@%s, @%s)`, fnRuleList, argSgFrom, argSgTo)
-		if scSgFrom, ok := sc.L.(scopedSGFrom); !ok {
-			return errors.WithMessagef(ErrUnexpectedScope, "%Т", sc.L)
-		} else if n := len(scSgFrom); n > 0 {
-			names := make([]string, 0, n)
-			for s := range scSgFrom {
-				names = append(names, s)
+		from = fmt.Sprintf(`%s($1, $2)`, fnRuleList)
+		for _, x := range []any{sc.L, sc.R} {
+			switch a := x.(type) {
+			case scopedSGFrom:
+				for s := range a {
+					if fromSg == nil {
+						fromSg = make([]string, 0, len(a))
+					}
+					fromSg = append(fromSg, s)
+				}
+			case scopedSGTo:
+				for s := range a {
+					if toSg == nil {
+						toSg = make([]string, 0, len(a))
+					}
+					toSg = append(toSg, s)
+				}
+			case noScope:
+			default:
+				badScope = true
 			}
-			args[argSgFrom] = names
 		}
-		if scSgTo, ok := sc.R.(scopedSGTo); !ok {
-			return errors.WithMessagef(ErrUnexpectedScope, "%Т", sc.R)
-		} else if n := len(scSgTo); n > 0 {
-			names := make([]string, 0, n)
-			for s := range scSgTo {
-				names = append(names, s)
-			}
-			args[argSgTo] = names
+		if fromSg != nil {
+			args[1] = fromSg
+		}
+		if toSg != nil {
+			args[2] = toSg
 		}
 	default:
-		return errors.WithMessagef(ErrUnexpectedScope, "%Т", scope)
+		badScope = true
+	}
+	if badScope {
+		return errors.WithMessagef(ErrUnexpectedScope, "%#v", scope)
 	}
 	conn, err := rd.conn()
 	if err != nil {
 		return err
 	}
 	var rows pgx.Rows
-	if rows, err = conn.Query(ctx, fmt.Sprintf(`%s %s`, sel, from), args); err != nil {
+	if rows, err = conn.Query(ctx, fmt.Sprintf(`%s %s`, sel, from), args...); err != nil {
 		return err
 	}
 	scanner := pgx.RowToStructByName[pg.SGRule]
@@ -186,6 +197,10 @@ func (rd *pgDbReader) ListSGRules(ctx context.Context, consume func(model.SGRule
 }
 
 // GetSyncStatus impl Reader interface
-func (rd *pgDbReader) GetSyncStatus(ctx context.Context) (*model.SyncStatus, error) {
+func (rd *pgDbReader) GetSyncStatus(_ context.Context) (*model.SyncStatus, error) {
+	if rd.getStatus != nil {
+		ret := rd.getStatus()
+		return ret, nil
+	}
 	return nil, nil
 }

@@ -5,12 +5,14 @@ import (
 	"net/url"
 	"time"
 
+	model "github.com/H-BF/sgroups/internal/models/sgroups"
+
 	"github.com/H-BF/sgroups/internal/registry/sgroups/pg"
 	atm "github.com/H-BF/sgroups/pkg/atomic"
-	"github.com/pkg/errors"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/pkg/errors"
 )
 
 // NewRegistryFromPG creates registry from Postgres
@@ -35,6 +37,7 @@ func NewRegistryFromPG(ctx context.Context, dbURL url.URL) (r Registry, err erro
 		return nil, err
 	}
 	ret := new(pgDbRegistry)
+	ret.status.Store(model.SyncStatus{UpdatedAt: time.Now()}, nil)
 	ret.pool.Store(pool, nil)
 	return ret, nil
 }
@@ -42,7 +45,8 @@ func NewRegistryFromPG(ctx context.Context, dbURL url.URL) (r Registry, err erro
 var _ Registry = (*pgDbRegistry)(nil)
 
 type pgDbRegistry struct {
-	pool atm.Value[*pgxpool.Pool]
+	pool   atm.Value[*pgxpool.Pool]
+	status atm.Value[model.SyncStatus]
 }
 
 // Reader impl Registry interface
@@ -51,6 +55,7 @@ func (imp *pgDbRegistry) Reader(ctx context.Context) (r Reader, err error) {
 		err = errors.WithMessage(err, "PG/Reader")
 	}()
 	err = ErrNoRegistry
+	status := &imp.status
 	_ = imp.pool.Fetch(func(v *pgxpool.Pool) {
 		var c *pgxpool.Conn
 		if c, err = v.Acquire(ctx); err != nil {
@@ -73,6 +78,12 @@ func (imp *pgDbRegistry) Reader(ctx context.Context) (r Reader, err error) {
 				})
 				return ret, e
 			},
+			getStatus: func() *model.SyncStatus {
+				if ret, ok := status.Load(); ok {
+					return &ret
+				}
+				return nil
+			},
 		}
 	})
 	return r, err
@@ -84,6 +95,7 @@ func (imp *pgDbRegistry) Writer(ctx context.Context) (w Writer, err error) {
 		err = errors.WithMessage(err, "PG/Writer")
 	}()
 	err = ErrNoRegistry
+	status := &imp.status
 	_ = imp.pool.Fetch(func(v *pgxpool.Pool) {
 		var h atm.Value[pgx.Tx]
 		var tx pgx.Tx
@@ -101,6 +113,12 @@ func (imp *pgDbRegistry) Writer(ctx context.Context) (w Writer, err error) {
 						c, e = t.Conn(), nil
 					})
 					return c, e
+				},
+				getStatus: func() *model.SyncStatus {
+					if ret, ok := status.Load(); ok {
+						return &ret
+					}
+					return nil
 				},
 			},
 			abort: func() {

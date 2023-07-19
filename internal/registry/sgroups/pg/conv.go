@@ -3,8 +3,9 @@ package pg
 import (
 	"strings"
 
-	"github.com/H-BF/corlib/pkg/ranges"
 	sgm "github.com/H-BF/sgroups/internal/models/sgroups"
+
+	"github.com/H-BF/corlib/pkg/ranges"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/pkg/errors"
@@ -94,7 +95,7 @@ func (o *PortMultirange) FromModel(m sgm.PortRanges) error {
 
 // ToModel -
 func (o PortMultirange) ToModel() (sgm.PortRanges, error) {
-	var ret sgm.PortRanges
+	ret := ranges.NewMultiRange(sgm.PortRangeFactory)
 	rr := make([]sgm.PortRange, 0, len(o.Multirange))
 	for _, pr := range o.Multirange {
 		r, e := pr.ToModel(false)
