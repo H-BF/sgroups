@@ -5,6 +5,8 @@ import (
 	"reflect"
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
+
+	"github.com/pkg/errors"
 )
 
 type (
@@ -53,6 +55,9 @@ type (
 			scopedAnd | scopedOr | scopedNot | noScope
 	}
 )
+
+// ErrUnexpectedScope -
+var ErrUnexpectedScope = errors.New("unexpected scope")
 
 // NoScope no any scope
 var NoScope noScope

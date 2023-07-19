@@ -18,6 +18,7 @@ func (srv *sgService) ListSecurityGroups(ctx context.Context, req *sg.ListSecuri
 	if reader, err = srv.registryReader(ctx); err != nil {
 		return resp, err
 	}
+	defer reader.Close() //lint:nolint
 	var scope registry.Scope = registry.NoScope
 	if names := req.GetSgNames(); len(names) > 0 {
 		scope = registry.SG(names[0], names[1:]...)

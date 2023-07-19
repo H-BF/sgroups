@@ -6,12 +6,10 @@ import (
 
 	"github.com/H-BF/sgroups/internal/api/sgroups"
 	"github.com/H-BF/sgroups/internal/app"
-	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 
 	"github.com/H-BF/corlib/server"
 	"github.com/H-BF/corlib/server/interceptors"
 	serverPrometheusMetrics "github.com/H-BF/corlib/server/metrics/prometheus"
-	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -28,20 +26,7 @@ const (
 )
 
 func setupSgServer(ctx context.Context) (*server.APIServer, error) {
-	var reg registry.Registry
-	{
-		m, e := registry.NewMemDB(registry.TblSecGroups,
-			registry.TblSecRules, registry.TblNetworks,
-			registry.TblSyncStatus,
-			registry.IntegrityChecker4SG(),
-			registry.IntegrityChecker4Rules(),
-			registry.IntegrityChecker4Networks())
-		if e != nil {
-			return nil, errors.WithMessage(e, "create mem db")
-		}
-		reg = registry.NewRegistryFromMemDB(m)
-	}
-	srv := sgroups.NewSGroupsService(ctx, reg)
+	srv := sgroups.NewSGroupsService(ctx, getAppRegistry())
 	doc, err := sgroups.SecGroupSwaggerUtil.GetSpec()
 	if err != nil {
 		return nil, err

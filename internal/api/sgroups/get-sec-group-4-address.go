@@ -43,6 +43,7 @@ func (srv *sgService) GetSecGroupForAddress(ctx context.Context, req *sg.GetSecG
 	if reader, err = srv.registryReader(ctx); err != nil {
 		return nil, err
 	}
+	defer reader.Close() //lint:nolint
 	var nwName string
 	err = reader.ListNetworks(ctx, func(n model.Network) error {
 		nwName = n.Name

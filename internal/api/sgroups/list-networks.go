@@ -19,6 +19,7 @@ func (srv *sgService) ListNetworks(ctx context.Context, req *sg.ListNetworksReq)
 	if reader, err = srv.registryReader(ctx); err != nil {
 		return resp, err
 	}
+	defer reader.Close() //lint:nolint
 	var scope registry.Scope = registry.NoScope
 	if nws := req.GetNeteworkNames(); len(nws) > 0 {
 		scope = registry.NetworkNames(nws[0], nws[1:]...)

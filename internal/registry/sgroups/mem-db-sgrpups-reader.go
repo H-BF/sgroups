@@ -84,6 +84,11 @@ func (rd sGroupsMemDbReader) ListSGRules(_ context.Context, consume func(model.S
 	})
 }
 
+// ListSGRules impl Reader
+func (rd sGroupsMemDbReader) Close() error {
+	return nil
+}
+
 func (rd sGroupsMemDbReader) fillSG(sg *model.SecurityGroup) error {
 	nw := sg.Networks[:0]
 	seen := make(map[model.NetworkName]bool)

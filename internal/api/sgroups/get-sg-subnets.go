@@ -21,6 +21,7 @@ func (srv *sgService) GetSgSubnets(ctx context.Context, req *sg.GetSgSubnetsReq)
 	if reader, err = srv.registryReader(ctx); err != nil {
 		return nil, err
 	}
+	defer reader.Close() //lint:nolint
 	sgName := req.GetSgName()
 	if len(sgName) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "SG name is not provided by request")

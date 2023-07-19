@@ -22,6 +22,7 @@ func (srv *sgService) SyncStatus(ctx context.Context, _ *emptypb.Empty) (resp *s
 	if reader, err = srv.registryReader(ctx); err != nil {
 		return nil, err
 	}
+	defer reader.Close() //lint:nolint
 	var st *sgroups.SyncStatus
 	st, err = reader.GetSyncStatus(ctx)
 	if err != nil {
