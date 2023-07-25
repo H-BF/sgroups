@@ -2,6 +2,7 @@ package sgroups
 
 import (
 	"context"
+	"sync/atomic"
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	"github.com/H-BF/sgroups/internal/registry/sgroups/pg"
@@ -18,12 +19,15 @@ type pgDbWriter struct {
 	abort     func()
 	getStatus func() *model.SyncStatus
 	updStatus func()
+
+	affectedRows *uint64
 }
 
 // SyncNetworks impl Writer interface
 func (wr *pgDbWriter) SyncNetworks(ctx context.Context, networks []model.Network, scope Scope, opts ...Option) error {
 	const api = "PG/SyncNetworks"
 
+	var affected int64
 	var err error
 	defer func() {
 		err = errors.WithMessage(err, api)
@@ -40,17 +44,21 @@ func (wr *pgDbWriter) SyncNetworks(ctx context.Context, networks []model.Network
 	}
 	switch v := scope.(type) {
 	case scopedNetworks:
+		names := make([]string, 0, len(v.Names))
 		for nw := range v.Names {
-			if err = snc.AddToFilter(ctx, nw); err != nil {
-				return err
-			}
+			names = append(names, nw)
+		}
+		if err = snc.AddToFilter(ctx, names...); err != nil {
+			return err
 		}
 	case noScope:
 	default:
 		return ErrUnexpectedScope
 	}
-	_, err = snc.Sync(ctx)
-
+	affected, err = snc.Sync(ctx)
+	if err == nil && affected > 0 {
+		atomic.AddUint64(wr.affectedRows, uint64(affected))
+	}
 	return err
 }
 
@@ -58,6 +66,7 @@ func (wr *pgDbWriter) SyncNetworks(ctx context.Context, networks []model.Network
 func (wr *pgDbWriter) SyncSecurityGroups(ctx context.Context, sgs []model.SecurityGroup, scope Scope, opts ...Option) error {
 	const api = "PG/SyncSecurityGroups"
 
+	var affected int64
 	var err error
 	defer func() {
 		err = errors.WithMessage(err, api)
@@ -74,16 +83,21 @@ func (wr *pgDbWriter) SyncSecurityGroups(ctx context.Context, sgs []model.Securi
 	}
 	switch v := scope.(type) {
 	case scopedSG:
+		names := make([]string, 0, len(v))
 		for n := range v {
-			if err = snc.AddToFilter(ctx, n); err != nil {
-				return err
-			}
+			names = append(names, n)
+		}
+		if err = snc.AddToFilter(ctx, names...); err != nil {
+			return err
 		}
 	case noScope:
 	default:
 		return ErrUnexpectedScope
 	}
-	_, err = snc.Sync(ctx)
+	affected, err = snc.Sync(ctx)
+	if err == nil && affected > 0 {
+		atomic.AddUint64(wr.affectedRows, uint64(affected))
+	}
 	return err
 }
 
@@ -92,6 +106,7 @@ func (wr *pgDbWriter) SyncSGRules(ctx context.Context, rules []model.SGRule, sco
 	const api = "PG/SyncSGRules"
 
 	var err error
+	var affected int64
 	defer func() {
 		err = errors.WithMessage(err, api)
 	}()
@@ -106,16 +121,21 @@ func (wr *pgDbWriter) SyncSGRules(ctx context.Context, rules []model.SGRule, sco
 	}
 	switch v := scope.(type) {
 	case scopedSGRuleIdentity:
+		ids := make([]model.SGRuleIdentity, 0, len(v))
 		for _, id := range v {
-			if err = snc.AddToFilter(ctx, id); err != nil {
-				return err
-			}
+			ids = append(ids, id)
+		}
+		if err = snc.AddToFilter(ctx, ids...); err != nil {
+			return err
 		}
 	case noScope:
 	default:
 		return ErrUnexpectedScope
 	}
-	_, err = snc.Sync(ctx)
+	affected, err = snc.Sync(ctx)
+	if err == nil && affected > 0 {
+		atomic.AddUint64(wr.affectedRows, uint64(affected))
+	}
 	return err
 }
 

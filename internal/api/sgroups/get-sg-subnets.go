@@ -38,7 +38,7 @@ func (srv *sgService) GetSgSubnets(ctx context.Context, req *sg.GetSgSubnetsReq)
 						},
 					})
 				return nil
-			}, registry.NetworkNames(group.Networks[0], group.Networks[1:]...))
+			}, registry.NetworkNames(group.Networks...))
 			if e != nil {
 				return e
 			}

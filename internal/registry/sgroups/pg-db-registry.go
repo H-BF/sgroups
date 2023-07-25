@@ -110,7 +110,9 @@ func (imp *pgDbRegistry) Writer(ctx context.Context) (w Writer, err error) {
 		}
 		txHolder.Store(tx, nil)
 		err = nil
+		affected := new(uint64)
 		w = &pgDbWriter{
+			affectedRows: affected,
 			tx: func() (pgx.Tx, error) {
 				x, ok := txHolder.Load()
 				if !ok {
@@ -126,8 +128,13 @@ func (imp *pgDbRegistry) Writer(ctx context.Context) (w Writer, err error) {
 			commit: func() error {
 				e := ErrWriterClosed
 				txHolder.Clear(func(t pgx.Tx) {
-					if e = t.Commit(ctx); e != nil {
+					if *affected == 0 {
 						_ = t.Rollback(ctx)
+						e = nil
+					} else if e = t.Commit(ctx); e != nil {
+						_ = t.Rollback(ctx)
+					} else {
+						e = nil
 					}
 				})
 				return e

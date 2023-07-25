@@ -161,37 +161,31 @@ func (t syncTable) createScript() string {
 
 //=========================================== syncGenSQL ========================================*
 
-func (hlp *syncGenSQL) genUpsert(w io.Writer) {
+func (hlp *syncGenSQL) genSemanticUdpate(w io.Writer, op string) {
 	wr := writer{w}
+	fds := hlp.tableDst.FieldNames()
 	wr.WriteString("with ")
-	hlp.old(w, "old", nil)
-	wr.WriteString(", ")
-	hlp.cteInsOrUpd(w, "old", "ups", true)
+	hlp.cte(w, "data", false, func(w1 io.Writer) {
+		wr1 := writer{w1}
+		fmt.Fprintf(wr1, "select %s from %s",
+			strings.Join(fds, ", "),
+			hlp.dataTable)
+	}, fds...)
 	wr.WriteString(" select count(")
-	hlp.callMutator(w, "ups", "ups", hlp.tableDst.fields)
-	wr.WriteString(") as c from ups")
+	hlp.callMutator(wr, op, "data", hlp.tableDst.fields)
+	wr.WriteString(") as c from data")
+}
+
+func (hlp *syncGenSQL) genUpsert(w io.Writer) {
+	hlp.genSemanticUdpate(w, "ups")
 }
 
 func (hlp *syncGenSQL) genInsert(w io.Writer) {
-	wr := writer{w}
-	wr.WriteString("with ")
-	hlp.old(w, "old", nil)
-	wr.WriteString(", ")
-	hlp.cteInsOrUpd(w, "old", "ins", true)
-	wr.WriteString(" select count(")
-	hlp.callMutator(w, "ins", "ins", hlp.tableDst.fields)
-	wr.WriteString(") as c from ins")
+	hlp.genSemanticUdpate(w, "ins")
 }
 
 func (hlp *syncGenSQL) genUpdate(w io.Writer) {
-	wr := writer{w}
-	wr.WriteString("with ")
-	hlp.old(w, "old", nil)
-	wr.WriteString(", ")
-	hlp.cteInsOrUpd(w, "old", "upd", false)
-	wr.WriteString(" select count(")
-	hlp.callMutator(w, "upd", "upd", hlp.tableDst.fields)
-	wr.WriteString(") as c from upd")
+	hlp.genSemanticUdpate(w, "upd")
 }
 
 func (hlp *syncGenSQL) genDelete(w io.Writer, flt *syncTable) {
@@ -213,22 +207,17 @@ func (hlp *syncGenSQL) old(w io.Writer, alias string, tableFlt *syncTable) {
 				hlp.tableDst.Name,
 				false,
 				tableFlt.Name,
-				fds,
+				hlp.tableDst.FieldNames(),
 				fds...)
 		} else {
-			wr := writer{w}
-			wr.WriteString("select ")
-			for i, f := range hlp.tableDst.FieldNames() {
-				if i > 0 {
-					wr.WriteString(", ")
-				}
-				fmt.Fprintf(wr, "%s.%s", hlp.tableDst.Name, f)
-			}
-			fmt.Fprintf(wr, " from %s", hlp.tableDst.Name)
+			fmt.Fprintf(w, "select %s from %s",
+				strings.Join(hlp.tableDst.FieldNames(), ", "),
+				hlp.tableDst.Name)
 		}
 	}, hlp.tableDst.FieldNames()...)
 }
 
+/*// TODO: Remove this
 func (hlp *syncGenSQL) cteInsOrUpd(w io.Writer, aliasOld, aliasInsOrUpd string, isForInsert bool) {
 	outFields := hlp.tableDst.FieldNames()
 	pkFields := hlp.tableDst.PkFieldNames()
@@ -248,6 +237,7 @@ func (hlp *syncGenSQL) cteInsOrUpd(w io.Writer, aliasOld, aliasInsOrUpd string, 
 		}
 	}, outFields...)
 }
+*/
 
 func (hlp *syncGenSQL) cteDel(w io.Writer, aliasOld, aliasDelete string) {
 	outFields := hlp.tableDst.FieldNames()
@@ -256,14 +246,18 @@ func (hlp *syncGenSQL) cteDel(w io.Writer, aliasOld, aliasDelete string) {
 		panic("no any pk field")
 	}
 	hlp.cte(w, aliasDelete, false, func(w io.Writer) {
-		hlp.join(w,
-			aliasOld,
-			true,
-			hlp.dataTable,
-			outFields,
-			pkFields...,
-		)
-		fmt.Fprintf(w, " where %s.%s is null", hlp.dataTable, pkFields[0])
+		if hlp.dataTable != "" {
+			hlp.join(w,
+				aliasOld,
+				true,
+				hlp.dataTable,
+				outFields,
+				pkFields...,
+			)
+			fmt.Fprintf(w, " where %s.%s is null", hlp.dataTable, pkFields[0])
+		} else {
+			fmt.Fprintf(w, "select %s from %s", strings.Join(outFields, ", "), aliasOld)
+		}
 	}, outFields...)
 }
 

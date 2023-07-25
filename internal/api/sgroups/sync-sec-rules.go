@@ -32,11 +32,9 @@ func (snc syncRules) process(ctx context.Context) error {
 		return status.Error(codes.InvalidArgument, err.Error())
 	}
 	var sc registry.Scope = registry.NoScope
-	if snc.ops != sg.SyncReq_FullSync {
-		sc = registry.SGRule(rules...)
-	}
 	if snc.ops == sg.SyncReq_Delete {
-		rules = rules[:0]
+		sc = registry.SGRule(rules...)
+		rules = nil
 	}
 	return snc.wr.SyncSGRules(ctx, rules, sc, opts...)
 }

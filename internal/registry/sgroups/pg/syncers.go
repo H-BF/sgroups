@@ -61,7 +61,7 @@ func (o *syncObj[T, tFlt]) construct() {
 		o.mutatorFn = "sgroups.sync_sg"
 	case *sgm.SGRule:
 		o.tableDst = syncTable{
-			Name: "sgroups.tbl_sg_rule",
+			Name: "sgroups.vu_sg_rule",
 		}.WithFields(
 			syncField{Name: "sg_from", PgTy: "sgroups.cname", Notnull: true, Pk: true},
 			syncField{Name: "sg_to", PgTy: "sgroups.cname", Notnull: true, Pk: true},
@@ -74,27 +74,43 @@ func (o *syncObj[T, tFlt]) construct() {
 	}
 }
 
+func (o *syncObj[T, tFlt]) enureFilterTable(ctx context.Context) error {
+	o.flt.Do(func() {
+		x := syncTable{
+			Temporay: true,
+			OnCommit: "drop",
+		}.WithRandomName("flt_", "")
+		for _, f := range o.tableDst.fields {
+			if f.Pk {
+				x.fields = append(x.fields, f)
+			}
+		}
+		o.flt.syncTable = &x
+		o.flt.err = x.Create(ctx, o.C)
+	})
+	return o.flt.err
+}
+
+func (o *syncObj[T, tFlt]) enureDataTable(ctx context.Context) error {
+	o.src.Do(func() {
+		x := o.tableDst.WithRandomName("data_", "")
+		x.Temporay = true
+		x.OnCommit = "drop"
+		o.src.syncTable = x
+		o.dataTable = x.Name
+		o.src.err = x.Create(ctx, o.C)
+	})
+	return o.src.err
+}
+
 // AddToFilter -
 func (o *syncObj[T, tFlt]) AddToFilter(ctx context.Context, data ...tFlt) error {
 	o.ensureConstructed.Do(o.construct)
 	var raw RawRowsData
+	if err := o.enureFilterTable(ctx); err != nil {
+		return err
+	}
 	for _, d := range data {
-		o.flt.Do(func() {
-			x := syncTable{
-				Temporay: true,
-				OnCommit: "drop",
-			}.WithRandomName("flt_", "")
-			for _, f := range o.tableDst.fields {
-				if f.Pk {
-					x.fields = append(x.fields, f)
-				}
-			}
-			o.flt.syncTable = &x
-			o.flt.err = x.Create(ctx, o.C)
-		})
-		if o.flt.err != nil {
-			return o.flt.err
-		}
 		switch v := any(d).(type) {
 		case string:
 			raw = append(raw, []any{v})
@@ -114,19 +130,11 @@ func (o *syncObj[T, tFlt]) AddToFilter(ctx context.Context, data ...tFlt) error 
 // AddData -
 func (o *syncObj[T, tFlt]) AddData(ctx context.Context, data ...T) error {
 	o.ensureConstructed.Do(o.construct)
+	if err := o.enureDataTable(ctx); err != nil {
+		return err
+	}
 	var raw RawRowsData
 	for _, d := range data {
-		o.src.Do(func() {
-			x := o.tableDst.WithRandomName("data_", "")
-			x.Temporay = true
-			x.OnCommit = "drop"
-			o.src.syncTable = x
-			o.dataTable = x.Name
-			o.src.err = x.Create(ctx, o.C)
-		})
-		if o.src.err != nil {
-			return o.src.err
-		}
 		switch v := any(d).(type) {
 		case sgm.Network:
 			raw = append(raw, []any{v.Name, v.Net})
@@ -147,6 +155,10 @@ func (o *syncObj[T, tFlt]) AddData(ctx context.Context, data ...T) error {
 
 // Sync -
 func (o *syncObj[T, tFlt]) Sync(ctx context.Context) (int64, error) {
+	o.ensureConstructed.Do(o.construct)
+	if err := o.enureDataTable(ctx); err != nil {
+		return 0, err
+	}
 	actions := make([]func(io.Writer), 0, 3)
 	if o.Upd && o.Ins {
 		actions = append(actions, o.genUpsert)

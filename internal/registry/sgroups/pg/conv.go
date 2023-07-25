@@ -69,11 +69,10 @@ func (o *PortRange) FromModel(m sgm.PortRange, allowNull bool) error {
 	if ex {
 		o.LowerType = pgtype.Exclusive
 	}
-
 	v, ex = b.GetValue()
 	o.Upper, o.UpperType = PortMumber(v), pgtype.Inclusive
 	if ex {
-		o.LowerType = pgtype.Exclusive
+		o.UpperType = pgtype.Exclusive
 	}
 	o.Valid = true
 	return nil

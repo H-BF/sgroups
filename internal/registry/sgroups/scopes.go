@@ -100,12 +100,10 @@ func SGTo(one string, other ...string) Scope {
 }
 
 // SG maks security group name(s) scope
-func SG(one string, other ...string) Scope {
-	ret := scopedSG{
-		one: {},
-	}
-	for i := range other {
-		ret[other[i]] = struct{}{}
+func SG(names ...string) Scope {
+	ret := make(scopedSG)
+	for i := range names {
+		ret[names[i]] = struct{}{}
 	}
 	return ret
 }
@@ -119,14 +117,12 @@ func IPs(one net.IP, all bool, other ...net.IP) Scope {
 }
 
 // NetworkNames makes networks name(s) scope
-func NetworkNames(one model.NetworkName, other ...model.NetworkName) Scope {
+func NetworkNames(names ...model.NetworkName) Scope {
 	ret := scopedNetworks{
-		Names: map[model.NetworkName]struct{}{
-			one: {},
-		},
+		Names: make(map[model.NetworkName]struct{}),
 	}
-	for i := range other {
-		ret.Names[other[i]] = struct{}{}
+	for i := range names {
+		ret.Names[names[i]] = struct{}{}
 	}
 	return ret
 }
