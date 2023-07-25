@@ -41,7 +41,7 @@ type (
 	//ScopedNetTransport network transport scope
 	ScopedNetTransport model.NetworkTransport
 
-	scopedSGRuleIdentity map[string]bool
+	scopedSGRuleIdentity map[string]model.SGRuleIdentity
 
 	scopedSG     map[string]struct{}
 	scopedSGFrom map[string]struct{}
@@ -134,9 +134,8 @@ func NetworkNames(one model.NetworkName, other ...model.NetworkName) Scope {
 // SGRule makes SG rule scope
 func SGRule(others ...model.SGRule) Scope {
 	ret := scopedSGRuleIdentity{}
-	for i := range others {
-		h := others[i].IdentityHash()
-		ret[h] = true
+	for _, o := range others {
+		ret[o.IdentityHash()] = o.SGRuleIdentity
 	}
 	return ret
 }
@@ -330,7 +329,8 @@ func (p ScopedNetTransport) meta() metaInfo {
 
 func (p scopedSGRuleIdentity) inSGRule(rule model.SGRule) bool {
 	h := rule.IdentityHash()
-	return p[h]
+	_, ok := p[h]
+	return ok
 }
 
 func (p scopedSGRuleIdentity) meta() metaInfo {

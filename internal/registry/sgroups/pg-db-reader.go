@@ -14,7 +14,7 @@ import (
 var _ Reader = (*pgDbReader)(nil)
 
 type pgDbReader struct {
-	conn      func() (*pgx.Conn, error)
+	doIt      func(context.Context, func(*pgx.Conn) error) error
 	close     func()
 	getStatus func() *model.SyncStatus
 }
@@ -72,20 +72,16 @@ func (rd *pgDbReader) ListNetworks(ctx context.Context, consume func(model.Netwo
 	default:
 		return errors.WithMessagef(ErrUnexpectedScope, "%#v", scope)
 	}
-	conn, err := rd.conn()
-	if err != nil {
-		return err
-	}
-	var rows pgx.Rows
-	rows, err = conn.Query(ctx, fmt.Sprintf(`%s %s`, sel, from), args...)
-	if err != nil {
-		return err
-	}
-	scanner := pgx.RowToStructByName[pg.Network]
-	err = pgxIterateRowsAndClose(rows, scanner, func(v pg.Network) error {
-		return consume(model.Network{Name: v.Name, Net: v.Network})
+	return rd.doIt(ctx, func(c *pgx.Conn) error {
+		rows, err := c.Query(ctx, fmt.Sprintf(`%s %s`, sel, from), args...)
+		if err != nil {
+			return err
+		}
+		scanner := pgx.RowToStructByName[pg.Network]
+		return pgxIterateRowsAndClose(rows, scanner, func(v pg.Network) error {
+			return consume(model.Network{Name: v.Name, Net: v.Network})
+		})
 	})
-	return err
 }
 
 // ListSecurityGroups impl Reader interface
@@ -117,17 +113,14 @@ func (rd *pgDbReader) ListSecurityGroups(ctx context.Context, consume func(model
 	default:
 		return errors.WithMessagef(ErrUnexpectedScope, "%#v", scope)
 	}
-	conn, err := rd.conn()
-	if err != nil {
-		return err
-	}
-	var rows pgx.Rows
-	if rows, err = conn.Query(ctx, fmt.Sprintf(`%s %s`, sel, from), args...); err != nil {
-		return err
-	}
-	scanner := pgx.RowToStructByName[model.SecurityGroup]
-	err = pgxIterateRowsAndClose(rows, scanner, consume)
-	return err
+	return rd.doIt(ctx, func(c *pgx.Conn) error {
+		rows, err := c.Query(ctx, fmt.Sprintf(`%s %s`, sel, from), args...)
+		if err != nil {
+			return err
+		}
+		scanner := pgx.RowToStructByName[model.SecurityGroup]
+		return pgxIterateRowsAndClose(rows, scanner, consume)
+	})
 }
 
 func (rd *pgDbReader) argsForListSGRules(scope Scope) ([]any, error) {
@@ -182,23 +175,20 @@ func (rd *pgDbReader) ListSGRules(ctx context.Context, consume func(model.SGRule
 	if err != nil {
 		return err
 	}
-	conn, err := rd.conn()
-	if err != nil {
-		return err
-	}
-	var rows pgx.Rows
-	if rows, err = conn.Query(ctx, qry, args...); err != nil {
-		return err
-	}
-	scanner := pgx.RowToStructByName[pg.SGRule]
-	err = pgxIterateRowsAndClose(rows, scanner, func(rule pg.SGRule) error {
-		m, e := rule.ToModel()
-		if e == nil {
-			e = consume(m)
+	return rd.doIt(ctx, func(c *pgx.Conn) error {
+		rows, e := c.Query(ctx, qry, args...)
+		if e != nil {
+			return e
 		}
-		return e
+		scanner := pgx.RowToStructByName[pg.SGRule]
+		return pgxIterateRowsAndClose(rows, scanner, func(rule pg.SGRule) error {
+			m, e1 := rule.ToModel()
+			if e1 != nil {
+				return e
+			}
+			return consume(m)
+		})
 	})
-	return err
 }
 
 // GetSyncStatus impl Reader interface

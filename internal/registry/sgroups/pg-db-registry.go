@@ -56,35 +56,37 @@ func (imp *pgDbRegistry) Reader(ctx context.Context) (r Reader, err error) {
 	}()
 	err = ErrNoRegistry
 	status := &imp.status
-	_ = imp.pool.Fetch(func(v *pgxpool.Pool) {
-		var c *pgxpool.Conn
-		if c, err = v.Acquire(ctx); err != nil {
-			return
+
+	type fu = func(context.Context) (*pgxpool.Conn, error)
+	var connAccurer atm.Value[fu]
+	_ = imp.pool.Fetch(func(p *pgxpool.Pool) {
+		connAccurer.Store(func(ctx1 context.Context) (*pgxpool.Conn, error) {
+			return p.Acquire(ctx1)
+		}, nil)
+		ret := new(pgDbReader)
+		ret.doIt = func(ctx1 context.Context, f func(*pgx.Conn) error) error {
+			cc, ok := connAccurer.Load()
+			if !ok {
+				return ErrReaderClosed
+			}
+			c, e := cc(ctx1)
+			if e != nil {
+				return e
+			}
+			defer c.Release()
+			return f(c.Conn())
 		}
-		var h atm.Value[*pgxpool.Conn]
-		h.Store(c, nil)
+		ret.close = func() {
+			connAccurer.Clear(nil)
+		}
+		ret.getStatus = func() *model.SyncStatus {
+			if ret, ok := status.Load(); ok {
+				return &ret
+			}
+			return nil
+		}
+		r = ret
 		err = nil
-		r = &pgDbReader{
-			close: func() {
-				h.Clear(func(c *pgxpool.Conn) {
-					c.Release()
-				})
-			},
-			conn: func() (*pgx.Conn, error) {
-				var ret *pgx.Conn
-				e := ErrReaderClosed
-				_ = h.Fetch(func(c *pgxpool.Conn) {
-					ret, e = c.Conn(), nil
-				})
-				return ret, e
-			},
-			getStatus: func() *model.SyncStatus {
-				if ret, ok := status.Load(); ok {
-					return &ret
-				}
-				return nil
-			},
-		}
 	})
 	return r, err
 }
@@ -97,41 +99,48 @@ func (imp *pgDbRegistry) Writer(ctx context.Context) (w Writer, err error) {
 	err = ErrNoRegistry
 	status := &imp.status
 	_ = imp.pool.Fetch(func(v *pgxpool.Pool) {
-		var h atm.Value[pgx.Tx]
+		var txHolder atm.Value[pgx.Tx]
 		var tx pgx.Tx
-		if tx, err = v.Begin(ctx); err != nil {
+		txOpts := pgx.TxOptions{
+			IsoLevel:   pgx.Serializable,
+			AccessMode: pgx.ReadWrite,
+		}
+		if tx, err = v.BeginTx(ctx, txOpts); err != nil {
 			return
 		}
-		h.Store(tx, nil)
+		txHolder.Store(tx, nil)
 		err = nil
 		w = &pgDbWriter{
-			pgDbReader: &pgDbReader{
-				conn: func() (*pgx.Conn, error) {
-					var c *pgx.Conn
-					e := ErrWriterClosed
-					_ = h.Fetch(func(t pgx.Tx) {
-						c, e = t.Conn(), nil
-					})
-					return c, e
-				},
-				getStatus: func() *model.SyncStatus {
-					if ret, ok := status.Load(); ok {
-						return &ret
-					}
-					return nil
-				},
+			tx: func() (pgx.Tx, error) {
+				x, ok := txHolder.Load()
+				if !ok {
+					return nil, ErrWriterClosed
+				}
+				return x, nil
 			},
 			abort: func() {
-				h.Clear(func(t pgx.Tx) {
+				txHolder.Clear(func(t pgx.Tx) {
 					_ = t.Rollback(ctx)
 				})
 			},
 			commit: func() error {
 				e := ErrWriterClosed
-				h.Clear(func(t pgx.Tx) {
-					e = t.Commit(ctx)
+				txHolder.Clear(func(t pgx.Tx) {
+					if e = t.Commit(ctx); e != nil {
+						_ = t.Rollback(ctx)
+					}
 				})
 				return e
+			},
+			getStatus: func() *model.SyncStatus {
+				st, _ := status.Load()
+				return &st
+			},
+			updStatus: func() {
+				st := model.SyncStatus{
+					UpdatedAt: time.Now(),
+				}
+				status.Store(st, nil)
 			},
 		}
 	})
