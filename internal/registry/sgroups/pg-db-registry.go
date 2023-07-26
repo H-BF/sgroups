@@ -3,9 +3,8 @@ package sgroups
 import (
 	"context"
 	"net/url"
+	"sync/atomic"
 	"time"
-
-	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
 	"github.com/H-BF/sgroups/internal/registry/sgroups/pg"
 	atm "github.com/H-BF/sgroups/pkg/atomic"
@@ -37,7 +36,6 @@ func NewRegistryFromPG(ctx context.Context, dbURL url.URL) (r Registry, err erro
 		return nil, err
 	}
 	ret := new(pgDbRegistry)
-	ret.status.Store(model.SyncStatus{UpdatedAt: time.Now()}, nil)
 	ret.pool.Store(pool, nil)
 	return ret, nil
 }
@@ -45,8 +43,7 @@ func NewRegistryFromPG(ctx context.Context, dbURL url.URL) (r Registry, err erro
 var _ Registry = (*pgDbRegistry)(nil)
 
 type pgDbRegistry struct {
-	pool   atm.Value[*pgxpool.Pool]
-	status atm.Value[model.SyncStatus]
+	pool atm.Value[*pgxpool.Pool]
 }
 
 // Reader impl Registry interface
@@ -55,7 +52,6 @@ func (imp *pgDbRegistry) Reader(ctx context.Context) (r Reader, err error) {
 		err = errors.WithMessage(err, "PG/Reader")
 	}()
 	err = ErrNoRegistry
-	status := &imp.status
 
 	type fu = func(context.Context) (*pgxpool.Conn, error)
 	var connAccurer atm.Value[fu]
@@ -79,12 +75,6 @@ func (imp *pgDbRegistry) Reader(ctx context.Context) (r Reader, err error) {
 		ret.close = func() {
 			connAccurer.Clear(nil)
 		}
-		ret.getStatus = func() *model.SyncStatus {
-			if ret, ok := status.Load(); ok {
-				return &ret
-			}
-			return nil
-		}
 		r = ret
 		err = nil
 	})
@@ -97,7 +87,6 @@ func (imp *pgDbRegistry) Writer(ctx context.Context) (w Writer, err error) {
 		err = errors.WithMessage(err, "PG/Writer")
 	}()
 	err = ErrNoRegistry
-	status := &imp.status
 	_ = imp.pool.Fetch(func(v *pgxpool.Pool) {
 		var txHolder atm.Value[pgx.Tx]
 		var tx pgx.Tx
@@ -110,9 +99,9 @@ func (imp *pgDbRegistry) Writer(ctx context.Context) (w Writer, err error) {
 		}
 		txHolder.Store(tx, nil)
 		err = nil
-		affected := new(uint64)
+		affectedRows := new(int64)
 		w = &pgDbWriter{
-			affectedRows: affected,
+			affectedRows: affectedRows,
 			tx: func() (pgx.Tx, error) {
 				x, ok := txHolder.Load()
 				if !ok {
@@ -128,26 +117,18 @@ func (imp *pgDbRegistry) Writer(ctx context.Context) (w Writer, err error) {
 			commit: func() error {
 				e := ErrWriterClosed
 				txHolder.Clear(func(t pgx.Tx) {
-					if *affected == 0 {
+					if n := atomic.AddInt64(affectedRows, 0); n > 0 {
+						e = (pg.SyncStatus{TotalAffectedRows: n}).Store(ctx, tx.Conn())
+						if e != nil {
+							_ = t.Rollback(ctx)
+							return
+						}
+					}
+					if e = t.Commit(ctx); e != nil {
 						_ = t.Rollback(ctx)
-						e = nil
-					} else if e = t.Commit(ctx); e != nil {
-						_ = t.Rollback(ctx)
-					} else {
-						e = nil
 					}
 				})
 				return e
-			},
-			getStatus: func() *model.SyncStatus {
-				st, _ := status.Load()
-				return &st
-			},
-			updStatus: func() {
-				st := model.SyncStatus{
-					UpdatedAt: time.Now(),
-				}
-				status.Store(st, nil)
 			},
 		}
 	})

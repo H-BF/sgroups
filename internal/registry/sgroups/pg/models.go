@@ -3,6 +3,7 @@ package pg
 import (
 	"context"
 	"net"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -57,7 +58,34 @@ type (
 		Proto  Proto            `db:"proto"`
 		Ports  SgRulePortsArray `db:"ports"`
 	}
+
+	// SyncStatus -
+	SyncStatus struct {
+		Updtated          time.Time `db:"updated_at"`
+		TotalAffectedRows int64     `db:"total_affected_rows"`
+	}
 )
+
+// Load -
+func (s *SyncStatus) Load(ctx context.Context, c *pgx.Conn) error {
+	const qry = `select updated_at, total_affected_rows from sgroups.tbl_sync_status where id = (select max(id) from sgroups.tbl_sync_status)`
+	r, e := c.Query(ctx, qry)
+	if e != nil {
+		return e
+	}
+	*s, e = pgx.CollectOneRow(r, pgx.RowToStructByName[SyncStatus])
+	return e
+}
+
+// Store -
+func (s SyncStatus) Store(ctx context.Context, c *pgx.Conn) error {
+	_, e := c.Exec(
+		ctx,
+		"insert into sgroups.tbl_sync_status(total_affected_rows) values($1)",
+		s.TotalAffectedRows)
+
+	return e
+}
 
 // RegisterSGroupsTypesOntoPGX -
 func RegisterSGroupsTypesOntoPGX(ctx context.Context, c *pgx.Conn) (err error) {

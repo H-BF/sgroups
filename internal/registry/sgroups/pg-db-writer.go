@@ -20,7 +20,7 @@ type pgDbWriter struct {
 	getStatus func() *model.SyncStatus
 	updStatus func()
 
-	affectedRows *uint64
+	affectedRows *int64
 }
 
 // SyncNetworks impl Writer interface
@@ -57,7 +57,7 @@ func (wr *pgDbWriter) SyncNetworks(ctx context.Context, networks []model.Network
 	}
 	affected, err = snc.Sync(ctx)
 	if err == nil && affected > 0 {
-		atomic.AddUint64(wr.affectedRows, uint64(affected))
+		atomic.AddInt64(wr.affectedRows, affected)
 	}
 	return err
 }
@@ -96,7 +96,7 @@ func (wr *pgDbWriter) SyncSecurityGroups(ctx context.Context, sgs []model.Securi
 	}
 	affected, err = snc.Sync(ctx)
 	if err == nil && affected > 0 {
-		atomic.AddUint64(wr.affectedRows, uint64(affected))
+		atomic.AddInt64(wr.affectedRows, affected)
 	}
 	return err
 }
@@ -134,7 +134,7 @@ func (wr *pgDbWriter) SyncSGRules(ctx context.Context, rules []model.SGRule, sco
 	}
 	affected, err = snc.Sync(ctx)
 	if err == nil && affected > 0 {
-		atomic.AddUint64(wr.affectedRows, uint64(affected))
+		atomic.AddInt64(wr.affectedRows, affected)
 	}
 	return err
 }

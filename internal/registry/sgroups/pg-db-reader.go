@@ -192,10 +192,22 @@ func (rd *pgDbReader) ListSGRules(ctx context.Context, consume func(model.SGRule
 }
 
 // GetSyncStatus impl Reader interface
-func (rd *pgDbReader) GetSyncStatus(_ context.Context) (*model.SyncStatus, error) {
-	if rd.getStatus != nil {
-		ret := rd.getStatus()
-		return ret, nil
-	}
-	return nil, nil
+func (rd *pgDbReader) GetSyncStatus(ctx context.Context) (*model.SyncStatus, error) {
+	const api = "PG/GetSyncStatus"
+	var ret *model.SyncStatus
+	err := rd.doIt(ctx, func(c *pgx.Conn) error {
+		var s pg.SyncStatus
+		e := s.Load(ctx, c)
+		if e != nil {
+			if errors.Is(e, pgx.ErrNoRows) {
+				return nil
+			}
+			return e
+		}
+		ret = &model.SyncStatus{
+			UpdatedAt: s.Updtated,
+		}
+		return nil
+	})
+	return ret, errors.WithMessage(err, api)
 }
