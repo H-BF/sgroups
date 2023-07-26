@@ -77,8 +77,8 @@ func (o *syncObj[T, tFlt]) construct() {
 func (o *syncObj[T, tFlt]) enureFilterTable(ctx context.Context) error {
 	o.flt.Do(func() {
 		x := syncTable{
-			Temporay: true,
-			OnCommit: "drop",
+			Temporary: true,
+			OnCommit:  "drop",
 		}.WithRandomName("flt_", "")
 		for _, f := range o.tableDst.fields {
 			if f.Pk {
@@ -94,7 +94,7 @@ func (o *syncObj[T, tFlt]) enureFilterTable(ctx context.Context) error {
 func (o *syncObj[T, tFlt]) enureDataTable(ctx context.Context) error {
 	o.src.Do(func() {
 		x := o.tableDst.WithRandomName("data_", "")
-		x.Temporay = true
+		x.Temporary = true
 		x.OnCommit = "drop"
 		o.src.syncTable = x
 		o.dataTable = x.Name

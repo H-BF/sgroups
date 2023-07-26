@@ -3,7 +3,7 @@ package pg
 import (
 	"bytes"
 	"context"
-	"crypto/md5"
+	"crypto/md5" //nolint:gosec
 	"fmt"
 	"io"
 	"math/rand"
@@ -24,9 +24,9 @@ type (
 	}
 
 	syncTable struct {
-		Name     string
-		Temporay bool
-		OnCommit string
+		Name      string
+		Temporary bool
+		OnCommit  string
 
 		fields []syncField
 	}
@@ -54,7 +54,7 @@ func (t syncTable) WithRandomName(prefix, suffix string) syncTable {
 		n2 int64
 	}{n, rand.NewSource(n).Int63()}
 	type bb = [unsafe.Sizeof(dat)]byte
-	h := md5.Sum((*bb)(unsafe.Pointer(&dat))[:])
+	h := md5.Sum((*bb)(unsafe.Pointer(&dat))[:]) //nolint:gosec
 	alnum := []byte("abcdefghijklmmopqrstuvwxyz1234567890")
 	al := []byte("abcdefghijklmmopqrstuvwxyz")
 	rand.Shuffle(len(alnum), func(i, j int) {
@@ -103,8 +103,8 @@ func (t syncTable) FieldNames() []string {
 func (t syncTable) Create(ctx context.Context, c *pgx.Conn) error {
 	s := t.createScript()
 	_, err := c.Exec(ctx, s)
-	if t.Temporay {
-		errors.WithMessagef(err, "on create temp table '%s'", t.Name)
+	if t.Temporary {
+		return errors.WithMessagef(err, "on create temp table '%s'", t.Name)
 	}
 	return errors.WithMessagef(err, "on create table '%s'", t.Name)
 }
@@ -129,7 +129,7 @@ func (t syncTable) CopyFrom(ctx context.Context, raw RawRowsData, c *pgx.Conn) e
 func (t syncTable) createScript() string {
 	b := bytes.NewBuffer(nil)
 	b.WriteString("create ")
-	if t.Temporay {
+	if t.Temporary {
 		b.WriteString("temp ")
 	}
 	fmt.Fprintf(b, "table %s (\n", t.Name)
@@ -164,16 +164,16 @@ func (t syncTable) createScript() string {
 func (hlp *syncGenSQL) genSemanticUdpate(w io.Writer, op string) {
 	wr := writer{w}
 	fds := hlp.tableDst.FieldNames()
-	wr.WriteString("with ")
+	_, _ = wr.WriteString("with ")
 	hlp.cte(w, "data", false, func(w1 io.Writer) {
 		wr1 := writer{w1}
 		fmt.Fprintf(wr1, "select %s from %s",
 			strings.Join(fds, ", "),
 			hlp.dataTable)
 	}, fds...)
-	wr.WriteString(" select count(")
+	_, _ = wr.WriteString(" select count(")
 	hlp.callMutator(wr, op, "data", hlp.tableDst.fields)
-	wr.WriteString(") as c from data")
+	_, _ = wr.WriteString(") as c from data")
 }
 
 func (hlp *syncGenSQL) genUpsert(w io.Writer) {
@@ -190,13 +190,13 @@ func (hlp *syncGenSQL) genUpdate(w io.Writer) {
 
 func (hlp *syncGenSQL) genDelete(w io.Writer, flt *syncTable) {
 	wr := writer{w}
-	wr.WriteString("with ")
+	_, _ = wr.WriteString("with ")
 	hlp.old(w, "old", flt)
-	wr.WriteString(", ")
+	_, _ = wr.WriteString(", ")
 	hlp.cteDel(w, "old", "del")
-	wr.WriteString(" select count(")
+	_, _ = wr.WriteString(" select count(")
 	hlp.callMutator(w, "del", "del", hlp.tableDst.fields)
-	wr.WriteString(") as c from del")
+	_, _ = wr.WriteString(") as c from del")
 }
 
 func (hlp *syncGenSQL) old(w io.Writer, alias string, tableFlt *syncTable) {
@@ -264,33 +264,33 @@ func (hlp *syncGenSQL) cteDel(w io.Writer, aliasOld, aliasDelete string) {
 func (*syncGenSQL) cte(w io.Writer, alias string, recursive bool, body func(io.Writer), fds ...string) {
 	wr := writer{w}
 	if recursive {
-		wr.WriteString("recursive ")
+		_, _ = wr.WriteString("recursive ")
 	}
 	fmt.Fprintf(wr, "%s", alias)
 	if len(fds) > 0 {
 		fmt.Fprintf(wr, "(%s)", strings.Join(fds, ", "))
 	}
-	wr.WriteString(" as (")
+	_, _ = wr.WriteString(" as (")
 	body(w)
-	wr.WriteByte(')')
+	_, _ = wr.WriteByte(')')
 }
 
 func (hlp *syncGenSQL) join(w io.Writer, aliasL string, outer bool, aliasR string, fdsOut []string, joinFds ...string) {
 	b := writer{w}
-	b.WriteString("select ")
+	_, _ = b.WriteString("select ")
 	for i, f := range fdsOut {
 		if i > 0 {
-			b.WriteString(", ")
+			_, _ = b.WriteString(", ")
 		}
 		fmt.Fprintf(b, "%s.%s", aliasL, f)
 	}
 	fmt.Fprintf(b, " from %s", aliasL)
 	if outer {
-		b.WriteString(" left outer")
+		_, _ = b.WriteString(" left outer")
 	}
 	fmt.Fprintf(b, " join %s on ", aliasR)
 	if len(joinFds) == 0 {
-		b.WriteString("true")
+		_, _ = b.WriteString("true")
 	} else {
 		hlp.fieldsEq(b, aliasL, aliasR, joinFds...)
 	}
@@ -301,21 +301,21 @@ func (hlp *syncGenSQL) callMutator(w io.Writer, typeOfMutate, alias string, fds 
 	fmt.Fprintf(b, "%s('%s', row(", hlp.mutatorFn, typeOfMutate)
 	for i, f := range fds {
 		if i > 0 {
-			b.WriteString(", ")
+			_, _ = b.WriteString(", ")
 		}
 		if len(alias) > 0 {
 			fmt.Fprintf(b, "%s.", alias)
 		}
-		b.WriteString(f.Name)
+		_, _ = b.WriteString(f.Name)
 	}
-	b.WriteString("))")
+	_, _ = b.WriteString("))")
 }
 
 func (*syncGenSQL) fieldsEq(w io.Writer, aliasL, aliasR string, fds ...string) {
 	b := writer{w}
 	for i, f := range fds {
 		if i > 0 {
-			b.WriteString(" and ")
+			_, _ = b.WriteString(" and ")
 		}
 		if len(aliasL) > 0 {
 			fmt.Fprintf(b, "%s.", aliasL)
@@ -324,6 +324,6 @@ func (*syncGenSQL) fieldsEq(w io.Writer, aliasL, aliasR string, fds ...string) {
 		if len(aliasR) > 0 {
 			fmt.Fprintf(b, "%s.", aliasR)
 		}
-		b.WriteString(f)
+		_, _ = b.WriteString(f)
 	}
 }

@@ -14,11 +14,9 @@ import (
 var _ Writer = (*pgDbWriter)(nil)
 
 type pgDbWriter struct {
-	tx        func() (pgx.Tx, error)
-	commit    func() error
-	abort     func()
-	getStatus func() *model.SyncStatus
-	updStatus func()
+	tx     func() (pgx.Tx, error)
+	commit func() error
+	abort  func()
 
 	affectedRows *int64
 }

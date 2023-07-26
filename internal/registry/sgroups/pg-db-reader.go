@@ -14,9 +14,8 @@ import (
 var _ Reader = (*pgDbReader)(nil)
 
 type pgDbReader struct {
-	doIt      func(context.Context, func(*pgx.Conn) error) error
-	close     func()
-	getStatus func() *model.SyncStatus
+	doIt  func(context.Context, func(*pgx.Conn) error) error
+	close func()
 }
 
 // Close impl Reader interface
