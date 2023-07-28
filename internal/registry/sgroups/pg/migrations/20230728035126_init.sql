@@ -1,3 +1,5 @@
+-- +goose Up
+-- +goose StatementBegin
 create schema sgroups;
 
 --------------------------------------------- AGGREGATES ----------------------------------------------
@@ -551,3 +553,9 @@ begin
    return ret is not null;
 end;
 $$ language plpgsql strict;
+-- +goose StatementEnd
+
+-- +goose Down
+-- +goose StatementBegin
+drop schema if exists sgroups cascade;
+-- +goose StatementEnd

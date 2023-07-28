@@ -111,7 +111,6 @@ endif
 	$(GO) build -ldflags="$(LDFLAGS)" -o $(OUT) $(CURDIR)/cmd/$(APP) &&\
 	echo -=OK=- 
 
-
 .PHONY: sgroups-tf	
 sgroups-tf: | go-deps ##build SGroups Terraform provider
 sgroups-tf: APP=sgroups-tf
@@ -123,4 +122,40 @@ sgroups-tf:
 	$(GO) build -ldflags="$(LDFLAGS)" -o $(OUT) $(CURDIR)/cmd/$(APP) &&\
 	echo -=OK=- 
 
+
+GOOSE_REPO:=https://github.com/pressly/goose
+GOOSE_LATEST_VERSION:= $(shell git ls-remote --tags --refs --sort='v:refname' $(GOOSE_REPO)|tail -1|egrep -o "v[0-9]+.*")
+GOOSE:=$(GOBIN)/goose
+ifneq ($(wildcard $(GOOSE)),)
+	GOOSE_CUR_VERSION?=$(shell $(GOOSE) -version|egrep -o "v[0-9\.]+")	
+else
+	GOOSE_CUR_VERSION?=
+endif
+.PHONY: .install-goose
+.install-goose: 
+ifeq ($(filter $(GOOSE_CUR_VERSION), $(GOOSE_LATEST_VERSION)),)
+	@echo installing \'goose\' $(GOOSE_LATEST_VERSION) util... && \
+	GOBIN=$(GOBIN) $(GO) install github.com/pressly/goose/v3/cmd/goose@$(GOOSE_LATEST_VERSION)
+else
+	@echo >/dev/null
+endif
+
+# example PG_URI=postgres://postgres:master@localhost:5432/sg?sslmode=disable
+PG_MIGRATIONS?=$(CURDIR)/internal/registry/sgroups/pg/migrations
+PG_URI?=
+.PHONY: sgroups-pg-migrations
+sgroups-pg-migrations: ##run SGroups Postgres migrations
+ifneq ($(PG_URI),)
+	@$(MAKE) .install-goose && \
+	cd $(PG_MIGRATIONS) && \
+	$(GOOSE) -table=sgroups_db_ver postgres $(PG_URI) up
+else
+	$(error need define PG_URI environment variable)
+endif	
+
+
+
+
+	
+	
 
