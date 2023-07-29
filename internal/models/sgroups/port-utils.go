@@ -11,6 +11,7 @@ import (
 	"unsafe"
 
 	"github.com/H-BF/corlib/pkg/ranges"
+	"github.com/pkg/errors"
 	"go.uber.org/multierr"
 )
 
@@ -119,12 +120,17 @@ func (portSourceHelper) str2portrange(ps string) (PortRange, error) {
 	)
 	m := parsePortsRE.FindStringSubmatch(ps)
 	if len(m) != 4 { //nolint:gomnd
-		return nil, errIncorrectPortsSource
+		return nil,
+			errors.WithMessagef(errIncorrectPortsSource, "unrecognized value '%s'", ps)
 	}
 	if m[2] != "" && m[3] != "" {
 		l, err = strconv.ParseUint(m[2], 10, 16)
 		if err == nil {
 			r, err = strconv.ParseUint(m[3], 10, 16)
+			if err == nil && l > r {
+				return nil, errors.WithMessagef(errIncorrectPortsSource,
+					"the left bound '%v' is greather than right one '%v'", l, r)
+			}
 		}
 	} else if m[1] != "" {
 		l, err = strconv.ParseUint(m[1], 10, 16)
