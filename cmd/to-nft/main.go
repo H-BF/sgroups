@@ -87,12 +87,12 @@ func main() {
 func runNftJob(ctx context.Context) error { //nolint:gocyclo
 	var (
 		err           error
-		exitOnSuffess bool
+		exitOnSuccess bool
 		sgClient      SGClient
 		nlWatcher     nl.NetlinkWatcher
 		nftProc       nft.NfTablesProcessor
 	)
-	if exitOnSuffess, err = ExitOnSuccess.Value(ctx); err != nil {
+	if exitOnSuccess, err = ExitOnSuccess.Value(ctx); err != nil {
 		return err
 	}
 
@@ -192,7 +192,7 @@ loop0:
 				break
 			}
 			logger.Infof(ctx, "net-conf applied")
-			if exitOnSuffess {
+			if exitOnSuccess {
 				break loop0
 			}
 		}
