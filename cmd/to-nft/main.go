@@ -38,6 +38,7 @@ func main() {
 	err := config.InitGlobalConfig(
 		config.WithAcceptEnvironment{EnvPrefix: "NFT"},
 		config.WithSourceFile{FileName: ConfigFile},
+		config.WithDefValue{Key: ExitOnSuccess, Val: false},
 		config.WithDefValue{Key: AppLoggerLevel, Val: "DEBUG"},
 		config.WithDefValue{Key: AppGracefulShutdown, Val: 10 * time.Second},
 		config.WithDefValue{Key: NetNS, Val: ""},
@@ -85,11 +86,15 @@ func main() {
 
 func runNftJob(ctx context.Context) error { //nolint:gocyclo
 	var (
-		err       error
-		sgClient  SGClient
-		nlWatcher nl.NetlinkWatcher
-		nftProc   nft.NfTablesProcessor
+		err           error
+		exitOnSuffess bool
+		sgClient      SGClient
+		nlWatcher     nl.NetlinkWatcher
+		nftProc       nft.NfTablesProcessor
 	)
+	if exitOnSuffess, err = ExitOnSuccess.Value(ctx); err != nil {
+		return err
+	}
 
 	if sgClient, err = NewSGClient(ctx); err != nil {
 		return err
@@ -187,6 +192,9 @@ loop0:
 				break
 			}
 			logger.Infof(ctx, "net-conf applied")
+			if exitOnSuffess {
+				break loop0
+			}
 		}
 	}
 	return err

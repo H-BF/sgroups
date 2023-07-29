@@ -8,6 +8,7 @@ import (
 
 /*// config-sample.yaml
 
+exit-on-success: true|false - do exit when we suceeded to apply netfilter config; def-val=false
 netns: NetworkNS #is optional; def-val = ""
 graceful-shutdown: 10s
 logger:
@@ -23,14 +24,18 @@ extapi:
 */
 
 const (
-	//AppLoggerLevel log level [optional]
+
+	// ExitOnSuccess do exit when we suceeded to apply netfilter config; def-val=false
+	ExitOnSuccess config.ValueT[bool] = "exit-on-success"
+
+	// AppLoggerLevel log level [optional]
 	AppLoggerLevel config.ValueT[string] = "logger/level"
-	//AppGracefulShutdown [optional]
+	// AppGracefulShutdown [optional]
 	AppGracefulShutdown config.ValueT[time.Duration] = "graceful-schutdown"
 	// NetNS network namespace
 	NetNS config.ValueT[string] = "netns"
 
-	//ServicesDefDialDuration default dial duraton to conect a service [optional]
+	// ServicesDefDialDuration default dial duraton to conect a service [optional]
 	ServicesDefDialDuration config.ValueT[time.Duration] = "extapi/svc/def-daial-duration"
 
 	//SGroupsAddress service address [mandatory]
