@@ -8,6 +8,7 @@ import (
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 
 	sg "github.com/H-BF/protos/pkg/api/sgroups"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -25,9 +26,12 @@ type network struct {
 func (n *network) from(protoNw *sg.Network) error {
 	n.Name = protoNw.GetName()
 	c := protoNw.GetNetwork().GetCIDR()
-	_, nt, err := net.ParseCIDR(c)
+	ip, nt, err := net.ParseCIDR(c)
 	if err != nil {
 		return err
+	}
+	if !nt.IP.Equal(ip) {
+		return errors.Errorf("the '%s' seems just an IP address; the address of network is expected instead", c)
 	}
 	n.Net = *nt
 	return nil
