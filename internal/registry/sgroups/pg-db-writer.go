@@ -2,11 +2,13 @@ package sgroups
 
 import (
 	"context"
+	"strings"
 	"sync/atomic"
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	"github.com/H-BF/sgroups/internal/registry/sgroups/pg"
 
+	linq "github.com/ahmetb/go-linq/v3"
 	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"
 )
@@ -76,6 +78,12 @@ func (wr *pgDbWriter) SyncSecurityGroups(ctx context.Context, sgs []model.Securi
 	}
 	snc := pg.SyncerOfSecGroups{C: tx.Conn()}
 	snc.Upd, snc.Ins, snc.Del = wr.opts2flags(opts)
+	if snc.Upd || snc.Ins {
+		err = validateSecGroupsDataIn(sgs)
+		if err != nil {
+			return err
+		}
+	}
 	if err = snc.AddData(ctx, sgs...); err != nil {
 		return err
 	}
@@ -160,4 +168,53 @@ func (wr *pgDbWriter) opts2flags(opts []Option) (upd, ins, del bool) {
 		}
 	}
 	return upd, ins, del
+}
+
+func validateSecGroupsDataIn(sgs []model.SecurityGroup) error {
+	type nw2sg = struct {
+		Network model.NetworkName
+		SgName  string
+	}
+	fi := linq.From(sgs).
+		SelectManyT(func(sg model.SecurityGroup) linq.Query {
+			return linq.Query{
+				Iterate: func() linq.Iterator {
+					i := -1
+					return func() (any, bool) {
+						if i++; i < len(sg.Networks) {
+							return nw2sg{sg.Networks[i], sg.Name}, true
+						}
+						return nil, false
+					}
+				},
+			}
+		}).GroupByT(
+		func(o nw2sg) model.NetworkName {
+			return o.Network
+		},
+		func(o nw2sg) string {
+			return o.SgName
+		},
+	).Select(func(i any) any {
+		g := i.(linq.Group)
+		if len(g.Group) > 1 {
+			x := g.Group[:0]
+			linq.From(g.Group).Distinct().ToSlice(&x)
+			g.Group = x
+		}
+		return g
+	}).FirstWith(func(g any) bool {
+		return len(g.(linq.Group).Group) > 1
+	})
+	switch v := fi.(type) {
+	case nil:
+	case linq.Group:
+		var sg []string
+		linq.From(v.Group).ToSlice(&sg)
+		return errors.Errorf("the Network '%s' belongs to multiple SG [%s]",
+			v.Key.(string), strings.Join(sg, ","))
+	default:
+		panic("UB")
+	}
+	return nil
 }
