@@ -8,7 +8,7 @@ import (
 
 /*// config-sample.yaml
 
-exit-on-success: true|false - do exit when we suceeded to apply netfilter config; def-val=false
+exit-on-success: true|false - do exit when we succeeded to apply netfilter config; def-val=false
 netns: NetworkNS #is optional; def-val = ""
 graceful-shutdown: 10s
 logger:
@@ -25,7 +25,7 @@ extapi:
 
 const (
 
-	// ExitOnSuccess do exit when we suceeded to apply netfilter config; def-val=false
+	// ExitOnSuccess do exit when we succeeded to apply netfilter config; def-val=false
 	ExitOnSuccess config.ValueT[bool] = "exit-on-success"
 
 	// AppLoggerLevel log level [optional]
