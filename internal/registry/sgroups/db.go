@@ -24,13 +24,3 @@ const SchemaName = "sgroups"
 func (tid TableID) String() string {
 	return [...]string{"tbl_network", "tbl_sg", "tbl_rule", "tbl_sync_status"}[tid]
 }
-
-func (tid TableID) memDbSchema() MemDbSchemaInit {
-	return [...]MemDbSchemaInit{
-		memDbNetworksSchema,
-		memDbSecGroupsSchema,
-		memDbSgRulesSchema,
-		memDbSyncStatusSchema}[tid]
-}
-
-func (TableID) privateMemDbOption() {}

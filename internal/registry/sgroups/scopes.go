@@ -5,6 +5,8 @@ import (
 	"reflect"
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
+
+	"github.com/pkg/errors"
 )
 
 type (
@@ -39,7 +41,7 @@ type (
 	//ScopedNetTransport network transport scope
 	ScopedNetTransport model.NetworkTransport
 
-	scopedSGRuleIdentity map[string]bool
+	scopedSGRuleIdentity map[string]model.SGRuleIdentity
 
 	scopedSG     map[string]struct{}
 	scopedSGFrom map[string]struct{}
@@ -53,6 +55,9 @@ type (
 			scopedAnd | scopedOr | scopedNot | noScope
 	}
 )
+
+// ErrUnexpectedScope -
+var ErrUnexpectedScope = errors.New("unexpected scope")
 
 // NoScope no any scope
 var NoScope noScope
@@ -95,12 +100,10 @@ func SGTo(one string, other ...string) Scope {
 }
 
 // SG maks security group name(s) scope
-func SG(one string, other ...string) Scope {
-	ret := scopedSG{
-		one: {},
-	}
-	for i := range other {
-		ret[other[i]] = struct{}{}
+func SG(names ...string) Scope {
+	ret := make(scopedSG)
+	for i := range names {
+		ret[names[i]] = struct{}{}
 	}
 	return ret
 }
@@ -114,14 +117,12 @@ func IPs(one net.IP, all bool, other ...net.IP) Scope {
 }
 
 // NetworkNames makes networks name(s) scope
-func NetworkNames(one model.NetworkName, other ...model.NetworkName) Scope {
+func NetworkNames(names ...model.NetworkName) Scope {
 	ret := scopedNetworks{
-		Names: map[model.NetworkName]struct{}{
-			one: {},
-		},
+		Names: make(map[model.NetworkName]struct{}),
 	}
-	for i := range other {
-		ret.Names[other[i]] = struct{}{}
+	for i := range names {
+		ret.Names[names[i]] = struct{}{}
 	}
 	return ret
 }
@@ -129,9 +130,8 @@ func NetworkNames(one model.NetworkName, other ...model.NetworkName) Scope {
 // SGRule makes SG rule scope
 func SGRule(others ...model.SGRule) Scope {
 	ret := scopedSGRuleIdentity{}
-	for i := range others {
-		h := others[i].IdentityHash()
-		ret[h] = true
+	for _, o := range others {
+		ret[o.IdentityHash()] = o.SGRuleIdentity
 	}
 	return ret
 }
@@ -325,7 +325,8 @@ func (p ScopedNetTransport) meta() metaInfo {
 
 func (p scopedSGRuleIdentity) inSGRule(rule model.SGRule) bool {
 	h := rule.IdentityHash()
-	return p[h]
+	_, ok := p[h]
+	return ok
 }
 
 func (p scopedSGRuleIdentity) meta() metaInfo {

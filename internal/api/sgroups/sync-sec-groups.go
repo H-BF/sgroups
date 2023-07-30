@@ -16,21 +16,26 @@ type syncGroups struct {
 }
 
 func (snc syncGroups) process(ctx context.Context) error {
-	names := make([]string, 0, len(snc.groups))
-	groups := make([]model.SecurityGroup, 0, len(snc.groups))
-	var sc registry.Scope = registry.NoScope
+	var names []string
+	var groups []model.SecurityGroup
 	for _, g := range snc.groups {
-		if snc.ops != sg.SyncReq_Delete {
+		if snc.ops == sg.SyncReq_Delete {
+			if names == nil {
+				names = make([]string, 0, len(snc.groups))
+			}
+			names = append(names, g.GetName())
+		} else {
+			if groups == nil {
+				groups = make([]model.SecurityGroup, 0, len(snc.groups))
+			}
 			var x securityGroup
 			x.from(g)
 			groups = append(groups, x.SecurityGroup)
 		}
-		if snc.ops != sg.SyncReq_FullSync {
-			names = append(names, g.GetName())
-		}
 	}
-	if len(names) != 0 {
-		sc = registry.SG(names[0], names[1:]...)
+	var sc registry.Scope = registry.NoScope
+	if snc.ops == sg.SyncReq_Delete {
+		sc = registry.SG(names...)
 	}
 	var opts []registry.Option
 	if err := syncOptionsFromProto(snc.ops, &opts); err != nil {

@@ -1,16 +1,15 @@
 package main
 
 import (
+	"github.com/H-BF/sgroups/internal/app"
+	"github.com/H-BF/sgroups/internal/config"
+
 	_ "github.com/H-BF/corlib/app/identity"
 	"github.com/H-BF/corlib/logger"
 	pkgNet "github.com/H-BF/corlib/pkg/net"
 	"github.com/H-BF/corlib/server"
-	"github.com/H-BF/sgroups/internal/app"
-	"github.com/H-BF/sgroups/internal/config"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
-
-	_ "github.com/jackc/pgx/v4"
 )
 
 func main() {
@@ -26,6 +25,7 @@ func main() {
 		config.WithDefValue{Key: HealthcheckEnable, Val: true},
 		config.WithDefValue{Key: ServerGracefulShutdown, Val: "10s"},
 		config.WithDefValue{Key: ServerEndpoint, Val: "tcp://127.0.0.1:9000"},
+		config.WithDefValue{Key: StorageType, Val: "INTERNAL"},
 	)
 	if err != nil {
 		logger.Fatal(ctx, err)
@@ -47,6 +47,9 @@ func main() {
 	}))
 	if err != nil && errors.Is(err, config.ErrNotFound) {
 		logger.Fatal(ctx, errors.WithMessage(err, "server endpoint is absent"))
+	}
+	if err = setupRegistry(); err != nil {
+		logger.Fatal(ctx, errors.WithMessage(err, "on opening db storade"))
 	}
 	var srv *server.APIServer
 	if srv, err = setupSgServer(ctx); err != nil {

@@ -11,7 +11,7 @@ import (
 type (
 	emptyRegistry struct{}
 
-	memRegistry struct {
+	memDbRegisrtyHolder struct {
 		atomic.Value
 	}
 
@@ -23,7 +23,7 @@ type (
 
 // NewRegistryFromMemDB new Registry from MemDB
 func NewRegistryFromMemDB(m MemDB) Registry {
-	ret := new(memRegistry)
+	ret := new(memDbRegisrtyHolder)
 	ret.Store(
 		reflect.ValueOf(&memRegistryInner{MemDB: m}),
 	)
@@ -31,12 +31,18 @@ func NewRegistryFromMemDB(m MemDB) Registry {
 }
 
 var (
-	//ErrNoRegistry ...
+	// ErrNoRegistry -
 	ErrNoRegistry = errors.New("no registry available")
+
+	// ErrWriterClosed -
+	ErrWriterClosed = errors.New("writer is closed")
+
+	// ErrReaderClosed -
+	ErrReaderClosed = errors.New("reader is closed")
 )
 
 // Writer impl Registry
-func (r *memRegistry) Writer(_ context.Context) (Writer, error) {
+func (r *memDbRegisrtyHolder) Writer(_ context.Context) (Writer, error) {
 	v := r.Value.Load().(reflect.Value).Interface()
 	switch t := v.(type) {
 	case *emptyRegistry:
@@ -52,7 +58,7 @@ func (r *memRegistry) Writer(_ context.Context) (Writer, error) {
 }
 
 // Reader impl Registry
-func (r *memRegistry) Reader(_ context.Context) (Reader, error) {
+func (r *memDbRegisrtyHolder) Reader(_ context.Context) (Reader, error) {
 	v := r.Value.Load().(reflect.Value).Interface()
 	switch t := v.(type) {
 	case *emptyRegistry:
@@ -67,7 +73,7 @@ func (r *memRegistry) Reader(_ context.Context) (Reader, error) {
 }
 
 // Close closed db
-func (r *memRegistry) Close() error {
+func (r *memDbRegisrtyHolder) Close() error {
 	v := r.Value.Load().(reflect.Value).Interface()
 	if t, _ := v.(*memRegistryInner); t != nil {
 		t.Once.Do(func() {

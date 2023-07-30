@@ -19,6 +19,11 @@ healthcheck:
 server:
   endpoint: tcp://127.0.0.1:9006
   graceful-shutdown: 30s
+
+storage:
+  type: internal | postgres
+  postgres:
+    url: postgres://un:psw@host/db
 */
 
 const (
@@ -36,4 +41,10 @@ const (
 
 	// HealthcheckEnable enables|disables health check handler
 	HealthcheckEnable config.ValueT[bool] = "healthcheck/enable"
+
+	// StorageType selects storage DB backend
+	StorageType config.ValueT[string] = "storage/type"
+
+	// PostgresURL URL to connect Postgres DB
+	PostgresURL config.ValueT[string] = "storage/postgres/url"
 )

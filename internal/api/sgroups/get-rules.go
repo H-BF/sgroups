@@ -54,6 +54,7 @@ func (srv *sgService) GetRules(ctx context.Context, req *sg.GetRulesReq) (resp *
 	if reader, err = srv.registryReader(ctx); err != nil {
 		return nil, err
 	}
+	defer reader.Close() //lint:nolint
 	resp = new(sg.RulesResp)
 	err = reader.ListSGRules(ctx, func(rule model.SGRule) error {
 		r, e := sgRule2proto(rule)

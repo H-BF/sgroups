@@ -4,6 +4,16 @@ import (
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 )
 
+func (tid TableID) memDbSchema() MemDbSchemaInit {
+	return [...]MemDbSchemaInit{
+		memDbNetworksSchema,
+		memDbSecGroupsSchema,
+		memDbSgRulesSchema,
+		memDbSyncStatusSchema}[tid]
+}
+
+func (TableID) privateMemDbOption() {}
+
 func memDbNetworksSchema(schema *MemDbSchema) {
 	tbl := TblNetworks.String()
 	schema.Tables[tbl] = &MemDbTableSchema{

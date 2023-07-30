@@ -8,6 +8,7 @@ import (
 
 	"github.com/H-BF/protos/pkg/api/common"
 	sg "github.com/H-BF/protos/pkg/api/sgroups"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -32,11 +33,9 @@ func (snc syncRules) process(ctx context.Context) error {
 		return status.Error(codes.InvalidArgument, err.Error())
 	}
 	var sc registry.Scope = registry.NoScope
-	if snc.ops != sg.SyncReq_FullSync {
-		sc = registry.SGRule(rules...)
-	}
 	if snc.ops == sg.SyncReq_Delete {
-		rules = rules[:0]
+		sc = registry.SGRule(rules...)
+		rules = nil
 	}
 	return snc.wr.SyncSGRules(ctx, rules, sc, opts...)
 }
@@ -73,10 +72,10 @@ func (r *rulePorts) from(src []*sg.Rule_Ports) error {
 		var item model.SGRulePorts
 		var e error
 		if item.S, e = model.PortSource(p.S).ToPortRanges(); e != nil {
-			return e
+			return errors.WithMessagef(e, "bad 'source' port(s) '%s'", p.S)
 		}
 		if item.D, e = model.PortSource(p.D).ToPortRanges(); e != nil {
-			return e
+			return errors.WithMessagef(e, "bad 'dest' port(s) '%s'", p.D)
 		}
 		*r = append(*r, item)
 	}

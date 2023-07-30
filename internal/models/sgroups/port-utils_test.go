@@ -44,7 +44,7 @@ func Test_PortSource2PortRange(t *testing.T) {
 		{" 10 - 10 ", PortRangeFactory.Range(10, false, 10, false), false},
 		{" 10 - 11 ", PortRangeFactory.Range(10, false, 11, false), false},
 		{" - 10 - 11 ", nil, true},
-		{" 11 - 10  ", nil, false},
+		{" 11 - 10  ", nil, true},
 		{" 11 - 65536  ", nil, true},
 	}
 	for i := range cases {

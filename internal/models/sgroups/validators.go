@@ -6,8 +6,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ErrSPortsAreOverlapped -
-var ErrSPortsAreOverlapped = errors.New("source ports have overlapped regions")
+var (
+	// ErrSPortsAreOverlapped -
+	ErrSPortsAreOverlapped = errors.New("source ports have overlapped regions")
+
+	// ErrUnexpectedNullPortRange -
+	ErrUnexpectedNullPortRange = errors.New("unexpected null port range")
+)
 
 // Validatable is a alias to oz.Validatable
 type Validatable = oz.Validatable
@@ -65,12 +70,35 @@ func (sgRuleKey SGRuleIdentity) Validate() error {
 	)
 }
 
+// ValidatePortRange -
+func ValidatePortRange(pr PortRange, canBeNull bool) error {
+	if pr.IsNull() && !canBeNull {
+		return ErrUnexpectedNullPortRange
+	}
+	return nil
+}
+
 // Validate -
 func (ports SGRulePorts) Validate() error {
 	if ports.S.Len()+ports.D.Len() <= 0 {
 		return errors.Errorf("no any 'S' and 'D' port are present")
 	}
-	return nil
+	var err error
+	ports.D.Iterate(func(r PortRange) bool {
+		if err = ValidatePortRange(r, false); err != nil {
+			err = errors.WithMessagef(err, "on validate 'D' ports(%s) found bad range(%s)", ports.D, r)
+		}
+		return err == nil
+	})
+	if err == nil {
+		ports.S.Iterate(func(r PortRange) bool {
+			if err = ValidatePortRange(r, false); err != nil {
+				err = errors.WithMessagef(err, "on validate 'S' ports(%s) found bad range(%s)", ports.S, r)
+			}
+			return err == nil
+		})
+	}
+	return err
 }
 
 // Validate validates security group rule

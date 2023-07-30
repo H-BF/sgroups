@@ -163,7 +163,7 @@ func (wr sGroupsMemDbWriter) afterDeleteNetworks(ctx context.Context, nw []model
 		nwSet[nw[i].Name] = true
 		nwNames = append(nwNames, nw[i].Name)
 	}
-	scope := NetworkNames(nwNames[0], nwNames[1:]...)
+	scope := NetworkNames(nwNames...)
 	var sgs []model.SecurityGroup
 	//get related SG(s)
 	err := wr.ListSecurityGroups(ctx, func(sg model.SecurityGroup) error {

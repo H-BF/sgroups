@@ -8,6 +8,7 @@ import (
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 
 	sg "github.com/H-BF/protos/pkg/api/sgroups"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -25,32 +26,40 @@ type network struct {
 func (n *network) from(protoNw *sg.Network) error {
 	n.Name = protoNw.GetName()
 	c := protoNw.GetNetwork().GetCIDR()
-	_, nt, err := net.ParseCIDR(c)
+	ip, nt, err := net.ParseCIDR(c)
 	if err != nil {
 		return err
+	}
+	if !nt.IP.Equal(ip) {
+		return errors.Errorf("the '%s' seems just an IP address; the address of network is expected instead", c)
 	}
 	n.Net = *nt
 	return nil
 }
 
 func (snc syncNetworks) process(ctx context.Context) error {
-	networks := make([]model.Network, 0, len(snc.networks))
-	names := make([]string, 0, len(snc.networks))
+	var networks []model.Network
+	var names []string
 	for _, src := range snc.networks {
-		if snc.ops != sg.SyncReq_Delete {
+		if snc.ops == sg.SyncReq_Delete {
+			if names == nil {
+				names = make([]string, 0, len(snc.networks))
+			}
+			names = append(names, src.GetName())
+		} else {
+			if networks == nil {
+				networks = make([]model.Network, 0, len(snc.networks))
+			}
 			var item network
 			if e := item.from(src); e != nil {
 				return status.Error(codes.InvalidArgument, e.Error())
 			}
 			networks = append(networks, item.Network)
 		}
-		if snc.ops != sg.SyncReq_FullSync {
-			names = append(names, src.GetName())
-		}
 	}
 	var sc registry.Scope = registry.NoScope
-	if len(names) != 0 {
-		sc = registry.NetworkNames(names[0], names[1:]...)
+	if snc.ops == sg.SyncReq_Delete {
+		sc = registry.NetworkNames(names...)
 	}
 	var opts []registry.Option
 	if err := syncOptionsFromProto(snc.ops, &opts); err != nil {
