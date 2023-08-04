@@ -1,21 +1,28 @@
 package internal
 
 import (
-	"bytes"
 	"context"
 	"sort"
 	"strings"
 
 	"github.com/H-BF/corlib/pkg/slice"
-	utils "github.com/H-BF/sgroups/internal/api/sgroups"
 
 	sgroupsAPI "github.com/H-BF/protos/pkg/api/sgroups"
+	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 // RcSG -
 const RcSG = SGroupsProvider + "_group"
+
+const (
+	// RcLabelTrace -
+	RcLabelTrace = "trace"
+
+	// RcLabelDefaultAction
+	RcLabelDefaultAction = "default_action"
+)
 
 // SGroupsRcSG SG resource
 func SGroupsRcSG() *schema.Resource {
@@ -34,6 +41,33 @@ func SGroupsRcSG() *schema.Resource {
 				Description: "SecurityGroup name",
 				Type:        schema.TypeString,
 				Required:    true,
+			},
+			RcLabelLogs: {
+				Description: "switch ON|OFF logs on SG",
+				Optional:    true,
+				Default:     false,
+				Type:        schema.TypeBool,
+			},
+			RcLabelTrace: {
+				Description: "switch ON|OFF trace on SG",
+				Optional:    true,
+				Default:     false,
+				Type:        schema.TypeBool,
+			},
+			RcLabelDefaultAction: {
+				Default:     sgroupsAPI.SecGroup_DROP.String(),
+				Optional:    true,
+				Description: "set default action on SG",
+				Type:        schema.TypeString,
+				ValidateDiagFunc: func(i interface{}, _ cty.Path) diag.Diagnostics {
+					s := i.(string)
+					ok := sgroupsAPI.SecGroup_ACCEPT.String() == s ||
+						sgroupsAPI.SecGroup_DROP.String() == s
+					if ok {
+						return nil
+					}
+					return diag.Errorf("unknown SG default action '%s'", s)
+				},
 			},
 			RcLabelNetworks: {
 				DiffSuppressFunc: func(_, oldValue, newValue string, _ *schema.ResourceData) bool {
@@ -59,16 +93,10 @@ func sgRead(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Di
 		return diag.FromErr(err)
 	}
 	if g := resp.GetGroups(); len(g) > 0 {
-		m := utils.Proto2BriefModelSG(g[0])
-		if err = rd.Set(RcLabelName, m.Name); err == nil {
-			buf := bytes.NewBuffer(nil)
-			for _, n := range m.Networks {
-				if buf.Len() > 0 {
-					_ = buf.WriteByte(',')
-				}
-				_, _ = buf.WriteString(n)
+		for k, v := range protoSG2tf(g[0]) {
+			if err = rd.Set(k, v); err != nil {
+				break
 			}
-			err = rd.Set(RcLabelNetworks, buf.String())
 		}
 	} else {
 		rd.SetId("")
@@ -77,11 +105,16 @@ func sgRead(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Di
 }
 
 func sgC(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
-	name := rd.Get(RcLabelName).(string)
-	nwList, _ := rd.Get(RcLabelNetworks).(string)
-	sg := &sgroupsAPI.SecGroup{
-		Name:     name,
-		Networks: splitNetNames(nwList),
+	labs := [...]string{
+		RcLabelName, RcLabelNetworks, RcLabelLogs, RcLabelTrace, RcLabelDefaultAction,
+	}
+	raw := make(map[string]any)
+	for _, l := range labs {
+		raw[l] = rd.Get(l)
+	}
+	name, sg, err := tf2protoSG(raw)
+	if err != nil {
+		return diag.FromErr(err)
 	}
 	req := sgroupsAPI.SyncReq{
 		SyncOp: sgroupsAPI.SyncReq_Upsert,
@@ -102,13 +135,16 @@ func sgUD(ctx context.Context, rd *schema.ResourceData, i interface{}, upd bool)
 	if upd && rd.HasChange(RcLabelName) {
 		return diag.Errorf("unable change 'name' for 'SG' resource")
 	}
-	name := rd.Get(RcLabelName).(string)
-	sg := &sgroupsAPI.SecGroup{
-		Name: name,
+	labs := [...]string{
+		RcLabelName, RcLabelNetworks, RcLabelLogs, RcLabelTrace, RcLabelDefaultAction,
 	}
-	if upd {
-		nwList, _ := rd.Get(RcLabelNetworks).(string)
-		sg.Networks = splitNetNames(nwList)
+	raw := make(map[string]any)
+	for _, l := range labs {
+		raw[l] = rd.Get(l)
+	}
+	name, sg, err := tf2protoSG(raw)
+	if err != nil {
+		return diag.FromErr(err)
 	}
 	op := sgroupsAPI.SyncReq_Upsert
 	if !upd {

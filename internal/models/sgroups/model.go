@@ -26,6 +26,9 @@ type (
 	// NetworkTransport net transport
 	NetworkTransport uint8
 
+	// ChainDefaultAction default action for SG {DROP|ACCEPT}
+	ChainDefaultAction uint8
+
 	// NetworkName net nam
 	NetworkName = string
 
@@ -37,8 +40,11 @@ type (
 
 	// SecurityGroup security group for networks(s)
 	SecurityGroup struct {
-		Name     string
-		Networks []NetworkName
+		Name          string
+		Networks      []NetworkName
+		Logs          bool
+		Trace         bool
+		DefaultAction ChainDefaultAction
 	}
 
 	// SGRuleIdentity security rule ID as key
@@ -58,6 +64,7 @@ type (
 	SGRule struct {
 		SGRuleIdentity
 		Ports []SGRulePorts
+		Logs  bool
 	}
 
 	// SyncStatus succeeded sync-op status
@@ -89,6 +96,14 @@ const (
 	UDP
 )
 
+const (
+	// DROP drop action net packet
+	DROP ChainDefaultAction = iota
+
+	// ACCEPT accept action net packet
+	ACCEPT
+)
+
 // NewPortRarnges is a port rarnges constructor
 func NewPortRarnges() PortRanges {
 	return ranges.NewMultiRange(PortRangeFactory)
@@ -102,6 +117,25 @@ func (nw Network) String() string {
 // String impl Stringer
 func (nt NetworkTransport) String() string {
 	return [...]string{"tcp", "udp"}[nt]
+}
+
+// String impl Stringer
+func (a ChainDefaultAction) String() string {
+	return [...]string{"drop", "accept"}[a]
+}
+
+// FromString inits from string
+func (a *ChainDefaultAction) FromString(s string) error {
+	const api = "ChainDefaultAction/FromString"
+	switch strings.ToLower(s) {
+	case "drop":
+		*a = DROP
+	case "accept":
+		*a = ACCEPT
+	default:
+		return errors.WithMessage(fmt.Errorf("unknown value '%s'", s), api)
+	}
+	return nil
 }
 
 // FromString init from string
@@ -158,5 +192,6 @@ func (sgRuleKey *SGRuleIdentity) FromString(s string) error {
 // IsEq -
 func (rule SGRule) IsEq(other SGRule) bool {
 	return rule.SGRuleIdentity.IsEq(other.SGRuleIdentity) &&
-		AreRulePortsEq(rule.Ports, other.Ports)
+		AreRulePortsEq(rule.Ports, other.Ports) &&
+		rule.Logs == other.Logs
 }

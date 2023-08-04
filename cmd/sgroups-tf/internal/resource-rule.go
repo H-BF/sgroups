@@ -19,6 +19,7 @@ import (
 proto: TCP
 sg_from: sg1
 sg_to: sg2
+logs: <true|false>
 ports:
 - s: 10
   d: 200-210
@@ -65,6 +66,12 @@ func SGroupsRcRule() *schema.Resource {
 				Description: "SG to",
 				Type:        schema.TypeString,
 				Required:    true,
+			},
+			RcLabelLogs: {
+				Description: "switch {on|off} logs on every rule in SG",
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Default:     false,
 			},
 			RcLabelRulePorts: {
 				Description:      "access ports",
@@ -191,7 +198,7 @@ func ruleUD(ctx context.Context, rd *schema.ResourceData, i interface{}, upd boo
 
 func rd2protoRule(rd *schema.ResourceData, withPorts bool) (*sgroupsAPI.Rule, error) {
 	attrs := []string{
-		RcLabelSgFrom, RcLabelSgTo, RcLabelProto,
+		RcLabelSgFrom, RcLabelSgTo, RcLabelProto, RcLabelLogs,
 	}
 	if withPorts {
 		attrs = append(attrs, RcLabelRulePorts)

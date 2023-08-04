@@ -93,6 +93,7 @@ func (r sgRule) from(src *sg.Rule) error {
 	err := sgRuleIdentity{SGRuleIdentity: &r.SGRuleIdentity}.
 		from(src)
 	if err == nil {
+		r.Logs = src.GetLogs()
 		var p rulePorts
 		if err = p.from(src.GetPorts()); err == nil {
 			r.Ports = p

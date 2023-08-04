@@ -30,6 +30,7 @@ func sgRule2proto(src model.SGRule) (*sg.Rule, error) {
 	} else {
 		ret.Transport = t
 	}
+	ret.Logs = src.Logs
 	ret.SgFrom = src.SgFrom.Name
 	ret.SgTo = src.SgTo.Name
 	ret.Ports = make([]*sg.Rule_Ports, 0, len(src.Ports))

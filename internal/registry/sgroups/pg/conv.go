@@ -11,6 +11,28 @@ import (
 	"github.com/pkg/errors"
 )
 
+func (o SG) ToModel() (sgm.SecurityGroup, error) {
+	ret := sgm.SecurityGroup{
+		Name:     o.Name,
+		Networks: o.Networks,
+		Logs:     o.Logs,
+		Trace:    o.Trace,
+	}
+	err := ret.DefaultAction.FromString(string(o.DefaultAction))
+	return ret, err
+}
+
+// FromModel -
+func (o *SG) FromModel(m sgm.SecurityGroup) {
+	o.Name = m.Name
+	o.Networks = m.Networks
+	o.Logs = m.Logs
+	o.Trace = m.Trace
+	o.DefaultAction = ChainDefaultAction(
+		strings.ToUpper(m.DefaultAction.String()),
+	)
+}
+
 // ToModel -
 func (o PortRange) ToModel(allowNull bool) (sgm.PortRange, error) {
 	if o.IsNull() {
@@ -190,6 +212,7 @@ func (o SGRule) ToModel() (sgm.SGRule, error) {
 	if ret.Transport, err = o.Proto.ToModel(); err != nil {
 		return ret, err
 	}
+	ret.Logs = o.Logs
 	ret.Ports, err = o.Ports.ToModel()
 	return ret, err
 }
@@ -204,6 +227,7 @@ func (o *SGRule) FromModel(m sgm.SGRule) error {
 	if err := o.Ports.FromModel(m.Ports); err != nil {
 		return err
 	}
+	o.Logs = m.Logs
 	return nil
 }
 

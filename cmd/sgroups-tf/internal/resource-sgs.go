@@ -8,6 +8,7 @@ import (
 	sgroupsAPI "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/pkg/errors"
 )
 
 // RcSGs -
@@ -17,12 +18,23 @@ const RcSGs = SGroupsProvider + "_groups"
 items:
 - name: sg1
   networks: "nw1, nw2"
+  trace: <true|false>
+  logs: <true|false>
+  default_action: <DROP|ACCEPT>
 - name: sg2
   networks: "nw3"
+  trace: <true|false>
+  logs: <true|false>
+  default_action: <DROP|ACCEPT>
 */
 
 // SGroupsRcSGs SGs resource
 func SGroupsRcSGs() *schema.Resource {
+	itemRC := SGroupsRcSG()
+	itemRC.CreateContext = nil
+	itemRC.UpdateContext = nil
+	itemRC.CreateContext = nil
+	itemRC.DeleteContext = nil
 	return &schema.Resource{
 		Description:   fmt.Sprintf("represents SecurityGroups (SG) resource in '%s' provider", SGroupsProvider),
 		CreateContext: sgsC,
@@ -33,27 +45,7 @@ func SGroupsRcSGs() *schema.Resource {
 			RcLabelItems: {
 				Optional: true,
 				Type:     schema.TypeList,
-				Elem: &schema.Resource{
-					Description: "SecurityGroup element",
-					Schema: map[string]*schema.Schema{
-						RcLabelName: {
-							Description: "SecurityGroup name",
-							Type:        schema.TypeString,
-							Required:    true,
-						},
-						RcLabelNetworks: {
-							DiffSuppressFunc: func(_, oldValue, newValue string, _ *schema.ResourceData) bool {
-								a := strings.Join(splitNetNames(oldValue), ",")
-								b := strings.Join(splitNetNames(newValue), ",")
-								return a == b
-							},
-							DiffSuppressOnRefresh: true,
-							Description:           "associated set of network(s)",
-							Type:                  schema.TypeString,
-							Optional:              true,
-						},
-					},
-				},
+				Elem:     itemRC,
 			},
 		},
 	}
@@ -124,12 +116,23 @@ func tf2protoSG(raw any) (string, *sgroupsAPI.SecGroup, error) {
 	}
 	nws, _ := it[RcLabelNetworks].(string)
 	sg.Networks = splitNetNames(nws)
+	da, _ := it[RcLabelDefaultAction].(string)
+	x, ok := sgroupsAPI.SecGroup_DefaultAction_value[strings.ToUpper(da)]
+	if !ok {
+		return "", nil, errors.Errorf("unable to convert '%s' into SG default action", da)
+	}
+	sg.DefaultAction = sgroupsAPI.SecGroup_DefaultAction(x)
+	sg.Trace, _ = it[RcLabelTrace].(bool)
+	sg.Logs, _ = it[RcLabelLogs].(bool)
 	return sg.Name, &sg, nil
 }
 
 func protoSG2tf(sg *sgroupsAPI.SecGroup) map[string]any {
 	return map[string]any{
-		RcLabelName:     sg.GetName(),
-		RcLabelNetworks: strings.Join(sg.GetNetworks(), ","),
+		RcLabelName:          sg.GetName(),
+		RcLabelNetworks:      strings.Join(sg.GetNetworks(), ","),
+		RcLabelLogs:          sg.GetLogs(),
+		RcLabelTrace:         sg.GetTrace(),
+		RcLabelDefaultAction: sg.GetDefaultAction().String(),
 	}
 }

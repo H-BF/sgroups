@@ -29,8 +29,10 @@ const (
 	RcLabelSPorts = "s"
 	// RcLabelDPorts -
 	RcLabelDPorts = "d"
-	//RcLabelRulePorts -
+	// RcLabelRulePorts -
 	RcLabelRulePorts = "ports"
+	// RcLabelLogs -
+	RcLabelLogs = "logs"
 )
 
 /*// respurce skeleton
@@ -38,6 +40,7 @@ items:
 - proto: TCP
   sg_from: sg1
   sg_to: sg2
+  logs: <true|false>
   ports:
   - s: 10
     d: 200-210
@@ -55,6 +58,11 @@ items:
 
 // SGroupsRcRules sg-rules resource
 func SGroupsRcRules() *schema.Resource {
+	itemRC := SGroupsRcRule()
+	itemRC.CreateContext = nil
+	itemRC.UpdateContext = nil
+	itemRC.CreateContext = nil
+	itemRC.DeleteContext = nil
 	return &schema.Resource{
 		Description:   fmt.Sprintf("represents SG rules resource in '%s' provider", SGroupsProvider),
 		CreateContext: rulesC,
@@ -66,57 +74,7 @@ func SGroupsRcRules() *schema.Resource {
 				Optional:    true,
 				Description: "SG rules list",
 				Type:        schema.TypeList,
-				Elem: &schema.Resource{
-					Description: "SG rule element",
-					Schema: map[string]*schema.Schema{ //nolint:dupl
-						RcLabelProto: {
-							Description: "ip-proto tcp|udp",
-							Type:        schema.TypeString,
-							Required:    true,
-							ValidateDiagFunc: func(i interface{}, p cty.Path) diag.Diagnostics {
-								s := i.(string)
-								ok := strings.EqualFold(common.Networks_NetIP_TCP.String(), s) ||
-									strings.EqualFold(common.Networks_NetIP_UDP.String(), s)
-								if ok {
-									return nil
-								}
-								return diag.Errorf("bad proto: '%s'", s)
-							},
-						},
-						RcLabelSgFrom: {
-							Description: "SG from",
-							Type:        schema.TypeString,
-							Required:    true,
-						},
-						RcLabelSgTo: {
-							Description: "SG to",
-							Type:        schema.TypeString,
-							Required:    true,
-						},
-						RcLabelRulePorts: {
-							Description:      "access ports",
-							Type:             schema.TypeList,
-							Optional:         true,
-							DiffSuppressFunc: diffSuppressSGRulePorts,
-							Elem: &schema.Resource{
-								Schema: map[string]*schema.Schema{
-									RcLabelSPorts: {
-										Description:      "source port or ports range",
-										Type:             schema.TypeString,
-										ValidateDiagFunc: validatePortOrRange,
-										Optional:         true,
-									},
-									RcLabelDPorts: {
-										Description:      "dest port or poprts range",
-										Type:             schema.TypeString,
-										ValidateDiagFunc: validatePortOrRange,
-										Optional:         true,
-									},
-								},
-							},
-						},
-					},
-				},
+				Elem:        itemRC,
 			},
 		},
 	}
@@ -225,6 +183,7 @@ func modelRule2tf(mr *model.SGRule) (map[string]any, error) {
 		RcLabelSgFrom: mr.SgFrom.Name,
 		RcLabelSgTo:   mr.SgTo.Name,
 		RcLabelProto:  mr.Transport.String(),
+		RcLabelLogs:   mr.Logs,
 	}
 	if len(ports) > 0 {
 		ret[RcLabelRulePorts] = ports
@@ -243,6 +202,7 @@ func tf2protoRule(raw any) (string, *sgroupsAPI.Rule, error) {
 		SgFrom:    item[RcLabelSgFrom].(string),
 		SgTo:      item[RcLabelSgTo].(string),
 	}
+	rule.Logs, _ = item[RcLabelLogs].(bool)
 	id, err := utils.Proto2ModelSGRuleIdentity(rule)
 	if err != nil {
 		return "", nil, err

@@ -302,7 +302,7 @@ func (h syncHelper[T, TKey]) diff(opts ...Option) (upd, ins, del []T) { //nolint
 func (h syncHelper[T, TKey]) extractKey(obj T) (TKey, error) {
 	var k TKey
 	var vSrc reflect.Value
-	switch a := interface{}(obj).(type) {
+	switch a := any(obj).(type) {
 	case model.Network:
 		vSrc = reflect.ValueOf(a.Name)
 	case model.SecurityGroup:
@@ -322,18 +322,22 @@ func (h syncHelper[T, TKey]) extractKey(obj T) (TKey, error) {
 }
 
 func (h syncHelper[T, TKey]) isEQ(l, r T) bool {
-	switch lt := interface{}(l).(type) {
+	switch lt := any(l).(type) {
 	case net.IPNet:
-		rt := interface{}(r).(net.IPNet)
+		rt := any(r).(net.IPNet)
 		return lt.IP.Equal(rt.IP) &&
 			bytes.Equal(lt.Mask, rt.Mask)
 	case model.Network:
-		rt := interface{}(r).(model.Network)
+		rt := any(r).(model.Network)
 		var h syncHelper[net.IPNet, string]
 		return h.isEQ(lt.Net, rt.Net)
 	case model.SecurityGroup:
-		rt := interface{}(r).(model.SecurityGroup)
-		if len(lt.Networks) == len(rt.Networks) {
+		rt := any(r).(model.SecurityGroup)
+		eq := lt.DefaultAction == rt.DefaultAction &&
+			lt.Logs == rt.Logs &&
+			lt.Trace == rt.Trace &&
+			len(lt.Networks) == len(rt.Networks)
+		if eq {
 			a := make(map[model.NetworkName]bool, len(lt.Networks))
 			for _, nwName := range lt.Networks {
 				a[nwName] = true
@@ -348,7 +352,7 @@ func (h syncHelper[T, TKey]) isEQ(l, r T) bool {
 			return len(a) == 0
 		}
 	case model.SGRule:
-		rt := interface{}(r).(model.SGRule)
+		rt := any(r).(model.SGRule)
 		return lt.IsEq(rt)
 	default:
 	}
