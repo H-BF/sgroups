@@ -25,18 +25,12 @@ type (
 	//SgName is a type alias
 	SgName = string
 
-	//SG is a security gorups
-	SG = struct {
-		Name     string
-		Networks []Network
-	}
-
 	//SGClient is a type alias
 	SGClient = sgAPI.SecGroupServiceClient
 
 	// LocalSG ...
 	LocalSG struct {
-		SgName
+		SG           model.SecurityGroup
 		IPsV4, IPsV6 iplib.ByIP
 	}
 
@@ -73,8 +67,7 @@ func (loc *LocalSGs) Load(ctx context.Context, client SGClient, srcIPs []net.IP)
 		defer mx.Unlock()
 		it := (*loc)[sg.Name]
 		if it == nil {
-			it = new(LocalSG)
-			it.SgName = sg.Name
+			it = &LocalSG{SG: sg}
 			(*loc)[sg.Name] = it
 		}
 		switch len(srcIP) {
@@ -83,6 +76,7 @@ func (loc *LocalSGs) Load(ctx context.Context, client SGClient, srcIPs []net.IP)
 		case net.IPv6len:
 			it.IPsV6 = append(it.IPsV6, srcIP)
 		}
+		mx.Unlock()
 		return nil
 	}
 	if err := parallel.ExecAbstract(len(srcIPs), 8, job); err != nil { //nolint:gomnd
@@ -103,7 +97,7 @@ func (loc *LocalSGs) Load(ctx context.Context, client SGClient, srcIPs []net.IP)
 
 // Names get local SG(s) names
 func (loc LocalSGs) Names() []SgName {
-	var ret []SgName
+	ret := make([]SgName, 0, len(loc))
 	for n := range loc {
 		ret = append(ret, n)
 	}

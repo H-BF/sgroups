@@ -42,6 +42,10 @@ func (rb ruleBuilder) applyRule(chn *nftlib.Chain, c *nftlib.Conn) {
 	}
 }
 
+func (rb ruleBuilder) nop() ruleBuilder { //nolint:unused
+	return rb
+}
+
 func (rb ruleBuilder) accept() ruleBuilder {
 	rb.exprs = append(rb.exprs,
 		&Verdict{Kind: VerdictAccept},
