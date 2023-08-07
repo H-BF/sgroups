@@ -449,15 +449,18 @@ func (bt *batch) addOutChains(localRules cases.LocalRules) {
 						bt.addJob(api, func(tx *nfTablesTx) error {
 							if daddrSet := bt.addrsets.at(daddrSetName); daddrSet != nil {
 								cAddedRules++
-								ports.D(
+								r := ports.D(
 									ports.S(
 										beginRule().daddr(ipV).inSet(daddrSet).ipProto(in.Proto),
 									),
-								).counter().accept().
-									applyRule(chnApplyTo, tx.Conn)
+								).counter()
+								if details.logs {
+									r = r.dlogs(nfte.LogFlagsIPOpt)
+								}
+								r.accept().applyRule(chnApplyTo, tx.Conn)
 							}
 							if fin {
-								r := beginRule().metaNFTRACE(tmpl.SgOut.Logs).counter()
+								r := beginRule().metaNFTRACE(tmpl.SgOut.Trace).counter()
 								if tmpl.SgOut.Logs {
 									r = r.dlogs(nfte.LogFlagsIPOpt)
 								}
@@ -532,15 +535,18 @@ func (bt *batch) addInChains(localRules cases.LocalRules) {
 						bt.addJob(api, func(tx *nfTablesTx) error {
 							if saddrSet := bt.addrsets.at(saddrSetName); saddrSet != nil {
 								cAddedRules++
-								ports.S(
+								r := ports.S(
 									ports.D(
 										beginRule().saddr(ipV).inSet(saddrSet).ipProto(outSG.Proto),
 									),
-								).counter().accept().
-									applyRule(chnApplyTo, tx.Conn)
+								).counter()
+								if details.logs {
+									r = r.dlogs(nfte.LogFlagsIPOpt)
+								}
+								r.accept().applyRule(chnApplyTo, tx.Conn)
 							}
 							if fin {
-								r := beginRule().metaNFTRACE(tmpl.SgIn.Logs).counter()
+								r := beginRule().metaNFTRACE(tmpl.SgIn.Trace).counter()
 								if tmpl.SgIn.Logs {
 									r = r.dlogs(nfte.LogFlagsIPOpt)
 								}
