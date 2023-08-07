@@ -42,6 +42,17 @@ func (rb ruleBuilder) applyRule(chn *nftlib.Chain, c *nftlib.Conn) {
 	}
 }
 
+func (rb ruleBuilder) dlogs(f LogFlags) ruleBuilder { //nolint:unused
+	rb.exprs = append(rb.exprs,
+		&Log{
+			Flags: f,
+			Level: LogLevelDebug,
+			Key: (1<<unix.NFTA_LOG_FLAGS)*tern(f == 0, uint32(0), 1) |
+				(1 << unix.NFTA_LOG_LEVEL),
+		})
+	return rb
+}
+
 func (rb ruleBuilder) nop() ruleBuilder { //nolint:unused
 	return rb
 }
@@ -290,20 +301,18 @@ func (rb ruleBuilder) eqS(s string) ruleBuilder { //nolint:unused
 }
 
 func (rb ruleBuilder) metaNFTRACE(on bool) ruleBuilder {
-	var isOn byte
 	if on {
-		isOn = 1
+		rb.exprs = append(rb.exprs,
+			&Immediate{
+				Register: 1,
+				Data:     []byte{1},
+			},
+			&Meta{
+				Key:            MetaKeyNFTRACE,
+				Register:       1,
+				SourceRegister: true,
+			}, //meta nftrace set 1|0
+		)
 	}
-	rb.exprs = append(rb.exprs,
-		&Immediate{
-			Register: 1,
-			Data:     []byte{isOn},
-		},
-		&Meta{
-			Key:            MetaKeyNFTRACE,
-			Register:       1,
-			SourceRegister: true,
-		}, //meta nftrace set 1|0
-	)
 	return rb
 }

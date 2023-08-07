@@ -76,7 +76,6 @@ func (loc *LocalSGs) Load(ctx context.Context, client SGClient, srcIPs []net.IP)
 		case net.IPv6len:
 			it.IPsV6 = append(it.IPsV6, srcIP)
 		}
-		mx.Unlock()
 		return nil
 	}
 	if err := parallel.ExecAbstract(len(srcIPs), 8, job); err != nil { //nolint:gomnd

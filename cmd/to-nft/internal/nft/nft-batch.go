@@ -29,10 +29,6 @@ const (
 	chnFWOUT   = "FW-OUT"
 )
 
-const ( //TODO: it just for testing purpose
-	FWINS_ACCEPT = "ACCEPT_FWINS"
-)
-
 type (
 	jobItem struct {
 		name string
@@ -461,7 +457,21 @@ func (bt *batch) addOutChains(localRules cases.LocalRules) {
 									applyRule(chnApplyTo, tx.Conn)
 							}
 							if fin {
-								beginRule().drop().applyRule(chnApplyTo, tx.Conn)
+								r := beginRule().metaNFTRACE(tmpl.SgOut.Logs).counter()
+								if tmpl.SgOut.Logs {
+									r = r.dlogs(nfte.LogFlagsIPOpt)
+								}
+								switch da := tmpl.SgOut.DefaultAction; da {
+								case model.ACCEPT:
+									r = r.accept()
+								case model.DROP:
+									r = r.drop()
+								default:
+									panic(
+										errors.Errorf("in chain '%s' unrecognized default verdict action(%v)", outSGchName, da),
+									)
+								}
+								r.applyRule(chnApplyTo, tx.Conn)
 								bt.log.Debugf("added %v rule(s) to chain '%s' in table '%s'",
 									cAddedRules, outSGchName, bt.table.Name)
 							}
@@ -530,7 +540,21 @@ func (bt *batch) addInChains(localRules cases.LocalRules) {
 									applyRule(chnApplyTo, tx.Conn)
 							}
 							if fin {
-								beginRule().drop().applyRule(chnApplyTo, tx.Conn)
+								r := beginRule().metaNFTRACE(tmpl.SgIn.Logs).counter()
+								if tmpl.SgIn.Logs {
+									r = r.dlogs(nfte.LogFlagsIPOpt)
+								}
+								switch da := tmpl.SgIn.DefaultAction; da {
+								case model.ACCEPT:
+									r = r.accept()
+								case model.DROP:
+									r = r.drop()
+								default:
+									panic(
+										errors.Errorf("in chain '%s' unrecognized default verdict action(%v)", inSGchName, da),
+									)
+								}
+								r.applyRule(chnApplyTo, tx.Conn)
 								bt.log.Debugf("added %v rule(s) to chain '%s' in table '%s'",
 									cAddedRules, inSGchName, bt.table.Name)
 							}
