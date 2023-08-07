@@ -42,7 +42,7 @@ func (rb ruleBuilder) applyRule(chn *nftlib.Chain, c *nftlib.Conn) {
 	}
 }
 
-func (rb ruleBuilder) dlogs(f LogFlags) ruleBuilder { //nolint:unused
+func (rb ruleBuilder) dlogs(f LogFlags) ruleBuilder { //nolint:unparam
 	rb.exprs = append(rb.exprs,
 		&Log{
 			Flags: f,

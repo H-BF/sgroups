@@ -149,7 +149,7 @@ func (rules LocalRules) IterateNetworks(f func(sgName string, nets []net.IPNet, 
 }
 
 // TemplatesOutRules -
-func (rules LocalRules) TemplatesOutRules() []RulesOutTemplate {
+func (rules LocalRules) TemplatesOutRules() []RulesOutTemplate { //nolint:dupl
 	type groupped = struct {
 		Sg    string
 		Proto model.NetworkTransport
@@ -179,7 +179,7 @@ func (rules LocalRules) TemplatesOutRules() []RulesOutTemplate {
 }
 
 // TemplatesInRules -
-func (rules LocalRules) TemplatesInRules() []RulesInTemplate {
+func (rules LocalRules) TemplatesInRules() []RulesInTemplate { //nolint:dupl
 	type groupped = struct {
 		Sg    string
 		Proto model.NetworkTransport

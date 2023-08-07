@@ -442,7 +442,7 @@ func (bt *batch) addOutChains(localRules cases.LocalRules) {
 					chnApplyTo := bt.chains.at(outSGchName)
 					detailsName := nameUtils{}.nameOfPortSet(in.Proto, tmpl.SgOut.Name, in.Sg)
 					details := bt.ruleDetails.at(detailsName)
-					for n := range details.accports {
+					for n := range details.accports { //nolint:dupl
 						n := n
 						ports := details.accports[n]
 						fin := k+1 == len(tmpl.In) && j+1 == len(ipVersions) && n+1 == len(details.accports)
@@ -528,7 +528,7 @@ func (bt *batch) addInChains(localRules cases.LocalRules) {
 					chnApplyTo := bt.chains.at(inSGchName)
 					detailsName := nameUtils{}.nameOfPortSet(outSG.Proto, outSG.Sg, tmpl.SgIn.Name)
 					details := bt.ruleDetails.at(detailsName)
-					for n := range details.accports {
+					for n := range details.accports { //nolint:dupl
 						n := n
 						ports := details.accports[n]
 						fin := k+1 == len(tmpl.Out) && j+1 == len(ipVersions) && n+1 == len(details.accports)
