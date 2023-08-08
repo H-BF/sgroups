@@ -43,6 +43,10 @@ func ternAny[t1 any, t2 any](cond bool, a1 t1, a2 t2) any {
 	return a2
 }
 
+func sli[T any](d ...T) []T {
+	return d
+}
+
 func tern[T any](cond bool, a1, a2 T) T {
 	if cond {
 		return a1

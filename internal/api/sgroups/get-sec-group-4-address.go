@@ -48,9 +48,9 @@ func (srv *sgService) GetSecGroupForAddress(ctx context.Context, req *sg.GetSecG
 	err = reader.ListNetworks(ctx, func(n model.Network) error {
 		nwName = n.Name
 		return reader.ListSecurityGroups(ctx, func(g model.SecurityGroup) error {
-			resp = &sg.SecGroup{
-				Name:     g.Name,
-				Networks: g.Networks,
+			var e error
+			if resp, e = sg2proto(g); e != nil {
+				return e
 			}
 			return errSuccess
 		}, registry.NetworkNames(nwName))

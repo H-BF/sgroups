@@ -3,6 +3,7 @@ package cases
 import (
 	"context"
 	"net"
+	"sync"
 
 	conv "github.com/H-BF/sgroups/internal/api/sgroups"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
@@ -16,28 +17,9 @@ import (
 )
 
 type (
-	// SgFrom ...
-	SgFrom = struct {
-		SgName
-		Transport model.NetworkTransport
-	}
-	// SgTo ...
-	SgTo = map[SgName]RulePorts
-	// SgRules ...
-	SgRules = map[SgFrom]SgTo
-
-	// RulePorts ...
-	RulePorts = []model.SGRulePorts
-
-	// RuleIdentity -
-	RuleIdentity = struct {
-		SgFrom, SgTo string
-		Proto        model.NetworkTransport
-	}
-
 	// RulesOutTempalte -
 	RulesOutTemplate struct {
-		SgOut string
+		SgOut model.SecurityGroup
 		In    []struct {
 			Sg    string
 			Proto model.NetworkTransport
@@ -46,37 +28,40 @@ type (
 
 	// RulesInTempalte -
 	RulesInTemplate struct {
-		SgIn string
+		SgIn model.SecurityGroup
 		Out  []struct {
 			Sg    string
 			Proto model.NetworkTransport
 		}
 	}
 
-	// LocalRules ...
+	// LocalRules -
 	LocalRules struct {
-		SgRules
-		LocalSGs LocalSGs
-		UsedSGs  map[SgName]*SG
+		LocalSGs
+		Rules    []model.SGRule
+		Networks Sg2Networks
 	}
 
-	// SgNetworks ...
-	SgNetworks = struct {
+	// SgNetworks -
+	SgNetworks struct {
 		V4, V6 []net.IPNet
 	}
 
-	// Sg2Networks ...
+	// Sg2Networks -
 	Sg2Networks map[SgName]*SgNetworks
 )
 
 // Load ...
-func (rules *LocalRules) Load(ctx context.Context, client SGClient, locals LocalSGs) error {
+func (rules *LocalRules) Load(ctx context.Context, client SGClient, locals LocalSGs) (err error) {
 	const api = "LocalRules/Load"
 
-	rules.SgRules = make(SgRules)
+	defer func() {
+		err = errors.WithMessage(err, api)
+	}()
+
 	rules.LocalSGs = make(LocalSGs)
-	rules.UsedSGs = make(map[SgName]*SG)
-	var sgNames []string
+	rules.Networks = nil
+	rules.Rules = nil
 
 	localSgNames := locals.Names()
 	if len(localSgNames) == 0 {
@@ -86,69 +71,39 @@ func (rules *LocalRules) Load(ctx context.Context, client SGClient, locals Local
 		{SgFrom: localSgNames}, {SgTo: localSgNames},
 	}
 	for i := range reqs {
-		req, isFrom := &reqs[i], i == 0
-		resp, err := client.FindRules(ctx, req)
-		if err != nil {
-			return errors.WithMessage(err, api)
+		var resp *sgAPI.RulesResp
+		if resp, err = client.FindRules(ctx, &reqs[i]); err != nil {
+			return err
 		}
 		for _, protoRule := range resp.GetRules() {
 			var rule model.SGRule
 			if rule, err = conv.Proto2ModelSGRule(protoRule); err != nil {
-				return errors.WithMessage(err, api)
+				return err
 			}
-			if isFrom {
-				rules.addRule(rule)
-				if loc := locals[rule.SgFrom.Name]; loc != nil {
-					rules.LocalSGs[rule.SgFrom.Name] = loc
-				}
-			} else {
-				rules.addRule(rule)
-				if loc := locals[rule.SgTo.Name]; loc != nil {
-					rules.LocalSGs[rule.SgTo.Name] = loc
-				}
-			}
-			for _, n := range []string{rule.SgFrom.Name, rule.SgTo.Name} {
-				if rules.UsedSGs[n] == nil {
-					rules.UsedSGs[n] = &SG{Name: n}
-					sgNames = append(sgNames, n)
-				}
+			rules.Rules = append(rules.Rules, rule)
+		}
+	}
+	linq.From(rules.Rules).DistinctBy(func(i any) any {
+		type ri = struct {
+			SgFrom, SgTo string
+			Proto        model.NetworkTransport
+		}
+		v := i.(model.SGRule)
+		return ri{
+			SgFrom: v.SgFrom.Name,
+			SgTo:   v.SgTo.Name,
+			Proto:  v.Transport,
+		}
+	}).ToSlice(&rules.Rules)
+	for _, r := range rules.Rules {
+		for _, n := range [...]string{r.SgFrom.Name, r.SgTo.Name} {
+			if sg := locals[n]; sg != nil && rules.LocalSGs[n] == nil {
+				rules.LocalSGs[n] = sg
 			}
 		}
 	}
-
-	err := parallel.ExecAbstract(len(sgNames), 7, func(i int) error { //nolint:gomnd
-		rq := sgAPI.GetSgSubnetsReq{SgName: sgNames[i]}
-		resp, e := client.GetSgSubnets(ctx, &rq)
-		if e == nil {
-			for _, nw := range resp.GetNetworks() {
-				var m model.Network
-				m, e = conv.Proto2ModelNetwork(nw)
-				if e != nil {
-					return e
-				}
-				o := rules.UsedSGs[sgNames[i]]
-				o.Networks = append(o.Networks, m)
-			}
-		}
-		if status.Code(errors.Cause(e)) == codes.NotFound {
-			e = nil
-		}
-		return e
-	})
-	return errors.WithMessage(err, api)
-}
-
-func (rules *LocalRules) addRule(rule model.SGRule) {
-	sgFrom := SgFrom{
-		Transport: rule.Transport,
-		SgName:    rule.SgFrom.Name,
-	}
-	sgTo := rules.SgRules[sgFrom]
-	if sgTo == nil {
-		sgTo = make(SgTo)
-		rules.SgRules[sgFrom] = sgTo
-	}
-	sgTo[rule.SgTo.Name] = rule.Ports
+	err = rules.Networks.Load(ctx, client, rules.LocalSGs.Names())
+	return err
 }
 
 // IterateNetworks ...
@@ -157,8 +112,6 @@ func (rules LocalRules) IterateNetworks(f func(sgName string, nets []net.IPNet, 
 		sgName string
 		v6     bool
 	}
-	var sg2nws Sg2Networks
-	sg2nws.Init(rules)
 	seen := make(map[tk]bool)
 	send := func(sgName string, isV6 bool, nets []net.IPNet) error {
 		k := tk{sgName, isV6}
@@ -168,23 +121,23 @@ func (rules LocalRules) IterateNetworks(f func(sgName string, nets []net.IPNet, 
 		}
 		return nil
 	}
-	for from, to := range rules.SgRules {
-		nw1 := sg2nws[from.SgName]
-		for toSg := range to {
-			nw2 := sg2nws[toSg]
+	for _, r := range rules.Rules {
+		nw1 := rules.Networks[r.SgFrom.Name]
+		nw2 := rules.Networks[r.SgTo.Name]
+		if nw1 != nil && nw2 != nil {
 			if len(nw1.V4) > 0 && len(nw2.V4) > 0 {
-				err := send(from.SgName, false, nw1.V4)
+				err := send(r.SgFrom.Name, false, nw1.V4)
 				if err == nil {
-					err = send(toSg, false, nw2.V4)
+					err = send(r.SgTo.Name, false, nw2.V4)
 				}
 				if err != nil {
 					return err
 				}
 			}
 			if len(nw1.V6) > 0 && len(nw2.V6) > 0 {
-				err := send(from.SgName, true, nw1.V6)
+				err := send(r.SgFrom.Name, false, nw1.V6)
 				if err == nil {
-					err = send(toSg, true, nw2.V6)
+					err = send(r.SgTo.Name, false, nw2.V6)
 				}
 				if err != nil {
 					return err
@@ -196,85 +149,93 @@ func (rules LocalRules) IterateNetworks(f func(sgName string, nets []net.IPNet, 
 }
 
 // TemplatesOutRules -
-func (rules LocalRules) TemplatesOutRules() []RulesOutTemplate {
+func (rules LocalRules) TemplatesOutRules() []RulesOutTemplate { //nolint:dupl
 	type groupped = struct {
 		Sg    string
 		Proto model.NetworkTransport
 	}
-	var data []RuleIdentity
-	for from, to := range rules.SgRules {
-		if rules.LocalSGs[from.SgName] != nil {
-			id := RuleIdentity{SgFrom: from.SgName, Proto: from.Transport}
-			for toSg := range to {
-				id.SgTo = toSg
-				data = append(data, id)
+	var res []RulesOutTemplate
+	linq.From(rules.Rules).
+		GroupBy(
+			func(i any) any {
+				return i.(model.SGRule).SgFrom.Name
+			},
+			func(i any) any {
+				r := i.(model.SGRule)
+				return groupped{Sg: r.SgTo.Name, Proto: r.Transport}
+			},
+		).
+		Select(func(i any) any {
+			v := i.(linq.Group)
+			item := RulesOutTemplate{
+				SgOut: rules.LocalSGs[v.Key.(string)].SG,
 			}
-		}
-	}
-	groups := make([]linq.Group, 0, len(data))
-	linq.From(data).
-		GroupByT(
-			func(o RuleIdentity) string {
-				return o.SgFrom
-			},
-			func(o RuleIdentity) groupped {
-				return groupped{Sg: o.SgTo, Proto: o.Proto}
-			},
-		).ToSlice(&groups)
-	ret := make([]RulesOutTemplate, 0, len(groups))
-	for _, g := range groups {
-		item := RulesOutTemplate{SgOut: g.Key.(string)}
-		if len(g.Group) > 0 {
-			linq.From(g.Group).Distinct().ToSlice(&item.In)
-		}
-		ret = append(ret, item)
-	}
-	return ret
+			for _, g := range v.Group {
+				item.In = append(item.In, g.(groupped))
+			}
+			return item
+		}).ToSlice(&res)
+	return res
 }
 
 // TemplatesInRules -
-func (rules LocalRules) TemplatesInRules() []RulesInTemplate {
+func (rules LocalRules) TemplatesInRules() []RulesInTemplate { //nolint:dupl
 	type groupped = struct {
 		Sg    string
 		Proto model.NetworkTransport
 	}
-	var data []RuleIdentity
-	for from, to := range rules.SgRules {
-		id := RuleIdentity{SgFrom: from.SgName, Proto: from.Transport}
-		for toSg := range to {
-			if rules.LocalSGs[toSg] != nil {
-				id.SgTo = toSg
-				data = append(data, id)
+	var res []RulesInTemplate
+	linq.From(rules.Rules).
+		GroupBy(
+			func(i any) any {
+				return i.(model.SGRule).SgTo.Name
+			},
+			func(i any) any {
+				r := i.(model.SGRule)
+				return groupped{Sg: r.SgFrom.Name, Proto: r.Transport}
+			},
+		).
+		Select(func(i any) any {
+			v := i.(linq.Group)
+			item := RulesInTemplate{
+				SgIn: rules.LocalSGs[v.Key.(string)].SG,
 			}
-		}
-	}
-	groups := make([]linq.Group, 0, len(data))
-	linq.From(data).
-		GroupByT(
-			func(o RuleIdentity) string {
-				return o.SgTo
-			},
-			func(o RuleIdentity) groupped {
-				return groupped{Sg: o.SgFrom, Proto: o.Proto}
-			},
-		).ToSlice(&groups)
-	ret := make([]RulesInTemplate, 0, len(groups))
-	for _, g := range groups {
-		item := RulesInTemplate{SgIn: g.Key.(string)}
-		if len(g.Group) > 0 {
-			linq.From(g.Group).Distinct().ToSlice(&item.Out)
-		}
-		ret = append(ret, item)
-	}
-	return ret
+			for _, g := range v.Group {
+				item.Out = append(item.Out, g.(groupped))
+			}
+			return item
+		}).ToSlice(&res)
+	return res
 }
 
-// Init ...
-func (sg2nws *Sg2Networks) Init(locals LocalRules) {
+// Load loads networks from db
+func (sg2nws *Sg2Networks) Load(ctx context.Context, client SGClient, sgNames []SgName) error {
 	*sg2nws = make(Sg2Networks)
-	for _, sg := range locals.UsedSGs {
-		var nws SgNetworks
-		nws.V4, nws.V6 = separateNetworks(sg.Networks)
-		(*sg2nws)[sg.Name] = &nws
-	}
+	var mx sync.Mutex
+	err := parallel.ExecAbstract(len(sgNames), 8, func(i int) error { //nolint:gomnd
+		rq := sgAPI.GetSgSubnetsReq{SgName: sgNames[i]}
+		resp, e := client.GetSgSubnets(ctx, &rq)
+		if e != nil {
+			if status.Code(errors.Cause(e)) == codes.NotFound {
+				return nil
+			}
+			return e
+		}
+		nws := make([]Network, 0, len(resp.GetNetworks()))
+		for _, nw := range resp.GetNetworks() {
+			var m model.Network
+			if m, e = conv.Proto2ModelNetwork(nw); e != nil {
+				return e
+			}
+			nws = append(nws, m)
+		}
+		var x SgNetworks
+		x.V4, x.V6 = separateNetworks(nws)
+		mx.Lock()
+		(*sg2nws)[sgNames[i]] = &x
+		mx.Unlock()
+		return nil
+	})
+
+	return err
 }

@@ -17,7 +17,7 @@ var (
 // Validatable is a alias to oz.Validatable
 type Validatable = oz.Validatable
 
-// Network validate network model
+// Validate network model validate
 func (nw Network) Validate() error {
 	return oz.ValidateStruct(&nw,
 		oz.Field(&nw.Name, oz.Required.Error("network name is required")),
@@ -32,11 +32,12 @@ func (nw Network) Validate() error {
 	)
 }
 
-// SecurityGroup security grpoup validate
+// Validate security grpoup model validate
 func (sg SecurityGroup) Validate() error {
 	a := make(map[NetworkName]int)
 	return oz.ValidateStruct(&sg,
 		oz.Field(&sg.Name, oz.Required.Error("security grpoup name is rquired")),
+		oz.Field(&sg.DefaultAction),
 		oz.Field(&sg.Networks,
 			oz.Each(oz.By(func(value interface{}) error {
 				nw := value.(string)
@@ -52,16 +53,23 @@ func (sg SecurityGroup) Validate() error {
 	)
 }
 
+// Validate ChainDefaultAction validator
+func (a ChainDefaultAction) Validate() error {
+	vals, x := [...]any{int(DROP), int(ACCEPT)}, int(a)
+	return oz.Validate(x, oz.In(vals[:]...).Error("must be in ['DROP', 'ACCEPT']"))
+}
+
 // Validate net transport validator
 func (nt NetworkTransport) Validate() error {
-	return oz.Validate(nt, oz.In(TCP, UDP).Error("must be in ['TCP', 'UDP']"), oz.Skip)
+	vals, x := [...]any{int(TCP), int(UDP)}, int(nt)
+	return oz.Validate(x, oz.In(vals[:]...).Error("must be in ['TCP', 'UDP']"))
 }
 
 // Validate validate of SGRuleIdentity
 func (sgRuleKey SGRuleIdentity) Validate() error {
 	vali := func(value any) error {
 		sg := value.(SecurityGroup)
-		return oz.Validate(sg.Name, oz.Required.Error("sg name is required"))
+		return oz.Validate(sg.Name, oz.Required.Error("SG name is required"))
 	}
 	return oz.ValidateStruct(&sgRuleKey,
 		oz.Field(&sgRuleKey.Transport),
@@ -70,7 +78,7 @@ func (sgRuleKey SGRuleIdentity) Validate() error {
 	)
 }
 
-// ValidatePortRange -
+// ValidatePortRange portrange model validate
 func ValidatePortRange(pr PortRange, canBeNull bool) error {
 	if pr.IsNull() && !canBeNull {
 		return ErrUnexpectedNullPortRange
@@ -78,7 +86,7 @@ func ValidatePortRange(pr PortRange, canBeNull bool) error {
 	return nil
 }
 
-// Validate -
+// Validate SGRulePorts model validate
 func (ports SGRulePorts) Validate() error {
 	if ports.S.Len()+ports.D.Len() <= 0 {
 		return errors.Errorf("no any 'S' and 'D' port are present")

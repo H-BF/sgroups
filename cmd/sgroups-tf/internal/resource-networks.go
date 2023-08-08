@@ -39,6 +39,11 @@ items:
 
 // SGroupsRcNetworks networks resource
 func SGroupsRcNetworks() *schema.Resource {
+	itemRC := SGroupsRcNetwork()
+	itemRC.CreateContext = nil
+	itemRC.UpdateContext = nil
+	itemRC.CreateContext = nil
+	itemRC.DeleteContext = nil
 	return &schema.Resource{
 		Description:   fmt.Sprintf("represents networks resource in '%s' provider", SGroupsProvider),
 		CreateContext: networksC,

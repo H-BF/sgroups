@@ -7,6 +7,7 @@ import (
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 
 	sg "github.com/H-BF/protos/pkg/api/sgroups"
+	"github.com/pkg/errors"
 )
 
 type syncGroups struct {
@@ -29,7 +30,9 @@ func (snc syncGroups) process(ctx context.Context) error {
 				groups = make([]model.SecurityGroup, 0, len(snc.groups))
 			}
 			var x securityGroup
-			x.from(g)
+			if e := x.from(g); e != nil {
+				return e
+			}
 			groups = append(groups, x.SecurityGroup)
 		}
 	}
@@ -48,7 +51,18 @@ type securityGroup struct {
 	model.SecurityGroup
 }
 
-func (n *securityGroup) from(g *sg.SecGroup) {
+func (n *securityGroup) from(g *sg.SecGroup) error {
 	n.Name = g.GetName()
 	n.Networks = g.GetNetworks()
+	n.Logs = g.GetLogs()
+	n.Trace = g.GetTrace()
+	switch g.GetDefaultAction() {
+	case sg.SecGroup_DROP:
+		n.DefaultAction = model.DROP
+	case sg.SecGroup_ACCEPT:
+		n.DefaultAction = model.ACCEPT
+	default:
+		return errors.Errorf("unsupported SG chanin default action ('%s')", g.GetDefaultAction())
+	}
+	return nil
 }

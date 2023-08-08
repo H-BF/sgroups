@@ -66,7 +66,10 @@ func TestValidate_SecurityGroup(t *testing.T) {
 	}
 	cases := []item{
 		{SecurityGroup{}, true},
-		{SecurityGroup{Name: "sg"}, false},
+		{SecurityGroup{Name: "sg", DefaultAction: DROP + 100}, true},
+		{SecurityGroup{Name: "sg", DefaultAction: ACCEPT + 100}, true},
+		{SecurityGroup{Name: "sg", DefaultAction: ACCEPT}, false},
+		{SecurityGroup{Name: "sg", DefaultAction: DROP}, false},
 		{SecurityGroup{Name: "sg", Networks: []string{""}}, true},
 		{SecurityGroup{Name: "sg", Networks: []string{"nw"}}, false},
 		{SecurityGroup{Name: "sg", Networks: []string{"nw", "nw"}}, true},
@@ -97,6 +100,8 @@ func TestValidate_SGRuleIdentity(t *testing.T) {
 		{SGRuleIdentity{}, true},
 		{SGRuleIdentity{SgFrom: sg("n1"), Transport: TCP}, true},
 		{SGRuleIdentity{SgTo: sg("n2"), Transport: TCP}, true},
+		{SGRuleIdentity{SgFrom: sg("n1"), SgTo: sg("n2"), Transport: TCP + 100}, true},
+		{SGRuleIdentity{SgFrom: sg("n1"), SgTo: sg("n2"), Transport: UDP + 100}, true},
 		{SGRuleIdentity{SgFrom: sg("n1"), SgTo: sg("n2"), Transport: TCP}, false},
 		{SGRuleIdentity{SgFrom: sg("n1"), SgTo: sg("n2"), Transport: UDP}, false},
 		{SGRuleIdentity{SgFrom: sg("n1"), SgTo: sg("n2"), Transport: NetworkTransport(100)}, true},

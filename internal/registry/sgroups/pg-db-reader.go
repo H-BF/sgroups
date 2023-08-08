@@ -88,7 +88,7 @@ func (rd *pgDbReader) ListSecurityGroups(ctx context.Context, consume func(model
 	const (
 		fnSgList = "sgroups.list_sg"
 		fnSgFind = "sgroups.find_sg_by_network"
-		sel      = `select "name", networks from`
+		sel      = `select "name", networks, logs, trace, default_action from`
 	)
 	var from string
 	args := []any{pgx.QueryExecModeDescribeExec}
@@ -117,8 +117,14 @@ func (rd *pgDbReader) ListSecurityGroups(ctx context.Context, consume func(model
 		if err != nil {
 			return err
 		}
-		scanner := pgx.RowToStructByName[model.SecurityGroup]
-		return pgxIterateRowsAndClose(rows, scanner, consume)
+		scanner := pgx.RowToStructByName[pg.SG]
+		return pgxIterateRowsAndClose(rows, scanner, func(o pg.SG) error {
+			m, e := o.ToModel()
+			if e != nil {
+				return e
+			}
+			return consume(m)
+		})
 	})
 }
 
@@ -168,7 +174,7 @@ func (rd *pgDbReader) argsForListSGRules(scope Scope) ([]any, error) {
 // ListSGRules impl Reader interface
 func (rd *pgDbReader) ListSGRules(ctx context.Context, consume func(model.SGRule) error, scope Scope) error {
 	const (
-		qry = "select sg_from, sg_to, proto, ports from sgroups.list_sg_rule($1, $2)"
+		qry = "select sg_from, sg_to, proto, ports, logs from sgroups.list_sg_rule($1, $2)"
 	)
 	args, err := rd.argsForListSGRules(scope)
 	if err != nil {

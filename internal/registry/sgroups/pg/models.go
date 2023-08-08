@@ -39,6 +39,9 @@ type (
 	// Proto -
 	Proto string
 
+	// ChainDefaultAction -
+	ChainDefaultAction string
+
 	// Network -
 	Network struct {
 		Name    string    `db:"name"`
@@ -47,8 +50,11 @@ type (
 
 	// SG -
 	SG struct {
-		Name     string   `db:"name"`
-		Networks []string `db:"networks"`
+		Name          string             `db:"name"`
+		Networks      []string           `db:"networks"`
+		Logs          bool               `db:"logs"`
+		Trace         bool               `db:"trace"`
+		DefaultAction ChainDefaultAction `db:"default_action"`
 	}
 
 	// SGRule -
@@ -57,6 +63,7 @@ type (
 		SgTo   string           `db:"sg_to"`
 		Proto  Proto            `db:"proto"`
 		Ports  SgRulePortsArray `db:"ports"`
+		Logs   bool             `db:"logs"`
 	}
 
 	// SyncStatus -
@@ -139,6 +146,15 @@ func RegisterSGroupsTypesOntoPGX(ctx context.Context, c *pgx.Conn) (err error) {
 	pgTypeMap.RegisterType(pgType)
 	{
 		var x Proto
+		pgTypeMap.RegisterDefaultPgType(x, pgType.Name)
+		pgTypeMap.RegisterDefaultPgType(&x, pgType.Name)
+	}
+	if pgType, err = c.LoadType(ctx, "sgroups.chain_default_action"); err != nil {
+		return err
+	}
+	pgTypeMap.RegisterType(pgType)
+	{
+		var x ChainDefaultAction
 		pgTypeMap.RegisterDefaultPgType(x, pgType.Name)
 		pgTypeMap.RegisterDefaultPgType(&x, pgType.Name)
 	}

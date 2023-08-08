@@ -57,6 +57,9 @@ func (o *syncObj[T, tFlt]) construct() {
 		}.WithFields(
 			syncField{Name: "name", PgTy: "sgroups.cname", Notnull: true, Pk: true},
 			syncField{Name: "networks", PgTy: "sgroups.cname[]"},
+			syncField{Name: "logs", PgTy: "bool", Notnull: true},
+			syncField{Name: "trace", PgTy: "bool", Notnull: true},
+			syncField{Name: "default_action", PgTy: "sgroups.chain_default_action", Notnull: true},
 		)
 		o.mutatorFn = "sgroups.sync_sg"
 	case *sgm.SGRule:
@@ -67,6 +70,7 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "sg_to", PgTy: "sgroups.cname", Notnull: true, Pk: true},
 			syncField{Name: "proto", PgTy: "sgroups.proto", Notnull: true, Pk: true},
 			syncField{Name: "ports", PgTy: "sgroups.sg_rule_ports[]"},
+			syncField{Name: "logs", PgTy: "bool", Notnull: true},
 		)
 		o.mutatorFn = "sgroups.sync_sg_rule"
 	default:
@@ -139,13 +143,15 @@ func (o *syncObj[T, tFlt]) AddData(ctx context.Context, data ...T) error {
 		case sgm.Network:
 			raw = append(raw, []any{v.Name, v.Net})
 		case sgm.SecurityGroup:
-			raw = append(raw, []any{v.Name, v.Networks})
+			var sg SG
+			sg.FromModel(v)
+			raw = append(raw, []any{sg.Name, sg.Networks, sg.Logs, sg.Trace, sg.DefaultAction})
 		case sgm.SGRule:
 			var x SGRule
 			if err := x.FromModel(v); err != nil {
 				return err
 			}
-			raw = append(raw, []any{x.SgFrom, x.SgTo, x.Proto, x.Ports})
+			raw = append(raw, []any{x.SgFrom, x.SgTo, x.Proto, x.Ports, x.Logs})
 		default:
 			panic("UB")
 		}

@@ -17,17 +17,10 @@ func Proto2ModelNetwork(protoNw *sg.Network) (model.Network, error) {
 
 // Proto2ModelSG conv SG (proto --> model)
 func Proto2ModelSG(g *sg.SecGroup) (model.SecurityGroup, error) {
-	//const api = "proto2model-SG-conv"
+	const api = "proto2model-SG-conv"
 	var ret securityGroup
-	ret.from(g)
-	return ret.SecurityGroup, nil
-}
-
-// Proto2ModelSG conv SG (proto --> brief model)
-func Proto2BriefModelSG(g *sg.SecGroup) model.SecurityGroup {
-	var ret securityGroup
-	ret.from(g)
-	return ret.SecurityGroup
+	e := ret.from(g)
+	return ret.SecurityGroup, errors.WithMessage(e, api)
 }
 
 // Proto2ModelSGRuleIdentity -

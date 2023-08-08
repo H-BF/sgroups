@@ -533,7 +533,7 @@ begin
           set ports = (d).ports
         where sg_from = sgFrom
           and sg_to = sgTo
-          and proto = proto
+          and proto = (d).proto
     returning id into ret;
    elsif op = 'ups' then
        insert into sgroups.tbl_sg_rule (sg_from, sg_to, proto, ports)
