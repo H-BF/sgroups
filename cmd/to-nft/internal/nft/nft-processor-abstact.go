@@ -2,6 +2,8 @@ package nft
 
 import (
 	"context"
+
+	"github.com/H-BF/sgroups/internal/config"
 )
 
 // NfTablesProcessorOpt constructor option(s)
@@ -17,6 +19,13 @@ type NfTablesProcessor interface {
 
 // WithNetNS use network namespace
 type WithNetNS struct {
-	NfTablesProcessorOpt
 	NetNS string
 }
+
+// BaseRules -
+type BaseRules struct {
+	Nets []config.NetCIDR
+}
+
+func (WithNetNS) isNfTablesProcessorOpt() {}
+func (BaseRules) isNfTablesProcessorOpt() {}
