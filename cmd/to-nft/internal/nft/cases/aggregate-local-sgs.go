@@ -96,6 +96,7 @@ func (loc *SGs) LoadFromIPs(ctx context.Context, client SGClient, localIPs []net
 	return nil
 }
 
+// LoadFromRules it loads Local SGs from SG rules
 func (loc *SGs) LoadFromRules(ctx context.Context, client SGClient, rules []model.SGRule) error {
 	const api = "SG(s)/LoadFromRules"
 
