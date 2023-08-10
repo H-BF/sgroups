@@ -106,18 +106,7 @@ func (loc *SGs) LoadFromRules(ctx context.Context, client SGClient, rules []mode
 	linq.From(rules).
 		SelectMany(func(i any) linq.Query {
 			r := i.(model.SGRule)
-			ar := [...]string{r.SgFrom.Name, r.SgTo.Name}
-			return linq.Query{
-				Iterate: func() linq.Iterator {
-					i := -1
-					return func() (item any, ok bool) {
-						if i++; i < len(ar) {
-							return ar[i], true
-						}
-						return "", false
-					}
-				},
-			}
+			return linq.From([...]string{r.SgFrom.Name, r.SgTo.Name})
 		}).Distinct().ToSlice(&usedSG)
 
 	if len(usedSG) == 0 {
