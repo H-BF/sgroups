@@ -39,6 +39,7 @@ func main() {
 		config.WithAcceptEnvironment{EnvPrefix: "NFT"},
 		config.WithSourceFile{FileName: ConfigFile},
 		config.WithDefValue{Key: ExitOnSuccess, Val: false},
+		//config.WithDefValue{Key: BaseRulesOutNets, Val: `["192.168.1.0/24","192.168.2.0/24"]`},
 		config.WithDefValue{Key: AppLoggerLevel, Val: "DEBUG"},
 		config.WithDefValue{Key: AppGracefulShutdown, Val: 10 * time.Second},
 		config.WithDefValue{Key: NetNS, Val: ""},
@@ -114,6 +115,13 @@ func runNftJob(ctx context.Context) error { //nolint:gocyclo
 	var opts []nft.NfTablesProcessorOpt
 	if len(netNs) > 0 {
 		opts = append(opts, nft.WithNetNS{NetNS: netNs})
+	}
+	err = nft.IfBaseRulesFromConfig(ctx, func(br nft.BaseRules) error {
+		opts = append(opts, br)
+		return nil
+	})
+	if err != nil {
+		return errors.WithMessage(err, "load base rules")
 	}
 	nftProc = nft.NewNfTablesProcessor(sgClient, opts...)
 	defer nftProc.Close()

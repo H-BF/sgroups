@@ -10,10 +10,12 @@ import (
 	"time"
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
+	"github.com/H-BF/sgroups/internal/config"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
 	"github.com/H-BF/corlib/logger"
 	"github.com/H-BF/corlib/pkg/backoff"
+	"github.com/ahmetb/go-linq/v3"
 	"github.com/c-robinson/iplib"
 	nftLib "github.com/google/nftables"
 	util "github.com/google/nftables/binaryutil"
@@ -107,7 +109,7 @@ func (ap accports) D(rb ruleBuilder) ruleBuilder {
 	return ap.sourceOrDestPort(rb, false)
 }
 
-func (bt *batch) init(table *nftLib.Table, localRules cases.LocalRules) {
+func (bt *batch) init(table *nftLib.Table, localRules cases.LocalRules, baseRules *BaseRules) {
 	bt.addrsets.clear()
 	bt.chains.clear()
 	bt.jobs = nil
@@ -115,9 +117,9 @@ func (bt *batch) init(table *nftLib.Table, localRules cases.LocalRules) {
 
 	bt.initTable()
 	bt.addNetSets(localRules)
-	//bt.initPortSets(localRules)
 	bt.initRulesDetails(localRules)
 	bt.initRootChains()
+	bt.initBaseRules(baseRules)
 	bt.addInChains(localRules)
 	bt.addOutChains(localRules)
 	bt.addFinalRules()
@@ -130,7 +132,7 @@ func (bt *batch) addJob(n string, job jobf) {
 	bt.jobs.PushBack(jobItem{name: n, jobf: job})
 }
 
-func (bt *batch) execute(ctx context.Context, table *nftLib.Table, locals cases.LocalRules) error {
+func (bt *batch) execute(ctx context.Context, table *nftLib.Table, locals cases.LocalRules, baseRules *BaseRules) error {
 	var (
 		err error
 		it  jobItem
@@ -141,7 +143,7 @@ func (bt *batch) execute(ctx context.Context, table *nftLib.Table, locals cases.
 			_ = tx.Close()
 		}
 	}()
-	bt.init(table, locals)
+	bt.init(table, locals, baseRules)
 	bkf := backoff.ExponentialBackoffBuilder().
 		WithMultiplier(1.3).                       //nolint:gomnd
 		WithRandomizationFactor(0).                //nolint:gomnd
@@ -300,62 +302,64 @@ func (bt *batch) initRootChains() {
 	})
 }
 
+func (bt *batch) initBaseRules(baseRules *BaseRules) {
+	const api = "init-base-rules"
+
+	if baseRules == nil {
+		return
+	}
+
+	var nws []model.Network
+	linq.From(baseRules.Nets).
+		Select(func(i any) any {
+			return model.Network{Net: *i.(config.NetCIDR).IPNet}
+		}).ToSlice(&nws)
+
+	for i, nw := range sli(cases.SeparateNetworks(nws)) {
+		isIP4 := i == 0
+		nw := nw
+		elems := setsUtils{}.nets2SetElements(nw, tern(isIP4, iplib.IP4Version, iplib.IP6Version))
+		if len(elems) > 0 {
+			bt.addJob(api, func(tx *nfTablesTx) error {
+				netSet := &nftLib.Set{
+					ID:        nextSetID(),
+					Name:      "__set%d",
+					Constant:  true,
+					Table:     bt.table,
+					KeyType:   tern(isIP4, nftLib.TypeIPAddr, nftLib.TypeIP6Addr),
+					Interval:  true,
+					Anonymous: true,
+				}
+				if err := tx.AddSet(netSet, elems); err != nil {
+					return err
+				}
+				bt.log.Debugf("add network(s) %s into base rules", slice2stringer(nw...))
+				rule := beginRule()
+				tern(isIP4, rule.daddr4, rule.daddr6)().
+					inSet(netSet).accept().
+					applyRule(bt.chains.at(chnFWOUT), tx.Conn)
+				return nil
+			})
+		}
+	}
+}
+
 func (bt *batch) addNetSets(localRules cases.LocalRules) {
-	const (
-		api  = "add-net-sets"
-		b32  = 32
-		b128 = 128
-	)
+	const api = "add-net-sets"
 
 	_ = localRules.IterateNetworks(func(sgName string, nets []net.IPNet, isV6 bool) error {
-		ipV := iplib.IP4Version
-		ty := nftLib.TypeIPAddr
-		if isV6 {
-			ipV = iplib.IP6Version
-			ty = nftLib.TypeIP6Addr
-		}
+		ipV := tern(isV6, iplib.IP6Version, iplib.IP4Version)
 		nameOfSet := nameUtils{}.nameOfNetSet(ipV, sgName)
 		if bt.addrsets.at(nameOfSet) != nil {
 			return nil
 		}
-		var elements []nftLib.SetElement
-		for i := range nets {
-			nw := nets[i]
-			ones, _ := nw.Mask.Size()
-			netIf := iplib.NewNet(nw.IP, ones)
-			ipLast := iplib.NextIP(netIf.LastAddress())
-			switch ipV {
-			case iplib.IP4Version:
-				if ones < b32 {
-					ipLast = iplib.NextIP(ipLast)
-				}
-			case iplib.IP6Version:
-				if ones < b128 {
-					ipLast = iplib.NextIP(ipLast)
-				}
-			}
-			/*//TODO: need expert opinion
-			elements = append(elements, nftLib.SetElement{
-				Key:    nw.IP,
-				KeyEnd: ipLast,
-			})
-			*/
-			elements = append(elements,
-				nftLib.SetElement{
-					Key: nw.IP,
-				},
-				nftLib.SetElement{
-					IntervalEnd: true,
-					Key:         ipLast,
-				})
-		}
-		if len(elements) > 0 {
+		if elements := (setsUtils{}).nets2SetElements(nets, ipV); len(elements) > 0 {
 			bt.addJob(api, func(tx *nfTablesTx) error {
 				netSet := &nftLib.Set{
 					ID:       nextSetID(),
 					Constant: true,
 					Table:    bt.table,
-					KeyType:  ty,
+					KeyType:  tern(isV6, nftLib.TypeIP6Addr, nftLib.TypeIPAddr),
 					Interval: true,
 					Name:     nameOfSet,
 				}

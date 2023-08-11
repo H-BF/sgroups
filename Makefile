@@ -39,7 +39,7 @@ endif
 install-linter: ##install linter tool
 ifeq ($(filter $(GOLANGCI_CUR_VERSION), $(GOLANGCI_LATEST_VERSION)),)
 	$(info Installing GOLANGCI-LINT $(GOLANGCI_LATEST_VERSION)...)
-	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s $(GOLANGCI_LATEST_VERSION)
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOBIN) $(GOLANGCI_LATEST_VERSION)
 	@chmod +x $(GOLANGCI_BIN)
 else
 	@echo 1 >/dev/null

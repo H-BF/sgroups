@@ -224,7 +224,7 @@ func (sg2nws *Sg2Networks) Load(ctx context.Context, client SGClient, sgNames []
 			nws = append(nws, m)
 		}
 		var x SgNetworks
-		x.V4, x.V6 = separateNetworks(nws)
+		x.V4, x.V6 = SeparateNetworks(nws)
 		mx.Lock()
 		(*sg2nws)[sgNames[i]] = &x
 		mx.Unlock()

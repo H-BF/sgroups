@@ -4,8 +4,8 @@ import (
 	"net"
 )
 
-// it selerates source into IPv4 and IPv4 networks
-func separateNetworks(nws []Network, scopeIPs ...net.IP) (netIPv4, netIPv6 []net.IPNet) {
+// SeparateNetworks it selerates source into IPv4 and IPv4 networks
+func SeparateNetworks(nws []Network, scopeIPs ...net.IP) (netIPv4, netIPv6 []net.IPNet) {
 	netIPv4, netIPv6 = make([]net.IPNet, 0, len(nws)),
 		make([]net.IPNet, 0, len(nws))
 

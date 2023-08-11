@@ -4,13 +4,19 @@ import (
 	"bytes"
 	"fmt"
 	"math/rand"
+	"net"
 	"strings"
 	"sync/atomic"
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
+	"github.com/c-robinson/iplib"
+	nftLib "github.com/google/nftables"
 )
 
-type nameUtils struct{}
+type (
+	nameUtils struct{}
+	setsUtils struct{}
+)
 
 func (nameUtils) nameOfNetSet(ipV ipVersion, sgName string) string {
 	if sgName = strings.TrimSpace(sgName); len(sgName) == 0 {
@@ -28,6 +34,40 @@ func (nameUtils) nameOfPortSet(tp model.NetworkTransport, sgFrom, sgTo string) s
 	}
 	//                 [tcp|udp]-sgFrom-sgTo
 	return fmt.Sprintf("%s-%s-%s", tp, sgFrom, sgTo)
+}
+
+func (setsUtils) nets2SetElements(nets []net.IPNet, ipV int) []nftLib.SetElement {
+	const (
+		b32  = 32
+		b128 = 128
+	)
+	var elements []nftLib.SetElement
+	for i := range nets {
+		nw := nets[i]
+		ones, _ := nw.Mask.Size()
+		netIf := iplib.NewNet(nw.IP, ones)
+		ipLast := iplib.NextIP(netIf.LastAddress())
+		switch ipV {
+		case iplib.IP4Version:
+			ipLast = tern(ones < b32, iplib.NextIP(ipLast), ipLast)
+		case iplib.IP6Version:
+			ipLast = tern(ones < b128, iplib.NextIP(ipLast), ipLast)
+		}
+		////TODO: need expert opinion
+		//elements = append(elements, nftLib.SetElement{
+		//	Key:    nw.IP,
+		//	KeyEnd: ipLast,
+		//})
+		elements = append(elements,
+			nftLib.SetElement{
+				Key: nw.IP,
+			},
+			nftLib.SetElement{
+				IntervalEnd: true,
+				Key:         ipLast,
+			})
+	}
+	return elements
 }
 
 type stringer func() string

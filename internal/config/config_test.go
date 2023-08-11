@@ -3,6 +3,8 @@ package config
 import (
 	"bytes"
 	"context"
+	"encoding/json"
+	"net"
 	"os"
 	"testing"
 	"time"
@@ -112,6 +114,20 @@ values:
 	require.NoError(t, err)
 	_, err = du.Value(ctx)
 	assert.NoError(t, err)
+}
+
+func Test_NetCIDR_Json(t *testing.T) {
+	_, n1, e1 := net.ParseCIDR("192.168.1.0/24")
+	require.NoError(t, e1)
+	_, n2, e2 := net.ParseCIDR("192.168.2.0/24")
+	require.NoError(t, e2)
+	ar := []NetCIDR{{n1}, {n2}}
+	b, e3 := json.Marshal(ar)
+	require.NoError(t, e3)
+	var ar2 []NetCIDR
+	e4 := json.Unmarshal(b, &ar2)
+	require.NoError(t, e4)
+	require.Equal(t, ar, ar2)
 }
 
 /*//

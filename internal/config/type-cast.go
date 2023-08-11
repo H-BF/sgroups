@@ -13,7 +13,8 @@ import (
 // KnownValueTypes ...
 type KnownValueTypes interface {
 	time.Time |
-
+		NetCIDR |
+		~[]NetCIDR |
 		~int | ~uint |
 		~int64 | ~uint64 |
 		~int32 | ~uint32 |
@@ -120,4 +121,7 @@ func init() {
 
 	regTypeCastFunc(cast.ToDurationE)
 	regTypeCastFunc(cast.ToTimeE)
+
+	regTypeCastFunc(typeCastNetCIDR)
+	regTypeCastFunc(typeCastNetCIDRSlice)
 }
