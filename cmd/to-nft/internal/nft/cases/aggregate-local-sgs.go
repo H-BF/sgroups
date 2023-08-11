@@ -12,6 +12,7 @@ import (
 
 	"github.com/H-BF/corlib/pkg/parallel"
 	"github.com/H-BF/corlib/pkg/slice"
+	"github.com/ahmetb/go-linq/v3"
 	"github.com/c-robinson/iplib"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
@@ -28,27 +29,28 @@ type (
 	//SGClient is a type alias
 	SGClient = sgAPI.SecGroupServiceClient
 
-	// LocalSG ...
-	LocalSG struct {
-		SG           model.SecurityGroup
+	// SG ...
+	SG struct {
+		model.SecurityGroup
 		IPsV4, IPsV6 iplib.ByIP
 	}
 
-	// LocalSGs local SG(s) related to IP(s)
-	LocalSGs map[SgName]*LocalSG
+	// SGs local SG(s) related to IP(s)
+	SGs map[SgName]*SG
 )
 
-// Load it loads Local SGs by IPs
-func (loc *LocalSGs) Load(ctx context.Context, client SGClient, srcIPs []net.IP) error {
-	const api = "LocalSG(s)/Load"
-
-	*loc = make(LocalSGs)
-	if len(srcIPs) == 0 {
+// LoadFromIPs it loads Local SGs by IPs
+func (loc *SGs) LoadFromIPs(ctx context.Context, client SGClient, localIPs []net.IP) error {
+	const api = "SG(s)/LoadFromIPs"
+	if *loc == nil {
+		*loc = make(SGs)
+	}
+	if len(localIPs) == 0 {
 		return nil
 	}
 	var mx sync.Mutex
 	job := func(i int) error {
-		srcIP := srcIPs[i]
+		srcIP := localIPs[i]
 		req := &sgAPI.GetSecGroupForAddressReq{
 			Address: srcIP.String(),
 		}
@@ -67,7 +69,7 @@ func (loc *LocalSGs) Load(ctx context.Context, client SGClient, srcIPs []net.IP)
 		defer mx.Unlock()
 		it := (*loc)[sg.Name]
 		if it == nil {
-			it = &LocalSG{SG: sg}
+			it = &SG{SecurityGroup: sg}
 			(*loc)[sg.Name] = it
 		}
 		switch len(srcIP) {
@@ -78,7 +80,7 @@ func (loc *LocalSGs) Load(ctx context.Context, client SGClient, srcIPs []net.IP)
 		}
 		return nil
 	}
-	if err := parallel.ExecAbstract(len(srcIPs), 8, job); err != nil { //nolint:gomnd
+	if err := parallel.ExecAbstract(len(localIPs), 8, job); err != nil { //nolint:gomnd
 		return errors.WithMessage(err, api)
 	}
 	for _, it := range *loc {
@@ -94,8 +96,44 @@ func (loc *LocalSGs) Load(ctx context.Context, client SGClient, srcIPs []net.IP)
 	return nil
 }
 
+// LoadFromRules it loads Local SGs from SG rules
+func (loc *SGs) LoadFromRules(ctx context.Context, client SGClient, rules []model.SGRule) error {
+	const api = "SG(s)/LoadFromRules"
+
+	if *loc == nil {
+		*loc = make(SGs)
+	}
+	usedSG := make([]string, 0, len(rules)*2)
+	linq.From(rules).
+		SelectMany(func(i any) linq.Query {
+			r := i.(model.SGRule)
+			return linq.From([...]string{r.SgFrom.Name, r.SgTo.Name})
+		}).Distinct().ToSlice(&usedSG)
+
+	if len(usedSG) == 0 {
+		return nil
+	}
+	sgsResp, err := client.ListSecurityGroups(ctx, &sgAPI.ListSecurityGroupsReq{SgNames: usedSG})
+	if err != nil {
+		return errors.WithMessage(err, api)
+	}
+	linq.From(sgsResp.GetGroups()).
+		ForEach(func(i any) {
+			if err != nil {
+				return
+			}
+			g := i.(*sgAPI.SecGroup)
+			if sg, e := conv.Proto2ModelSG(g); e != nil {
+				err = e
+			} else {
+				(*loc)[sg.Name] = &SG{SecurityGroup: sg}
+			}
+		})
+	return errors.WithMessage(err, api)
+}
+
 // Names get local SG(s) names
-func (loc LocalSGs) Names() []SgName {
+func (loc SGs) Names() []SgName {
 	ret := make([]SgName, 0, len(loc))
 	for n := range loc {
 		ret = append(ret, n)

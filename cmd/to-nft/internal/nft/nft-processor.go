@@ -45,12 +45,12 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, conf NetConf) 
 	var (
 		err        error
 		localRules cases.LocalRules
-		localSGs   cases.LocalSGs
+		localSGs   cases.SGs
 	)
 
 	localIPsV4, loaclIPsV6 := conf.LocalIPs()
 	allLoaclIPs := append(localIPsV4, loaclIPsV6...)
-	if err = localSGs.Load(ctx, impl.sgClient, allLoaclIPs); err != nil {
+	if err = localSGs.LoadFromIPs(ctx, impl.sgClient, allLoaclIPs); err != nil {
 		return multierr.Combine(ErrNfTablesProcessor,
 			err, pkgErr.ErrDetails{Api: api, Details: allLoaclIPs})
 	}

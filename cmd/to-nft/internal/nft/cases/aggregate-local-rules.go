@@ -37,7 +37,7 @@ type (
 
 	// LocalRules -
 	LocalRules struct {
-		LocalSGs
+		SGs
 		Rules    []model.SGRule
 		Networks Sg2Networks
 	}
@@ -52,21 +52,19 @@ type (
 )
 
 // Load ...
-func (rules *LocalRules) Load(ctx context.Context, client SGClient, locals LocalSGs) (err error) {
+func (rules *LocalRules) Load(ctx context.Context, client SGClient, locals SGs) (err error) {
 	const api = "LocalRules/Load"
 
 	defer func() {
 		err = errors.WithMessage(err, api)
 	}()
 
-	rules.LocalSGs = make(LocalSGs)
-	rules.Networks = nil
-	rules.Rules = nil
-
 	localSgNames := locals.Names()
 	if len(localSgNames) == 0 {
 		return nil
 	}
+	rules.Networks = nil
+	rules.Rules = nil
 	reqs := []sgAPI.FindRulesReq{
 		{SgFrom: localSgNames}, {SgTo: localSgNames},
 	}
@@ -95,57 +93,45 @@ func (rules *LocalRules) Load(ctx context.Context, client SGClient, locals Local
 			Proto:  v.Transport,
 		}
 	}).ToSlice(&rules.Rules)
-	for _, r := range rules.Rules {
-		for _, n := range [...]string{r.SgFrom.Name, r.SgTo.Name} {
-			if sg := locals[n]; sg != nil && rules.LocalSGs[n] == nil {
-				rules.LocalSGs[n] = sg
-			}
-		}
+	if err = rules.SGs.LoadFromRules(ctx, client, rules.Rules); err == nil {
+		err = rules.Networks.Load(ctx, client, rules.SGs.Names())
 	}
-	err = rules.Networks.Load(ctx, client, rules.LocalSGs.Names())
 	return err
 }
 
 // IterateNetworks ...
 func (rules LocalRules) IterateNetworks(f func(sgName string, nets []net.IPNet, isV6 bool) error) error {
-	type tk = struct {
-		sgName string
-		v6     bool
+	var err error
+	type item = struct {
+		sg string
+		nw *SgNetworks
 	}
-	seen := make(map[tk]bool)
-	send := func(sgName string, isV6 bool, nets []net.IPNet) error {
-		k := tk{sgName, isV6}
-		if !seen[k] {
-			seen[k] = true
-			return f(sgName, nets, isV6)
-		}
-		return nil
-	}
-	for _, r := range rules.Rules {
-		nw1 := rules.Networks[r.SgFrom.Name]
-		nw2 := rules.Networks[r.SgTo.Name]
-		if nw1 != nil && nw2 != nil {
-			if len(nw1.V4) > 0 && len(nw2.V4) > 0 {
-				err := send(r.SgFrom.Name, false, nw1.V4)
-				if err == nil {
-					err = send(r.SgTo.Name, false, nw2.V4)
+	linq.From(rules.Rules).
+		SelectMany(func(i any) linq.Query {
+			r := i.(model.SGRule)
+			return linq.From([...]item{
+				{sg: r.SgFrom.Name, nw: rules.Networks[r.SgFrom.Name]},
+				{sg: r.SgTo.Name, nw: rules.Networks[r.SgTo.Name]},
+			})
+		}).
+		Where(func(i any) bool {
+			return i.(item).nw != nil
+		}).
+		DistinctBy(func(i any) any {
+			return i.(item).sg
+		}).
+		ForEach(func(i any) {
+			if err == nil {
+				v := i.(item)
+				if len(v.nw.V4) > 0 {
+					err = f(v.sg, v.nw.V4, false)
 				}
-				if err != nil {
-					return err
+				if err == nil && len(v.nw.V6) > 0 {
+					err = f(v.sg, v.nw.V6, true)
 				}
 			}
-			if len(nw1.V6) > 0 && len(nw2.V6) > 0 {
-				err := send(r.SgFrom.Name, false, nw1.V6)
-				if err == nil {
-					err = send(r.SgTo.Name, false, nw2.V6)
-				}
-				if err != nil {
-					return err
-				}
-			}
-		}
-	}
-	return nil
+		})
+	return err
 }
 
 // TemplatesOutRules -
@@ -165,10 +151,14 @@ func (rules LocalRules) TemplatesOutRules() []RulesOutTemplate { //nolint:dupl
 				return groupped{Sg: r.SgTo.Name, Proto: r.Transport}
 			},
 		).
+		Where(func(i any) bool {
+			v := i.(linq.Group)
+			return rules.SGs[v.Key.(string)] != nil
+		}).
 		Select(func(i any) any {
 			v := i.(linq.Group)
 			item := RulesOutTemplate{
-				SgOut: rules.LocalSGs[v.Key.(string)].SG,
+				SgOut: rules.SGs[v.Key.(string)].SecurityGroup,
 			}
 			for _, g := range v.Group {
 				item.In = append(item.In, g.(groupped))
@@ -195,10 +185,14 @@ func (rules LocalRules) TemplatesInRules() []RulesInTemplate { //nolint:dupl
 				return groupped{Sg: r.SgFrom.Name, Proto: r.Transport}
 			},
 		).
+		Where(func(i any) bool {
+			v := i.(linq.Group)
+			return rules.SGs[v.Key.(string)] != nil
+		}).
 		Select(func(i any) any {
 			v := i.(linq.Group)
 			item := RulesInTemplate{
-				SgIn: rules.LocalSGs[v.Key.(string)].SG,
+				SgIn: rules.SGs[v.Key.(string)].SecurityGroup,
 			}
 			for _, g := range v.Group {
 				item.Out = append(item.Out, g.(groupped))
