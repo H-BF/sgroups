@@ -38,7 +38,8 @@ type (
 	// LocalRules -
 	LocalRules struct {
 		SGs
-		Rules    []model.SGRule
+		In       []model.SGRule
+		Out      []model.SGRule
 		Networks Sg2Networks
 	}
 
@@ -64,9 +65,13 @@ func (rules *LocalRules) Load(ctx context.Context, client SGClient, locals SGs) 
 		return nil
 	}
 	rules.Networks = nil
-	rules.Rules = nil
+	rules.In = nil
+	rules.Out = nil
 	reqs := []sgAPI.FindRulesReq{
 		{SgFrom: localSgNames}, {SgTo: localSgNames},
+	}
+	dest := []*[]model.SGRule{
+		&rules.Out, &rules.In,
 	}
 	for i := range reqs {
 		var resp *sgAPI.RulesResp
@@ -78,10 +83,20 @@ func (rules *LocalRules) Load(ctx context.Context, client SGClient, locals SGs) 
 			if rule, err = conv.Proto2ModelSGRule(protoRule); err != nil {
 				return err
 			}
-			rules.Rules = append(rules.Rules, rule)
+			*dest[i] = append(*dest[i], rule)
 		}
 	}
-	linq.From(rules.Rules).DistinctBy(func(i any) any {
+	if err = rules.SGs.LoadFromRules(ctx, client, append(rules.In, rules.Out...)); err == nil {
+		err = rules.Networks.Load(ctx, client, rules.SGs.Names())
+	}
+	return err
+}
+
+// AllRules -
+func (rules LocalRules) AllRules() []model.SGRule {
+	src := append(rules.In, rules.Out...)
+	ret := src[:0]
+	linq.From(src).DistinctBy(func(i any) any {
 		type ri = struct {
 			SgFrom, SgTo string
 			Proto        model.NetworkTransport
@@ -92,11 +107,8 @@ func (rules *LocalRules) Load(ctx context.Context, client SGClient, locals SGs) 
 			SgTo:   v.SgTo.Name,
 			Proto:  v.Transport,
 		}
-	}).ToSlice(&rules.Rules)
-	if err = rules.SGs.LoadFromRules(ctx, client, rules.Rules); err == nil {
-		err = rules.Networks.Load(ctx, client, rules.SGs.Names())
-	}
-	return err
+	}).ToSlice(&ret)
+	return ret
 }
 
 // IterateNetworks ...
@@ -106,7 +118,7 @@ func (rules LocalRules) IterateNetworks(f func(sgName string, nets []net.IPNet, 
 		sg string
 		nw *SgNetworks
 	}
-	linq.From(rules.Rules).
+	linq.From(append(rules.In, rules.Out...)).
 		SelectMany(func(i any) linq.Query {
 			r := i.(model.SGRule)
 			return linq.From([...]item{
@@ -141,7 +153,7 @@ func (rules LocalRules) TemplatesOutRules() []RulesOutTemplate { //nolint:dupl
 		Proto model.NetworkTransport
 	}
 	var res []RulesOutTemplate
-	linq.From(rules.Rules).
+	linq.From(rules.Out).
 		GroupBy(
 			func(i any) any {
 				return i.(model.SGRule).SgFrom.Name
@@ -175,7 +187,7 @@ func (rules LocalRules) TemplatesInRules() []RulesInTemplate { //nolint:dupl
 		Proto model.NetworkTransport
 	}
 	var res []RulesInTemplate
-	linq.From(rules.Rules).
+	linq.From(rules.In).
 		GroupBy(
 			func(i any) any {
 				return i.(model.SGRule).SgTo.Name
