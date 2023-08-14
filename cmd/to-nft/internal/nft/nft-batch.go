@@ -388,7 +388,7 @@ func (bt *batch) initRulesDetails(localRules cases.LocalRules) {
 		})
 		return ret
 	}
-	for _, r := range localRules.Rules {
+	for _, r := range localRules.AllRules() {
 		item := ruleDetails{
 			accports: make([]accports, 0, len(r.Ports)),
 			logs:     r.Logs,
