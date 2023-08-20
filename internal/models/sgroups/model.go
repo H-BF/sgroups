@@ -1,6 +1,7 @@
 package sgroups
 
 import (
+	"bytes"
 	"crypto/md5" //nolint:gosec
 	"encoding/hex"
 	"fmt"
@@ -192,7 +193,7 @@ func (sgRuleKey SGRuleIdentity) IdentityHash() string {
 func (sgRuleKey FDQNRuleIdentity) IdentityHash() string {
 	hasher := md5.New() //nolint:gosec
 	hasher.Write([]byte(sgRuleKey.SgFrom))
-	//hasher.Write(bytes.ToLower([]byte(sgRuleKey.FdqnTo)))
+	hasher.Write(bytes.ToLower([]byte(sgRuleKey.FdqnTo)))
 	hasher.Write([]byte(sgRuleKey.Transport.String()))
 	return strings.ToLower(hex.EncodeToString(hasher.Sum(nil)))
 }
