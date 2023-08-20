@@ -110,7 +110,7 @@ func rulesR(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Di
 		if mr, err = utils.Proto2ModelSGRule(rule); err != nil {
 			return diag.FromErr(err)
 		}
-		if id := mr.String(); h.mapped[id] != nil {
+		if id := mr.ID.String(); h.mapped[id] != nil {
 			_ = h1.set(id, &mr)
 		}
 	}
@@ -180,9 +180,9 @@ func modelRule2tf(mr *model.SGRule) (map[string]any, error) {
 		}
 	}
 	ret := map[string]any{
-		RcLabelSgFrom: mr.SgFrom.Name,
-		RcLabelSgTo:   mr.SgTo.Name,
-		RcLabelProto:  mr.Transport.String(),
+		RcLabelSgFrom: mr.ID.SgFrom,
+		RcLabelSgTo:   mr.ID.SgTo,
+		RcLabelProto:  mr.ID.Transport.String(),
 		RcLabelLogs:   mr.Logs,
 	}
 	if len(ports) > 0 {

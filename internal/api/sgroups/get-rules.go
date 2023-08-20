@@ -25,14 +25,14 @@ func netTranport2proto(src model.NetworkTransport) (common.Networks_NetIP_Transp
 
 func sgRule2proto(src model.SGRule) (*sg.Rule, error) {
 	var ret sg.Rule
-	if t, e := netTranport2proto(src.Transport); e != nil {
+	if t, e := netTranport2proto(src.ID.Transport); e != nil {
 		return nil, e
 	} else {
 		ret.Transport = t
 	}
 	ret.Logs = src.Logs
-	ret.SgFrom = src.SgFrom.Name
-	ret.SgTo = src.SgTo.Name
+	ret.SgFrom = src.ID.SgFrom
+	ret.SgTo = src.ID.SgTo
 	ret.Ports = make([]*sg.Rule_Ports, 0, len(src.Ports))
 	for _, p := range src.Ports {
 		var s, d model.PortSource

@@ -405,7 +405,7 @@ func (bt *batch) initRulesDetails(localRules cases.LocalRules) {
 		if len(item.accports) == 0 {
 			item.accports = append(item.accports, accports{})
 		}
-		setsName := nameUtils{}.nameOfPortSet(r.Transport, r.SgFrom.Name, r.SgTo.Name)
+		setsName := nameUtils{}.nameOfPortSet(r.ID.Transport, r.ID.SgFrom, r.ID.SgTo)
 		bt.ruleDetails.put(setsName, &item)
 	}
 }

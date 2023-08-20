@@ -5,11 +5,15 @@ import (
 )
 
 func (tid TableID) memDbSchema() MemDbSchemaInit {
-	return [...]MemDbSchemaInit{
-		memDbNetworksSchema,
-		memDbSecGroupsSchema,
-		memDbSgRulesSchema,
-		memDbSyncStatusSchema}[tid]
+	return tableID2MemDbSchemaInit[tid]
+}
+
+var tableID2MemDbSchemaInit = map[TableID]MemDbSchemaInit{
+	TblNetworks:   memDbNetworksSchema,
+	TblSecGroups:  memDbSecGroupsSchema,
+	TblSecRules:   memDbSgRulesSchema,
+	TblSyncStatus: memDbSyncStatusSchema,
+	TblFdqnRules:  memDbFdqnRulesSchema,
 }
 
 func (TableID) privateMemDbOption() {}
@@ -60,6 +64,20 @@ func memDbSgRulesSchema(schema *MemDbSchema) {
 				Name:    indexID,
 				Unique:  true,
 				Indexer: SGRuleIdIndexer{},
+			},
+		},
+	}
+}
+
+func memDbFdqnRulesSchema(schema *MemDbSchema) {
+	tbl := TblFdqnRules.String()
+	schema.Tables[tbl] = &MemDbTableSchema{
+		Name: tbl,
+		Indexes: map[string]*MemDbIndexSchema{
+			indexID: {
+				Name:    indexID,
+				Unique:  true,
+				Indexer: FDQNRuleIdIndexer{},
 			},
 		},
 	}

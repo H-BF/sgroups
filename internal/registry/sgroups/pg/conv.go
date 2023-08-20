@@ -207,9 +207,9 @@ func (o *Proto) FromModel(m sgm.NetworkTransport) error {
 func (o SGRule) ToModel() (sgm.SGRule, error) {
 	var ret sgm.SGRule
 	var err error
-	ret.SgFrom.Name = o.SgFrom
-	ret.SgTo.Name = o.SgTo
-	if ret.Transport, err = o.Proto.ToModel(); err != nil {
+	ret.ID.SgFrom = o.SgFrom
+	ret.ID.SgTo = o.SgTo
+	if ret.ID.Transport, err = o.Proto.ToModel(); err != nil {
 		return ret, err
 	}
 	ret.Logs = o.Logs
@@ -219,9 +219,9 @@ func (o SGRule) ToModel() (sgm.SGRule, error) {
 
 // FromModel -
 func (o *SGRule) FromModel(m sgm.SGRule) error {
-	o.SgFrom = m.SgFrom.Name
-	o.SgTo = m.SgTo.Name
-	if err := o.Proto.FromModel(m.Transport); err != nil {
+	o.SgFrom = m.ID.SgFrom
+	o.SgTo = m.ID.SgTo
+	if err := o.Proto.FromModel(m.ID.Transport); err != nil {
 		return err
 	}
 	if err := o.Ports.FromModel(m.Ports); err != nil {

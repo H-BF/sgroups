@@ -83,14 +83,14 @@ func (r *rulePorts) from(src []*sg.Rule_Ports) error {
 }
 
 func (ri sgRuleIdentity) from(src *sg.Rule) error {
-	ri.SgFrom.Name = src.GetSgFrom()
-	ri.SgTo.Name = src.GetSgTo()
+	ri.SgFrom = src.GetSgFrom()
+	ri.SgTo = src.GetSgTo()
 	return networkTransport{NetworkTransport: &ri.Transport}.
 		from(src.GetTransport())
 }
 
 func (r sgRule) from(src *sg.Rule) error {
-	err := sgRuleIdentity{SGRuleIdentity: &r.SGRuleIdentity}.
+	err := sgRuleIdentity{SGRuleIdentity: &r.ID}.
 		from(src)
 	if err == nil {
 		r.Logs = src.GetLogs()

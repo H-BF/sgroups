@@ -131,7 +131,7 @@ func NetworkNames(names ...model.NetworkName) Scope {
 func SGRule(others ...model.SGRule) Scope {
 	ret := scopedSGRuleIdentity{}
 	for _, o := range others {
-		ret[o.IdentityHash()] = o.SGRuleIdentity
+		ret[o.ID.IdentityHash()] = o.ID
 	}
 	return ret
 }
@@ -149,7 +149,7 @@ func (ScopedNetTransport) privateScope()   {}
 func (scopedSGRuleIdentity) privateScope() {}
 
 type filterKindArg interface {
-	model.Network | model.SecurityGroup | model.SGRule
+	model.Network | model.SecurityGroup | model.SGRule | model.FDQNRule
 }
 
 type filterTree[filterArgT filterKindArg] struct {
@@ -265,18 +265,11 @@ func (p *scopedNetworks) inSG(sg model.SecurityGroup) bool {
 	return false
 }
 
-func (p *scopedNetworks) inSGRule(rule model.SGRule) bool {
-	return p.inSG(rule.SgFrom) ||
-		p.inSG(rule.SgTo)
-}
-
 func (p scopedNetworks) meta() metaInfo {
 	return metaInfo{
 		reflect.TypeOf((*model.SecurityGroup)(nil)).Elem(): reflect.ValueOf(p.inSG),
 
 		reflect.TypeOf((*model.Network)(nil)).Elem(): reflect.ValueOf(p.inNetwork),
-
-		reflect.TypeOf((*model.SGRule)(nil)).Elem(): reflect.ValueOf(p.inSGRule),
 	}
 }
 
@@ -292,18 +285,25 @@ func (p scopedSG) meta() metaInfo {
 }
 
 func (p scopedSGFrom) inSGRule(rule model.SGRule) bool {
-	_, ok := p[rule.SgFrom.Name]
+	_, ok := p[rule.ID.SgFrom]
+	return ok
+}
+
+func (p scopedSGFrom) inFdqnRule(rule model.FDQNRule) bool {
+	_, ok := p[rule.ID.SgFrom]
 	return ok
 }
 
 func (p scopedSGFrom) meta() metaInfo {
 	return metaInfo{
 		reflect.TypeOf((*model.SGRule)(nil)).Elem(): reflect.ValueOf(p.inSGRule),
+
+		reflect.TypeOf((*model.FDQNRule)(nil)).Elem(): reflect.ValueOf(p.inFdqnRule),
 	}
 }
 
 func (p scopedSGTo) inSGRule(rule model.SGRule) bool {
-	_, ok := p[rule.SgTo.Name]
+	_, ok := p[rule.ID.SgTo]
 	return ok
 }
 
@@ -314,7 +314,7 @@ func (p scopedSGTo) meta() metaInfo {
 }
 
 func (p ScopedNetTransport) inSGRule(rule model.SGRule) bool {
-	return rule.Transport == model.NetworkTransport(p)
+	return rule.ID.Transport == model.NetworkTransport(p)
 }
 
 func (p ScopedNetTransport) meta() metaInfo {
@@ -324,7 +324,7 @@ func (p ScopedNetTransport) meta() metaInfo {
 }
 
 func (p scopedSGRuleIdentity) inSGRule(rule model.SGRule) bool {
-	h := rule.IdentityHash()
+	h := rule.ID.IdentityHash()
 	_, ok := p[h]
 	return ok
 }

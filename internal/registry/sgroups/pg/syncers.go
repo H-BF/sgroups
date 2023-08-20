@@ -123,7 +123,7 @@ func (o *syncObj[T, tFlt]) AddToFilter(ctx context.Context, data ...tFlt) error 
 			if err := p.FromModel(v.Transport); err != nil {
 				return err
 			}
-			raw = append(raw, []any{v.SgFrom.Name, v.SgTo.Name, p})
+			raw = append(raw, []any{v.SgFrom, v.SgTo, p})
 		default:
 			panic("UB")
 		}

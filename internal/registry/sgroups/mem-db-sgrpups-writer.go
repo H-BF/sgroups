@@ -143,6 +143,45 @@ func (wr sGroupsMemDbWriter) SyncSGRules(ctx context.Context, rules []model.SGRu
 	return errors.WithMessage(err, api)
 }
 
+// SyncFdqnRules impl Writer = update / delete FDQN rules
+func (wr sGroupsMemDbWriter) SyncFdqnRules(ctx context.Context, rules []model.FDQNRule, scope Scope, opts ...Option) error {
+	const api = "mem-db/SyncFdqnRules"
+
+	it, err := wr.writer.Get(TblFdqnRules, indexID)
+	if err != nil {
+		return errors.WithMessage(err, api)
+	}
+	var ft filterTree[model.FDQNRule]
+	if !ft.init(scope) {
+		return errors.Errorf("bad scope")
+	}
+	it = memdb.NewFilterIterator(it, func(i interface{}) bool {
+		r := *i.(*model.FDQNRule)
+		return !ft.invoke(r)
+	})
+
+	var changed bool
+	h := syncHelper[model.FDQNRule, string]{
+		delete: func(obj *model.FDQNRule) error {
+			e := wr.writer.Delete(TblFdqnRules, obj)
+			if errors.Is(e, memdb.ErrNotFound) {
+				return nil
+			}
+			changed = changed || e == nil
+			return e
+		},
+		upsert: func(obj *model.FDQNRule) error {
+			e := wr.writer.Upsert(TblFdqnRules, obj)
+			changed = changed || e == nil
+			return e
+		},
+	}
+	if err = h.doSync(rules, it, opts...); err == nil && changed {
+		err = wr.updateSyncStatus(ctx)
+	}
+	return errors.WithMessage(err, api)
+}
+
 // Commit impl Writer
 func (wr sGroupsMemDbWriter) Commit() error {
 	return wr.writer.Commit()
@@ -200,13 +239,21 @@ func (wr sGroupsMemDbWriter) afterDeleteSGs(ctx context.Context, sgs []model.Sec
 	for i := range sgs {
 		names = append(names, sgs[i].Name)
 	}
-	scope := Or(SGFrom(names[0], names[1:]...), SGTo(names[0], names[1:]...))
 
-	//delete related SGRule(s)
-	err := wr.SyncSGRules(ctx, nil,
-		scope, SyncOmitInsert{}, SyncOmitUpdate{})
+	// delete related SGRule(s)
+	err1 := wr.SyncSGRules(ctx, nil,
+		Or(SGFrom(names[0], names[1:]...), SGTo(names[0], names[1:]...)),
+		SyncOmitInsert{}, SyncOmitUpdate{})
 
-	return errors.WithMessage(err, "delete related SGRule(s)")
+	// delete related FDQNRule(s)
+	err2 := wr.SyncFdqnRules(ctx, nil,
+		SGFrom(names[0], names[1:]...),
+		SyncOmitInsert{}, SyncOmitUpdate{})
+
+	return multierr.Combine(
+		errors.WithMessage(err1, "delete related SGRule(s)"),
+		errors.WithMessage(err2, "delete related FDQNRule(s)"),
+	)
 }
 
 func (wr sGroupsMemDbWriter) updateSyncStatus(_ context.Context) error {
@@ -308,7 +355,9 @@ func (h syncHelper[T, TKey]) extractKey(obj T) (TKey, error) {
 	case model.SecurityGroup:
 		vSrc = reflect.ValueOf(a.Name)
 	case model.SGRule:
-		vSrc = reflect.ValueOf(a.IdentityHash())
+		vSrc = reflect.ValueOf(a.ID.IdentityHash())
+	case model.FDQNRule:
+		vSrc = reflect.ValueOf(a.ID.IdentityHash())
 	default:
 		return k, errors.Errorf("key-extractor: no extraction from '%T' type", obj)
 	}
@@ -353,6 +402,9 @@ func (h syncHelper[T, TKey]) isEQ(l, r T) bool {
 		}
 	case model.SGRule:
 		rt := any(r).(model.SGRule)
+		return lt.IsEq(rt)
+	case model.FDQNRule:
+		rt := any(r).(model.FDQNRule)
 		return lt.IsEq(rt)
 	default:
 	}

@@ -116,7 +116,7 @@ func ruleR(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Dia
 		if mr, err = utils.Proto2ModelSGRule(rule); err != nil {
 			return diag.FromErr(err)
 		}
-		if mr.Transport == tp {
+		if mr.ID.Transport == tp {
 			rc, err := modelRule2tf(&mr)
 			if err != nil {
 				return diag.FromErr(err)
@@ -131,7 +131,7 @@ func ruleR(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Dia
 					}
 				}
 			}
-			rd.SetId(mr.SGRuleIdentity.String())
+			rd.SetId(mr.ID.String())
 			return nil
 		}
 	}

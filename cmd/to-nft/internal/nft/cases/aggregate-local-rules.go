@@ -103,9 +103,9 @@ func (rules LocalRules) AllRules() []model.SGRule {
 		}
 		v := i.(model.SGRule)
 		return ri{
-			SgFrom: v.SgFrom.Name,
-			SgTo:   v.SgTo.Name,
-			Proto:  v.Transport,
+			SgFrom: v.ID.SgFrom,
+			SgTo:   v.ID.SgTo,
+			Proto:  v.ID.Transport,
 		}
 	}).ToSlice(&ret)
 	return ret
@@ -122,8 +122,8 @@ func (rules LocalRules) IterateNetworks(f func(sgName string, nets []net.IPNet, 
 		SelectMany(func(i any) linq.Query {
 			r := i.(model.SGRule)
 			return linq.From([...]item{
-				{sg: r.SgFrom.Name, nw: rules.Networks[r.SgFrom.Name]},
-				{sg: r.SgTo.Name, nw: rules.Networks[r.SgTo.Name]},
+				{sg: r.ID.SgFrom, nw: rules.Networks[r.ID.SgFrom]},
+				{sg: r.ID.SgTo, nw: rules.Networks[r.ID.SgTo]},
 			})
 		}).
 		Where(func(i any) bool {
@@ -156,11 +156,11 @@ func (rules LocalRules) TemplatesOutRules() []RulesOutTemplate { //nolint:dupl
 	linq.From(rules.Out).
 		GroupBy(
 			func(i any) any {
-				return i.(model.SGRule).SgFrom.Name
+				return i.(model.SGRule).ID.SgFrom
 			},
 			func(i any) any {
 				r := i.(model.SGRule)
-				return groupped{Sg: r.SgTo.Name, Proto: r.Transport}
+				return groupped{Sg: r.ID.SgTo, Proto: r.ID.Transport}
 			},
 		).
 		Where(func(i any) bool {
@@ -190,11 +190,11 @@ func (rules LocalRules) TemplatesInRules() []RulesInTemplate { //nolint:dupl
 	linq.From(rules.In).
 		GroupBy(
 			func(i any) any {
-				return i.(model.SGRule).SgTo.Name
+				return i.(model.SGRule).ID.SgTo
 			},
 			func(i any) any {
 				r := i.(model.SGRule)
-				return groupped{Sg: r.SgFrom.Name, Proto: r.Transport}
+				return groupped{Sg: r.ID.SgFrom, Proto: r.ID.Transport}
 			},
 		).
 		Where(func(i any) bool {

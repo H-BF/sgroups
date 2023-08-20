@@ -205,8 +205,8 @@ func (sui *sGroupServiceTests) rule2Id(rules ...*api.Rule) []model.SGRuleIdentit
 	var ret []model.SGRuleIdentity
 	for _, r := range rules {
 		var id model.SGRuleIdentity
-		id.SgFrom.Name = r.SgFrom
-		id.SgTo.Name = r.SgTo
+		id.SgFrom = r.SgFrom
+		id.SgTo = r.SgTo
 		err := (networkTransport{&id.Transport}).
 			from(r.GetTransport())
 		sui.Require().NoError(err)
@@ -227,7 +227,7 @@ func (sui *sGroupServiceTests) Test_Sync_Rules() {
 	r := sui.reader()
 	m := make(map[string]bool)
 	err := r.ListSGRules(sui.ctx, func(rule model.SGRule) error {
-		m[rule.IdentityHash()] = true
+		m[rule.ID.IdentityHash()] = true
 		return nil
 	}, registry.NoScope)
 	sui.Require().NoError(err)
