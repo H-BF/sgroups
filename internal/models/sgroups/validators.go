@@ -61,7 +61,7 @@ func (sg SecurityGroup) Validate() error {
 
 // Validate ChainDefaultAction validator
 func (a ChainDefaultAction) Validate() error {
-	vals, x := [...]any{int(DROP), int(ACCEPT)}, int(a)
+	vals, x := [...]any{int(DEFAULT), int(DROP), int(ACCEPT)}, int(a)
 	return oz.Validate(x, oz.In(vals[:]...).Error("must be in ['DROP', 'ACCEPT']"))
 }
 

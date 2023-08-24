@@ -67,7 +67,7 @@ func (nt networkTransport) from(src common.Networks_NetIP_Transport) error {
 	return nil
 }
 
-func (r *rulePorts) from(src []*sg.Rule_Ports) error {
+func (r *rulePorts) from(src []*sg.AccPorts) error {
 	for _, p := range src {
 		var item model.SGRulePorts
 		var e error

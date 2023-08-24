@@ -23,6 +23,22 @@ func netTranport2proto(src model.NetworkTransport) (common.Networks_NetIP_Transp
 	return 0, errors.Errorf("bad net transport (%v)", src)
 }
 
+func sgAccPorts2proto(src []model.SGRulePorts) ([]*sg.AccPorts, error) {
+	ret := make([]*sg.AccPorts, 0, len(src))
+	for _, p := range src {
+		var s, d model.PortSource
+		if err := s.FromPortRanges(p.S); err != nil {
+			return nil, errors.Wrapf(err, "bad 'S' ports value '%s'", p.S)
+		}
+		if err := d.FromPortRanges(p.D); err != nil {
+			return nil, errors.Wrapf(err, "bad 'D' ports value '%s'", p.D)
+		}
+		ret = append(ret, &sg.AccPorts{S: string(s), D: string(d)})
+	}
+	return ret, nil
+
+}
+
 func sgRule2proto(src model.SGRule) (*sg.Rule, error) {
 	var ret sg.Rule
 	if t, e := netTranport2proto(src.ID.Transport); e != nil {
@@ -33,18 +49,23 @@ func sgRule2proto(src model.SGRule) (*sg.Rule, error) {
 	ret.Logs = src.Logs
 	ret.SgFrom = src.ID.SgFrom
 	ret.SgTo = src.ID.SgTo
-	ret.Ports = make([]*sg.Rule_Ports, 0, len(src.Ports))
-	for _, p := range src.Ports {
-		var s, d model.PortSource
-		if err := s.FromPortRanges(p.S); err != nil {
-			return nil, errors.Wrapf(err, "bad 'S' ports value '%s'", p.S)
-		}
-		if err := d.FromPortRanges(p.D); err != nil {
-			return nil, errors.Wrapf(err, "bad 'D' ports value '%s'", p.D)
-		}
-		ret.Ports = append(ret.Ports, &sg.Rule_Ports{S: string(s), D: string(d)})
+	var e error
+	ret.Ports, e = sgAccPorts2proto(src.Ports)
+	return &ret, e
+}
+
+func sgFdqnRule2proto(src model.FDQNRule) (*sg.FdqnRule, error) {
+	var ret sg.FdqnRule
+	if t, e := netTranport2proto(src.ID.Transport); e != nil {
+		return nil, e
+	} else {
+		ret.Transport = t
 	}
-	return &ret, nil
+	ret.Logs = src.Logs
+	ret.SgFrom = src.ID.SgFrom
+	var e error
+	ret.Ports, e = sgAccPorts2proto(src.Ports)
+	return &ret, e
 }
 
 func (srv *sgService) GetRules(ctx context.Context, req *sg.GetRulesReq) (resp *sg.RulesResp, err error) {
@@ -60,7 +81,7 @@ func (srv *sgService) GetRules(ctx context.Context, req *sg.GetRulesReq) (resp *
 	err = reader.ListSGRules(ctx, func(rule model.SGRule) error {
 		r, e := sgRule2proto(rule)
 		if e != nil {
-			return errors.WithMessagef(e, "on convert SGRule '%s' to proto", rule)
+			return errors.WithMessagef(e, "on convert SGRule '%s' to proto", rule.ID)
 		}
 		resp.Rules = append(resp.Rules, r)
 		return nil

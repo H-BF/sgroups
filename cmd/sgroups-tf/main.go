@@ -25,13 +25,15 @@ func main() {
 				Schema:               details.SGroupsConfigSchema(),
 				ConfigureContextFunc: details.SGroupsConfigure,
 				ResourcesMap: map[string]*schema.Resource{
-					details.RcNetwork: details.SGroupsRcNetwork(),
-					details.RcSG:      details.SGroupsRcSG(),
-					details.RcRule:    details.SGroupsRcRule(),
+					details.RcNetwork:  details.SGroupsRcNetwork(),
+					details.RcSG:       details.SGroupsRcSG(),
+					details.RcRule:     details.SGroupsRcRule(),
+					details.RcFdqnRule: details.SGroupsRcFdqnRule(),
 
-					details.RcNetworks: details.SGroupsRcNetworks(),
-					details.RcSGs:      details.SGroupsRcSGs(),
-					details.RcRules:    details.SGroupsRcRules(),
+					details.RcNetworks:  details.SGroupsRcNetworks(),
+					details.RcSGs:       details.SGroupsRcSGs(),
+					details.RcRules:     details.SGroupsRcRules(),
+					details.RcFdqnRules: details.SGroupsRcFdqnRules(),
 				},
 			}
 		},

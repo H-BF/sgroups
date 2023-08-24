@@ -125,8 +125,11 @@ const (
 )
 
 const (
+	// DEFAULT is mean default action
+	DEFAULT ChainDefaultAction = iota
+
 	// DROP drop action net packet
-	DROP ChainDefaultAction = iota
+	DROP
 
 	// ACCEPT accept action net packet
 	ACCEPT
@@ -149,13 +152,15 @@ func (nt NetworkTransport) String() string {
 
 // String impl Stringer
 func (a ChainDefaultAction) String() string {
-	return [...]string{"drop", "accept"}[a]
+	return [...]string{"default", "drop", "accept"}[a]
 }
 
 // FromString inits from string
 func (a *ChainDefaultAction) FromString(s string) error {
 	const api = "ChainDefaultAction/FromString"
 	switch strings.ToLower(s) {
+	case "defuault":
+		*a = DEFAULT
 	case "drop":
 		*a = DROP
 	case "accept":

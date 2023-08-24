@@ -191,14 +191,23 @@ func modelRule2tf(mr *model.SGRule) (map[string]any, error) {
 	return ret, nil
 }
 
+func tf2protoNetProto(raw map[string]any) (ret common.Networks_NetIP_Transport, e error) {
+	lab := raw[RcLabelProto].(string)
+	proto, ok := common.Networks_NetIP_Transport_value[strings.ToUpper(lab)]
+	if !ok {
+		return 0, errors.Errorf("bad proto '%s'", lab)
+	}
+	return common.Networks_NetIP_Transport(proto), nil
+}
+
 func tf2protoRule(raw any) (string, *sgroupsAPI.Rule, error) {
 	item := raw.(map[string]any)
-	proto, ok := common.Networks_NetIP_Transport_value[strings.ToUpper(item[RcLabelProto].(string))]
-	if !ok {
-		return "", nil, errors.Errorf("bad proto '%s'", item[RcLabelProto].(string))
+	proto, e := tf2protoNetProto(item)
+	if e != nil {
+		return "", nil, e
 	}
 	rule := &sgroupsAPI.Rule{
-		Transport: common.Networks_NetIP_Transport(proto),
+		Transport: proto,
 		SgFrom:    item[RcLabelSgFrom].(string),
 		SgTo:      item[RcLabelSgTo].(string),
 	}
@@ -207,20 +216,25 @@ func tf2protoRule(raw any) (string, *sgroupsAPI.Rule, error) {
 	if err != nil {
 		return "", nil, err
 	}
-	ports, _ := item[RcLabelRulePorts].([]any)
+	rule.Ports = tf2protoAccPorts(item)
+	return id.String(), rule, nil
+}
+
+func tf2protoAccPorts(raw map[string]any) (ret []*sgroupsAPI.AccPorts) {
+	ports, _ := raw[RcLabelRulePorts].([]any)
 	for _, p := range ports {
 		if rp, _ := p.(map[string]any); rp != nil {
 			s, _ := rp[RcLabelSPorts].(string)
 			d, _ := rp[RcLabelDPorts].(string)
 			if len(s) > 0 || len(d) > 0 {
-				rule.Ports = append(rule.Ports, &sgroupsAPI.Rule_Ports{
+				ret = append(ret, &sgroupsAPI.AccPorts{
 					S: s,
 					D: d,
 				})
 			}
 		}
 	}
-	return id.String(), rule, nil
+	return ret
 }
 
 func diffSuppressSGRulePorts(k, _, _ string, rd *schema.ResourceData) bool {

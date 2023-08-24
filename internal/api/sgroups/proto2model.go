@@ -31,18 +31,35 @@ func Proto2ModelSGRuleIdentity(src *sg.Rule) (model.SGRuleIdentity, error) {
 	return ret, errors.WithMessage(err, api)
 }
 
+// Proto2ModelFDQNRuleIdentity -
+func Proto2ModelFDQNRuleIdentity(src *sg.FdqnRule) (model.FDQNRuleIdentity, error) {
+	const api = "proto2model-FDQNRuleIdentity-conv"
+	var ret model.FDQNRuleIdentity
+	err := (sgFdqnRuleIdentity{&ret}).from(src)
+	return ret, errors.WithMessage(err, api)
+}
+
 // Proto2ModelSGRule conv SGRule (proto --> model)
 func Proto2ModelSGRule(src *sg.Rule) (model.SGRule, error) {
 	const api = "proto2model-SGRule-conv"
-
 	var ret model.SGRule
 	err := sgRule{SGRule: &ret}.from(src)
 	return ret, errors.WithMessage(err, api)
 }
 
+// Proto2ModelFDQNRule conv FDQNRule (proto --> model)
+func Proto2ModelFDQNRule(src *sg.FdqnRule) (model.FDQNRule, error) {
+	const api = "proto2model-FDQNRule-conv"
+	var ret model.FDQNRule
+	err := sgFdqnRule{FDQNRule: &ret}.from(src)
+	return ret, errors.WithMessage(err, api)
+}
+
+/*//
 // Proto2ModelPortRanges -
-func Proto2ModelPortRanges(src []*sg.Rule_Ports) ([]model.SGRulePorts, error) {
+func Proto2ModelPortRanges(src []*sg.AccPorts) ([]model.SGRulePorts, error) {
 	var ret rulePorts
 	err := ret.from(src)
 	return []model.SGRulePorts(ret), err
 }
+*/
