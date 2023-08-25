@@ -71,9 +71,9 @@ func (rd sGroupsMemDbReader) ListSGRules(_ context.Context, consume func(model.S
 	return memDbListObjects(rd.reader, scope, TblSecRules, consume)
 }
 
-// ListFdqnRules impl Reader
-func (rd sGroupsMemDbReader) ListFdqnRules(_ context.Context, consume func(model.FDQNRule) error, scope Scope) error {
-	return memDbListObjects(rd.reader, scope, TblFdqnRules, consume)
+// ListFqdnRules impl Reader
+func (rd sGroupsMemDbReader) ListFqdnRules(_ context.Context, consume func(model.FQDNRule) error, scope Scope) error {
+	return memDbListObjects(rd.reader, scope, TblFqdnRules, consume)
 }
 
 // ListSGRules impl Reader

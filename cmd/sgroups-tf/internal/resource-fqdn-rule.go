@@ -15,7 +15,7 @@ import (
 /*// resource skeleton
 proto: TCP|UDP
 sg_from: sg1
-fdqn: aws.com
+fqdn: aws.com
 logs: <true|false>
 ports:
 - s: 10
@@ -24,23 +24,23 @@ ports:
   d: 100
 */
 
-// RcFdqnRule -
-const RcFdqnRule = SGroupsProvider + "_fdqn_rule"
+// RcFqdnRule -
+const RcFqdnRule = SGroupsProvider + "_fqdn_rule"
 
-// RcLabelFdqn -
-const RcLabelFdqn = "fdqn"
+// RcLabelFqdn -
+const RcLabelFqdn = "fqdn"
 
-// SGroupsRcFdqnRule -
-func SGroupsRcFdqnRule() *schema.Resource {
+// SGroupsRcFqdnRule -
+func SGroupsRcFqdnRule() *schema.Resource {
 	return &schema.Resource{
-		Description:   "FDQN rule",
-		ReadContext:   fdqnRuleR,
-		CreateContext: fdqnRuleC,
+		Description:   "FQDN rule",
+		ReadContext:   fqdnRuleR,
+		CreateContext: fqdnRuleC,
 		UpdateContext: func(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
-			return fdqnRuleUD(ctx, rd, i, true)
+			return fqdnRuleUD(ctx, rd, i, true)
 		},
 		DeleteContext: func(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
-			return fdqnRuleUD(ctx, rd, i, false)
+			return fqdnRuleUD(ctx, rd, i, false)
 		},
 		Schema: map[string]*schema.Schema{ //nolint:dupl
 			RcLabelProto: netProtoSchema(),
@@ -49,8 +49,8 @@ func SGroupsRcFdqnRule() *schema.Resource {
 				Type:        schema.TypeString,
 				Required:    true,
 			},
-			RcLabelFdqn: {
-				Description: "FDQN record",
+			RcLabelFqdn: {
+				Description: "FQDN record",
 				Type:        schema.TypeString,
 				Required:    true,
 			},
@@ -65,10 +65,10 @@ func SGroupsRcFdqnRule() *schema.Resource {
 	}
 }
 
-func fdqnRuleR(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
-	var req sgroupsAPI.FindFdqnRulesReq
+func fqdnRuleR(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+	var req sgroupsAPI.FindFqdnRulesReq
 	req.SgFrom = append(req.SgFrom, rd.Get(RcLabelSgFrom).(string))
-	resp, err := i.(SGClient).FindFdqnRules(ctx, &req)
+	resp, err := i.(SGClient).FindFqdnRules(ctx, &req)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -77,17 +77,17 @@ func fdqnRuleR(ctx context.Context, rd *schema.ResourceData, i interface{}) diag
 		return diag.FromErr(err)
 	}
 	for _, rule := range resp.GetRules() {
-		var mr model.FDQNRule
-		if mr, err = utils.Proto2ModelFDQNRule(rule); err != nil {
+		var mr model.FQDNRule
+		if mr, err = utils.Proto2ModelFQDNRule(rule); err != nil {
 			return diag.FromErr(err)
 		}
 		if mr.ID.Transport == tp {
-			rc, err := modelFdqnRule2tf(mr)
+			rc, err := modelFqdnRule2tf(mr)
 			if err != nil {
 				return diag.FromErr(err)
 			}
 			attrs := []string{
-				RcLabelSgFrom, RcLabelSgTo, RcLabelProto, RcLabelRulePorts,
+				RcLabelSgFrom, RcLabelFqdn, RcLabelProto, RcLabelRulePorts,
 			}
 			for _, a := range attrs {
 				if v, ok := rc[a]; ok {
@@ -104,20 +104,20 @@ func fdqnRuleR(ctx context.Context, rd *schema.ResourceData, i interface{}) diag
 	return nil
 }
 
-func fdqnRuleC(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
-	rule, err := rd2protoFdqnRule(rd, true)
+func fqdnRuleC(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+	rule, err := rd2protoFqdnRule(rd, true)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	var id model.FDQNRuleIdentity
-	if id, err = utils.Proto2ModelFDQNRuleIdentity(rule); err != nil {
+	var id model.FQDNRuleIdentity
+	if id, err = utils.Proto2ModelFQDNRuleIdentity(rule); err != nil {
 		return diag.FromErr(err)
 	}
 	req := sgroupsAPI.SyncReq{
 		SyncOp: sgroupsAPI.SyncReq_Upsert,
-		Subject: &sgroupsAPI.SyncReq_FdqnRules{
-			FdqnRules: &sgroupsAPI.SyncFdqnRules{
-				Rules: []*sgroupsAPI.FdqnRule{rule},
+		Subject: &sgroupsAPI.SyncReq_FqdnRules{
+			FqdnRules: &sgroupsAPI.SyncFqdnRules{
+				Rules: []*sgroupsAPI.FqdnRule{rule},
 			},
 		},
 	}
@@ -127,19 +127,19 @@ func fdqnRuleC(ctx context.Context, rd *schema.ResourceData, i interface{}) diag
 	return diag.FromErr(err)
 }
 
-func fdqnRuleUD(ctx context.Context, rd *schema.ResourceData, i interface{}, upd bool) diag.Diagnostics {
-	rule, err := rd2protoFdqnRule(rd, upd)
+func fqdnRuleUD(ctx context.Context, rd *schema.ResourceData, i interface{}, upd bool) diag.Diagnostics {
+	rule, err := rd2protoFqdnRule(rd, upd)
 	if err != nil {
 		return diag.FromErr(err)
 	}
-	var id model.FDQNRuleIdentity
+	var id model.FQDNRuleIdentity
 	if upd {
-		for _, a := range []string{RcLabelSgFrom, RcLabelFdqn, RcLabelProto} {
+		for _, a := range []string{RcLabelSgFrom, RcLabelFqdn, RcLabelProto} {
 			if rd.HasChange(a) {
 				return diag.FromErr(fmt.Errorf("unable change '%s' attribute", a))
 			}
 		}
-		if id, err = utils.Proto2ModelFDQNRuleIdentity(rule); err != nil {
+		if id, err = utils.Proto2ModelFQDNRuleIdentity(rule); err != nil {
 			return diag.FromErr(err)
 		}
 	}
@@ -149,9 +149,9 @@ func fdqnRuleUD(ctx context.Context, rd *schema.ResourceData, i interface{}, upd
 	}
 	req := sgroupsAPI.SyncReq{
 		SyncOp: op,
-		Subject: &sgroupsAPI.SyncReq_FdqnRules{
-			FdqnRules: &sgroupsAPI.SyncFdqnRules{
-				Rules: []*sgroupsAPI.FdqnRule{rule},
+		Subject: &sgroupsAPI.SyncReq_FqdnRules{
+			FqdnRules: &sgroupsAPI.SyncFqdnRules{
+				Rules: []*sgroupsAPI.FqdnRule{rule},
 			},
 		},
 	}
@@ -161,7 +161,7 @@ func fdqnRuleUD(ctx context.Context, rd *schema.ResourceData, i interface{}, upd
 	return diag.FromErr(err)
 }
 
-func modelFdqnRule2tf(mr model.FDQNRule) (map[string]any, error) {
+func modelFqdnRule2tf(mr model.FQDNRule) (map[string]any, error) {
 	var ports []any
 	for _, p := range mr.Ports {
 		var s, d model.PortSource
@@ -185,7 +185,7 @@ func modelFdqnRule2tf(mr model.FDQNRule) (map[string]any, error) {
 	}
 	ret := map[string]any{
 		RcLabelSgFrom: mr.ID.SgFrom,
-		RcLabelFdqn:   mr.ID.FdqnTo,
+		RcLabelFqdn:   mr.ID.FqdnTo,
 		RcLabelProto:  mr.ID.Transport.String(),
 		RcLabelLogs:   mr.Logs,
 	}
@@ -195,9 +195,9 @@ func modelFdqnRule2tf(mr model.FDQNRule) (map[string]any, error) {
 	return ret, nil
 }
 
-func rd2protoFdqnRule(rd *schema.ResourceData, withPorts bool) (*sgroupsAPI.FdqnRule, error) {
+func rd2protoFqdnRule(rd *schema.ResourceData, withPorts bool) (*sgroupsAPI.FqdnRule, error) {
 	attrs := []string{
-		RcLabelSgFrom, RcLabelFdqn, RcLabelProto, RcLabelLogs,
+		RcLabelSgFrom, RcLabelFqdn, RcLabelProto, RcLabelLogs,
 	}
 	if withPorts {
 		attrs = append(attrs, RcLabelRulePorts)
@@ -208,23 +208,23 @@ func rd2protoFdqnRule(rd *schema.ResourceData, withPorts bool) (*sgroupsAPI.Fdqn
 			raw[a] = v
 		}
 	}
-	_, ret, err := tf2protoFdqnRule(raw)
+	_, ret, err := tf2protoFqdnRule(raw)
 	return ret, err
 }
 
-func tf2protoFdqnRule(raw any) (string, *sgroupsAPI.FdqnRule, error) {
+func tf2protoFqdnRule(raw any) (string, *sgroupsAPI.FqdnRule, error) {
 	item := raw.(map[string]any)
 	proto, e := tf2protoNetProto(item)
 	if e != nil {
 		return "", nil, e
 	}
-	rule := &sgroupsAPI.FdqnRule{
+	rule := &sgroupsAPI.FqdnRule{
 		Transport: proto,
 		SgFrom:    item[RcLabelSgFrom].(string),
-		FDQN:      item[RcLabelFdqn].(string),
+		FQDN:      item[RcLabelFqdn].(string),
 	}
 	rule.Logs, _ = item[RcLabelLogs].(bool)
-	id, err := utils.Proto2ModelFDQNRuleIdentity(rule)
+	id, err := utils.Proto2ModelFQDNRuleIdentity(rule)
 	if err != nil {
 		return "", nil, err
 	}

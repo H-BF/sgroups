@@ -11,11 +11,11 @@ import (
 func newInternalDB(ctx context.Context) (appdb.Registry, error) {
 	m, e := appdb.NewMemDB(appdb.TblSecGroups,
 		appdb.TblSecRules, appdb.TblNetworks,
-		appdb.TblSyncStatus, appdb.TblFdqnRules,
+		appdb.TblSyncStatus, appdb.TblFqdnRules,
 		appdb.IntegrityChecker4SG(),
 		appdb.IntegrityChecker4SGRules(),
 		appdb.IntegrityChecker4Networks(),
-		appdb.IntegrityChecker4FdqnRules())
+		appdb.IntegrityChecker4FqdnRules())
 	if e != nil {
 		return nil, errors.WithMessage(e, "create mem db")
 	}

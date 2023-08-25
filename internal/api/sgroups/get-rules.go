@@ -54,8 +54,8 @@ func sgRule2proto(src model.SGRule) (*sg.Rule, error) {
 	return &ret, e
 }
 
-func sgFdqnRule2proto(src model.FDQNRule) (*sg.FdqnRule, error) {
-	var ret sg.FdqnRule
+func sgFqdnRule2proto(src model.FQDNRule) (*sg.FqdnRule, error) {
+	var ret sg.FqdnRule
 	if t, e := netTranport2proto(src.ID.Transport); e != nil {
 		return nil, e
 	} else {

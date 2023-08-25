@@ -12,26 +12,26 @@ import (
 )
 
 type (
-	syncFdqnRules struct {
+	syncFqdnRules struct {
 		wr    registry.Writer
-		rules []*sg.FdqnRule
+		rules []*sg.FqdnRule
 		ops   sg.SyncReq_SyncOp
 	}
 
-	sgFdqnRule struct {
-		*model.FDQNRule
+	sgFqdnRule struct {
+		*model.FQDNRule
 	}
 
-	sgFdqnRuleIdentity struct {
-		*model.FDQNRuleIdentity
+	sgFqdnRuleIdentity struct {
+		*model.FQDNRuleIdentity
 	}
 )
 
-func (snc syncFdqnRules) process(ctx context.Context) error {
-	rules := make([]model.FDQNRule, 0, len(snc.rules))
+func (snc syncFqdnRules) process(ctx context.Context) error {
+	rules := make([]model.FQDNRule, 0, len(snc.rules))
 	for _, rl := range snc.rules {
-		var item model.FDQNRule
-		if err := (sgFdqnRule{FDQNRule: &item}).from(rl); err != nil {
+		var item model.FQDNRule
+		if err := (sgFqdnRule{FQDNRule: &item}).from(rl); err != nil {
 			return status.Error(codes.InvalidArgument, err.Error())
 		}
 		rules = append(rules, item)
@@ -42,20 +42,20 @@ func (snc syncFdqnRules) process(ctx context.Context) error {
 	}
 	var sc registry.Scope = registry.NoScope
 	if snc.ops == sg.SyncReq_Delete {
-		sc = registry.FDQNRule(rules...)
+		sc = registry.FQDNRule(rules...)
 		rules = nil
 	}
-	return snc.wr.SyncFdqnRules(ctx, rules, sc, opts...)
+	return snc.wr.SyncFqdnRules(ctx, rules, sc, opts...)
 }
 
-func (ri sgFdqnRuleIdentity) from(src *sg.FdqnRule) error {
+func (ri sgFqdnRuleIdentity) from(src *sg.FqdnRule) error {
 	ri.SgFrom = src.GetSgFrom()
 	return networkTransport{NetworkTransport: &ri.Transport}.
 		from(src.GetTransport())
 }
 
-func (r sgFdqnRule) from(src *sg.FdqnRule) error {
-	err := sgFdqnRuleIdentity{FDQNRuleIdentity: &r.ID}.
+func (r sgFqdnRule) from(src *sg.FqdnRule) error {
+	err := sgFqdnRuleIdentity{FQDNRuleIdentity: &r.ID}.
 		from(src)
 	if err == nil {
 		r.Logs = src.GetLogs()

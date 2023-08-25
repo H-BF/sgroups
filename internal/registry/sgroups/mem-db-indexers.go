@@ -19,8 +19,8 @@ type (
 	// SGRuleIdIndexer indexer
 	SGRuleIdIndexer struct{} //nolint:revive
 
-	// FDQNRuleIdIndexer indexer
-	FDQNRuleIdIndexer struct{} //nolint:revive
+	// FQDNRuleIdIndexer indexer
+	FQDNRuleIdIndexer struct{} //nolint:revive
 )
 
 // FromObject impl Indexer
@@ -80,22 +80,22 @@ func (idx SGRuleIdIndexer) FromArgs(args ...interface{}) ([]byte, error) {
 }
 
 // FromObject impl Indexer
-func (idx FDQNRuleIdIndexer) FromObject(obj interface{}) (bool, []byte, error) {
+func (idx FQDNRuleIdIndexer) FromObject(obj interface{}) (bool, []byte, error) {
 	val, err := idx.FromArgs(obj)
 	return len(val) != 0, val, err
 }
 
 // FromArgs impl Indexer
-func (idx FDQNRuleIdIndexer) FromArgs(args ...interface{}) ([]byte, error) {
+func (idx FQDNRuleIdIndexer) FromArgs(args ...interface{}) ([]byte, error) {
 	if len(args) != 1 {
 		return nil, errors.New("must provide only a single argument")
 	}
 	b := bytes.NewBuffer(nil)
 	arg := reflect.Indirect(reflect.ValueOf(args[0])).Interface()
 	switch a := arg.(type) {
-	case model.FDQNRule:
+	case model.FQDNRule:
 		_, _ = fmt.Fprintf(b, "%s\x00", a.ID.IdentityHash())
-	case model.FDQNRuleIdentity:
+	case model.FQDNRuleIdentity:
 		_, _ = fmt.Fprintf(b, "%s\x00", a.IdentityHash())
 	default:
 		return nil, errors.New("IPNetIndexer: unsupported data type")

@@ -12,7 +12,7 @@ type (
 		ListNetworks(ctx context.Context, consume func(model.Network) error, scope Scope) error
 		ListSecurityGroups(ctx context.Context, consume func(model.SecurityGroup) error, scope Scope) error
 		ListSGRules(ctx context.Context, consume func(model.SGRule) error, scope Scope) error
-		ListFdqnRules(ctx context.Context, consume func(model.FDQNRule) error, scope Scope) error
+		ListFqdnRules(ctx context.Context, consume func(model.FQDNRule) error, scope Scope) error
 		GetSyncStatus(ctx context.Context) (*model.SyncStatus, error)
 	}
 
@@ -27,7 +27,7 @@ type (
 		SyncNetworks(ctx context.Context, networks []model.Network, scope Scope, opts ...Option) error
 		SyncSecurityGroups(ctx context.Context, sgs []model.SecurityGroup, scope Scope, opts ...Option) error
 		SyncSGRules(ctx context.Context, rules []model.SGRule, scope Scope, opts ...Option) error
-		SyncFdqnRules(ctx context.Context, rules []model.FDQNRule, scope Scope, opts ...Option) error
+		SyncFqdnRules(ctx context.Context, rules []model.FQDNRule, scope Scope, opts ...Option) error
 		Commit() error
 		Abort()
 	}

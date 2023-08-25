@@ -16,8 +16,8 @@ var (
 	// ErrUnexpectedNullPortRange -
 	ErrUnexpectedNullPortRange = errors.New("unexpected null port range")
 
-	// ErrInvalidFDQN -
-	ErrInvalidFDQN = errors.New("invalid FDQN")
+	// ErrInvalidFQDN -
+	ErrInvalidFQDN = errors.New("invalid FQDN")
 )
 
 // Validatable is a alias to oz.Validatable
@@ -80,12 +80,12 @@ func (sgRuleKey SGRuleIdentity) Validate() error {
 	)
 }
 
-// Validate validate of FDQNRuleIdentity
-func (o FDQNRuleIdentity) Validate() error {
+// Validate validate of FQDNRuleIdentity
+func (o FQDNRuleIdentity) Validate() error {
 	return oz.ValidateStruct(&o,
 		oz.Field(&o.Transport),
 		oz.Field(&o.SgFrom, oz.Required),
-		oz.Field(&o.FdqnTo),
+		oz.Field(&o.FqdnTo),
 	)
 }
 
@@ -150,13 +150,13 @@ func (rule ruleT[T]) Validate() error {
 	)
 }
 
-// FDQN impl Validator
-func (o FDQN) Validate() error {
+// Validate impl Validator
+func (o FQDN) Validate() error {
 	a := unsafe.Slice(
 		unsafe.StringData(string(o)), len(o),
 	)
-	if m := reFDQN.Match(a); !m {
-		return ErrInvalidFDQN
+	if m := reFQDN.Match(a); !m {
+		return ErrInvalidFQDN
 	}
 	return nil
 }
@@ -164,5 +164,5 @@ func (o FDQN) Validate() error {
 var (
 	reCName = regexp.MustCompile(`^\w(?:.*\w)?$`)
 
-	reFDQN = regexp.MustCompile(`(?ims)^([a-z0-9\*][a-z0-9_-]{1,62}){1}(\.[a-z0-9_][a-z0-9_-]{0,62})*$`)
+	reFQDN = regexp.MustCompile(`(?ims)^([a-z0-9\*][a-z0-9_-]{1,62}){1}(\.[a-z0-9_][a-z0-9_-]{0,62})*$`)
 )

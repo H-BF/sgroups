@@ -196,8 +196,8 @@ func (rd *pgDbReader) ListSGRules(ctx context.Context, consume func(model.SGRule
 	})
 }
 
-// ListFdqnRules impl Reader interface
-func (rd *pgDbReader) ListFdqnRules(ctx context.Context, consume func(model.FDQNRule) error, scope Scope) error {
+// ListFqdnRules impl Reader interface
+func (rd *pgDbReader) ListFqdnRules(ctx context.Context, consume func(model.FQDNRule) error, scope Scope) error {
 	_ = ctx
 	_ = consume
 	_ = scope

@@ -40,12 +40,12 @@ func IntegrityChecker4SGRules() IntegrityChecker {
 	}
 }
 
-// IntegrityChecker4FdqnRules checks SG Rules restrictions
-func IntegrityChecker4FdqnRules() IntegrityChecker {
-	const api = "Integrity-of-FdqnRules"
+// IntegrityChecker4FqdnRules checks SG Rules restrictions
+func IntegrityChecker4FqdnRules() IntegrityChecker {
+	const api = "Integrity-of-FqdnRules"
 
 	return func(reader MemDbReader) error {
-		it, err := reader.Get(TblFdqnRules, indexID)
+		it, err := reader.Get(TblFqdnRules, indexID)
 		if err != nil {
 			return errors.WithMessage(err, api)
 		}
@@ -53,7 +53,7 @@ func IntegrityChecker4FdqnRules() IntegrityChecker {
 			return nil
 		}
 		for x := it.Next(); x != nil; x = it.Next() {
-			r := x.(*model.FDQNRule)
+			r := x.(*model.FQDNRule)
 			i, e := reader.First(TblSecGroups, indexID, r.ID.SgFrom)
 			if e != nil {
 				return errors.WithMessagef(e, "%s: find ref to SG '%s'", api, r.ID.SgFrom)

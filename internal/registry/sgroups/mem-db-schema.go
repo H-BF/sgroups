@@ -13,7 +13,7 @@ var tableID2MemDbSchemaInit = map[TableID]MemDbSchemaInit{
 	TblSecGroups:  memDbSecGroupsSchema,
 	TblSecRules:   memDbSgRulesSchema,
 	TblSyncStatus: memDbSyncStatusSchema,
-	TblFdqnRules:  memDbFdqnRulesSchema,
+	TblFqdnRules:  memDbFqdnRulesSchema,
 }
 
 func (TableID) privateMemDbOption() {}
@@ -69,15 +69,15 @@ func memDbSgRulesSchema(schema *MemDbSchema) {
 	}
 }
 
-func memDbFdqnRulesSchema(schema *MemDbSchema) {
-	tbl := TblFdqnRules.String()
+func memDbFqdnRulesSchema(schema *MemDbSchema) {
+	tbl := TblFqdnRules.String()
 	schema.Tables[tbl] = &MemDbTableSchema{
 		Name: tbl,
 		Indexes: map[string]*MemDbIndexSchema{
 			indexID: {
 				Name:    indexID,
 				Unique:  true,
-				Indexer: FDQNRuleIdIndexer{},
+				Indexer: FQDNRuleIdIndexer{},
 			},
 		},
 	}

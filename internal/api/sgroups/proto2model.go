@@ -31,11 +31,11 @@ func Proto2ModelSGRuleIdentity(src *sg.Rule) (model.SGRuleIdentity, error) {
 	return ret, errors.WithMessage(err, api)
 }
 
-// Proto2ModelFDQNRuleIdentity -
-func Proto2ModelFDQNRuleIdentity(src *sg.FdqnRule) (model.FDQNRuleIdentity, error) {
-	const api = "proto2model-FDQNRuleIdentity-conv"
-	var ret model.FDQNRuleIdentity
-	err := (sgFdqnRuleIdentity{&ret}).from(src)
+// Proto2ModelFQDNRuleIdentity -
+func Proto2ModelFQDNRuleIdentity(src *sg.FqdnRule) (model.FQDNRuleIdentity, error) {
+	const api = "proto2model-FQDNRuleIdentity-conv"
+	var ret model.FQDNRuleIdentity
+	err := (sgFqdnRuleIdentity{&ret}).from(src)
 	return ret, errors.WithMessage(err, api)
 }
 
@@ -47,11 +47,11 @@ func Proto2ModelSGRule(src *sg.Rule) (model.SGRule, error) {
 	return ret, errors.WithMessage(err, api)
 }
 
-// Proto2ModelFDQNRule conv FDQNRule (proto --> model)
-func Proto2ModelFDQNRule(src *sg.FdqnRule) (model.FDQNRule, error) {
-	const api = "proto2model-FDQNRule-conv"
-	var ret model.FDQNRule
-	err := sgFdqnRule{FDQNRule: &ret}.from(src)
+// Proto2ModelFQDNRule conv FQDNRule (proto --> model)
+func Proto2ModelFQDNRule(src *sg.FqdnRule) (model.FQDNRule, error) {
+	const api = "proto2model-FQDNRule-conv"
+	var ret model.FQDNRule
+	err := sgFqdnRule{FQDNRule: &ret}.from(src)
 	return ret, errors.WithMessage(err, api)
 }
 

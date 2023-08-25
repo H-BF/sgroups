@@ -194,7 +194,7 @@ func TestValidate_SGRule(t *testing.T) {
 	}
 }
 
-func TestValidate_FDQN(t *testing.T) {
+func TestValidate_FQDN(t *testing.T) {
 	cases := []struct {
 		val  string
 		fail bool
@@ -210,7 +210,7 @@ func TestValidate_FDQN(t *testing.T) {
 	}
 	for i := range cases {
 		c := cases[i]
-		e := FDQN(c.val).Validate()
+		e := FQDN(c.val).Validate()
 		if !c.fail {
 			require.NoErrorf(t, e, "test case #%v  '%v'", i, c.val)
 		} else {

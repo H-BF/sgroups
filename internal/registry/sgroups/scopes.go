@@ -43,7 +43,7 @@ type (
 
 	scopedSGRuleIdentity map[string]model.SGRuleIdentity
 
-	scopedFdqnRuleIdentity map[string]model.FDQNRuleIdentity
+	scopedFqdnRuleIdentity map[string]model.FQDNRuleIdentity
 
 	scopedSG     map[string]struct{}
 	scopedSGFrom map[string]struct{}
@@ -53,7 +53,7 @@ type (
 	KindOfScope interface {
 		Scope
 		scopedIPs | scopedNetworks | ScopedNetTransport |
-			scopedSGRuleIdentity | scopedFdqnRuleIdentity |
+			scopedSGRuleIdentity | scopedFqdnRuleIdentity |
 			scopedSGFrom | scopedSGTo | scopedSG |
 			scopedAnd | scopedOr | scopedNot | noScope
 	}
@@ -139,9 +139,9 @@ func SGRule(others ...model.SGRule) Scope {
 	return ret
 }
 
-// FDQNRule makes FDQN rule scope
-func FDQNRule(others ...model.FDQNRule) Scope {
-	ret := scopedFdqnRuleIdentity{}
+// FQDNRule makes FQDN rule scope
+func FQDNRule(others ...model.FQDNRule) Scope {
+	ret := scopedFqdnRuleIdentity{}
 	for _, o := range others {
 		ret[o.ID.IdentityHash()] = o.ID
 	}
@@ -159,10 +159,10 @@ func (scopedSGFrom) privateScope()           {}
 func (scopedSGTo) privateScope()             {}
 func (ScopedNetTransport) privateScope()     {}
 func (scopedSGRuleIdentity) privateScope()   {}
-func (scopedFdqnRuleIdentity) privateScope() {}
+func (scopedFqdnRuleIdentity) privateScope() {}
 
 type filterKindArg interface {
-	model.Network | model.SecurityGroup | model.SGRule | model.FDQNRule
+	model.Network | model.SecurityGroup | model.SGRule | model.FQDNRule
 }
 
 type filterTree[filterArgT filterKindArg] struct {
@@ -302,7 +302,7 @@ func (p scopedSGFrom) inSGRule(rule model.SGRule) bool {
 	return ok
 }
 
-func (p scopedSGFrom) inFdqnRule(rule model.FDQNRule) bool {
+func (p scopedSGFrom) inFqdnRule(rule model.FQDNRule) bool {
 	_, ok := p[rule.ID.SgFrom]
 	return ok
 }
@@ -311,7 +311,7 @@ func (p scopedSGFrom) meta() metaInfo {
 	return metaInfo{
 		reflect.TypeOf((*model.SGRule)(nil)).Elem(): reflect.ValueOf(p.inSGRule),
 
-		reflect.TypeOf((*model.FDQNRule)(nil)).Elem(): reflect.ValueOf(p.inFdqnRule),
+		reflect.TypeOf((*model.FQDNRule)(nil)).Elem(): reflect.ValueOf(p.inFqdnRule),
 	}
 }
 
@@ -348,14 +348,14 @@ func (p scopedSGRuleIdentity) meta() metaInfo {
 	}
 }
 
-func (p scopedFdqnRuleIdentity) inFDQNRule(rule model.FDQNRule) bool {
+func (p scopedFqdnRuleIdentity) inFQDNRule(rule model.FQDNRule) bool {
 	h := rule.ID.IdentityHash()
 	_, ok := p[h]
 	return ok
 }
 
-func (p scopedFdqnRuleIdentity) meta() metaInfo {
+func (p scopedFqdnRuleIdentity) meta() metaInfo {
 	return metaInfo{
-		reflect.TypeOf((*model.FDQNRule)(nil)).Elem(): reflect.ValueOf(p.inFDQNRule),
+		reflect.TypeOf((*model.FQDNRule)(nil)).Elem(): reflect.ValueOf(p.inFQDNRule),
 	}
 }

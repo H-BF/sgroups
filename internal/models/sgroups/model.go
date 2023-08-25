@@ -33,8 +33,8 @@ type (
 	// NetworkName net nam
 	NetworkName = string
 
-	// FDQN -
-	FDQN string
+	// FQDN -
+	FQDN string
 
 	// Network is IP network
 	Network struct {
@@ -58,11 +58,11 @@ type (
 		SgTo      string
 	}
 
-	// FDQNRuleIdentity -
-	FDQNRuleIdentity struct {
+	// FQDNRuleIdentity -
+	FQDNRuleIdentity struct {
 		Transport NetworkTransport
 		SgFrom    string
-		FdqnTo    FDQN
+		FqdnTo    FQDN
 	}
 
 	// SGRulePorts source and destination port ranges
@@ -74,8 +74,8 @@ type (
 	// SGRule security rule for From-To security groups
 	SGRule = ruleT[SGRuleIdentity]
 
-	// FDQNRule  security rule for From SG to FDQN
-	FDQNRule = ruleT[FDQNRuleIdentity]
+	// FQDNRule  security rule for From SG to FQDN
+	FQDNRule = ruleT[FQDNRuleIdentity]
 
 	// SyncStatus succeeded sync-op status
 	SyncStatus struct {
@@ -98,7 +98,7 @@ type (
 
 var (
 	_ ruleID[SGRuleIdentity]   = (*SGRuleIdentity)(nil)
-	_ ruleID[FDQNRuleIdentity] = (*FDQNRuleIdentity)(nil)
+	_ ruleID[FQDNRuleIdentity] = (*FQDNRuleIdentity)(nil)
 )
 
 // PortRangeFactory ...
@@ -194,11 +194,11 @@ func (sgRuleKey SGRuleIdentity) IdentityHash() string {
 	return strings.ToLower(hex.EncodeToString(hasher.Sum(nil)))
 }
 
-// IdentityHash makes ID as hash for FDQNRuleIdentity
-func (sgRuleKey FDQNRuleIdentity) IdentityHash() string {
+// IdentityHash makes ID as hash for FQDNRuleIdentity
+func (sgRuleKey FQDNRuleIdentity) IdentityHash() string {
 	hasher := md5.New() //nolint:gosec
 	hasher.Write([]byte(sgRuleKey.SgFrom))
-	hasher.Write(bytes.ToLower([]byte(sgRuleKey.FdqnTo)))
+	hasher.Write(bytes.ToLower([]byte(sgRuleKey.FqdnTo)))
 	hasher.Write([]byte(sgRuleKey.Transport.String()))
 	return strings.ToLower(hex.EncodeToString(hasher.Sum(nil)))
 }
@@ -211,9 +211,9 @@ func (sgRuleKey SGRuleIdentity) IsEq(other SGRuleIdentity) bool {
 }
 
 // IsEq -
-func (sgRuleKey FDQNRuleIdentity) IsEq(other FDQNRuleIdentity) bool {
+func (sgRuleKey FQDNRuleIdentity) IsEq(other FQDNRuleIdentity) bool {
 	return sgRuleKey.SgFrom == other.SgFrom &&
-		sgRuleKey.FdqnTo.IsEq(other.FdqnTo) &&
+		sgRuleKey.FqdnTo.IsEq(other.FqdnTo) &&
 		sgRuleKey.Transport == other.Transport
 }
 
@@ -224,9 +224,9 @@ func (sgRuleKey SGRuleIdentity) String() string {
 }
 
 // String impl Stringer
-func (sgRuleKey FDQNRuleIdentity) String() string {
+func (sgRuleKey FQDNRuleIdentity) String() string {
 	return fmt.Sprintf("%s:'%s'-'%s'",
-		sgRuleKey.Transport, sgRuleKey.SgFrom, sgRuleKey.FdqnTo)
+		sgRuleKey.Transport, sgRuleKey.SgFrom, sgRuleKey.FqdnTo)
 }
 
 // FromString init from string
@@ -252,11 +252,11 @@ func (rule ruleT[T]) IsEq(other ruleT[T]) bool {
 }
 
 // String impl Stringer
-func (o FDQN) String() string {
+func (o FQDN) String() string {
 	return string(o)
 }
 
 // IsEq -
-func (o FDQN) IsEq(other FDQN) bool {
+func (o FQDN) IsEq(other FQDN) bool {
 	return strings.EqualFold(string(o), string(other))
 }

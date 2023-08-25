@@ -28,12 +28,12 @@ func main() {
 					details.RcNetwork:  details.SGroupsRcNetwork(),
 					details.RcSG:       details.SGroupsRcSG(),
 					details.RcRule:     details.SGroupsRcRule(),
-					details.RcFdqnRule: details.SGroupsRcFdqnRule(),
+					details.RcFqdnRule: details.SGroupsRcFqdnRule(),
 
 					details.RcNetworks:  details.SGroupsRcNetworks(),
 					details.RcSGs:       details.SGroupsRcSGs(),
 					details.RcRules:     details.SGroupsRcRules(),
-					details.RcFdqnRules: details.SGroupsRcFdqnRules(),
+					details.RcFqdnRules: details.SGroupsRcFqdnRules(),
 				},
 			}
 		},

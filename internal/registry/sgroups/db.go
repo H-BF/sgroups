@@ -16,8 +16,8 @@ const (
 	// TblSecRules table 'sync-status'
 	TblSyncStatus
 
-	// TblFdqnRules table 'fdqn rules'
-	TblFdqnRules
+	// TblFqdnRules table 'fqdn rules'
+	TblFqdnRules
 )
 
 // SchemaName database scheme name
@@ -33,5 +33,5 @@ var tableID2string = map[TableID]string{
 	TblSecGroups:  "tbl_sg",
 	TblSecRules:   "tbl_sgrule",
 	TblSyncStatus: "tbl_sync_status",
-	TblFdqnRules:  "tbl_fdqnrule",
+	TblFqdnRules:  "tbl_fqdnrule",
 }

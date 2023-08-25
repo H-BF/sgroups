@@ -45,8 +45,8 @@ func (srv *sgService) FindRules(ctx context.Context, req *sg.FindRulesReq) (resp
 	return resp, nil
 }
 
-// FindFdqnRules impl SecGroupServiceServer
-func (srv *sgService) FindFdqnRules(ctx context.Context, req *sg.FindFdqnRulesReq) (resp *sg.FdqnRulesResp, err error) {
+// FindFqdnRules impl SecGroupServiceServer
+func (srv *sgService) FindFqdnRules(ctx context.Context, req *sg.FindFqdnRulesReq) (resp *sg.FqdnRulesResp, err error) {
 	defer func() {
 		err = correctError(err)
 	}()
@@ -59,11 +59,11 @@ func (srv *sgService) FindFdqnRules(ctx context.Context, req *sg.FindFdqnRulesRe
 	if s := req.GetSgFrom(); len(s) > 0 {
 		sc = registry.SGFrom(s[0], s[1:]...)
 	}
-	resp = new(sg.FdqnRulesResp)
-	err = reader.ListFdqnRules(ctx, func(rule model.FDQNRule) error {
-		r, e := sgFdqnRule2proto(rule)
+	resp = new(sg.FqdnRulesResp)
+	err = reader.ListFqdnRules(ctx, func(rule model.FQDNRule) error {
+		r, e := sgFqdnRule2proto(rule)
 		if e != nil {
-			return errors.WithMessagef(e, "convert FDQNRule '%s' to proto", rule.ID)
+			return errors.WithMessagef(e, "convert FQDNRule '%s' to proto", rule.ID)
 		}
 		resp.Rules = append(resp.Rules, r)
 		return nil

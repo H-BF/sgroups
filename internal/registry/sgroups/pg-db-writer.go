@@ -145,8 +145,8 @@ func (wr *pgDbWriter) SyncSGRules(ctx context.Context, rules []model.SGRule, sco
 	return err
 }
 
-// SyncFdqnRules impl Writer interface
-func (wr *pgDbWriter) SyncFdqnRules(ctx context.Context, rules []model.FDQNRule, scope Scope, opts ...Option) error {
+// SyncFqdnRules impl Writer interface
+func (wr *pgDbWriter) SyncFqdnRules(ctx context.Context, rules []model.FQDNRule, scope Scope, opts ...Option) error {
 	_ = ctx
 	_ = rules
 	_ = scope

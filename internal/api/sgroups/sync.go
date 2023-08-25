@@ -41,9 +41,9 @@ func (srv *sgService) Sync(ctx context.Context, req *sg.SyncReq) (ret *emptypb.E
 		rules := sbj.SgRules.GetRules()
 		err = syncRules{wr: wr, ops: ops, rules: rules}.
 			process(ctx)
-	case *sg.SyncReq_FdqnRules:
-		rules := sbj.FdqnRules.GetRules()
-		err = syncFdqnRules{wr: wr, ops: ops, rules: rules}.
+	case *sg.SyncReq_FqdnRules:
+		rules := sbj.FqdnRules.GetRules()
+		err = syncFqdnRules{wr: wr, ops: ops, rules: rules}.
 			process(ctx)
 	default:
 		err = status.Error(codes.InvalidArgument, "unsupported subject type")
