@@ -9,6 +9,7 @@ import (
 
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/miekg/dns"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -74,8 +75,7 @@ func (rs queryHelper) buildClient() (*dns.Client, error) {
 				e := raw.Control(func(fd uintptr) {
 					opErr = syscall.SetsockoptInt(
 						int(fd), syscall.SOL_SOCKET,
-						//syscall.SO_REUSEADDR, 1)
-						syscall.SO_REUSEPORT, 1)
+						unix.SO_REUSEPORT, 1)
 				})
 				return tern(e != nil, e, opErr)
 			},
