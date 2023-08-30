@@ -2,6 +2,8 @@ package dns
 
 import (
 	"time"
+
+	bkf "github.com/H-BF/corlib/pkg/backoff"
 )
 
 // Option -
@@ -33,6 +35,11 @@ type ( // options
 
 	// NoDefNS -
 	NoDefNS struct{}
+
+	// WithBackoff -
+	WithBackoff struct {
+		bkf.Backoff
+	}
 )
 
 func (o UsePort) apply(r *queryHelper) {
@@ -65,4 +72,10 @@ func (o UseTCP) apply(r *queryHelper) {
 
 func (o NoDefNS) apply(r *queryHelper) {
 	r.noDefNS = true
+}
+
+func (o WithBackoff) apply(r *queryHelper) {
+	if o.Backoff != nil {
+		r.backoff = o.Backoff
+	}
 }

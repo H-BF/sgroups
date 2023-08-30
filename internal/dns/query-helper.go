@@ -7,6 +7,7 @@ import (
 	"syscall"
 	"time"
 
+	bkf "github.com/H-BF/corlib/pkg/backoff"
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/miekg/dns"
 	"golang.org/x/sys/unix"
@@ -26,6 +27,7 @@ type queryHelper struct {
 	nameservers   []string
 	port          uint16
 	localAddr     string
+	backoff       bkf.Backoff
 	dialDuration  time.Duration
 	readDuration  time.Duration
 	writeDuration time.Duration
@@ -45,6 +47,7 @@ func (rs *queryHelper) init(opts ...Option) {
 	rs.writeDuration = defaultWriteDuration
 	rs.readDuration = defaultReadDuration
 	rs.port = defaultPort
+	rs.backoff = &bkf.StopBackoff
 	for _, o := range opts {
 		o.apply(rs)
 	}

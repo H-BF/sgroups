@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"time"
 
+	bkf "github.com/H-BF/corlib/pkg/backoff"
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/miekg/dns"
 	"github.com/pkg/errors"
@@ -82,40 +84,53 @@ func (queryAddress[AddrT]) Ask(ctx context.Context, domain string, opts ...Optio
 		m *dns.Msg
 		e error
 	}
-	var errs []error
-	var succeeded int
-	nn := int(-1)
-	linq.From(nss).
-		Where(func(_ any) bool {
-			return nn <= 0 || !haveCancelledOrDeadline(errs[nn-1])
-		}).
-		Select(func(i any) any {
-			nn++
-			v := i.(string)
-			msg := h.makeMsq(q)
-			n := tern(net.ParseIP(v) != nil,
-				net.JoinHostPort(v, strconv.Itoa(int(h.port))),
-				fmt.Sprintf("%s:%v", dns.Fqdn(v), h.port))
-			var r retType
-			if r.m, _, r.e = c.ExchangeContext(ctx, msg, n); r.e != nil {
-				errs = append(errs, errors.WithMessagef(r.e, "use-ns(%s)", v))
-			} else if r.m.Rcode == dns.RcodeSuccess {
-				succeeded++
-			}
-			return r
-		}).
-		Where(func(i any) bool {
-			v := i.(retType)
-			return v.e == nil && v.m.Rcode == dns.RcodeSuccess &&
-				len(v.m.Answer) > 0
-		}).
-		Take(1).
-		SelectMany(func(i any) linq.Query {
-			rrs := i.(retType).m.Answer
-			return linq.From(AddrT{}.rr2addr(rrs))
-		}).ToSlice(&ret.Addresses)
+	for {
+		var errs []error
+		nn := int(-1)
+		linq.From(nss).
+			Where(func(_ any) bool {
+				return nn <= 0 || !haveCancelledOrDeadline(errs[nn-1])
+			}).
+			Select(func(i any) any {
+				nn++
+				v := i.(string)
+				msg := h.makeMsq(q)
+				n := tern(net.ParseIP(v) != nil,
+					net.JoinHostPort(v, strconv.Itoa(int(h.port))),
+					fmt.Sprintf("%s:%v", dns.Fqdn(v), h.port))
+				var r retType
+				if r.m, _, r.e = c.ExchangeContext(ctx, msg, n); r.e != nil {
+					errs = append(errs, errors.WithMessagef(r.e, "use-ns(%s)", v))
+				}
+				return r
+			}).
+			Where(func(i any) bool {
+				v := i.(retType)
+				return v.e == nil && v.m.Rcode == dns.RcodeSuccess &&
+					len(v.m.Answer) > 0
+			}).
+			Take(1).
+			SelectMany(func(i any) linq.Query {
+				rrs := i.(retType).m.Answer
+				return linq.From(AddrT{}.rr2addr(rrs))
+			}).ToSlice(&ret.Addresses)
 
-	ret.Error = tern(succeeded == 0, multierr.Combine(errs...), nil)
+		if len(ret.Addresses) != 0 || len(errs) == 0 {
+			break
+		}
+		nxt := h.backoff.NextBackOff()
+		if nxt == bkf.Stop {
+			ret.Error = multierr.Combine(errs...)
+		} else {
+			select {
+			case <-time.After(nxt):
+				continue
+			case <-ctx.Done():
+				ret.Error = multierr.Combine(append(errs, ctx.Err())...)
+			}
+		}
+		break
+	}
 	return ret
 }
 
