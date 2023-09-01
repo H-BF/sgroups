@@ -45,7 +45,7 @@ func (dict *HDict[Tk, Tv]) Put(k Tk, v Tv) {
 // Insert -
 func (dict *HDict[Tk, Tv]) Insert(k Tk, v Tv) bool {
 	dict.ensureInit()
-	if _, ok := dict.hmap[k]; ok {
+	if _, ok := dict.hmap[k]; !ok {
 		dict.hmap[k] = v
 		return true
 	}
