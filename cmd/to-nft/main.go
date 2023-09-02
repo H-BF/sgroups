@@ -46,6 +46,15 @@ func main() {
 		config.WithDefValue{Key: ServicesDefDialDuration, Val: 10 * time.Second},
 		config.WithDefValue{Key: SGroupsAddress, Val: "tcp://127.0.0.1:9000"},
 		config.WithDefValue{Key: SGroupsSyncStatusInterval, Val: "30s"},
+		//DNS group
+		config.WithDefValue{Key: DnsNameservers, Val: `["8.8.8.8"]`},
+		config.WithDefValue{Key: DnsProto, Val: "udp"},
+		config.WithDefValue{Key: DnsPort, Val: 53},
+		config.WithDefValue{Key: DnsRetries, Val: 3},
+		config.WithDefValue{Key: DnsRetriesTmo, Val: "1s"},
+		config.WithDefValue{Key: DnsDialDuration, Val: "3s"},
+		config.WithDefValue{Key: DnsWriteDuration, Val: "5s"},
+		config.WithDefValue{Key: DnsReadDuration, Val: "5s"},
 	)
 	if err != nil {
 		logger.Fatal(ctx, err)

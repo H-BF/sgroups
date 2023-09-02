@@ -130,6 +130,20 @@ func Test_NetCIDR_Json(t *testing.T) {
 	require.Equal(t, ar, ar2)
 }
 
+func Test_IP_Json(t *testing.T) {
+	v := []IP{
+		{net.ParseIP("192.168.1.0")},
+		{net.ParseIP("192.168.2.0")},
+		{net.ParseIP("[::]")},
+	}
+	b, e := json.Marshal(v)
+	require.NoError(t, e)
+	var v1 []IP
+	e = json.Unmarshal(b, &v1)
+	require.NoError(t, e)
+	require.Equal(t, v, v1)
+}
+
 /*//
 func Test_S(t *testing.T) {
 

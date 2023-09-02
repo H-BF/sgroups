@@ -19,7 +19,7 @@ var (
 	QueryA AddressResolver = queryAddress[typeA]{}
 
 	// QueryAAAA -
-	QueryAAA AddressResolver = queryAddress[typeAAAA]{}
+	QueryAAAA AddressResolver = queryAddress[typeAAAA]{}
 
 	// ErrNoAnyNs - no any nameserver is used
 	ErrNoAnyNs = errors.New("no any nameserver is used")
