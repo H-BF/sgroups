@@ -182,7 +182,15 @@ loop0:
 					logger.ErrorKV(ctx, "net-watcher", "error", e)
 				}
 			}
-			needApply = conf.UpdFromWatcher(msgs...) != 0 || appliedCount == 0
+			{
+				clonedConf := conf.Clone()
+				clonedConf.UpdFromWatcher(msgs...)
+				if clonedConf.Eq(conf) {
+					needApply = appliedCount == 0
+				} else {
+					conf, needApply = clonedConf, true
+				}
+			}
 			if needApply {
 				var st model.SyncStatus
 				if st, err = getSyncStatus(ctx, sgClient); err != nil {

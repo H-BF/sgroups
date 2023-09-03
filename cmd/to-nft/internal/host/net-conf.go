@@ -222,8 +222,7 @@ func (conf NetConf) LocalIPs() (IPv4 []net.IP, IPv6 []net.IP) {
 }
 
 // UpdFromWatcher updates conf with messages came from netlink-watcher
-func (conf *NetConf) UpdFromWatcher(msgs ...nl.WatcherMsg) uint {
-	var cnt uint
+func (conf *NetConf) UpdFromWatcher(msgs ...nl.WatcherMsg) {
 	for _, m := range msgs {
 		switch v := m.(type) {
 		case nl.AddrUpdateMsg:
@@ -231,7 +230,6 @@ func (conf *NetConf) UpdFromWatcher(msgs ...nl.WatcherMsg) uint {
 				v.LinkIndex,
 				v.Address,
 				tern(v.Deleted, Delete, Update))
-			cnt++
 		case nl.LinkUpdateMsg:
 			attrs := v.Link.Attrs()
 			conf.IpDevs.Upd(
@@ -241,10 +239,8 @@ func (conf *NetConf) UpdFromWatcher(msgs ...nl.WatcherMsg) uint {
 				},
 				tern(v.Deleted, Delete, Update),
 			)
-			cnt++
 		}
 	}
-	return cnt
 }
 
 func tern[tval any](cond bool, v1, v2 tval) tval {

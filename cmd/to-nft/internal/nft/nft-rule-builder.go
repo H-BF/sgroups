@@ -3,6 +3,7 @@ package nft
 import (
 	"fmt"
 
+	di "github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
 	"github.com/c-robinson/iplib"
@@ -17,20 +18,16 @@ func beginRule() ruleBuilder {
 }
 
 type ruleBuilder struct {
-	sets     dict[uint32, *nftlib.Set]
-	setElems dict[uint32, []nftlib.SetElement]
-	exprs    []Any
+	sets  di.HDict[uint32, NfSet]
+	exprs []Any
 }
 
 func (rb ruleBuilder) applyRule(chn *nftlib.Chain, c *nftlib.Conn) {
 	if len(rb.exprs) > 0 {
-		rb.sets.iterate(func(id uint32, s *nftlib.Set) bool {
-			if setElems, ok := rb.setElems.get(id); ok {
-				s.Table = chn.Table
-				e := c.AddSet(s, setElems)
-				if e != nil {
-					panic(e)
-				}
+		rb.sets.Iterate(func(id uint32, s NfSet) bool {
+			s.Table = chn.Table
+			if e := c.AddSet(s.Set, s.Elements); e != nil {
+				panic(e)
 			}
 			return true
 		})

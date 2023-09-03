@@ -11,6 +11,7 @@ import (
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
 	"github.com/H-BF/sgroups/internal/config"
+	di "github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
 	"github.com/H-BF/corlib/logger"
@@ -53,11 +54,11 @@ type (
 		log        logger.TypeOfLogger
 		txProvider func() (*nfTablesTx, error)
 
-		ruleDetails dict[string, *ruleDetails]
+		ruleDetails di.HDict[string, *ruleDetails]
 
 		table    *nftLib.Table
-		addrsets dict[string, *nftLib.Set]
-		chains   dict[string, *nftLib.Chain]
+		addrsets di.HDict[string, *nftLib.Set]
+		chains   di.HDict[string, *nftLib.Chain]
 		jobs     *list.List
 	}
 )
@@ -93,8 +94,7 @@ func (ap accports) sourceOrDestPort(rb ruleBuilder, isSource bool) ruleBuilder {
 			)
 		}
 		rb = tern(isSource, rb.sport, rb.dport)().inSet(set)
-		rb.sets.put(set.ID, set)
-		rb.setElems.put(set.ID, elements)
+		rb.sets.Put(set.ID, NfSet{Set: set, Elements: elements})
 	}
 	return rb
 }
@@ -110,8 +110,8 @@ func (ap accports) D(rb ruleBuilder) ruleBuilder {
 }
 
 func (bt *batch) init(table *nftLib.Table, localRules cases.LocalRules, baseRules *BaseRules) {
-	bt.addrsets.clear()
-	bt.chains.clear()
+	bt.addrsets.Clear()
+	bt.chains.Clear()
 	bt.jobs = nil
 	bt.table = table
 
@@ -190,24 +190,19 @@ loop:
 func delTables(tx *nfTablesTx, tbls ...*nftLib.Table) error {
 	const api = "del-table(s)"
 
-	type tableKey struct {
-		family nftLib.TableFamily
-		name   string
-	}
-	if len(tbls) == 0 {
-		return nil
-	}
-	var toDel dict[tableKey, *nftLib.Table]
+	var toDel di.HDict[NfTableKey, bool]
 	for _, tbl := range tbls {
-		toDel.put(tableKey{tbl.Family, tbl.Name}, tbl)
+		toDel.Put(NfTableKey{tbl.Family, tbl.Name}, true)
+	}
+	if toDel.Len() == 0 {
+		return nil
 	}
 	tableList, err := tx.ListTables()
 	if err != nil {
 		return errors.WithMessagef(err, "%s: get list of tables", api)
 	}
 	for _, tbl := range tableList {
-		k := tableKey{tbl.Family, tbl.Name}
-		if _, found := toDel.get(k); found {
+		if toDel.At(NfTableKey{tbl.Family, tbl.Name}) {
 			tx.DelTable(tbl)
 		}
 	}
@@ -254,7 +249,7 @@ func (bt *batch) initRootChains() {
 			Table: bt.table,
 		})
 		bt.log.Debugf("add chain '%s' into table '%s'", chnFWIN, bt.table.Name)
-		bt.chains.put(chnFWIN, fwInChain)
+		bt.chains.Put(chnFWIN, fwInChain)
 		//beginRule().metaNFTRACE(true).
 		//	applyRule(fwInChain, tx.Conn)
 
@@ -263,7 +258,7 @@ func (bt *batch) initRootChains() {
 			Table: bt.table,
 		})
 		bt.log.Debugf("add chain '%s' into table '%s'", chnFWOUT, bt.table.Name)
-		bt.chains.put(chnFWOUT, fwOutChain)
+		bt.chains.Put(chnFWOUT, fwOutChain)
 		//beginRule().metaNFTRACE(true).
 		//	applyRule(fwOutChain, tx.Conn)
 
@@ -276,7 +271,7 @@ func (bt *batch) initRootChains() {
 			Priority: nftLib.ChainPriorityFilter,
 		})
 		bt.log.Debugf("add chain '%s' into table '%s'", chnOUTPUT, bt.table.Name)
-		bt.chains.put(chnOUTPUT, chnOutput)
+		bt.chains.Put(chnOUTPUT, chnOutput)
 		beginRule().
 			ctState(nfte.CtStateBitESTABLISHED|nfte.CtStateBitRELATED).
 			accept().applyRule(chnOutput, tx.Conn)
@@ -292,7 +287,7 @@ func (bt *batch) initRootChains() {
 			Priority: nftLib.ChainPriorityFilter,
 		})
 		bt.log.Debugf("add chain '%s' into table '%s'", chnINPUT, bt.table.Name)
-		bt.chains.put(chnINPUT, chnInput)
+		bt.chains.Put(chnINPUT, chnInput)
 		beginRule().
 			ctState(nfte.CtStateBitESTABLISHED|nfte.CtStateBitRELATED).
 			accept().applyRule(chnInput, tx.Conn)
@@ -337,7 +332,7 @@ func (bt *batch) initBaseRules(baseRules *BaseRules) {
 				rule := beginRule()
 				tern(isIP4, rule.daddr4, rule.daddr6)().
 					inSet(netSet).accept().
-					applyRule(bt.chains.at(chnFWOUT), tx.Conn)
+					applyRule(bt.chains.At(chnFWOUT), tx.Conn)
 				return nil
 			})
 		}
@@ -350,7 +345,7 @@ func (bt *batch) addNetSets(localRules cases.LocalRules) {
 	_ = localRules.IterateNetworks(func(sgName string, nets []net.IPNet, isV6 bool) error {
 		ipV := tern(isV6, iplib.IP6Version, iplib.IP4Version)
 		nameOfSet := nameUtils{}.nameOfNetSet(ipV, sgName)
-		if bt.addrsets.at(nameOfSet) != nil {
+		if bt.addrsets.At(nameOfSet) != nil {
 			return nil
 		}
 		if elements := (setsUtils{}).nets2SetElements(nets, ipV); len(elements) > 0 {
@@ -368,7 +363,7 @@ func (bt *batch) addNetSets(localRules cases.LocalRules) {
 				}
 				bt.log.Debugf("add network(s) %s into set '%s'/'%s'",
 					slice2stringer(nets...), bt.table.Name, nameOfSet)
-				bt.addrsets.put(netSet.Name, netSet)
+				bt.addrsets.Put(netSet.Name, netSet)
 				return nil
 			})
 		}
@@ -406,7 +401,7 @@ func (bt *batch) initRulesDetails(localRules cases.LocalRules) {
 			item.accports = append(item.accports, accports{})
 		}
 		setsName := nameUtils{}.nameOfPortSet(r.ID.Transport, r.ID.SgFrom, r.ID.SgTo)
-		bt.ruleDetails.put(setsName, &item)
+		bt.ruleDetails.Put(setsName, &item)
 	}
 }
 
@@ -419,7 +414,7 @@ func (bt *batch) addOutChains(localRules cases.LocalRules) {
 		outSGchName := chnFWOUT + "-" + tmpl.SgOut.Name
 		bt.addJob(api, func(tx *nfTablesTx) error {
 			chn := tx.AddChain(&nftLib.Chain{Name: outSGchName, Table: bt.table})
-			bt.chains.put(outSGchName, chn)
+			bt.chains.Put(outSGchName, chn)
 			bt.log.Debugf("add chain '%s' into table '%s'", outSGchName, bt.table.Name)
 			return nil
 		})
@@ -430,8 +425,8 @@ func (bt *batch) addOutChains(localRules cases.LocalRules) {
 			ipV := ipVersions[j]
 			bt.addJob(api, func(tx *nfTablesTx) error {
 				saddrSetName := nameUtils{}.nameOfNetSet(ipV, tmpl.SgOut.Name)
-				if saddrSet := bt.addrsets.at(saddrSetName); saddrSet != nil {
-					output := bt.chains.at(chnFWOUT)
+				if saddrSet := bt.addrsets.At(saddrSetName); saddrSet != nil {
+					output := bt.chains.At(chnFWOUT)
 					beginRule().
 						saddr(ipV).inSet(saddrSet).counter().
 						go2(outSGchName).applyRule(output, tx.Conn)
@@ -443,15 +438,15 @@ func (bt *batch) addOutChains(localRules cases.LocalRules) {
 				in := tmpl.In[k]
 				bt.addJob(api, func(tx *nfTablesTx) error {
 					daddrSetName := nameUtils{}.nameOfNetSet(ipV, in.Sg)
-					chnApplyTo := bt.chains.at(outSGchName)
+					chnApplyTo := bt.chains.At(outSGchName)
 					detailsName := nameUtils{}.nameOfPortSet(in.Proto, tmpl.SgOut.Name, in.Sg)
-					details := bt.ruleDetails.at(detailsName)
+					details := bt.ruleDetails.At(detailsName)
 					for n := range details.accports { //nolint:dupl
 						n := n
 						ports := details.accports[n]
 						fin := k+1 == len(tmpl.In) && j+1 == len(ipVersions) && n+1 == len(details.accports)
 						bt.addJob(api, func(tx *nfTablesTx) error {
-							if daddrSet := bt.addrsets.at(daddrSetName); daddrSet != nil {
+							if daddrSet := bt.addrsets.At(daddrSetName); daddrSet != nil {
 								cAddedRules++
 								r := ports.D(
 									ports.S(
@@ -504,7 +499,7 @@ func (bt *batch) addInChains(localRules cases.LocalRules) {
 				Name:  inSGchName,
 				Table: bt.table,
 			})
-			bt.chains.put(inSGchName, chn)
+			bt.chains.Put(inSGchName, chn)
 			bt.log.Debugf("add chain '%s' into table '%s'", inSGchName, bt.table.Name)
 			return nil
 		})
@@ -515,8 +510,8 @@ func (bt *batch) addInChains(localRules cases.LocalRules) {
 			ipV := ipVersions[j]
 			bt.addJob(api, func(tx *nfTablesTx) error {
 				daddrSetName := nameUtils{}.nameOfNetSet(ipV, tmpl.SgIn.Name)
-				if daddrSet := bt.addrsets.at(daddrSetName); daddrSet != nil {
-					input := bt.chains.at(chnFWIN)
+				if daddrSet := bt.addrsets.At(daddrSetName); daddrSet != nil {
+					input := bt.chains.At(chnFWIN)
 					beginRule().
 						daddr(ipV).inSet(daddrSet).
 						counter().
@@ -529,15 +524,15 @@ func (bt *batch) addInChains(localRules cases.LocalRules) {
 				outSG := tmpl.Out[k]
 				bt.addJob(api, func(tx *nfTablesTx) error {
 					saddrSetName := nameUtils{}.nameOfNetSet(ipV, outSG.Sg)
-					chnApplyTo := bt.chains.at(inSGchName)
+					chnApplyTo := bt.chains.At(inSGchName)
 					detailsName := nameUtils{}.nameOfPortSet(outSG.Proto, outSG.Sg, tmpl.SgIn.Name)
-					details := bt.ruleDetails.at(detailsName)
+					details := bt.ruleDetails.At(detailsName)
 					for n := range details.accports { //nolint:dupl
 						n := n
 						ports := details.accports[n]
 						fin := k+1 == len(tmpl.Out) && j+1 == len(ipVersions) && n+1 == len(details.accports)
 						bt.addJob(api, func(tx *nfTablesTx) error {
-							if saddrSet := bt.addrsets.at(saddrSetName); saddrSet != nil {
+							if saddrSet := bt.addrsets.At(saddrSetName); saddrSet != nil {
 								cAddedRules++
 								r := ports.S(
 									ports.D(
@@ -581,7 +576,7 @@ func (bt *batch) addInChains(localRules cases.LocalRules) {
 func (bt *batch) addFinalRules() {
 	bt.addJob("final", func(tx *nfTablesTx) error {
 		for _, ch := range sli(chnFWIN, chnFWOUT) {
-			beginRule().drop().applyRule(bt.chains.at(ch), tx.Conn)
+			beginRule().drop().applyRule(bt.chains.At(ch), tx.Conn)
 		}
 		return nil
 	})
