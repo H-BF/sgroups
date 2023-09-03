@@ -136,7 +136,6 @@ func runNftJob(ctx context.Context) error { //nolint:gocyclo
 	defer nftProc.Close()
 
 	var conf nft.NetConf
-	conf.Init()
 	stm := nlWatcher.Stream()
 
 	sel := []reflect.SelectCase{
