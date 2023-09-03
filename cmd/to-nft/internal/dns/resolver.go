@@ -19,10 +19,10 @@ import (
 
 // Addresses -
 type Addresses struct {
-	Domain       string
-	ExpiredAfter *time.Time
-	IPs          []net.IP
-	Err          error
+	Domain string
+	TTL    time.Duration
+	IPs    []net.IP
+	Err    error
 }
 
 // Resolver -
@@ -66,7 +66,7 @@ func (r *resolver) init(ctx context.Context) (err error) {
 		}
 	}()
 	var errs []error
-	errH := func(_ any, e error) func(ignoreNotFound bool) {
+	errF := func(_ any, e error) func(ignoreNotFound bool) {
 		return func(ignoreNotFound bool) {
 			if errors.Is(e, config.ErrNotFound) && ignoreNotFound {
 				return
@@ -76,12 +76,12 @@ func (r *resolver) init(ctx context.Context) (err error) {
 			}
 		}
 	}
-	errH(internal.DnsNameservers.Value(ctx,
+	errF(internal.DnsNameservers.Value(ctx,
 		internal.DnsNameservers.OptSink(func(ips []config.IP) error {
 			var o dns.WithNameservers
 			linq.From(ips).
 				Select(func(i any) any {
-					return i.(net.IP).String()
+					return i.(config.IP).String()
 				}).ToSlice(&o)
 			if len(o) == 0 {
 				return errNoNameservers
@@ -90,19 +90,19 @@ func (r *resolver) init(ctx context.Context) (err error) {
 			return nil
 		}),
 	))(false)
-	errH(internal.DnsProto.Value(ctx,
+	errF(internal.DnsProto.Value(ctx,
 		internal.DnsProto.OptSink(func(s string) error {
 			switch s {
 			case "tcp":
 				opts = append(opts, dns.UseTCP{})
 			case "udp":
 			default:
-				return errors.Errorf("unusable proto (%s)", s)
+				return errors.Errorf("unusable proto '%s'", s)
 			}
 			return nil
 		}),
 	))(false)
-	errH(internal.DnsPort.Value(ctx,
+	errF(internal.DnsPort.Value(ctx,
 		internal.DnsPort.OptSink(func(u uint16) error {
 			if u == 0 {
 				return errPortZero
@@ -111,7 +111,7 @@ func (r *resolver) init(ctx context.Context) (err error) {
 			return nil
 		}),
 	))(false)
-	errH(internal.DnsRetriesTmo.Value(ctx,
+	errF(internal.DnsRetriesTmo.Value(ctx,
 		internal.DnsRetriesTmo.OptSink(func(d time.Duration) error {
 			if d > 0 {
 				bkf = backoff.NewConstantBackOff(d)
@@ -120,7 +120,7 @@ func (r *resolver) init(ctx context.Context) (err error) {
 			return errRitriesTimeoutZero
 		}),
 	))(true)
-	errH(internal.DnsRetries.Value(ctx,
+	errF(internal.DnsRetries.Value(ctx,
 		internal.DnsRetries.OptSink(func(u uint8) error {
 			if u > 0 {
 				if bkf == nil {
@@ -132,7 +132,7 @@ func (r *resolver) init(ctx context.Context) (err error) {
 			return errRitryCountZero
 		}),
 	))(true)
-	errH(internal.DnsDialDuration.Value(ctx,
+	errF(internal.DnsDialDuration.Value(ctx,
 		internal.DnsDialDuration.OptSink(func(d time.Duration) error {
 			if d > 0 {
 				opts = append(opts, dns.WithDialDuration(d))
@@ -141,7 +141,7 @@ func (r *resolver) init(ctx context.Context) (err error) {
 			return errDialDurationZero
 		}),
 	))(true)
-	errH(internal.DnsWriteDuration.Value(ctx,
+	errF(internal.DnsWriteDuration.Value(ctx,
 		internal.DnsWriteDuration.OptSink(func(d time.Duration) error {
 			if d > 0 {
 				opts = append(opts, dns.WithWriteDuration(d))
@@ -150,7 +150,7 @@ func (r *resolver) init(ctx context.Context) (err error) {
 			return errWriteDurationZero
 		}),
 	))(true)
-	errH(internal.DnsReadDuration.Value(ctx,
+	errF(internal.DnsReadDuration.Value(ctx,
 		internal.DnsReadDuration.OptSink(func(d time.Duration) error {
 			if d > 0 {
 				opts = append(opts, dns.WithReadDuration(d))
@@ -194,8 +194,5 @@ func (aa *Addresses) fromDnsAnswer(o dns.AddrAnswer) {
 		Where(func(i any) bool {
 			return i.(uint32) > 0
 		}).Min().(uint32)
-	if minTTL > 0 {
-		d := time.Now().Add(time.Duration(minTTL) * time.Second)
-		aa.ExpiredAfter = &d
-	}
+	aa.TTL = time.Duration(minTTL) * time.Second
 }
