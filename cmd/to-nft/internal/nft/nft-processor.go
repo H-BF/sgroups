@@ -58,6 +58,7 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, conf NetConf) 
 		err        error
 		localRules cases.LocalRules
 		localSGs   cases.SGs
+		_          cases.FQDNRules
 	)
 
 	localIPsV4, loaclIPsV6 := conf.LocalIPs()

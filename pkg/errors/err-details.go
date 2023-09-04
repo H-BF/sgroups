@@ -19,6 +19,11 @@ func (e ErrDetails) Error() string {
 	if err != nil {
 		return "<?>"
 	}
+	for i := range b {
+		if b[i] == '"' {
+			b[i] = '\''
+		}
+	}
 	return string(b)
 }
 

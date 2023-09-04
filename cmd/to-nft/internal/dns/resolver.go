@@ -19,10 +19,9 @@ import (
 
 // Addresses -
 type Addresses struct {
-	Domain string
-	TTL    time.Duration
-	IPs    []net.IP
-	Err    error
+	TTL time.Duration
+	IPs []net.IP
+	Err error
 }
 
 // Resolver -
@@ -178,7 +177,6 @@ func (r resolver) AAAA(ctx context.Context, domain string) (ret Addresses) {
 
 func (aa *Addresses) fromDnsAnswer(o dns.AddrAnswer) {
 	*aa = Addresses{}
-	aa.Domain = o.Domain
 	if o.Error != nil {
 		aa.Err = o.Error
 		return

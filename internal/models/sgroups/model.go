@@ -256,7 +256,18 @@ func (o FQDN) String() string {
 	return string(o)
 }
 
-// IsEq -
+// IsEq chacke if is Eq with no case
 func (o FQDN) IsEq(other FQDN) bool {
 	return strings.EqualFold(string(o), string(other))
+}
+
+// Cmp compare no case
+func (o FQDN) Cmp(other FQDN) int {
+	if strings.EqualFold(string(o), string(other)) {
+		return 0
+	}
+	if o < other {
+		return -1
+	}
+	return 1
 }
