@@ -9,6 +9,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/H-BF/sgroups/cmd/to-nft/internal/dns"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
 	"github.com/H-BF/sgroups/internal/config"
 	di "github.com/H-BF/sgroups/internal/dict"
@@ -109,14 +110,15 @@ func (ap accports) D(rb ruleBuilder) ruleBuilder {
 	return ap.sourceOrDestPort(rb, false)
 }
 
-func (bt *batch) init(table *nftLib.Table, localRules cases.LocalRules, baseRules *BaseRules) {
+func (bt *batch) init(table *nftLib.Table, localRules cases.LocalRules, baseRules *BaseRules, fqdnRules cases.FQDNRules) {
 	bt.addrsets.Clear()
 	bt.chains.Clear()
 	bt.jobs = nil
 	bt.table = table
 
 	bt.initTable()
-	bt.addNetSets(localRules)
+	bt.addSGNetSets(localRules)
+	bt.addFQDNNetSets(fqdnRules)
 	bt.initRulesDetails(localRules)
 	bt.initRootChains()
 	bt.initBaseRules(baseRules)
@@ -132,7 +134,7 @@ func (bt *batch) addJob(n string, job jobf) {
 	bt.jobs.PushBack(jobItem{name: n, jobf: job})
 }
 
-func (bt *batch) execute(ctx context.Context, table *nftLib.Table, locals cases.LocalRules, baseRules *BaseRules) error {
+func (bt *batch) execute(ctx context.Context, table *nftLib.Table, locals cases.LocalRules, baseRules *BaseRules, fqdnRules cases.FQDNRules) error {
 	var (
 		err error
 		it  jobItem
@@ -143,7 +145,7 @@ func (bt *batch) execute(ctx context.Context, table *nftLib.Table, locals cases.
 			_ = tx.Close()
 		}
 	}()
-	bt.init(table, locals, baseRules)
+	bt.init(table, locals, baseRules, fqdnRules)
 	bkf := backoff.ExponentialBackoffBuilder().
 		WithMultiplier(1.3).                       //nolint:gomnd
 		WithRandomizationFactor(0).                //nolint:gomnd
@@ -339,8 +341,8 @@ func (bt *batch) initBaseRules(baseRules *BaseRules) {
 	}
 }
 
-func (bt *batch) addNetSets(localRules cases.LocalRules) {
-	const api = "add-net-sets"
+func (bt *batch) addSGNetSets(localRules cases.LocalRules) {
+	const api = "add-SG-net-sets"
 
 	_ = localRules.IterateNetworks(func(sgName string, nets []net.IPNet, isV6 bool) error {
 		ipV := tern(isV6, iplib.IP6Version, iplib.IP4Version)
@@ -368,6 +370,49 @@ func (bt *batch) addNetSets(localRules cases.LocalRules) {
 			})
 		}
 		return nil
+	})
+}
+
+func (bt *batch) addFQDNNetSets(fqdnRules cases.FQDNRules) {
+	const api = "add-FQDN-net-sets"
+
+	f := func(isV6 bool, domain model.FQDN, a dns.Addresses) {
+		ipV := tern(isV6, iplib.IP6Version, iplib.IP4Version)
+		nameOfSet := nameUtils{}.nameOfFqdnNetSet(ipV, domain)
+		if bt.addrsets.At(nameOfSet) != nil || a.Err != nil {
+			return
+		}
+		nets := make([]net.IPNet, 0, len(a.IPs))
+		for _, ip := range a.IPs {
+			bits := tern(isV6, net.IPv6len, net.IPv6len) * 8
+			nets = append(nets, net.IPNet{IP: ip, Mask: net.CIDRMask(bits, bits)})
+		}
+		elements := (setsUtils{}).nets2SetElements(nets, ipV)
+		bt.addJob(api, func(tx *nfTablesTx) error {
+			netSet := &nftLib.Set{
+				ID:       nextSetID(),
+				Table:    bt.table,
+				KeyType:  tern(isV6, nftLib.TypeIP6Addr, nftLib.TypeIPAddr),
+				Interval: true,
+				Name:     nameOfSet,
+			}
+			if err := tx.AddSet(netSet, elements); err != nil {
+				return err
+			}
+			bt.log.Debugf("add network(s) %s into set '%s'/'%s'",
+				slice2stringer(nets...), bt.table.Name, nameOfSet)
+			bt.addrsets.Put(netSet.Name, netSet)
+			return nil
+		})
+	}
+
+	fqdnRules.A.Iterate(func(domain model.FQDN, a dns.Addresses) bool {
+		f(false, domain, a)
+		return true
+	})
+	fqdnRules.AAAA.Iterate(func(domain model.FQDN, a dns.Addresses) bool {
+		f(true, domain, a)
+		return true
 	})
 }
 

@@ -19,10 +19,7 @@ type (
 )
 
 func (nameUtils) nameOfFqdnNetSet(ipV ipVersion, domain model.FQDN) string {
-	if e := domain.Validate(); e != nil {
-		panic(e)
-	}
-	return fmt.Sprintf("NetIPv%v-%s-FQDN", ipV, strings.ToLower(domain.String()))
+	return fmt.Sprintf("NetIPv%v-fqdn-%s", ipV, strings.ToLower(domain.String()))
 }
 
 func (nameUtils) nameOfNetSet(ipV ipVersion, sgName string) string {

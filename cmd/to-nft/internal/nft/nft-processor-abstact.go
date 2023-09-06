@@ -3,6 +3,7 @@ package nft
 import (
 	"context"
 
+	"github.com/H-BF/sgroups/cmd/to-nft/internal/dns"
 	"github.com/H-BF/sgroups/internal/config"
 )
 
@@ -27,5 +28,13 @@ type BaseRules struct {
 	Nets []config.NetCIDR
 }
 
-func (WithNetNS) isNfTablesProcessorOpt() {}
-func (BaseRules) isNfTablesProcessorOpt() {}
+// DnsResolver -
+type DnsResolver struct {
+	dns.Resolver
+}
+
+//DNS resolver
+
+func (WithNetNS) isNfTablesProcessorOpt()   {}
+func (BaseRules) isNfTablesProcessorOpt()   {}
+func (DnsResolver) isNfTablesProcessorOpt() {}

@@ -19,7 +19,7 @@ import (
 type FQDNRules struct {
 	Rules []model.FQDNRule
 	A     dict.RBDict[model.FQDN, dns.Addresses]
-	AAA   dict.RBDict[model.FQDN, dns.Addresses]
+	AAAA  dict.RBDict[model.FQDN, dns.Addresses]
 }
 
 // FQDNRulesLoader -
