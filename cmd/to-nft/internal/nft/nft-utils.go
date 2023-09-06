@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
+	"github.com/ahmetb/go-linq/v3"
 	"github.com/c-robinson/iplib"
 	nftLib "github.com/google/nftables"
 )
@@ -29,7 +30,7 @@ func (nameUtils) nameOfNetSet(ipV ipVersion, sgName string) string {
 	return fmt.Sprintf("NetIPv%v-%s", ipV, sgName)
 }
 
-func (nameUtils) nameOfPortSet(tp model.NetworkTransport, sgFrom, sgTo string) string {
+func (nameUtils) nameOfSG2SGPortSet(tp model.NetworkTransport, sgFrom, sgTo string) string {
 	if sgFrom = strings.TrimSpace(sgFrom); len(sgFrom) == 0 {
 		panic("no 'SGFrom' name in arguments")
 	}
@@ -38,6 +39,17 @@ func (nameUtils) nameOfPortSet(tp model.NetworkTransport, sgFrom, sgTo string) s
 	}
 	//                 [tcp|udp]-sgFrom-sgTo
 	return fmt.Sprintf("%s-%s-%s", tp, sgFrom, sgTo)
+}
+
+func (nameUtils) nameOfSG2FQDNPortSet(tp model.NetworkTransport, sgFrom string, domain model.FQDN) string {
+	if sgFrom = strings.TrimSpace(sgFrom); len(sgFrom) == 0 {
+		panic("no 'SGFrom' name in arguments")
+	}
+	if e := domain.Validate(); e != nil {
+		panic(e)
+	}
+	//                 [tcp|udp]-sgFrom-domain-fqdn
+	return fmt.Sprintf("%s-%s-%s-fqdn", tp, sgFrom, domain)
 }
 
 func (setsUtils) nets2SetElements(nets []net.IPNet, ipV int) []nftLib.SetElement {
@@ -72,6 +84,35 @@ func (setsUtils) nets2SetElements(nets []net.IPNet, ipV int) []nftLib.SetElement
 			})
 	}
 	return elements
+}
+
+func (setsUtils) transormPortRanges(pr model.PortRanges) (ret [][2]model.PortNumber) {
+	ret = make([][2]model.PortNumber, 0, pr.Len())
+	pr.Iterate(func(r model.PortRange) bool {
+		a, b := r.Bounds()
+		var x [2]model.PortNumber
+		x[0], _ = a.AsIncluded().GetValue()
+		x[1], _ = b.AsIncluded().GetValue()
+		ret = append(ret, x)
+		return true
+	})
+	return ret
+}
+
+func (u setsUtils) makeAccPorts(prr []model.SGRulePorts) (ret []accports) {
+	linq.From(prr).
+		Select(func(i any) any {
+			p := i.(model.SGRulePorts)
+			return accports{
+				dp: u.transormPortRanges(p.D),
+				sp: u.transormPortRanges(p.S),
+			}
+		}).
+		Where(func(i any) bool {
+			accp := i.(accports)
+			return len(accp.sp) != 0 || len(accp.dp) != 0
+		}).ToSlice(&ret)
+	return ret
 }
 
 type stringer func() string

@@ -119,7 +119,7 @@ func (bt *batch) init(table *nftLib.Table, localRules cases.LocalRules, baseRule
 	bt.initTable()
 	bt.addSGNetSets(localRules)
 	bt.addFQDNNetSets(fqdnRules)
-	bt.initRulesDetails(localRules)
+	bt.initLocalRulesDetails(localRules)
 	bt.initRootChains()
 	bt.initBaseRules(baseRules)
 	bt.addInChains(localRules)
@@ -416,37 +416,17 @@ func (bt *batch) addFQDNNetSets(fqdnRules cases.FQDNRules) {
 	})
 }
 
-func (bt *batch) initRulesDetails(localRules cases.LocalRules) {
-	portRange2elems := func(pr model.PortRanges) (ret [][2]model.PortNumber) {
-		pr.Iterate(func(r model.PortRange) bool {
-			a, b := r.Bounds()
-			var x [2]model.PortNumber
-			x[0], _ = a.AsIncluded().GetValue()
-			x[1], _ = b.AsIncluded().GetValue()
-			ret = append(ret, x)
-			return true
-		})
-		return ret
-	}
+func (bt *batch) initLocalRulesDetails(localRules cases.LocalRules) {
 	for _, r := range localRules.AllRules() {
 		item := ruleDetails{
-			accports: make([]accports, 0, len(r.Ports)),
+			accports: setsUtils{}.makeAccPorts(r.Ports),
 			logs:     r.Logs,
-		}
-		for _, p := range r.Ports {
-			accp := accports{
-				dp: portRange2elems(p.D),
-				sp: portRange2elems(p.S),
-			}
-			if !(len(accp.sp) == 0 && len(accp.dp) == 0) {
-				item.accports = append(item.accports, accp)
-			}
 		}
 		if len(item.accports) == 0 {
 			item.accports = append(item.accports, accports{})
 		}
-		setsName := nameUtils{}.nameOfPortSet(r.ID.Transport, r.ID.SgFrom, r.ID.SgTo)
-		bt.ruleDetails.Put(setsName, &item)
+		setName := nameUtils{}.nameOfSG2SGPortSet(r.ID.Transport, r.ID.SgFrom, r.ID.SgTo)
+		bt.ruleDetails.Put(setName, &item)
 	}
 }
 
@@ -484,7 +464,7 @@ func (bt *batch) addOutChains(localRules cases.LocalRules) {
 				bt.addJob(api, func(tx *nfTablesTx) error {
 					daddrSetName := nameUtils{}.nameOfNetSet(ipV, in.Sg)
 					chnApplyTo := bt.chains.At(outSGchName)
-					detailsName := nameUtils{}.nameOfPortSet(in.Proto, tmpl.SgOut.Name, in.Sg)
+					detailsName := nameUtils{}.nameOfSG2SGPortSet(in.Proto, tmpl.SgOut.Name, in.Sg)
 					details := bt.ruleDetails.At(detailsName)
 					for n := range details.accports { //nolint:dupl
 						n := n
@@ -511,7 +491,7 @@ func (bt *batch) addOutChains(localRules cases.LocalRules) {
 								switch da := tmpl.SgOut.DefaultAction; da {
 								case model.ACCEPT:
 									r = r.accept()
-								case model.DROP:
+								case model.DROP, model.DEFAULT:
 									r = r.drop()
 								default:
 									panic(
@@ -570,7 +550,7 @@ func (bt *batch) addInChains(localRules cases.LocalRules) {
 				bt.addJob(api, func(tx *nfTablesTx) error {
 					saddrSetName := nameUtils{}.nameOfNetSet(ipV, outSG.Sg)
 					chnApplyTo := bt.chains.At(inSGchName)
-					detailsName := nameUtils{}.nameOfPortSet(outSG.Proto, outSG.Sg, tmpl.SgIn.Name)
+					detailsName := nameUtils{}.nameOfSG2SGPortSet(outSG.Proto, outSG.Sg, tmpl.SgIn.Name)
 					details := bt.ruleDetails.At(detailsName)
 					for n := range details.accports { //nolint:dupl
 						n := n
@@ -597,7 +577,7 @@ func (bt *batch) addInChains(localRules cases.LocalRules) {
 								switch da := tmpl.SgIn.DefaultAction; da {
 								case model.ACCEPT:
 									r = r.accept()
-								case model.DROP:
+								case model.DROP, model.DEFAULT:
 									r = r.drop()
 								default:
 									panic(
