@@ -50,6 +50,7 @@ func (snc syncFqdnRules) process(ctx context.Context) error {
 
 func (ri sgFqdnRuleIdentity) from(src *sg.FqdnRule) error {
 	ri.SgFrom = src.GetSgFrom()
+	ri.FqdnTo = model.FQDN(src.GetFQDN())
 	return networkTransport{NetworkTransport: &ri.Transport}.
 		from(src.GetTransport())
 }

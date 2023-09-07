@@ -3,6 +3,7 @@ package cases
 import (
 	"context"
 	"strings"
+	"sync"
 
 	"github.com/H-BF/corlib/pkg/parallel"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/dns"
@@ -15,30 +16,33 @@ import (
 	"github.com/pkg/errors"
 )
 
-// FQDNRules -
-type FQDNRules struct {
-	Rules []model.FQDNRule
-	A     dict.RBDict[model.FQDN, dns.Addresses]
-	AAAA  dict.RBDict[model.FQDN, dns.Addresses]
-}
+type (
+	// FQDNRules -
+	FQDNRules struct {
+		Rules []model.FQDNRule
+		A     dict.RBDict[model.FQDN, dns.Addresses]
+		AAAA  dict.RBDict[model.FQDN, dns.Addresses]
+	}
 
-// FQDNRulesLoader -
-type FQDNRulesLoader struct {
-	SGSrv  SGClient
-	DnsRes dns.Resolver
-}
+	// FQDNRulesLoader -
+	FQDNRulesLoader struct {
+		SGSrv  SGClient
+		DnsRes dns.Resolver
+	}
+)
 
-func (ld FQDNRulesLoader) Load(ctx context.Context, localSGs SGs) (rr FQDNRules, err error) {
+func (ld FQDNRulesLoader) Load(ctx context.Context, localRules LocalRules) (rr FQDNRules, err error) {
 	const api = "FQDNRules/Load"
 	defer func() {
 		err = errors.WithMessage(err, api)
 	}()
 
 	var req sgAPI.FindFqdnRulesReq
-	linq.From(localSGs).
+	linq.From(localRules.Out).
 		Select(func(i any) any {
-			return i.(linq.KeyValue).Key.(string)
-		}).ToSlice(&req.SgFrom)
+			return i.(model.SGRule).ID.SgFrom
+		}).
+		Distinct().ToSlice(&req.SgFrom)
 	if len(req.SgFrom) == 0 {
 		return rr, nil
 	}
@@ -47,7 +51,6 @@ func (ld FQDNRulesLoader) Load(ctx context.Context, localSGs SGs) (rr FQDNRules,
 		return rr, err
 	}
 	rules := resp.GetRules()
-	rr.Rules = make([]model.FQDNRule, 0, len(rules))
 	for _, r := range rules {
 		var m model.FQDNRule
 		if m, err = conv.Proto2ModelFQDNRule(r); err != nil {
@@ -61,37 +64,50 @@ func (ld FQDNRulesLoader) Load(ctx context.Context, localSGs SGs) (rr FQDNRules,
 
 func (ld FQDNRulesLoader) fillWithAddresses(ctx context.Context, rr *FQDNRules) (err error) {
 	const api = "resolve-addresses"
+
 	defer func() {
 		err = errors.WithMessage(err, api)
 	}()
 	var domains []model.FQDN
 	linq.From(rr.Rules).
+		DistinctBy(func(i any) any {
+			return strings.ToLower(i.(model.FQDNRule).ID.FqdnTo.String())
+		}).
 		Select(func(i any) any {
 			return i.(model.FQDNRule).ID.FqdnTo
-		}).
-		DistinctBy(func(i any) any {
-			return strings.ToLower(i.(model.FQDN).String())
 		}).ToSlice(&domains)
-	rA := make([]dns.Addresses, len(domains))
-	rAAAA := make([]dns.Addresses, len(domains))
+	var mx sync.Mutex
 	err = parallel.ExecAbstract(len(domains), 8, func(i int) error {
 		domain := domains[i].String()
-		if rA[i] = ld.DnsRes.A(ctx, domain); rA[i].Err != nil {
-			return rA[i].Err
+		addrA := ld.DnsRes.A(ctx, domain)
+		if addrA.Err != nil {
+			return addrA.Err
 		}
-		rAAAA[i] = ld.DnsRes.AAAA(ctx, domain)
-		return rAAAA[i].Err
+		/*//
+		addrAAAA := ld.DnsRes.AAAA(ctx, domain)
+		if addrAAAA.Err != nil {
+			return addrAAAA.Err
+		}
+		*/
+		mx.Lock()
+		defer mx.Unlock()
+		if len(addrA.IPs) > 0 {
+			rr.A.Put(domains[i], addrA)
+		}
+		//if len(addrAAAA.IPs) > 0 {
+		//	rr.AAAA.Put(domains[i], addrAAAA)
+		//}
+		return nil
 	})
-	if err != nil {
-		return err
-	}
-	for i, dm := range domains {
-		if x := rA[i]; len(x.IPs) > 0 {
-			rr.A.Put(dm, x)
-		}
-		if x := rAAAA[i]; len(x.IPs) > 0 {
-			rr.A.Put(dm, x)
-		}
-	}
-	return nil
+	return err
+}
+
+// SelectForSG -
+func (rules FQDNRules) RulesForSG(sgName string) []model.FQDNRule {
+	var ret []model.FQDNRule
+	linq.From(rules).
+		Where(func(i any) bool {
+			return i.(model.FQDNRule).ID.SgFrom == sgName
+		}).ToSlice(&ret)
+	return ret
 }

@@ -30,7 +30,7 @@ func (nameUtils) nameOfNetSet(ipV ipVersion, sgName string) string {
 	return fmt.Sprintf("NetIPv%v-%s", ipV, sgName)
 }
 
-func (nameUtils) nameOfSG2SGPortSet(tp model.NetworkTransport, sgFrom, sgTo string) string {
+func (nameUtils) nameOfSG2SGRuleDetails(tp model.NetworkTransport, sgFrom, sgTo string) string {
 	if sgFrom = strings.TrimSpace(sgFrom); len(sgFrom) == 0 {
 		panic("no 'SGFrom' name in arguments")
 	}
@@ -41,7 +41,7 @@ func (nameUtils) nameOfSG2SGPortSet(tp model.NetworkTransport, sgFrom, sgTo stri
 	return fmt.Sprintf("%s-%s-%s", tp, sgFrom, sgTo)
 }
 
-func (nameUtils) nameOfSG2FQDNPortSet(tp model.NetworkTransport, sgFrom string, domain model.FQDN) string {
+func (nameUtils) nameOfSG2FQDNRuleDetails(tp model.NetworkTransport, sgFrom string, domain model.FQDN) string {
 	if sgFrom = strings.TrimSpace(sgFrom); len(sgFrom) == 0 {
 		panic("no 'SGFrom' name in arguments")
 	}

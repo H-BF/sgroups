@@ -119,11 +119,12 @@ func (bt *batch) init(table *nftLib.Table, localRules cases.LocalRules, baseRule
 	bt.initTable()
 	bt.addSGNetSets(localRules)
 	bt.addFQDNNetSets(fqdnRules)
-	bt.initLocalRulesDetails(localRules)
+	bt.initSG2SGRulesDetails(localRules)
+	bt.initSG2FQDNRulesDetails(fqdnRules)
 	bt.initRootChains()
 	bt.initBaseRules(baseRules)
-	bt.addInChains(localRules)
-	bt.addOutChains(localRules)
+	bt.makeInChains(localRules)
+	bt.makeOutChains(localRules)
 	bt.addFinalRules()
 }
 
@@ -346,12 +347,9 @@ func (bt *batch) addSGNetSets(localRules cases.LocalRules) {
 
 	_ = localRules.IterateNetworks(func(sgName string, nets []net.IPNet, isV6 bool) error {
 		ipV := tern(isV6, iplib.IP6Version, iplib.IP4Version)
-		nameOfSet := nameUtils{}.nameOfNetSet(ipV, sgName)
-		if bt.addrsets.At(nameOfSet) != nil {
-			return nil
-		}
 		if elements := (setsUtils{}).nets2SetElements(nets, ipV); len(elements) > 0 {
 			bt.addJob(api, func(tx *nfTablesTx) error {
+				nameOfSet := nameUtils{}.nameOfNetSet(ipV, sgName)
 				netSet := &nftLib.Set{
 					ID:       nextSetID(),
 					Constant: true,
@@ -363,9 +361,9 @@ func (bt *batch) addSGNetSets(localRules cases.LocalRules) {
 				if err := tx.AddSet(netSet, elements); err != nil {
 					return err
 				}
-				bt.log.Debugf("add network(s) %s into set '%s'/'%s'",
-					slice2stringer(nets...), bt.table.Name, nameOfSet)
 				bt.addrsets.Put(netSet.Name, netSet)
+				bt.log.Debugf("add network set '%s'/'%s' %s",
+					bt.table.Name, nameOfSet, slice2stringer(nets...))
 				return nil
 			})
 		}
@@ -376,47 +374,45 @@ func (bt *batch) addSGNetSets(localRules cases.LocalRules) {
 func (bt *batch) addFQDNNetSets(fqdnRules cases.FQDNRules) {
 	const api = "add-FQDN-net-sets"
 
-	f := func(isV6 bool, domain model.FQDN, a dns.Addresses) {
-		ipV := tern(isV6, iplib.IP6Version, iplib.IP4Version)
-		nameOfSet := nameUtils{}.nameOfFqdnNetSet(ipV, domain)
-		if bt.addrsets.At(nameOfSet) != nil || a.Err != nil {
-			return
-		}
-		nets := make([]net.IPNet, 0, len(a.IPs))
-		for _, ip := range a.IPs {
-			bits := tern(isV6, net.IPv6len, net.IPv6len) * 8
-			nets = append(nets, net.IPNet{IP: ip, Mask: net.CIDRMask(bits, bits)})
-		}
-		elements := (setsUtils{}).nets2SetElements(nets, ipV)
+	f := func(IPv int, domain model.FQDN, a dns.Addresses) {
 		bt.addJob(api, func(tx *nfTablesTx) error {
+			nameOfSet := nameUtils{}.nameOfFqdnNetSet(IPv, domain)
+			nets := make([]net.IPNet, 0, len(a.IPs))
+			for _, ip := range a.IPs {
+				bits := tern(IPv == iplib.IP6Version, net.IPv6len, net.IPv6len) * 8
+				nets = append(nets, net.IPNet{IP: ip, Mask: net.CIDRMask(bits, bits)})
+			}
+			elements := (setsUtils{}).nets2SetElements(nets, IPv)
 			netSet := &nftLib.Set{
-				ID:       nextSetID(),
-				Table:    bt.table,
-				KeyType:  tern(isV6, nftLib.TypeIP6Addr, nftLib.TypeIPAddr),
+				ID:    nextSetID(),
+				Table: bt.table,
+				KeyType: tern(IPv == iplib.IP6Version,
+					nftLib.TypeIP6Addr, nftLib.TypeIPAddr),
 				Interval: true,
+				Constant: true,
 				Name:     nameOfSet,
 			}
 			if err := tx.AddSet(netSet, elements); err != nil {
 				return err
 			}
-			bt.log.Debugf("add network(s) %s into set '%s'/'%s'",
-				slice2stringer(nets...), bt.table.Name, nameOfSet)
 			bt.addrsets.Put(netSet.Name, netSet)
+			bt.log.Debugf("add network set '%s'/'%s' %s",
+				bt.table.Name, nameOfSet, slice2stringer(nets...))
 			return nil
 		})
 	}
 
 	fqdnRules.A.Iterate(func(domain model.FQDN, a dns.Addresses) bool {
-		f(false, domain, a)
+		f(iplib.IP4Version, domain, a)
 		return true
 	})
 	fqdnRules.AAAA.Iterate(func(domain model.FQDN, a dns.Addresses) bool {
-		f(true, domain, a)
+		f(iplib.IP6Version, domain, a)
 		return true
 	})
 }
 
-func (bt *batch) initLocalRulesDetails(localRules cases.LocalRules) {
+func (bt *batch) initSG2SGRulesDetails(localRules cases.LocalRules) {
 	for _, r := range localRules.AllRules() {
 		item := ruleDetails{
 			accports: setsUtils{}.makeAccPorts(r.Ports),
@@ -425,12 +421,33 @@ func (bt *batch) initLocalRulesDetails(localRules cases.LocalRules) {
 		if len(item.accports) == 0 {
 			item.accports = append(item.accports, accports{})
 		}
-		setName := nameUtils{}.nameOfSG2SGPortSet(r.ID.Transport, r.ID.SgFrom, r.ID.SgTo)
+		setName := nameUtils{}.nameOfSG2SGRuleDetails(
+			r.ID.Transport,
+			r.ID.SgFrom,
+			r.ID.SgTo)
 		bt.ruleDetails.Put(setName, &item)
 	}
 }
 
-func (bt *batch) addOutChains(localRules cases.LocalRules) {
+func (bt *batch) initSG2FQDNRulesDetails(rules cases.FQDNRules) {
+	for _, r := range rules.Rules {
+		item := ruleDetails{
+			accports: setsUtils{}.makeAccPorts(r.Ports),
+			logs:     r.Logs,
+		}
+		if len(item.accports) == 0 {
+			item.accports = append(item.accports, accports{})
+		}
+		setName := nameUtils{}.nameOfSG2FQDNRuleDetails(
+			r.ID.Transport,
+			r.ID.SgFrom,
+			r.ID.FqdnTo,
+		)
+		bt.ruleDetails.Put(setName, &item)
+	}
+}
+
+func (bt *batch) makeOutChains(localRules cases.LocalRules) {
 	const api = "make-out-chains"
 
 	outTmpls := localRules.TemplatesOutRules()
@@ -440,14 +457,11 @@ func (bt *batch) addOutChains(localRules cases.LocalRules) {
 		bt.addJob(api, func(tx *nfTablesTx) error {
 			chn := tx.AddChain(&nftLib.Chain{Name: outSGchName, Table: bt.table})
 			bt.chains.Put(outSGchName, chn)
-			bt.log.Debugf("add chain '%s' into table '%s'", outSGchName, bt.table.Name)
+			bt.log.Debugf("chain '%s'/'%s' is in progress", bt.table.Name, outSGchName)
 			return nil
 		})
-		cAddedRules := 0
-		ipVersions := []int{iplib.IP4Version, iplib.IP6Version}
-		for j := range ipVersions {
-			j := j
-			ipV := ipVersions[j]
+		for _, ipV := range sli(iplib.IP4Version, iplib.IP6Version) {
+			ipV := ipV
 			bt.addJob(api, func(tx *nfTablesTx) error {
 				saddrSetName := nameUtils{}.nameOfNetSet(ipV, tmpl.SgOut.Name)
 				if saddrSet := bt.addrsets.At(saddrSetName); saddrSet != nil {
@@ -458,53 +472,67 @@ func (bt *batch) addOutChains(localRules cases.LocalRules) {
 				}
 				return nil
 			})
-			for k := range tmpl.In {
-				k := k
-				in := tmpl.In[k]
-				bt.addJob(api, func(tx *nfTablesTx) error {
-					daddrSetName := nameUtils{}.nameOfNetSet(ipV, in.Sg)
-					chnApplyTo := bt.chains.At(outSGchName)
-					detailsName := nameUtils{}.nameOfSG2SGPortSet(in.Proto, tmpl.SgOut.Name, in.Sg)
-					details := bt.ruleDetails.At(detailsName)
-					for n := range details.accports { //nolint:dupl
-						n := n
-						ports := details.accports[n]
-						fin := k+1 == len(tmpl.In) && j+1 == len(ipVersions) && n+1 == len(details.accports)
-						bt.addJob(api, func(tx *nfTablesTx) error {
-							if daddrSet := bt.addrsets.At(daddrSetName); daddrSet != nil {
-								cAddedRules++
-								r := ports.D(
-									ports.S(
-										beginRule().daddr(ipV).inSet(daddrSet).ipProto(in.Proto),
-									),
-								).counter()
-								if details.logs {
-									r = r.dlogs(nfte.LogFlagsIPOpt)
-								}
-								r.accept().applyRule(chnApplyTo, tx.Conn)
-							}
-							if fin {
-								r := beginRule().metaNFTRACE(tmpl.SgOut.Trace).counter()
-								if tmpl.SgOut.Logs {
-									r = r.dlogs(nfte.LogFlagsIPOpt)
-								}
-								switch da := tmpl.SgOut.DefaultAction; da {
-								case model.ACCEPT:
-									r = r.accept()
-								case model.DROP, model.DEFAULT:
-									r = r.drop()
-								default:
-									panic(
-										errors.Errorf("in chain '%s' unrecognized default verdict action(%v)", outSGchName, da),
-									)
-								}
-								r.applyRule(chnApplyTo, tx.Conn)
-								bt.log.Debugf("added %v rule(s) to chain '%s' in table '%s'",
-									cAddedRules, outSGchName, bt.table.Name)
-							}
-							return nil
-						})
+		}
+		bt.populateSG2SGOutRules(tmpl, outSGchName)
+		bt.addJob(api, func(tx *nfTablesTx) error {
+			r := beginRule().metaNFTRACE(tmpl.SgOut.Trace).counter()
+			if tmpl.SgOut.Logs {
+				r = r.dlogs(nfte.LogFlagsIPOpt)
+			}
+			switch da := tmpl.SgOut.DefaultAction; da {
+			case model.ACCEPT:
+				r = r.accept()
+			case model.DROP, model.DEFAULT:
+				r = r.drop()
+			default:
+				panic(
+					errors.Errorf("for chain '%s'/'%s' provided unsupported default verdict '%v'",
+						bt.table.Name, outSGchName, da),
+				)
+			}
+			chnApplyTo := bt.chains.At(outSGchName)
+			r.applyRule(chnApplyTo, tx.Conn)
+			bt.log.Debugf("chain '%s'/'%s' finished", bt.table.Name, outSGchName)
+			return nil
+		})
+	}
+}
+
+func (bt *batch) populateSG2SGOutRules(tm cases.RulesOutTemplate, outChainName string) {
+	for i := range tm.In {
+		i := i
+		in := tm.In[i]
+		detailsName := nameUtils{}.nameOfSG2SGRuleDetails(in.Proto, tm.SgOut.Name, in.Sg)
+		rd := bt.ruleDetails.At(detailsName)
+		IPvv := sli(iplib.IP4Version, iplib.IP6Version)
+		for j := range IPvv {
+			j := j
+			IPv := IPvv[j]
+			daddrSetName := nameUtils{}.nameOfNetSet(IPv, in.Sg)
+			for n := range rd.accports {
+				ports := rd.accports[n]
+				bt.addJob("poplulate-out-rules", func(tx *nfTablesTx) error {
+					if i == 0 && j == 0 {
+						bt.log.Debugf("chain '%s'/'%s' SG-SG rules are in progress",
+							bt.table.Name, outChainName)
+					} else if i == len(tm.In)-1 && j == len(IPvv)-1 {
+						defer bt.log.Debugf("chain '%s'/'%s' SG-SG rules are finished",
+							bt.table.Name, outChainName)
 					}
+					daddr := bt.addrsets.At(daddrSetName)
+					if daddr == nil {
+						return nil
+					}
+					r := ports.D(
+						ports.S(
+							beginRule().daddr(IPv).inSet(daddr).ipProto(in.Proto),
+						),
+					).counter()
+					if rd.logs {
+						r = r.dlogs(nfte.LogFlagsIPOpt)
+					}
+					chnApplyTo := bt.chains.At(outChainName)
+					r.accept().applyRule(chnApplyTo, tx.Conn)
 					return nil
 				})
 			}
@@ -512,7 +540,7 @@ func (bt *batch) addOutChains(localRules cases.LocalRules) {
 	}
 }
 
-func (bt *batch) addInChains(localRules cases.LocalRules) {
+func (bt *batch) makeInChains(localRules cases.LocalRules) {
 	const api = "make-in-chains"
 
 	inTmpls := localRules.TemplatesInRules()
@@ -525,10 +553,9 @@ func (bt *batch) addInChains(localRules cases.LocalRules) {
 				Table: bt.table,
 			})
 			bt.chains.Put(inSGchName, chn)
-			bt.log.Debugf("add chain '%s' into table '%s'", inSGchName, bt.table.Name)
+			bt.log.Debugf("chain '%s'/'%s' is in progress", bt.table.Name, inSGchName)
 			return nil
 		})
-		cAddedRules := 0
 		ipVersions := []int{iplib.IP4Version, iplib.IP6Version}
 		for j := range ipVersions {
 			j := j
@@ -550,7 +577,7 @@ func (bt *batch) addInChains(localRules cases.LocalRules) {
 				bt.addJob(api, func(tx *nfTablesTx) error {
 					saddrSetName := nameUtils{}.nameOfNetSet(ipV, outSG.Sg)
 					chnApplyTo := bt.chains.At(inSGchName)
-					detailsName := nameUtils{}.nameOfSG2SGPortSet(outSG.Proto, outSG.Sg, tmpl.SgIn.Name)
+					detailsName := nameUtils{}.nameOfSG2SGRuleDetails(outSG.Proto, outSG.Sg, tmpl.SgIn.Name)
 					details := bt.ruleDetails.At(detailsName)
 					for n := range details.accports { //nolint:dupl
 						n := n
@@ -558,7 +585,6 @@ func (bt *batch) addInChains(localRules cases.LocalRules) {
 						fin := k+1 == len(tmpl.Out) && j+1 == len(ipVersions) && n+1 == len(details.accports)
 						bt.addJob(api, func(tx *nfTablesTx) error {
 							if saddrSet := bt.addrsets.At(saddrSetName); saddrSet != nil {
-								cAddedRules++
 								r := ports.S(
 									ports.D(
 										beginRule().saddr(ipV).inSet(saddrSet).ipProto(outSG.Proto),
@@ -581,12 +607,13 @@ func (bt *batch) addInChains(localRules cases.LocalRules) {
 									r = r.drop()
 								default:
 									panic(
-										errors.Errorf("in chain '%s' unrecognized default verdict action(%v)", inSGchName, da),
+										errors.Errorf("for chain '%s'/'%s' provided unsupported default verdict '%v'",
+											bt.table.Name, inSGchName, da),
 									)
 								}
 								r.applyRule(chnApplyTo, tx.Conn)
-								bt.log.Debugf("added %v rule(s) to chain '%s' in table '%s'",
-									cAddedRules, inSGchName, bt.table.Name)
+								bt.log.Debugf("chain '%s'/'%s' finished",
+									bt.table.Name, inSGchName)
 							}
 							return nil
 						})

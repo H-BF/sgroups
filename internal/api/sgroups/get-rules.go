@@ -63,6 +63,7 @@ func sgFqdnRule2proto(src model.FQDNRule) (*sg.FqdnRule, error) {
 	}
 	ret.Logs = src.Logs
 	ret.SgFrom = src.ID.SgFrom
+	ret.FQDN = src.ID.FqdnTo.String()
 	var e error
 	ret.Ports, e = sgAccPorts2proto(src.Ports)
 	return &ret, e

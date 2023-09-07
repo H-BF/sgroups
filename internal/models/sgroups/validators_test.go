@@ -207,6 +207,7 @@ func TestValidate_FQDN(t *testing.T) {
 		{"*ex.com", false},
 		{"*ex.com.2", false},
 		{"*ex.com.2w", false},
+		{"microsoft.com", false},
 	}
 	for i := range cases {
 		c := cases[i]

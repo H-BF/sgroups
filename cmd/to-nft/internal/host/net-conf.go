@@ -183,8 +183,8 @@ func (devs IpDevs) Eq(other IpDevs) bool {
 
 // Eq -
 func (conf NetConf) Eq(other NetConf) bool {
-	return conf.IPAdresses.Eq(other.IPAdresses) &&
-		conf.IpDevs.Eq(other.IpDevs)
+	return conf.IpDevs.Eq(other.IpDevs) &&
+		conf.IPAdresses.Eq(other.IPAdresses)
 }
 
 // Clone -

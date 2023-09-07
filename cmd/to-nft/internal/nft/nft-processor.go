@@ -75,12 +75,14 @@ type (
 
 // ApplyConf impl 'NfTablesProcessor'
 func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, conf NetConf) (err error) {
-	const api = "nftables/ApplyConf"
+	const api = "nft/ApplyConf"
 
 	defer func() {
-		err = errors.WithMessage(multierr.Combine(
-			ErrNfTablesProcessor, err,
-		), api)
+		if err != nil {
+			err = errors.WithMessage(multierr.Combine(
+				ErrNfTablesProcessor, err,
+			), api)
+		}
 	}()
 
 	var (
@@ -88,29 +90,32 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, conf NetConf) 
 		localSGs   cases.SGs
 		fqdnRules  cases.FQDNRules
 	)
+	log := logger.FromContext(ctx).Named("nft")
+	if len(impl.netNS) > 0 {
+		log = log.WithField("net-NS", impl.netNS)
+	}
 
 	localIPsV4, loaclIPsV6 := conf.LocalIPs()
 	allLoaclIPs := append(localIPsV4, loaclIPsV6...)
+
+	log.Infof("start loading local data")
+	log.Debugw("loading SG...", "local-IP", slice2stringer(allLoaclIPs...))
 	if localSGs, err = impl.loadLocalSG(ctx, allLoaclIPs); err != nil {
 		return err
 	}
+	log.Debugw("loading SG-SG rules...", "local-IP", slice2stringer(allLoaclIPs...))
 	if localRules, err = impl.loadLocalRules(ctx, localSGs); err != nil {
 		return err
 	}
-	if fqdnRules, err = impl.loadFQDNRules(ctx, localSGs); err != nil {
+	log.Debugw("loading SG-FQDN rules...", "local-SG", slice2stringer(localSGs.Names()...))
+	if fqdnRules, err = impl.loadFQDNRules(ctx, localRules); err != nil {
 		return err
 	}
-
-	_ = fqdnRules
+	log.Infof("local data = OK; will apply it now")
 
 	tblMain := &nftLib.Table{
 		Name:   "main",
 		Family: nftLib.TableFamilyINet,
-	}
-
-	log := logger.FromContext(ctx).Named("nft")
-	if len(impl.netNS) > 0 {
-		log = log.WithField("NetNS", impl.netNS)
 	}
 	btch := batch{
 		log: log,
@@ -141,7 +146,7 @@ func (impl *nfTablesProcessorImpl) loadLocalSG(ctx context.Context, localIPs []n
 	return ret, errors.WithMessage(err, api)
 }
 
-func (impl *nfTablesProcessorImpl) loadFQDNRules(ctx context.Context, localSGs cases.SGs) (cases.FQDNRules, error) {
+func (impl *nfTablesProcessorImpl) loadFQDNRules(ctx context.Context, localRules cases.LocalRules) (cases.FQDNRules, error) {
 	const api = "load-FQDN-rules"
 	var ret cases.FQDNRules
 	dnsR, err := impl.getDnsResolver(ctx)
@@ -151,7 +156,7 @@ func (impl *nfTablesProcessorImpl) loadFQDNRules(ctx context.Context, localSGs c
 	ret, err = cases.FQDNRulesLoader{
 		SGSrv:  impl.sgClient,
 		DnsRes: dnsR,
-	}.Load(ctx, localSGs)
+	}.Load(ctx, localRules)
 	return ret, errors.WithMessage(err, api)
 }
 

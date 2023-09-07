@@ -5,10 +5,14 @@ import (
 	"github.com/emirpasic/gods/utils"
 )
 
-// RBDict -
-type RBDict[Tk rbKeyType[Tk], Tv any] struct {
+// RBDict red-black tree; type key 'Tk' should be Ordered or cmpOps[Tk] interface
+type RBDict[Tk any, Tv any] struct {
 	m  *rbt.Tree
 	cm utils.Comparator
+}
+
+type cmpOps[T any] interface {
+	Cmp(T) int
 }
 
 func (dict *RBDict[Tk, Tv]) ensureInit() {
@@ -17,9 +21,9 @@ func (dict *RBDict[Tk, Tv]) ensureInit() {
 			var cm utils.Comparator
 			var k Tk
 			switch any(k).(type) {
-			case CmpOps[Tk]:
+			case cmpOps[Tk]:
 				cm = func(a, b any) int {
-					return a.(CmpOps[Tk]).Cmp(b.(Tk))
+					return a.(cmpOps[Tk]).Cmp(b.(Tk))
 				}
 			default:
 				if cm = orderedCmp[Tk](); cm == nil {
