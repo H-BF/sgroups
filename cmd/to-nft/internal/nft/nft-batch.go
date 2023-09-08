@@ -124,7 +124,7 @@ func (bt *batch) init(table *nftLib.Table, localRules cases.LocalRules, baseRule
 	bt.initRootChains()
 	bt.initBaseRules(baseRules)
 	bt.makeInChains(localRules)
-	bt.makeOutChains(localRules)
+	bt.makeOutChains(localRules, fqdnRules)
 	bt.addFinalRules()
 }
 
@@ -377,19 +377,19 @@ func (bt *batch) addFQDNNetSets(fqdnRules cases.FQDNRules) {
 	f := func(IPv int, domain model.FQDN, a dns.Addresses) {
 		bt.addJob(api, func(tx *nfTablesTx) error {
 			nameOfSet := nameUtils{}.nameOfFqdnNetSet(IPv, domain)
-			nets := make([]net.IPNet, 0, len(a.IPs))
-			for _, ip := range a.IPs {
-				bits := tern(IPv == iplib.IP6Version, net.IPv6len, net.IPv6len) * 8
-				nets = append(nets, net.IPNet{IP: ip, Mask: net.CIDRMask(bits, bits)})
+			nets := make([]net.IPNet, len(a.IPs))
+			isV6 := IPv == iplib.IP6Version
+			bits := tern(isV6, net.IPv6len, net.IPv4len) * 8
+			mask := net.CIDRMask(bits, bits)
+			for i, ip := range a.IPs {
+				nets[i] = net.IPNet{IP: ip, Mask: mask}
 			}
 			elements := (setsUtils{}).nets2SetElements(nets, IPv)
 			netSet := &nftLib.Set{
-				ID:    nextSetID(),
-				Table: bt.table,
-				KeyType: tern(IPv == iplib.IP6Version,
-					nftLib.TypeIP6Addr, nftLib.TypeIPAddr),
+				ID:       nextSetID(),
+				Table:    bt.table,
+				KeyType:  tern(isV6, nftLib.TypeIP6Addr, nftLib.TypeIPAddr),
 				Interval: true,
-				Constant: true,
 				Name:     nameOfSet,
 			}
 			if err := tx.AddSet(netSet, elements); err != nil {
@@ -447,10 +447,10 @@ func (bt *batch) initSG2FQDNRulesDetails(rules cases.FQDNRules) {
 	}
 }
 
-func (bt *batch) makeOutChains(localRules cases.LocalRules) {
+func (bt *batch) makeOutChains(sg2sgRules cases.LocalRules, sg2fqdnRules cases.FQDNRules) {
 	const api = "make-out-chains"
 
-	outTmpls := localRules.TemplatesOutRules()
+	outTmpls := sg2sgRules.TemplatesOutRules()
 	for i := range outTmpls {
 		tmpl := outTmpls[i]
 		outSGchName := chnFWOUT + "-" + tmpl.SgOut.Name
@@ -474,6 +474,7 @@ func (bt *batch) makeOutChains(localRules cases.LocalRules) {
 			})
 		}
 		bt.populateSG2SGOutRules(tmpl, outSGchName)
+		bt.populateSG2FQDNOutRules(tmpl, sg2fqdnRules, outSGchName)
 		bt.addJob(api, func(tx *nfTablesTx) error {
 			r := beginRule().metaNFTRACE(tmpl.SgOut.Trace).counter()
 			if tmpl.SgOut.Logs {
@@ -498,20 +499,41 @@ func (bt *batch) makeOutChains(localRules cases.LocalRules) {
 	}
 }
 
+func (bt *batch) populateSG2FQDNOutRules(tm cases.RulesOutTemplate, fqdnRules cases.FQDNRules, outChainName string) {
+	rules := fqdnRules.RulesForSG(tm.SgOut.Name)
+	IPvv := sli(iplib.IP4Version, iplib.IP6Version)
+	names := nameUtils{}
+	for i := range rules {
+		i := i
+		rule := rules[i]
+		detailsName := names.nameOfSG2FQDNRuleDetails(
+			rule.ID.Transport, rule.ID.SgFrom, rule.ID.FqdnTo,
+		)
+		rd := bt.ruleDetails.At(detailsName)
+		_ = rd
+		for j := range IPvv {
+			j := j
+			IPv := IPvv[j]
+			daddrSetName := names.nameOfFqdnNetSet(IPv, rule.ID.FqdnTo)
+			_ = daddrSetName
+		}
+	}
+}
+
 func (bt *batch) populateSG2SGOutRules(tm cases.RulesOutTemplate, outChainName string) {
+	IPvv := sli(iplib.IP4Version, iplib.IP6Version)
 	for i := range tm.In {
 		i := i
 		in := tm.In[i]
 		detailsName := nameUtils{}.nameOfSG2SGRuleDetails(in.Proto, tm.SgOut.Name, in.Sg)
 		rd := bt.ruleDetails.At(detailsName)
-		IPvv := sli(iplib.IP4Version, iplib.IP6Version)
 		for j := range IPvv {
 			j := j
 			IPv := IPvv[j]
 			daddrSetName := nameUtils{}.nameOfNetSet(IPv, in.Sg)
 			for n := range rd.accports {
 				ports := rd.accports[n]
-				bt.addJob("poplulate-out-rules", func(tx *nfTablesTx) error {
+				bt.addJob("poplulate-SG-SG-rules", func(tx *nfTablesTx) error {
 					if i == 0 && j == 0 {
 						bt.log.Debugf("chain '%s'/'%s' SG-SG rules are in progress",
 							bt.table.Name, outChainName)
