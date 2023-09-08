@@ -502,35 +502,59 @@ func (bt *batch) makeOutChains(sg2sgRules cases.LocalRules, sg2fqdnRules cases.F
 func (bt *batch) populateSG2FQDNOutRules(tm cases.RulesOutTemplate, fqdnRules cases.FQDNRules, outChainName string) {
 	rules := fqdnRules.RulesForSG(tm.SgOut.Name)
 	IPvv := sli(iplib.IP4Version, iplib.IP6Version)
-	names := nameUtils{}
+	var names nameUtils
 	for i := range rules {
-		i := i
-		rule := rules[i]
+		i, rule := i, rules[i]
 		detailsName := names.nameOfSG2FQDNRuleDetails(
 			rule.ID.Transport, rule.ID.SgFrom, rule.ID.FqdnTo,
 		)
 		rd := bt.ruleDetails.At(detailsName)
-		_ = rd
 		for j := range IPvv {
-			j := j
-			IPv := IPvv[j]
+			j, IPv := j, IPvv[j]
 			daddrSetName := names.nameOfFqdnNetSet(IPv, rule.ID.FqdnTo)
-			_ = daddrSetName
+			for n := range rd.accports {
+				ports := rd.accports[n]
+				bt.addJob("poplulate-SG-FQDN-rules", func(tx *nfTablesTx) error {
+					if i == 0 && j == 0 {
+						bt.log.Debugf("chain '%s'/'%s' SG-FQDN rules are in progress",
+							bt.table.Name, outChainName)
+					} else if i == len(tm.In)-1 && j == len(IPvv)-1 {
+						defer bt.log.Debugf("chain '%s'/'%s' SG-FQDN rules are finished",
+							bt.table.Name, outChainName)
+					}
+					daddr := bt.addrsets.At(daddrSetName)
+					if daddr == nil {
+						return nil
+					}
+					r := ports.D(
+						ports.S(
+							beginRule().daddr(IPv).inSet(daddr).ipProto(rule.ID.Transport),
+						),
+					).counter()
+					if rd.logs {
+						r = r.dlogs(nfte.LogFlagsIPOpt)
+					}
+					chnApplyTo := bt.chains.At(outChainName)
+					r.accept().applyRule(chnApplyTo, tx.Conn)
+					return nil
+				})
+			}
 		}
 	}
 }
 
 func (bt *batch) populateSG2SGOutRules(tm cases.RulesOutTemplate, outChainName string) {
 	IPvv := sli(iplib.IP4Version, iplib.IP6Version)
+	var names nameUtils
 	for i := range tm.In {
 		i := i
 		in := tm.In[i]
-		detailsName := nameUtils{}.nameOfSG2SGRuleDetails(in.Proto, tm.SgOut.Name, in.Sg)
+		detailsName := names.nameOfSG2SGRuleDetails(in.Proto, tm.SgOut.Name, in.Sg)
 		rd := bt.ruleDetails.At(detailsName)
 		for j := range IPvv {
 			j := j
 			IPv := IPvv[j]
-			daddrSetName := nameUtils{}.nameOfNetSet(IPv, in.Sg)
+			daddrSetName := names.nameOfNetSet(IPv, in.Sg)
 			for n := range rd.accports {
 				ports := rd.accports[n]
 				bt.addJob("poplulate-SG-SG-rules", func(tx *nfTablesTx) error {

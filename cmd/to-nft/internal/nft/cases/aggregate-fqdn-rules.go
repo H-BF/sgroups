@@ -105,7 +105,7 @@ func (ld FQDNRulesLoader) fillWithAddresses(ctx context.Context, rr *FQDNRules) 
 // SelectForSG -
 func (rules FQDNRules) RulesForSG(sgName string) []model.FQDNRule {
 	var ret []model.FQDNRule
-	linq.From(rules).
+	linq.From(rules.Rules).
 		Where(func(i any) bool {
 			return i.(model.FQDNRule).ID.SgFrom == sgName
 		}).ToSlice(&ret)
