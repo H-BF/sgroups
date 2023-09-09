@@ -10,12 +10,14 @@ import (
 	"github.com/vishvananda/netns"
 )
 
-type nfTablesTx struct {
+// Tx -
+type Tx struct {
 	*nftLib.Conn
 	commitOnce sync.Once
 }
 
-func nfTx(netNS string) (*nfTablesTx, error) {
+// NewTx -
+func NewTx(netNS string) (*Tx, error) {
 	const api = "connect to nft"
 
 	opts := []nftLib.ConnOption{nftLib.AsLasting()}
@@ -32,11 +34,11 @@ func nfTx(netNS string) (*nfTablesTx, error) {
 	if e != nil {
 		return nil, errors.WithMessage(e, api)
 	}
-	return &nfTablesTx{Conn: c}, nil
+	return &Tx{Conn: c}, nil
 }
 
 // Close impl 'Closer'
-func (tx *nfTablesTx) Close() error {
+func (tx *Tx) Close() error {
 	c := tx.Conn
 	tx.commitOnce.Do(func() {
 		_ = c.CloseLasting()
@@ -45,7 +47,7 @@ func (tx *nfTablesTx) Close() error {
 }
 
 // FlushAndClose does flush and close
-func (tx *nfTablesTx) FlushAndClose() error {
+func (tx *Tx) FlushAndClose() error {
 	c := tx.Conn
 	err := net.ErrClosed
 	tx.commitOnce.Do(func() {

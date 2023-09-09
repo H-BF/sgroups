@@ -4,34 +4,44 @@ import (
 	"context"
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/dns"
+	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
 	"github.com/H-BF/sgroups/internal/config"
 )
 
-// NfTablesProcessorOpt constructor option(s)
-type NfTablesProcessorOpt interface {
-	isNfTablesProcessorOpt()
-}
+type (
+	// AppliedRules -
+	AppliedRules struct {
+		SavedNftConf NFTablesConf
+		cases.SG2FQDNRules
+		cases.SG2SGRules
+	}
 
-// NfTablesProcessor abstract interface
-type NfTablesProcessor interface {
-	ApplyConf(ctx context.Context, conf NetConf) error
-	Close() error
-}
+	// NfTablesProcessorOpt constructor option(s)
+	NfTablesProcessorOpt interface {
+		isNfTablesProcessorOpt()
+	}
 
-// WithNetNS use network namespace
-type WithNetNS struct {
-	NetNS string
-}
+	// NfTablesProcessor abstract interface
+	NfTablesProcessor interface {
+		ApplyConf(ctx context.Context, conf NetConf) (AppliedRules, error)
+		Close() error
+	}
 
-// BaseRules -
-type BaseRules struct {
-	Nets []config.NetCIDR
-}
+	// WithNetNS use network namespace
+	WithNetNS struct {
+		NetNS string
+	}
 
-// DnsResolver -
-type DnsResolver struct {
-	dns.Resolver
-}
+	// BaseRules -
+	BaseRules struct {
+		Nets []config.NetCIDR
+	}
+
+	// DnsResolver -
+	DnsResolver struct {
+		dns.Resolver
+	}
+)
 
 //DNS resolver
 

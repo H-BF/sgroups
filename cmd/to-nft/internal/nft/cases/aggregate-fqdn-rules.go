@@ -17,8 +17,8 @@ import (
 )
 
 type (
-	// FQDNRules -
-	FQDNRules struct {
+	// SG2FQDNRules -
+	SG2FQDNRules struct {
 		Rules []model.FQDNRule
 		A     dict.RBDict[model.FQDN, dns.Addresses]
 		AAAA  dict.RBDict[model.FQDN, dns.Addresses]
@@ -31,7 +31,7 @@ type (
 	}
 )
 
-func (ld FQDNRulesLoader) Load(ctx context.Context, localRules LocalRules) (rr FQDNRules, err error) {
+func (ld FQDNRulesLoader) Load(ctx context.Context, localRules SG2SGRules) (rr SG2FQDNRules, err error) {
 	const api = "FQDNRules/Load"
 	defer func() {
 		err = errors.WithMessage(err, api)
@@ -62,7 +62,7 @@ func (ld FQDNRulesLoader) Load(ctx context.Context, localRules LocalRules) (rr F
 	return rr, err
 }
 
-func (ld FQDNRulesLoader) fillWithAddresses(ctx context.Context, rr *FQDNRules) (err error) {
+func (ld FQDNRulesLoader) fillWithAddresses(ctx context.Context, rr *SG2FQDNRules) (err error) {
 	const api = "resolve-addresses"
 
 	defer func() {
@@ -103,7 +103,7 @@ func (ld FQDNRulesLoader) fillWithAddresses(ctx context.Context, rr *FQDNRules) 
 }
 
 // SelectForSG -
-func (rules FQDNRules) RulesForSG(sgName string) []model.FQDNRule {
+func (rules SG2FQDNRules) RulesForSG(sgName string) []model.FQDNRule {
 	var ret []model.FQDNRule
 	linq.From(rules.Rules).
 		Where(func(i any) bool {

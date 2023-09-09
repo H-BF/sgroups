@@ -35,8 +35,8 @@ type (
 		}
 	}
 
-	// LocalRules -
-	LocalRules struct {
+	// SG2SGRules -
+	SG2SGRules struct {
 		SGs
 		In       []model.SGRule
 		Out      []model.SGRule
@@ -53,7 +53,7 @@ type (
 )
 
 // Load ...
-func (rules *LocalRules) Load(ctx context.Context, client SGClient, locals SGs) (err error) {
+func (rules *SG2SGRules) Load(ctx context.Context, client SGClient, locals SGs) (err error) {
 	const api = "LocalRules/Load"
 
 	defer func() {
@@ -93,7 +93,7 @@ func (rules *LocalRules) Load(ctx context.Context, client SGClient, locals SGs) 
 }
 
 // AllRules -
-func (rules LocalRules) AllRules() []model.SGRule {
+func (rules SG2SGRules) AllRules() []model.SGRule {
 	src := append(rules.In, rules.Out...)
 	ret := src[:0]
 	linq.From(src).DistinctBy(func(i any) any {
@@ -112,7 +112,7 @@ func (rules LocalRules) AllRules() []model.SGRule {
 }
 
 // IterateNetworks ...
-func (rules LocalRules) IterateNetworks(f func(sgName string, nets []net.IPNet, isV6 bool) error) error {
+func (rules SG2SGRules) IterateNetworks(f func(sgName string, nets []net.IPNet, isV6 bool) error) error {
 	var err error
 	type item = struct {
 		sg string
@@ -147,7 +147,7 @@ func (rules LocalRules) IterateNetworks(f func(sgName string, nets []net.IPNet, 
 }
 
 // TemplatesOutRules -
-func (rules LocalRules) TemplatesOutRules() []RulesOutTemplate { //nolint:dupl
+func (rules SG2SGRules) TemplatesOutRules() []RulesOutTemplate { //nolint:dupl
 	type groupped = struct {
 		Sg    string
 		Proto model.NetworkTransport
@@ -181,7 +181,7 @@ func (rules LocalRules) TemplatesOutRules() []RulesOutTemplate { //nolint:dupl
 }
 
 // TemplatesInRules -
-func (rules LocalRules) TemplatesInRules() []RulesInTemplate { //nolint:dupl
+func (rules SG2SGRules) TemplatesInRules() []RulesInTemplate { //nolint:dupl
 	type groupped = struct {
 		Sg    string
 		Proto model.NetworkTransport
