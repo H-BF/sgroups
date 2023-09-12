@@ -62,7 +62,7 @@ func (idx SGRuleIdIndexer) FromObject(obj interface{}) (bool, []byte, error) {
 }
 
 // FromArgs impl Indexer
-func (idx SGRuleIdIndexer) FromArgs(args ...interface{}) ([]byte, error) {
+func (idx SGRuleIdIndexer) FromArgs(args ...interface{}) ([]byte, error) { //nolint:dupl
 	if len(args) != 1 {
 		return nil, errors.New("must provide only a single argument")
 	}
@@ -86,7 +86,7 @@ func (idx FQDNRuleIdIndexer) FromObject(obj interface{}) (bool, []byte, error) {
 }
 
 // FromArgs impl Indexer
-func (idx FQDNRuleIdIndexer) FromArgs(args ...interface{}) ([]byte, error) {
+func (idx FQDNRuleIdIndexer) FromArgs(args ...interface{}) ([]byte, error) { //nolint:dupl
 	if len(args) != 1 {
 		return nil, errors.New("must provide only a single argument")
 	}

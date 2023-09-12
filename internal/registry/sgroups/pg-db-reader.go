@@ -172,7 +172,7 @@ func (rd *pgDbReader) argsForListSGRules(scope Scope) ([]any, error) {
 }
 
 // ListSGRules impl Reader interface
-func (rd *pgDbReader) ListSGRules(ctx context.Context, consume func(model.SGRule) error, scope Scope) error {
+func (rd *pgDbReader) ListSGRules(ctx context.Context, consume func(model.SGRule) error, scope Scope) error { //nolint:dupl
 	const (
 		qry = "select sg_from, sg_to, proto, ports, logs from sgroups.list_sg_rule($1, $2)"
 	)
@@ -218,7 +218,7 @@ func (rd *pgDbReader) argsForListFQDNRules(scope Scope) ([]any, error) {
 }
 
 // ListFqdnRules impl Reader interface
-func (rd *pgDbReader) ListFqdnRules(ctx context.Context, consume func(model.FQDNRule) error, scope Scope) error {
+func (rd *pgDbReader) ListFqdnRules(ctx context.Context, consume func(model.FQDNRule) error, scope Scope) error { //nolint:dupl
 	const (
 		qry = "select sg_from, fqdn_to, proto, ports, logs from sgroups.list_fqdn_rule($1)"
 	)

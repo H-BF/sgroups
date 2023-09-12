@@ -157,7 +157,7 @@ func validatePortOrRange(i interface{}, _ cty.Path) diag.Diagnostics {
 	return diag.FromErr(errors.Errorf("bad port or range: '%s'", src))
 }
 
-func modelRule2tf(mr *model.SGRule) (map[string]any, error) {
+func modelRule2tf(mr *model.SGRule) (map[string]any, error) { //nolint:dupl
 	var ports []any
 	for _, p := range mr.Ports {
 		var s, d model.PortSource
@@ -200,7 +200,7 @@ func tf2protoNetProto(raw map[string]any) (ret common.Networks_NetIP_Transport, 
 	return common.Networks_NetIP_Transport(proto), nil
 }
 
-func tf2protoRule(raw any) (string, *sgroupsAPI.Rule, error) {
+func tf2protoRule(raw any) (string, *sgroupsAPI.Rule, error) { //nolint:dupl
 	item := raw.(map[string]any)
 	proto, e := tf2protoNetProto(item)
 	if e != nil {

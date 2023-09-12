@@ -53,7 +53,7 @@ var (
 )
 
 // init inits options from app config
-func (r *resolver) init(ctx context.Context) (err error) {
+func (r *resolver) init(ctx context.Context) (err error) { //nolint:gocyclo
 	var bkf backoff.Backoff
 	opts := []dns.Option{dns.NoDefNS{}}
 	defer func() {

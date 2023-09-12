@@ -139,8 +139,9 @@ func (sui *sGroupServiceTests) syncSGs(sgs []*api.SecGroup, op api.SyncReq_SyncO
 
 func (sui *sGroupServiceTests) newSG(name string, nws ...string) *api.SecGroup {
 	return &api.SecGroup{
-		Name:     name,
-		Networks: nws,
+		Name:          name,
+		Networks:      nws,
+		DefaultAction: api.SecGroup_DROP,
 	}
 }
 

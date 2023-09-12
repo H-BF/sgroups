@@ -83,7 +83,7 @@ func Test_QueryA(t *testing.T) {
 	}()
 	select {
 	case <-started:
-		defer srvDNS.Shutdown()
+		defer srvDNS.Shutdown() //nolint:errcheck
 	case <-failed:
 		t.FailNow()
 		return

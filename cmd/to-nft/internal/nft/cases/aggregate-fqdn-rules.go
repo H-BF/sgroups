@@ -64,6 +64,7 @@ func (ld FQDNRulesLoader) Load(ctx context.Context, localRules SG2SGRules) (rr S
 
 func (ld FQDNRulesLoader) fillWithAddresses(ctx context.Context, rr *SG2FQDNRules) (err error) {
 	const api = "resolve-addresses"
+	const parallelism = 8
 
 	defer func() {
 		err = errors.WithMessage(err, api)
@@ -77,7 +78,7 @@ func (ld FQDNRulesLoader) fillWithAddresses(ctx context.Context, rr *SG2FQDNRule
 			return i.(model.FQDNRule).ID.FqdnTo
 		}).ToSlice(&domains)
 	var mx sync.Mutex
-	err = parallel.ExecAbstract(len(domains), 8, func(i int) error {
+	err = parallel.ExecAbstract(len(domains), parallelism, func(i int) error {
 		domain := domains[i].String()
 		addrA := ld.DnsRes.A(ctx, domain)
 		if addrA.Err != nil {

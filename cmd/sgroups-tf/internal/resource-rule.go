@@ -31,7 +31,7 @@ ports:
 const RcRule = SGroupsProvider + "_rule"
 
 // SGroupsRcRule -
-func SGroupsRcRule() *schema.Resource {
+func SGroupsRcRule() *schema.Resource { //nolint:dupl
 	return &schema.Resource{
 		Description:   "SG rule",
 		ReadContext:   ruleR,
@@ -105,7 +105,7 @@ func ruleR(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Dia
 	return nil
 }
 
-func ruleC(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+func ruleC(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics { //nolint:dupl
 	rule, err := rd2protoRule(rd, true)
 	if err != nil {
 		return diag.FromErr(err)

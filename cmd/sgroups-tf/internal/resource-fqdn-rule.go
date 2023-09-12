@@ -31,7 +31,7 @@ const RcFqdnRule = SGroupsProvider + "_fqdn_rule"
 const RcLabelFqdn = "fqdn"
 
 // SGroupsRcFqdnRule -
-func SGroupsRcFqdnRule() *schema.Resource {
+func SGroupsRcFqdnRule() *schema.Resource { //nolint:dupl
 	return &schema.Resource{
 		Description:   "FQDN rule",
 		ReadContext:   fqdnRuleR,
@@ -104,7 +104,7 @@ func fqdnRuleR(ctx context.Context, rd *schema.ResourceData, i interface{}) diag
 	return nil
 }
 
-func fqdnRuleC(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+func fqdnRuleC(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics { //nolint:dupl
 	rule, err := rd2protoFqdnRule(rd, true)
 	if err != nil {
 		return diag.FromErr(err)
@@ -161,7 +161,7 @@ func fqdnRuleUD(ctx context.Context, rd *schema.ResourceData, i interface{}, upd
 	return diag.FromErr(err)
 }
 
-func modelFqdnRule2tf(mr model.FQDNRule) (map[string]any, error) {
+func modelFqdnRule2tf(mr model.FQDNRule) (map[string]any, error) { //nolint:dupl
 	var ports []any
 	for _, p := range mr.Ports {
 		var s, d model.PortSource
@@ -212,7 +212,7 @@ func rd2protoFqdnRule(rd *schema.ResourceData, withPorts bool) (*sgroupsAPI.Fqdn
 	return ret, err
 }
 
-func tf2protoFqdnRule(raw any) (string, *sgroupsAPI.FqdnRule, error) {
+func tf2protoFqdnRule(raw any) (string, *sgroupsAPI.FqdnRule, error) { //nolint:dupl
 	item := raw.(map[string]any)
 	proto, e := tf2protoNetProto(item)
 	if e != nil {

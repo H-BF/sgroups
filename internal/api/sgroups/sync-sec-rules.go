@@ -19,7 +19,7 @@ type syncRules struct {
 	ops   sg.SyncReq_SyncOp
 }
 
-func (snc syncRules) process(ctx context.Context) error {
+func (snc syncRules) process(ctx context.Context) error { //nolint:dupl
 	rules := make([]model.SGRule, 0, len(snc.rules))
 	for _, rl := range snc.rules {
 		var item model.SGRule

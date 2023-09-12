@@ -108,7 +108,7 @@ func (wr *pgDbWriter) SyncSecurityGroups(ctx context.Context, sgs []model.Securi
 }
 
 // SyncSGRules impl Writer interface
-func (wr *pgDbWriter) SyncSGRules(ctx context.Context, rules []model.SGRule, scope Scope, opts ...Option) error {
+func (wr *pgDbWriter) SyncSGRules(ctx context.Context, rules []model.SGRule, scope Scope, opts ...Option) error { //nolint:dupl
 	const api = "PG/SyncSGRules"
 
 	var err error
@@ -146,7 +146,7 @@ func (wr *pgDbWriter) SyncSGRules(ctx context.Context, rules []model.SGRule, sco
 }
 
 // SyncFqdnRules impl Writer interface
-func (wr *pgDbWriter) SyncFqdnRules(ctx context.Context, rules []model.FQDNRule, scope Scope, opts ...Option) error {
+func (wr *pgDbWriter) SyncFqdnRules(ctx context.Context, rules []model.FQDNRule, scope Scope, opts ...Option) error { //nolint:dupl
 	const api = "PG/SyncSG2FQDNRules"
 	var err error
 	var affected int64

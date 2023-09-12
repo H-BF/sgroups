@@ -105,7 +105,7 @@ func (wr sGroupsMemDbWriter) SyncSecurityGroups(ctx context.Context, sgs []model
 }
 
 // SyncSGRules impl Writer = update / delete security group rules
-func (wr sGroupsMemDbWriter) SyncSGRules(ctx context.Context, rules []model.SGRule, scope Scope, opts ...Option) error {
+func (wr sGroupsMemDbWriter) SyncSGRules(ctx context.Context, rules []model.SGRule, scope Scope, opts ...Option) error { //nolint:dupl
 	const api = "mem-db/SyncSGRules"
 
 	it, err := wr.writer.Get(TblSecRules, indexID)
@@ -144,7 +144,7 @@ func (wr sGroupsMemDbWriter) SyncSGRules(ctx context.Context, rules []model.SGRu
 }
 
 // SyncFqdnRules impl Writer = update / delete FQQN rules
-func (wr sGroupsMemDbWriter) SyncFqdnRules(ctx context.Context, rules []model.FQDNRule, scope Scope, opts ...Option) error {
+func (wr sGroupsMemDbWriter) SyncFqdnRules(ctx context.Context, rules []model.FQDNRule, scope Scope, opts ...Option) error { //nolint:dupl
 	const api = "mem-db/SyncFqdnRules"
 
 	it, err := wr.writer.Get(TblFqdnRules, indexID)

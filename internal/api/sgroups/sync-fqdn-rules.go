@@ -27,7 +27,7 @@ type (
 	}
 )
 
-func (snc syncFqdnRules) process(ctx context.Context) error {
+func (snc syncFqdnRules) process(ctx context.Context) error { //nolint:dupl
 	rules := make([]model.FQDNRule, 0, len(snc.rules))
 	for _, rl := range snc.rules {
 		var item model.FQDNRule
