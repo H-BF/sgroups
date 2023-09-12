@@ -31,7 +31,7 @@ create table sgroups.tbl_fqdn_rule (
          check (
             sgroups.s_ports_dont_intersect(ports)
          ),
-    constraint fk_fqdn_rule__sg_from
+    constraint fk_fqdn_rule___sg_from
        foreign key(sg_from) references sgroups.tbl_sg(id)
             on delete cascade
             on update restrict
