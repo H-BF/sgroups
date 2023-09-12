@@ -91,7 +91,7 @@ func (imp *pgDbRegistry) Writer(ctx context.Context) (w Writer, err error) {
 		var txHolder atm.Value[pgx.Tx]
 		var tx pgx.Tx
 		txOpts := pgx.TxOptions{
-			IsoLevel:   pgx.Serializable,
+			IsoLevel:   pgx.RepeatableRead,
 			AccessMode: pgx.ReadWrite,
 		}
 		if tx, err = v.BeginTx(ctx, txOpts); err != nil {

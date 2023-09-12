@@ -155,7 +155,7 @@ func (o FQDN) Validate() error {
 	a := unsafe.Slice(
 		unsafe.StringData(string(o)), len(o),
 	)
-	if m := reFQDN.Match(a); !m {
+	if m := reFQDN.Match(a); !m || len(a) > 255 {
 		return ErrInvalidFQDN
 	}
 	return nil

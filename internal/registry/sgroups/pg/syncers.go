@@ -21,6 +21,9 @@ type SyncerOfSecGroups = syncObj[sgm.SecurityGroup, string]
 // SyncerOfSgRules -
 type SyncerOfSgRules = syncObj[sgm.SGRule, sgm.SGRuleIdentity]
 
+// SyncerOfSg2FqdnRules -
+type SyncerOfSg2FqdnRules = syncObj[sgm.FQDNRule, sgm.FQDNRuleIdentity]
+
 type syncObj[T any, tFlt any] struct {
 	C   *pgx.Conn
 	Ins bool
@@ -73,6 +76,17 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
 		)
 		o.mutatorFn = "sgroups.sync_sg_rule"
+	case *sgm.FQDNRule:
+		o.tableDst = syncTable{
+			Name: "sgroups.vu_fqdn_rule",
+		}.WithFields(
+			syncField{Name: "sg_from", PgTy: "sgroups.cname", Notnull: true, Pk: true},
+			syncField{Name: "fqdn_to", PgTy: "sgroups.fqdn", Notnull: true, Pk: true},
+			syncField{Name: "proto", PgTy: "sgroups.proto", Notnull: true, Pk: true},
+			syncField{Name: "ports", PgTy: "sgroups.sg_rule_ports[]"},
+			syncField{Name: "logs", PgTy: "bool", Notnull: true},
+		)
+		o.mutatorFn = "sgroups.sync_fqdn_rule"
 	default:
 		panic("UB")
 	}
@@ -152,6 +166,12 @@ func (o *syncObj[T, tFlt]) AddData(ctx context.Context, data ...T) error {
 				return err
 			}
 			raw = append(raw, []any{x.SgFrom, x.SgTo, x.Proto, x.Ports, x.Logs})
+		case sgm.FQDNRule:
+			var x SG2FQDNRule
+			if err := x.FromModel(v); err != nil {
+				return err
+			}
+			raw = append(raw, []any{x.SgFrom, x.FqndTo, x.Proto, x.Ports, x.Logs})
 		default:
 			panic("UB")
 		}

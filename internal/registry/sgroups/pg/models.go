@@ -48,6 +48,9 @@ type (
 		Network net.IPNet `db:"network"`
 	}
 
+	// FQDN -
+	FQDN string
+
 	// SG -
 	SG struct {
 		Name          string             `db:"name"`
@@ -61,6 +64,15 @@ type (
 	SGRule struct {
 		SgFrom string           `db:"sg_from"`
 		SgTo   string           `db:"sg_to"`
+		Proto  Proto            `db:"proto"`
+		Ports  SgRulePortsArray `db:"ports"`
+		Logs   bool             `db:"logs"`
+	}
+
+	// SG2FQDNRule -
+	SG2FQDNRule struct {
+		SgFrom string           `db:"sg_from"`
+		FqndTo FQDN             `db:"fqdn_to"`
 		Proto  Proto            `db:"proto"`
 		Ports  SgRulePortsArray `db:"ports"`
 		Logs   bool             `db:"logs"`
@@ -100,10 +112,10 @@ func RegisterSGroupsTypesOntoPGX(ctx context.Context, c *pgx.Conn) (err error) {
 		err = errors.WithMessage(err, "register 'sgroups' types onto PGX")
 	}()
 	var pgType *pgtype.Type
+	pgTypeMap := c.TypeMap()
 	if pgType, err = c.LoadType(ctx, "sgroups.port_ranges"); err != nil {
 		return err
 	}
-	pgTypeMap := c.TypeMap()
 	pgTypeMap.RegisterType(pgType)
 	{
 		var x PortMultirange
@@ -155,6 +167,26 @@ func RegisterSGroupsTypesOntoPGX(ctx context.Context, c *pgx.Conn) (err error) {
 	pgTypeMap.RegisterType(pgType)
 	{
 		var x ChainDefaultAction
+		pgTypeMap.RegisterDefaultPgType(x, pgType.Name)
+		pgTypeMap.RegisterDefaultPgType(&x, pgType.Name)
+	}
+	if _, err = c.Exec(ctx, "create extension if not exists citext"); err != nil {
+		return err
+	}
+	//Register OID CITEXT extension
+	citextExtType := pgtype.Type{Name: "citext", Codec: pgtype.TextCodec{}}
+	err = c.QueryRow(ctx, "select $1::text::regtype::oid;", citextExtType.Name).
+		Scan(&citextExtType.OID)
+	if err != nil {
+		return err
+	}
+	pgTypeMap.RegisterType(&citextExtType)
+	if pgType, err = c.LoadType(ctx, "sgroups.fqdn"); err != nil {
+		return err
+	}
+	pgTypeMap.RegisterType(pgType)
+	{
+		var x FQDN
 		pgTypeMap.RegisterDefaultPgType(x, pgType.Name)
 		pgTypeMap.RegisterDefaultPgType(&x, pgType.Name)
 	}

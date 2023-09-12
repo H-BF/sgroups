@@ -231,6 +231,34 @@ func (o *SGRule) FromModel(m sgm.SGRule) error {
 	return nil
 }
 
+// ToModel -
+func (o SG2FQDNRule) ToModel() (sgm.FQDNRule, error) {
+	var ret sgm.FQDNRule
+	var err error
+	ret.ID.SgFrom = o.SgFrom
+	ret.ID.FqdnTo = sgm.FQDN(string(o.FqndTo))
+	if ret.ID.Transport, err = o.Proto.ToModel(); err != nil {
+		return ret, err
+	}
+	ret.Logs = o.Logs
+	ret.Ports, err = o.Ports.ToModel()
+	return ret, err
+}
+
+// FromModel -
+func (o *SG2FQDNRule) FromModel(m sgm.FQDNRule) error {
+	o.SgFrom = m.ID.SgFrom
+	o.FqndTo = FQDN(m.ID.FqdnTo.String())
+	if err := o.Proto.FromModel(m.ID.Transport); err != nil {
+		return err
+	}
+	if err := o.Ports.FromModel(m.Ports); err != nil {
+		return err
+	}
+	o.Logs = m.Logs
+	return nil
+}
+
 var (
 	modelProto2proto = map[sgm.NetworkTransport]string{
 		sgm.TCP: strings.ToLower(sgm.TCP.String()),
