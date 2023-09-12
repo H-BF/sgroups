@@ -211,7 +211,7 @@ loop0:
 		if needApply {
 			appliedCount++
 			logger.Infof(ctx, "net-conf will apply now")
-			if err = nftProc.ApplyConf(ctx, conf); err != nil {
+			if _, err = nftProc.ApplyConf(ctx, conf); err != nil {
 				logger.Errorf(ctx, "net-conf din`t apply")
 				break
 			}
