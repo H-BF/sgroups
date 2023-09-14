@@ -28,7 +28,7 @@ ports:
 const RcFqdnRule = SGroupsProvider + "_fqdn_rule"
 
 // RcLabelFqdn -
-const RcLabelFqdn = "fqdn"
+const RcLabelFqdn = "fqdn_to"
 
 // SGroupsRcFqdnRule -
 func SGroupsRcFqdnRule() *schema.Resource { //nolint:dupl

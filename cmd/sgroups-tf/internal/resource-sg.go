@@ -55,7 +55,7 @@ func SGroupsRcSG() *schema.Resource {
 				Type:        schema.TypeBool,
 			},
 			RcLabelDefaultAction: {
-				Default:     sgroupsAPI.SecGroup_DEFAULT.String(),
+				Default:     sgroupsAPI.SecGroup_DROP.String(),
 				Optional:    true,
 				Description: "set default action on SG",
 				Type:        schema.TypeString,
