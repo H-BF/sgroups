@@ -11,9 +11,11 @@ import (
 type (
 	// AppliedRules -
 	AppliedRules struct {
+		TargetTable  string
 		SavedNftConf NFTablesConf
-		cases.SG2FQDNRules
-		cases.SG2SGRules
+		BaseRules    BaseRules
+		SG2SGRules   cases.SG2SGRules
+		SG2FQDNRules cases.SG2FQDNRules
 	}
 
 	// NfTablesProcessorOpt constructor option(s)

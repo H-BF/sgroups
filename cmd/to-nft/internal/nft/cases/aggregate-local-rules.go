@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	conv "github.com/H-BF/sgroups/internal/api/sgroups"
+	"github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
 	"github.com/H-BF/corlib/pkg/parallel"
@@ -37,19 +38,16 @@ type (
 
 	// SG2SGRules -
 	SG2SGRules struct {
-		SGs
+		SGs      SGs
 		In       []model.SGRule
 		Out      []model.SGRule
-		Networks Sg2Networks
+		Networks dict.HDict[string, *SgNetworks]
 	}
 
 	// SgNetworks -
 	SgNetworks struct {
 		V4, V6 []net.IPNet
 	}
-
-	// Sg2Networks -
-	Sg2Networks map[SgName]*SgNetworks
 )
 
 // Load ...
@@ -64,7 +62,7 @@ func (rules *SG2SGRules) Load(ctx context.Context, client SGClient, locals SGs) 
 	if len(localSgNames) == 0 {
 		return nil
 	}
-	rules.Networks = nil
+	rules.Networks.Clear()
 	rules.In = nil
 	rules.Out = nil
 	reqs := []sgAPI.FindRulesReq{
@@ -86,10 +84,10 @@ func (rules *SG2SGRules) Load(ctx context.Context, client SGClient, locals SGs) 
 			*dest[i] = append(*dest[i], rule)
 		}
 	}
-	if err = rules.SGs.LoadFromRules(ctx, client, append(rules.In, rules.Out...)); err == nil {
-		err = rules.Networks.Load(ctx, client, rules.SGs.Names())
+	if err = rules.SGs.LoadFromRules(ctx, client, append(rules.In, rules.Out...)); err != nil {
+		return err
 	}
-	return err
+	return rules.loadNetworks(ctx, client, rules.SGs.Names())
 }
 
 // AllRules -
@@ -121,20 +119,16 @@ func (rules SG2SGRules) IterateNetworks(f func(sgName string, nets []net.IPNet, 
 	linq.From(append(rules.In, rules.Out...)).
 		SelectMany(func(i any) linq.Query {
 			r := i.(model.SGRule)
-			return linq.From([...]item{
-				{sg: r.ID.SgFrom, nw: rules.Networks[r.ID.SgFrom]},
-				{sg: r.ID.SgTo, nw: rules.Networks[r.ID.SgTo]},
-			})
+			return linq.From([...]string{r.ID.SgFrom, r.ID.SgTo})
 		}).
-		Where(func(i any) bool {
-			return i.(item).nw != nil
-		}).
-		DistinctBy(func(i any) any {
-			return i.(item).sg
+		Distinct().
+		Select(func(i any) any {
+			sgName := i.(string)
+			return item{sg: sgName, nw: rules.Networks.At(sgName)}
 		}).
 		ForEach(func(i any) {
-			if err == nil {
-				v := i.(item)
+			v := i.(item)
+			if err == nil && v.nw != nil {
 				if len(v.nw.V4) > 0 {
 					err = f(v.sg, v.nw.V4, false)
 				}
@@ -165,12 +159,12 @@ func (rules SG2SGRules) TemplatesOutRules() []RulesOutTemplate { //nolint:dupl
 		).
 		Where(func(i any) bool {
 			v := i.(linq.Group)
-			return rules.SGs[v.Key.(string)] != nil
+			return rules.SGs.At(v.Key.(string)) != nil
 		}).
 		Select(func(i any) any {
 			v := i.(linq.Group)
 			item := RulesOutTemplate{
-				SgOut: rules.SGs[v.Key.(string)].SecurityGroup,
+				SgOut: rules.SGs.At(v.Key.(string)).SecurityGroup,
 			}
 			for _, g := range v.Group {
 				item.In = append(item.In, g.(groupped))
@@ -199,12 +193,12 @@ func (rules SG2SGRules) TemplatesInRules() []RulesInTemplate { //nolint:dupl
 		).
 		Where(func(i any) bool {
 			v := i.(linq.Group)
-			return rules.SGs[v.Key.(string)] != nil
+			return rules.SGs.At(v.Key.(string)) != nil
 		}).
 		Select(func(i any) any {
 			v := i.(linq.Group)
 			item := RulesInTemplate{
-				SgIn: rules.SGs[v.Key.(string)].SecurityGroup,
+				SgIn: rules.SGs.At(v.Key.(string)).SecurityGroup,
 			}
 			for _, g := range v.Group {
 				item.Out = append(item.Out, g.(groupped))
@@ -215,8 +209,7 @@ func (rules SG2SGRules) TemplatesInRules() []RulesInTemplate { //nolint:dupl
 }
 
 // Load loads networks from db
-func (sg2nws *Sg2Networks) Load(ctx context.Context, client SGClient, sgNames []SgName) error {
-	*sg2nws = make(Sg2Networks)
+func (rules *SG2SGRules) loadNetworks(ctx context.Context, client SGClient, sgNames []SgName) error {
 	var mx sync.Mutex
 	err := parallel.ExecAbstract(len(sgNames), 8, func(i int) error { //nolint:gomnd
 		rq := sgAPI.GetSgSubnetsReq{SgName: sgNames[i]}
@@ -238,7 +231,7 @@ func (sg2nws *Sg2Networks) Load(ctx context.Context, client SGClient, sgNames []
 		var x SgNetworks
 		x.V4, x.V6 = SeparateNetworks(nws)
 		mx.Lock()
-		(*sg2nws)[sgNames[i]] = &x
+		rules.Networks.Put(sgNames[i], &x)
 		mx.Unlock()
 		return nil
 	})

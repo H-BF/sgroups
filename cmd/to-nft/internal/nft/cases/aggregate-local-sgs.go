@@ -8,6 +8,7 @@ import (
 
 	sgAPI "github.com/H-BF/protos/pkg/api/sgroups"
 	conv "github.com/H-BF/sgroups/internal/api/sgroups"
+	"github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
 	"github.com/H-BF/corlib/pkg/parallel"
@@ -36,15 +37,15 @@ type (
 	}
 
 	// SGs local SG(s) related to IP(s)
-	SGs map[SgName]*SG
+	SGs struct {
+		dict.HDict[SgName, *SG]
+	}
 )
 
 // LoadFromIPs it loads Local SGs by IPs
 func (loc *SGs) LoadFromIPs(ctx context.Context, client SGClient, localIPs []net.IP) error {
 	const api = "SG(s)/LoadFromIPs"
-	if *loc == nil {
-		*loc = make(SGs)
-	}
+	loc.Clear()
 	if len(localIPs) == 0 {
 		return nil
 	}
@@ -67,10 +68,10 @@ func (loc *SGs) LoadFromIPs(ctx context.Context, client SGClient, localIPs []net
 		}
 		mx.Lock()
 		defer mx.Unlock()
-		it := (*loc)[sg.Name]
+		it := loc.At(sg.Name)
 		if it == nil {
 			it = &SG{SecurityGroup: sg}
-			(*loc)[sg.Name] = it
+			loc.Put(sg.Name, it)
 		}
 		switch len(srcIP) {
 		case net.IPv4len:
@@ -83,16 +84,16 @@ func (loc *SGs) LoadFromIPs(ctx context.Context, client SGClient, localIPs []net
 	if err := parallel.ExecAbstract(len(localIPs), 8, job); err != nil { //nolint:gomnd
 		return errors.WithMessage(err, api)
 	}
-	for _, it := range *loc {
-		lst := []*iplib.ByIP{&it.IPsV4, &it.IPsV6}
-		for _, ips := range lst {
+	loc.Iterate(func(_ string, it *SG) bool {
+		for _, ips := range []*iplib.ByIP{&it.IPsV4, &it.IPsV6} {
 			sort.Sort(*ips)
 			_ = slice.DedupSlice(ips, func(i, j int) bool {
 				l, r := (*ips)[i], (*ips)[j]
 				return l.Equal(r)
 			})
 		}
-	}
+		return true
+	})
 	return nil
 }
 
@@ -100,9 +101,7 @@ func (loc *SGs) LoadFromIPs(ctx context.Context, client SGClient, localIPs []net
 func (loc *SGs) LoadFromRules(ctx context.Context, client SGClient, rules []model.SGRule) error {
 	const api = "SG(s)/LoadFromRules"
 
-	if *loc == nil {
-		*loc = make(SGs)
-	}
+	loc.Clear()
 	usedSG := make([]string, 0, len(rules)*2)
 	linq.From(rules).
 		SelectMany(func(i any) linq.Query {
@@ -126,7 +125,7 @@ func (loc *SGs) LoadFromRules(ctx context.Context, client SGClient, rules []mode
 			if sg, e := conv.Proto2ModelSG(g); e != nil {
 				err = e
 			} else {
-				(*loc)[sg.Name] = &SG{SecurityGroup: sg}
+				loc.Put(sg.Name, &SG{SecurityGroup: sg})
 			}
 		})
 	return errors.WithMessage(err, api)
@@ -134,9 +133,5 @@ func (loc *SGs) LoadFromRules(ctx context.Context, client SGClient, rules []mode
 
 // Names get local SG(s) names
 func (loc SGs) Names() []SgName {
-	ret := make([]SgName, 0, len(loc))
-	for n := range loc {
-		ret = append(ret, n)
-	}
-	return ret
+	return loc.Keys()
 }

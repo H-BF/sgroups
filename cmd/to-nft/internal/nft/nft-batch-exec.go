@@ -34,6 +34,7 @@ type (
 func (exc BatchPerformer) Exec(ctx context.Context, opts ...BatchOpt) error {
 	b := batch{
 		log:        logger.FromContext(ctx),
+		localRules: exc.LocalRules,
 		tableName:  exc.TableName,
 		txProvider: exc.Tx,
 	}

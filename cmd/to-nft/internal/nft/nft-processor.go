@@ -130,9 +130,10 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, conf NetConf) 
 		applied.SavedNftConf, err = impl.loadNftConfig()
 		if err == nil {
 			log.Debugw("final NFT config done")
+			applied.BaseRules = impl.baseRules
+			applied.TargetTable = pfm.TableName
 		}
 	}
-	log.Debugw("loaded final NFT config")
 	return applied, err
 }
 
