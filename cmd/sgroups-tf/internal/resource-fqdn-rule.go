@@ -15,7 +15,7 @@ import (
 /*// resource skeleton
 proto: TCP|UDP
 sg_from: sg1
-fqdn: aws.com
+fqdn_to: aws.com
 logs: <true|false>
 ports:
 - s: 10

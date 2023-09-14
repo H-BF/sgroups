@@ -144,6 +144,52 @@ func Test_IP_Json(t *testing.T) {
 	require.Equal(t, v, v1)
 }
 
+func Test_IP_Slice_FromConfig(t *testing.T) {
+	const data = `
+dns:
+   resolvers: ["192.168.1.0", "192.168.2.0"]   
+`
+	const (
+		ress ValueT[[]IP] = "dns/resolvers"
+	)
+
+	err := InitGlobalConfig(WithSource{
+		Source: bytes.NewBuffer([]byte(data)),
+		Type:   "yaml",
+	})
+	require.NoError(t, err)
+	ctx := context.TODO()
+	var ret []IP
+	ret, err = ress.Value(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(ret))
+	require.Equal(t, "192.168.1.0", ret[0].String())
+	require.Equal(t, "192.168.2.0", ret[1].String())
+}
+
+func Test_IPnet_Slice_FromConfig(t *testing.T) {
+	const data = `
+net:
+   list: ["10.10.1.0/24", "10.10.2.0/24"]   
+`
+	const (
+		ress ValueT[[]NetCIDR] = "net/list"
+	)
+
+	err := InitGlobalConfig(WithSource{
+		Source: bytes.NewBuffer([]byte(data)),
+		Type:   "yaml",
+	})
+	require.NoError(t, err)
+	ctx := context.TODO()
+	var ret []NetCIDR
+	ret, err = ress.Value(ctx)
+	require.NoError(t, err)
+	require.Equal(t, 2, len(ret))
+	require.Equal(t, "10.10.1.0/24", ret[0].String())
+	require.Equal(t, "10.10.2.0/24", ret[1].String())
+}
+
 /*//
 func Test_S(t *testing.T) {
 

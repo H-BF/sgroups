@@ -80,7 +80,12 @@ func typeCastIPSlice(data any) ([]IP, error) {
 	case *[]IP:
 		ret = *v
 	default:
-		err = errors.Errorf("unable to cast %#v of type %T to []IP", data, data)
+		if b, e := json.Marshal(data); e == nil {
+			err = json.Unmarshal(b, &ret)
+			if err != nil {
+				err = errors.Errorf("unable to cast %#v of type %T to []IP", data, data)
+			}
+		}
 	}
 	return ret, err
 }

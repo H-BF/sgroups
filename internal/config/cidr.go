@@ -76,7 +76,12 @@ func typeCastNetCIDRSlice(data any) ([]NetCIDR, error) {
 	case *[]NetCIDR:
 		ret = *v
 	default:
-		err = errors.Errorf("unable to cast %#v of type %T to []NetCIDR", data, data)
+		if b, e := json.Marshal(data); e == nil {
+			err = json.Unmarshal(b, &ret)
+			if err != nil {
+				err = errors.Errorf("unable to cast %#v of type %T to []NetCIDR", data, data)
+			}
+		}
 	}
 	return ret, err
 }
