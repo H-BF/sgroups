@@ -13,6 +13,7 @@ import (
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/dns"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
 	"github.com/H-BF/sgroups/internal/config"
+	"github.com/ahmetb/go-linq/v3"
 
 	"github.com/H-BF/corlib/logger"
 	pkgNet "github.com/H-BF/corlib/pkg/net"
@@ -103,23 +104,29 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, conf NetConf) 
 	if localSGs, err = impl.loadLocalSG(ctx, allLoaclIPs); err != nil {
 		return applied, err
 	}
+
 	stringerOfLocalSGs := slice2stringer(localSGs.Names()...)
-	log.Debugw("loading Networks...", "local-SG(s)", stringerOfLocalSGs)
-	if err = networks.Load(ctx, impl.sgClient, localSGs); err != nil {
-		return applied, err
-	}
 	log.Debugw("loading SG-SG rules...", "local-SG(s)", stringerOfLocalSGs)
 	if localRules, err = impl.loadLocalRules(ctx, localSGs); err != nil {
 		return applied, err
 	}
 	applied.SG2SGRules = localRules
+
 	log.Debugw("loading SG-FQDN rules...", "local-SG(s)", stringerOfLocalSGs)
 	if fqdnRules, err = impl.loadFQDNRules(ctx, localSGs); err != nil {
 		return applied, err
 	}
 	applied.SG2FQDNRules = fqdnRules
-	log.Infof("data loaded; will apply it now")
 
+	var sgNames []string
+	linq.From(append(localRules.SGs.Names(), fqdnRules.SGs.Names()...)).
+		Distinct().ToSlice(&sgNames)
+	log.Debugw("loading networks...", "SG(s)", slice2stringer(sgNames...))
+	if err = networks.LoadFromSGNames(ctx, impl.sgClient, sgNames); err != nil {
+		return applied, err
+	}
+
+	log.Infof("data loaded; will apply it now")
 	pfm := BatchPerformer{
 		TableName: "main",
 		Tx: func() (*Tx, error) {

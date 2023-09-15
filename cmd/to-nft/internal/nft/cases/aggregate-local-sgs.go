@@ -46,10 +46,35 @@ type (
 	}
 )
 
+// LoadFromNames load SG from its names
+func (loc *SGs) LoadFromNames(ctx context.Context, client SGClient, names []string) (err error) {
+	const api = "SG(s)/LoadFromNames"
+
+	defer func() {
+		err = errors.WithMessage(err, api)
+	}()
+	if len(names) == 0 {
+		return nil
+	}
+	req := sgAPI.ListSecurityGroupsReq{SgNames: names}
+	var resp *sgAPI.ListSecurityGroupsResp
+	if resp, err = client.ListSecurityGroups(ctx, &req); err != nil {
+		return err
+	}
+	for _, g := range resp.GetGroups() {
+		var sg SG
+		if sg.SecurityGroup, err = conv.Proto2ModelSG(g); err != nil {
+			return err
+		}
+		_ = loc.Insert(sg.Name, &sg)
+	}
+	return nil
+}
+
 // LoadFromIPs it loads Local SGs by IPs
 func (loc *SGs) LoadFromIPs(ctx context.Context, client SGClient, localIPs []net.IP) error {
 	const api = "SG(s)/LoadFromIPs"
-	loc.Clear()
+
 	if len(localIPs) == 0 {
 		return nil
 	}
@@ -106,13 +131,12 @@ func (loc SGs) Names() []SgName {
 	return loc.Keys()
 }
 
-// Load -
-func (sgsNws *SGsNetworks) Load(ctx context.Context, client SGClient, sgs SGs) error {
+// LoadFromSGNames -
+func (sgsNws *SGsNetworks) LoadFromSGNames(ctx context.Context, client SGClient, sgNames []string) error {
 	const api = "SG(s)/Networks/Load"
 
 	sgsNws.Clear()
 	var mx sync.Mutex
-	sgNames := sgs.Names()
 	err := parallel.ExecAbstract(len(sgNames), 8, func(i int) error {
 		req := sgAPI.GetSgSubnetsReq{SgName: sgNames[i]}
 		resp, e := client.GetSgSubnets(ctx, &req)

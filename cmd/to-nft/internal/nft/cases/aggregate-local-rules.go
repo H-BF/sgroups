@@ -49,9 +49,6 @@ func (rules *SG2SGRules) Load(ctx context.Context, client SGClient, locals SGs) 
 		err = errors.WithMessage(err, api)
 	}()
 
-	rules.SGs.Clear()
-	rules.In = nil
-	rules.Out = nil
 	localSgNames := locals.Names()
 	if len(localSgNames) == 0 {
 		return nil
@@ -62,6 +59,7 @@ func (rules *SG2SGRules) Load(ctx context.Context, client SGClient, locals SGs) 
 	dest := []*[]model.SGRule{
 		&rules.Out, &rules.In,
 	}
+	var nonLocalSgs []string
 	for i := range reqs {
 		var resp *sgAPI.RulesResp
 		if resp, err = client.FindRules(ctx, &reqs[i]); err != nil {
@@ -72,16 +70,17 @@ func (rules *SG2SGRules) Load(ctx context.Context, client SGClient, locals SGs) 
 			if rule, err = conv.Proto2ModelSGRule(protoRule); err != nil {
 				return err
 			}
-			sg1 := locals.At(rule.ID.SgFrom)
-			sg2 := locals.At(rule.ID.SgTo)
-			if sg1 != nil && sg2 != nil {
-				*dest[i] = append(*dest[i], rule)
-				_ = rules.SGs.Insert(sg1.Name, sg1)
-				_ = rules.SGs.Insert(sg2.Name, sg2)
+			*dest[i] = append(*dest[i], rule)
+			for _, sgN := range []string{rule.ID.SgFrom, rule.ID.SgTo} {
+				if sg := locals.At(sgN); sg != nil {
+					_ = rules.SGs.Insert(sgN, sg)
+				} else {
+					nonLocalSgs = append(nonLocalSgs, sgN)
+				}
 			}
 		}
 	}
-	return nil
+	return rules.SGs.LoadFromNames(ctx, client, nonLocalSgs)
 }
 
 // AllRules -
