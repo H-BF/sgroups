@@ -22,9 +22,8 @@ type (
 
 	// BatchPerformer -
 	BatchPerformer struct {
-		TableName  string
-		Tx         TxProvider
-		LocalRules cases.SG2SGRules
+		TableName string
+		Tx        TxProvider
 	}
 
 	funcBatchOpt func(*batch)
@@ -34,7 +33,6 @@ type (
 func (exc BatchPerformer) Exec(ctx context.Context, opts ...BatchOpt) error {
 	b := batch{
 		log:        logger.FromContext(ctx),
-		localRules: exc.LocalRules,
 		tableName:  exc.TableName,
 		txProvider: exc.Tx,
 	}
@@ -55,10 +53,24 @@ func WithLogger(l logger.TypeOfLogger) funcBatchOpt {
 	}
 }
 
+// WithNetworks -
+func WithNetworks(nws cases.SGsNetworks) funcBatchOpt {
+	return func(b *batch) {
+		b.networks = nws
+	}
+}
+
 // WithBaseRules -
 func WithBaseRules(baseRules BaseRules) funcBatchOpt {
 	return func(b *batch) {
 		b.baseRules = baseRules
+	}
+}
+
+// WithSg2SgRules -
+func WithSg2SgRules(r cases.SG2SGRules) funcBatchOpt {
+	return func(b *batch) {
+		b.localRules = r
 	}
 }
 

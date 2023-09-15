@@ -132,6 +132,12 @@ func (o *syncObj[T, tFlt]) AddToFilter(ctx context.Context, data ...tFlt) error 
 		switch v := any(d).(type) {
 		case string:
 			raw = append(raw, []any{v})
+		case sgm.FQDNRuleIdentity:
+			var p Proto
+			if err := p.FromModel(v.Transport); err != nil {
+				return err
+			}
+			raw = append(raw, []any{v.SgFrom, v.FqdnTo, p})
 		case sgm.SGRuleIdentity:
 			var p Proto
 			if err := p.FromModel(v.Transport); err != nil {

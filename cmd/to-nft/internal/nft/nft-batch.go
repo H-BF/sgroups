@@ -52,9 +52,11 @@ type (
 	}
 
 	batch struct {
-		log          logger.TypeOfLogger
-		txProvider   TxProvider
-		tableName    string
+		log        logger.TypeOfLogger
+		txProvider TxProvider
+		tableName  string
+
+		networks     cases.SGsNetworks
 		localRules   cases.SG2SGRules
 		baseRules    BaseRules
 		sg2fqdnRules cases.SG2FQDNRules
@@ -349,29 +351,38 @@ func (bt *batch) initBaseRules() {
 func (bt *batch) addSGNetSets() {
 	const api = "add-SG-net-sets"
 
-	_ = bt.localRules.IterateNetworks(func(sgName string, nets []net.IPNet, isV6 bool) error {
-		ipV := tern(isV6, iplib.IP6Version, iplib.IP4Version)
-		if elements := (setsUtils{}).nets2SetElements(nets, ipV); len(elements) > 0 {
-			bt.addJob(api, func(tx *Tx) error {
-				nameOfSet := nameUtils{}.nameOfNetSet(ipV, sgName)
-				netSet := &nftLib.Set{
-					ID:       nextSetID(),
-					Constant: true,
-					Table:    bt.table,
-					KeyType:  tern(isV6, nftLib.TypeIP6Addr, nftLib.TypeIPAddr),
-					Interval: true,
-					Name:     nameOfSet,
-				}
-				if err := tx.AddSet(netSet, elements); err != nil {
-					return err
-				}
-				bt.addrsets.Put(netSet.Name, netSet)
-				bt.log.Debugf("add network set '%s'/'%s' %s",
-					bt.table.Name, nameOfSet, slice2stringer(nets...))
-				return nil
-			})
+	bt.networks.Iterate(func(sgName string, nws []model.Network) bool {
+		ok := bt.localRules.SGs.At(sgName) != nil ||
+			bt.sg2fqdnRules.SGs.At(sgName) != nil
+		if !ok {
+			return true
 		}
-		return nil
+		nwsV4, nwsV6 := cases.SeparateNetworks(nws)
+		for i, nets := range sli(nwsV4, nwsV6) {
+			isV6 := i > 0
+			ipV := tern(isV6, iplib.IP6Version, iplib.IP4Version)
+			if elements := (setsUtils{}).nets2SetElements(nets, ipV); len(elements) > 0 {
+				bt.addJob(api, func(tx *Tx) error {
+					nameOfSet := nameUtils{}.nameOfNetSet(ipV, sgName)
+					netSet := &nftLib.Set{
+						ID:       nextSetID(),
+						Constant: true,
+						Table:    bt.table,
+						KeyType:  tern(isV6, nftLib.TypeIP6Addr, nftLib.TypeIPAddr),
+						Interval: true,
+						Name:     nameOfSet,
+					}
+					if err := tx.AddSet(netSet, elements); err != nil {
+						return err
+					}
+					bt.addrsets.Put(nameOfSet, netSet)
+					bt.log.Debugf("add IP set '%s'/'%s' with items:[%s]",
+						bt.table.Name, nameOfSet, slice2stringer(nets...))
+					return nil
+				})
+			}
+		}
+		return true
 	})
 }
 
@@ -399,9 +410,16 @@ func (bt *batch) addFQDNNetSets() {
 			if err := tx.AddSet(netSet, elements); err != nil {
 				return err
 			}
-			bt.addrsets.Put(netSet.Name, netSet)
-			bt.log.Debugf("add network set '%s'/'%s' %s",
+			bt.addrsets.Put(nameOfSet, netSet)
+			bt.log.Debugf("add network set '%s'/'%s' items:[%s]",
 				bt.table.Name, nameOfSet, slice2stringer(nets...))
+			if len(nets) == 0 {
+				bt.log.Warnf("add IP set '%s'/'%s' no any IP%v address is resolved for domain '%s'",
+					bt.table.Name, nameOfSet, IPv, domain)
+			} else {
+				bt.log.Debugf("add IP set '%s'/'%s' with items:[%s]",
+					bt.table.Name, nameOfSet, slice2stringer(nets...))
+			}
 			return nil
 		})
 	}
@@ -451,56 +469,67 @@ func (bt *batch) initSG2FQDNRulesDetails() {
 	}
 }
 
-func (bt *batch) makeOutChains() {
+func (bt *batch) makeOutChain(tmpl cases.RulesOutTemplate) {
 	const api = "make-out-chains"
 
-	outTmpls := bt.localRules.TemplatesOutRules()
-	for i := range outTmpls {
-		tmpl := outTmpls[i]
-		outSGchName := chnFWOUT + "-" + tmpl.SgOut.Name
+	outSGchName := chnFWOUT + "-" + tmpl.SgOut.Name
+	bt.addJob(api, func(tx *Tx) error {
+		chn := tx.AddChain(&nftLib.Chain{Name: outSGchName, Table: bt.table})
+		bt.chains.Put(outSGchName, chn)
+		bt.log.Debugf("chain '%s'/'%s' is in progress", bt.table.Name, outSGchName)
+		return nil
+	})
+	for _, ipV := range sli(iplib.IP4Version, iplib.IP6Version) {
+		ipV := ipV
 		bt.addJob(api, func(tx *Tx) error {
-			chn := tx.AddChain(&nftLib.Chain{Name: outSGchName, Table: bt.table})
-			bt.chains.Put(outSGchName, chn)
-			bt.log.Debugf("chain '%s'/'%s' is in progress", bt.table.Name, outSGchName)
-			return nil
-		})
-		for _, ipV := range sli(iplib.IP4Version, iplib.IP6Version) {
-			ipV := ipV
-			bt.addJob(api, func(tx *Tx) error {
-				saddrSetName := nameUtils{}.nameOfNetSet(ipV, tmpl.SgOut.Name)
-				if saddrSet := bt.addrsets.At(saddrSetName); saddrSet != nil {
-					output := bt.chains.At(chnFWOUT)
-					beginRule().
-						saddr(ipV).inSet(saddrSet).counter().
-						go2(outSGchName).applyRule(output, tx.Conn)
-				}
-				return nil
-			})
-		}
-		bt.populateSG2SGOutRules(tmpl, outSGchName)
-		bt.populateSG2FQDNOutRules(tmpl, outSGchName)
-		bt.addJob(api, func(tx *Tx) error {
-			r := beginRule().metaNFTRACE(tmpl.SgOut.Trace).counter()
-			if tmpl.SgOut.Logs {
-				r = r.dlogs(nfte.LogFlagsIPOpt)
+			saddrSetName := nameUtils{}.nameOfNetSet(ipV, tmpl.SgOut.Name)
+			if saddrSet := bt.addrsets.At(saddrSetName); saddrSet != nil {
+				output := bt.chains.At(chnFWOUT)
+				beginRule().
+					saddr(ipV).inSet(saddrSet).counter().
+					go2(outSGchName).applyRule(output, tx.Conn)
 			}
-			switch da := tmpl.SgOut.DefaultAction; da {
-			case model.ACCEPT:
-				r = r.accept()
-			case model.DROP, model.DEFAULT:
-				r = r.drop()
-			default:
-				panic(
-					errors.Errorf("for chain '%s'/'%s' provided unsupported default verdict '%v'",
-						bt.table.Name, outSGchName, da),
-				)
-			}
-			chnApplyTo := bt.chains.At(outSGchName)
-			r.applyRule(chnApplyTo, tx.Conn)
-			bt.log.Debugf("chain '%s'/'%s' finished", bt.table.Name, outSGchName)
 			return nil
 		})
 	}
+	bt.populateSG2SGOutRules(tmpl, outSGchName)
+	bt.populateSG2FQDNOutRules(tmpl, outSGchName)
+	bt.addJob(api, func(tx *Tx) error {
+		r := beginRule().metaNFTRACE(tmpl.SgOut.Trace).counter()
+		if tmpl.SgOut.Logs {
+			r = r.dlogs(nfte.LogFlagsIPOpt)
+		}
+		switch da := tmpl.SgOut.DefaultAction; da {
+		case model.ACCEPT:
+			r = r.accept()
+		case model.DROP, model.DEFAULT:
+			r = r.drop()
+		default:
+			panic(
+				errors.Errorf("for chain '%s'/'%s' provided unsupported default verdict '%v'",
+					bt.table.Name, outSGchName, da),
+			)
+		}
+		chnApplyTo := bt.chains.At(outSGchName)
+		r.applyRule(chnApplyTo, tx.Conn)
+		bt.log.Debugf("chain '%s'/'%s' finished", bt.table.Name, outSGchName)
+		return nil
+	})
+}
+
+func (bt *batch) makeOutChains() {
+	outTmpls := bt.localRules.TemplatesOutRules()
+	bt.sg2fqdnRules.SGs.Iterate(func(sgName string, v *cases.SG) bool {
+		if _, found := outTmpls.Get(sgName); !found {
+			_ = outTmpls.Insert(sgName,
+				cases.RulesOutTemplate{SgOut: v.SecurityGroup})
+		}
+		return true
+	})
+	outTmpls.Iterate(func(_ string, tmpl cases.RulesOutTemplate) bool {
+		bt.makeOutChain(tmpl)
+		return true
+	})
 }
 
 func (bt *batch) populateSG2FQDNOutRules(tm cases.RulesOutTemplate, outChainName string) {

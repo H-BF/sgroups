@@ -19,6 +19,7 @@ import (
 type (
 	// SG2FQDNRules -
 	SG2FQDNRules struct {
+		SGs   SGs
 		Rules []model.FQDNRule
 		A     dict.RBDict[model.FQDN, dns.Addresses]
 		AAAA  dict.RBDict[model.FQDN, dns.Addresses]
@@ -31,34 +32,36 @@ type (
 	}
 )
 
-func (ld FQDNRulesLoader) Load(ctx context.Context, localRules SG2SGRules) (rr SG2FQDNRules, err error) {
+func (ld FQDNRulesLoader) Load(ctx context.Context, sgs SGs) (rr SG2FQDNRules, err error) {
 	const api = "FQDNRules/Load"
+
 	defer func() {
 		err = errors.WithMessage(err, api)
 	}()
 
 	var req sgAPI.FindFqdnRulesReq
-	linq.From(localRules.Out).
-		Select(func(i any) any {
-			return i.(model.SGRule).ID.SgFrom
-		}).
-		Distinct().ToSlice(&req.SgFrom)
-	if len(req.SgFrom) == 0 {
-		return rr, nil
-	}
-	var resp *sgAPI.FqdnRulesResp
-	if resp, err = ld.SGSrv.FindFqdnRules(ctx, &req); err != nil {
-		return rr, err
-	}
-	rules := resp.GetRules()
-	for _, r := range rules {
-		var m model.FQDNRule
-		if m, err = conv.Proto2ModelFQDNRule(r); err != nil {
+	sgs.Iterate(func(sgName string, _ *SG) bool {
+		req.SgFrom = append(req.SgFrom, sgName)
+		return true
+	})
+	if len(req.SgFrom) > 0 {
+		var resp *sgAPI.FqdnRulesResp
+		if resp, err = ld.SGSrv.FindFqdnRules(ctx, &req); err != nil {
 			return rr, err
 		}
-		rr.Rules = append(rr.Rules, m)
+		rules := resp.GetRules()
+		for _, r := range rules {
+			var m model.FQDNRule
+			if m, err = conv.Proto2ModelFQDNRule(r); err != nil {
+				return rr, err
+			}
+			if sg := sgs.At(m.ID.SgFrom); sg != nil {
+				rr.Rules = append(rr.Rules, m)
+				_ = rr.SGs.Insert(sg.Name, sg)
+			}
+		}
+		err = ld.fillWithAddresses(ctx, &rr)
 	}
-	err = ld.fillWithAddresses(ctx, &rr)
 	return rr, err
 }
 
@@ -92,12 +95,8 @@ func (ld FQDNRulesLoader) fillWithAddresses(ctx context.Context, rr *SG2FQDNRule
 		*/
 		mx.Lock()
 		defer mx.Unlock()
-		if len(addrA.IPs) > 0 {
-			rr.A.Put(domains[i], addrA)
-		}
-		//if len(addrAAAA.IPs) > 0 {
-		//	rr.AAAA.Put(domains[i], addrAAAA)
-		//}
+		rr.A.Put(domains[i], addrA)
+		//rr.AAAA.Put(domains[i], addrAAAA)
 		return nil
 	})
 	return err

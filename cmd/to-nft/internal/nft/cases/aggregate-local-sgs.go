@@ -13,7 +13,6 @@ import (
 
 	"github.com/H-BF/corlib/pkg/parallel"
 	"github.com/H-BF/corlib/pkg/slice"
-	"github.com/ahmetb/go-linq/v3"
 	"github.com/c-robinson/iplib"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
@@ -39,6 +38,11 @@ type (
 	// SGs local SG(s) related to IP(s)
 	SGs struct {
 		dict.HDict[SgName, *SG]
+	}
+
+	// SGsNetworks -
+	SGsNetworks struct {
+		dict.HDict[string, []model.Network]
 	}
 )
 
@@ -97,41 +101,40 @@ func (loc *SGs) LoadFromIPs(ctx context.Context, client SGClient, localIPs []net
 	return nil
 }
 
-// LoadFromRules it loads Local SGs from SG rules
-func (loc *SGs) LoadFromRules(ctx context.Context, client SGClient, rules []model.SGRule) error {
-	const api = "SG(s)/LoadFromRules"
-
-	loc.Clear()
-	usedSG := make([]string, 0, len(rules)*2)
-	linq.From(rules).
-		SelectMany(func(i any) linq.Query {
-			r := i.(model.SGRule)
-			return linq.From([...]string{r.ID.SgFrom, r.ID.SgTo})
-		}).Distinct().ToSlice(&usedSG)
-
-	if len(usedSG) == 0 {
-		return nil
-	}
-	sgsResp, err := client.ListSecurityGroups(ctx, &sgAPI.ListSecurityGroupsReq{SgNames: usedSG})
-	if err != nil {
-		return errors.WithMessage(err, api)
-	}
-	linq.From(sgsResp.GetGroups()).
-		ForEach(func(i any) {
-			if err != nil {
-				return
-			}
-			g := i.(*sgAPI.SecGroup)
-			if sg, e := conv.Proto2ModelSG(g); e != nil {
-				err = e
-			} else {
-				loc.Put(sg.Name, &SG{SecurityGroup: sg})
-			}
-		})
-	return errors.WithMessage(err, api)
-}
-
 // Names get local SG(s) names
 func (loc SGs) Names() []SgName {
 	return loc.Keys()
+}
+
+// Load -
+func (sgsNws *SGsNetworks) Load(ctx context.Context, client SGClient, sgs SGs) error {
+	const api = "SG(s)/Networks/Load"
+
+	sgsNws.Clear()
+	var mx sync.Mutex
+	sgNames := sgs.Names()
+	err := parallel.ExecAbstract(len(sgNames), 8, func(i int) error {
+		req := sgAPI.GetSgSubnetsReq{SgName: sgNames[i]}
+		resp, e := client.GetSgSubnets(ctx, &req)
+		if e != nil {
+			if status.Code(errors.Cause(e)) == codes.NotFound {
+				return nil
+			}
+			return e
+		}
+		protoNws := resp.GetNetworks()
+		nws := make([]model.Network, 0, len(protoNws))
+		for _, nw := range protoNws {
+			var m model.Network
+			if m, e = conv.Proto2ModelNetwork(nw); e != nil {
+				return e
+			}
+			nws = append(nws, m)
+		}
+		mx.Lock()
+		defer mx.Unlock()
+		sgsNws.Put(sgNames[i], nws)
+		return nil
+	})
+	return errors.WithMessage(err, api)
 }
