@@ -2,9 +2,9 @@ package sgroups
 
 import (
 	"context"
-	"net/url"
-
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
+	"net/url"
+	"sync"
 
 	"github.com/H-BF/corlib/server"
 	sgPkg "github.com/H-BF/protos/pkg"
@@ -18,15 +18,18 @@ import (
 
 // NewSGroupsService creates service
 func NewSGroupsService(ctx context.Context, r registry.Registry) server.APIService {
-	return &sgService{
+	service := sgService{
 		appCtx: ctx,
 		reg:    r,
 	}
+	go service.statusUpdater()
+	return &service
 }
 
 type sgService struct {
-	appCtx context.Context
-	reg    registry.Registry
+	appCtx            context.Context
+	reg               registry.Registry
+	statusSubscribers sync.Map
 
 	sg.UnimplementedSecGroupServiceServer
 }
