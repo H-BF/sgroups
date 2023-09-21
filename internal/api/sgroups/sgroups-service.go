@@ -2,9 +2,9 @@ package sgroups
 
 import (
 	"context"
-	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 	"net/url"
-	"sync"
+
+	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 
 	"github.com/H-BF/corlib/server"
 	sgPkg "github.com/H-BF/protos/pkg"
@@ -18,18 +18,15 @@ import (
 
 // NewSGroupsService creates service
 func NewSGroupsService(ctx context.Context, r registry.Registry) server.APIService {
-	service := sgService{
+	return &sgService{
 		appCtx: ctx,
 		reg:    r,
 	}
-	go service.statusUpdater()
-	return &service
 }
 
 type sgService struct {
-	appCtx            context.Context
-	reg               registry.Registry
-	statusSubscribers sync.Map
+	appCtx context.Context
+	reg    registry.Registry
 
 	sg.UnimplementedSecGroupServiceServer
 }
@@ -43,6 +40,9 @@ var (
 	SecGroupSwaggerUtil sgPkg.SwaggerUtil[sg.SecGroupServiceServer]
 
 	errSuccess = errors.New("success")
+
+	errServiceIsClosing = status.Error(codes.Unavailable,
+		"'sgroups' service is about to be closed")
 )
 
 // Description impl server.APIService

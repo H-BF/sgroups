@@ -4,6 +4,8 @@ import (
 	"context"
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
+	"github.com/H-BF/sgroups/internal/patterns"
+
 	"github.com/pkg/errors"
 )
 
@@ -32,6 +34,7 @@ type (
 
 	//Registry abstract db registry
 	Registry interface {
+		Subject() patterns.Subject
 		Writer(ctx context.Context) (Writer, error)
 		Reader(ctx context.Context) (Reader, error)
 		Close() error

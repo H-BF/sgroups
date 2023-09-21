@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/H-BF/sgroups/internal/patterns"
 	"github.com/H-BF/sgroups/internal/registry/sgroups/pg"
 	atm "github.com/H-BF/sgroups/pkg/atomic"
 
@@ -35,7 +36,9 @@ func NewRegistryFromPG(ctx context.Context, dbURL url.URL) (r Registry, err erro
 	if pool, err = pgxpool.NewWithConfig(ctx, conf); err != nil {
 		return nil, err
 	}
-	ret := new(pgDbRegistry)
+	ret := &pgDbRegistry{
+		subject: patterns.NewSubject(),
+	}
 	ret.pool.Store(pool, nil)
 	return ret, nil
 }
@@ -43,7 +46,13 @@ func NewRegistryFromPG(ctx context.Context, dbURL url.URL) (r Registry, err erro
 var _ Registry = (*pgDbRegistry)(nil)
 
 type pgDbRegistry struct {
-	pool atm.Value[*pgxpool.Pool]
+	subject patterns.Subject
+	pool    atm.Value[*pgxpool.Pool]
+}
+
+// Subject impl Registry interface
+func (imp *pgDbRegistry) Subject() patterns.Subject {
+	return imp.subject
 }
 
 // Reader impl Registry interface
@@ -137,6 +146,7 @@ func (imp *pgDbRegistry) Writer(ctx context.Context) (w Writer, err error) {
 
 // Close impl Registry interface
 func (imp *pgDbRegistry) Close() error {
+	_ = imp.subject.Close()
 	imp.pool.Clear(func(p *pgxpool.Pool) {
 		p.Close()
 	})
