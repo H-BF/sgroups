@@ -1,0 +1,130 @@
+package jobs
+
+import (
+	"context"
+
+	"github.com/H-BF/sgroups/cmd/to-nft/internal"
+	"github.com/H-BF/sgroups/cmd/to-nft/internal/host"
+	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft"
+	model "github.com/H-BF/sgroups/internal/models/sgroups"
+	"github.com/H-BF/sgroups/internal/queue"
+
+	"github.com/H-BF/corlib/pkg/patterns/observer"
+	uuid "github.com/satori/go.uuid"
+)
+
+func NewNftApplierJob(proc nft.NfTablesProcessor, opts ...Option) *NftApplierJob {
+	ret := &NftApplierJob{
+		nftProcessor: proc,
+		agentSubject: internal.AgentSubject(),
+		que:          queue.NewFIFO(),
+	}
+	for _, o := range opts {
+		switch t := o.(type) {
+		case WithAgentSubject:
+			ret.agentSubject = t.Subject
+		}
+	}
+	ret.Observer = observer.NewObserver(
+		ret.onEvent,
+		false,
+		applyConfigEvent{},
+		internal.NetlinkUpdates{},
+		internal.SyncStatusValue{},
+	)
+	ret.agentSubject.ObserversAttach(ret)
+	return ret
+}
+
+// NftApplierJob -
+type NftApplierJob struct {
+	observer.Observer
+	nftProcessor nft.NfTablesProcessor
+	agentSubject observer.Subject
+	que          *queue.FIFO
+	syncStatus   *model.SyncStatus
+	netConf      *host.NetConf
+}
+
+type applyConfigEvent struct {
+	observer.EventType
+}
+
+// Close -
+func (jb *NftApplierJob) Close() error {
+	jb.agentSubject.ObserversDetach(jb)
+	_ = jb.Observer.Close()
+	_ = jb.que.Close()
+	return nil
+}
+
+// Run -
+func (jb *NftApplierJob) Run(ctx context.Context) error {
+	que := jb.que.Reader()
+	for {
+		var raw any
+		select {
+		case raw = <-que:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+		switch o := raw.(type) {
+		case internal.SyncStatusValue:
+			jb.handleSyncStatus(ctx, o)
+		case internal.NetlinkUpdates:
+			jb.handleNetlinkEvent(ctx, o)
+		case applyConfigEvent:
+			if err := jb.doApply(ctx); err != nil {
+				return err
+			}
+		}
+	}
+}
+
+func (jb *NftApplierJob) onEvent(ev observer.EventType) { //async recv
+	_ = jb.que.Put(ev)
+}
+
+func (jb *NftApplierJob) handleSyncStatus(ctx context.Context, ev internal.SyncStatusValue) { //sync recv
+	if apply := jb.syncStatus == nil; !apply {
+		apply = ev.UpdatedAt.After(jb.syncStatus.UpdatedAt)
+		if !apply {
+			return
+		}
+	}
+	jb.syncStatus = &ev.SyncStatus
+	subj := internal.AgentSubject()
+	subj.Notify(applyConfigEvent{})
+}
+
+func (jb *NftApplierJob) handleNetlinkEvent(ctx context.Context, ev internal.NetlinkUpdates) { //sync recv
+	var cnf host.NetConf
+	if jb.netConf != nil {
+		cnf = jb.netConf.Clone()
+	}
+	cnf.UpdFromWatcher(ev.Updates...)
+	if apply := jb.netConf == nil; !apply {
+		apply = !jb.netConf.Eq(cnf)
+		if !apply {
+			return
+		}
+	}
+	jb.netConf = &cnf
+	jb.agentSubject.Notify(applyConfigEvent{})
+}
+
+func (jb *NftApplierJob) doApply(ctx context.Context) error {
+	if jb.netConf == nil || jb.syncStatus == nil {
+		return nil
+	}
+	appliedRules, err := jb.nftProcessor.ApplyConf(ctx, *jb.netConf)
+	if err == nil {
+		ev := AppliedConfEvent{
+			UID:          uuid.NewV4(),
+			NetConf:      jb.netConf.Clone(),
+			AppliedRules: appliedRules,
+		}
+		jb.agentSubject.Notify(ev)
+	}
+	return err
+}

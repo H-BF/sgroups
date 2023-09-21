@@ -1,22 +1,15 @@
 package nft
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
 	"net"
-	"strings"
 	"sync"
 
-	"github.com/H-BF/sgroups/cmd/to-nft/internal"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/dns"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
-	"github.com/H-BF/sgroups/internal/config"
 	"github.com/ahmetb/go-linq/v3"
 
 	"github.com/H-BF/corlib/logger"
-	pkgNet "github.com/H-BF/corlib/pkg/net"
 	sgAPI "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/pkg/errors"
 	"go.uber.org/multierr"
@@ -32,11 +25,11 @@ func NewNfTablesProcessor(client SGClient, opts ...NfTablesProcessorOpt) NfTable
 		var (
 			o sync.Once
 			e error
-			r dns.Resolver
+			r dns.DomainAddressQuerier
 		)
-		ret.getDnsResolver = func(ctx context.Context) (dns.Resolver, error) {
+		ret.getDnsResolver = func(ctx context.Context) (dns.DomainAddressQuerier, error) {
 			o.Do(func() {
-				r, e = dns.NewResolver(ctx)
+				r, e = dns.NewDomainAddressQuerier(ctx)
 			})
 			return r, e
 		}
@@ -48,11 +41,11 @@ func NewNfTablesProcessor(client SGClient, opts ...NfTablesProcessorOpt) NfTable
 		case BaseRules:
 			ret.baseRules = t
 		case DnsResolver:
-			ret.getDnsResolver = func(_ context.Context) (dns.Resolver, error) {
-				if t.Resolver == nil {
+			ret.getDnsResolver = func(_ context.Context) (dns.DomainAddressQuerier, error) {
+				if t.DomainAddressQuerier == nil {
 					return nil, errors.New("has no DNS resolver")
 				}
-				return t.Resolver, nil
+				return t.DomainAddressQuerier, nil
 			}
 		}
 	}
@@ -67,7 +60,7 @@ type (
 		sgClient       SGClient
 		netNS          string
 		baseRules      BaseRules
-		getDnsResolver func(context.Context) (dns.Resolver, error)
+		getDnsResolver func(context.Context) (dns.DomainAddressQuerier, error)
 	}
 
 	ipVersion = int
@@ -189,45 +182,4 @@ func (impl *nfTablesProcessorImpl) loadFQDNRules(ctx context.Context, sgs cases.
 		DnsRes: dnsR,
 	}.Load(ctx, sgs)
 	return ret, err
-}
-
-// IfBaseRulesFromConfig -
-func IfBaseRulesFromConfig(ctx context.Context, cons func(BaseRules) error) error {
-	def := internal.BaseRulesOutNets.OptDefaulter(func() ([]config.NetCIDR, error) {
-		a, e := internal.SGroupsAddress.Value(ctx)
-		if e != nil {
-			return nil, e
-		}
-		var ep *pkgNet.Endpoint
-		if ep, e = pkgNet.ParseEndpoint(a); e != nil {
-			return nil, e
-		}
-		if ep.Network() != "tcp" {
-			return nil, config.ErrNotFound
-		}
-		h, _, _ := ep.HostPort()
-		ip := net.ParseIP(h)
-		if ip == nil {
-			return nil, errors.Errorf("'sgroups' server address must be an in 'IP' form; we got(%s)", a)
-		}
-		ips := ip.String()
-		b := bytes.NewBuffer(nil)
-		_, _ = fmt.Fprintf(b, `["%s/%s"]`, ips, tern(strings.ContainsAny(ips, ":"), "128", "32"))
-		var x []config.NetCIDR
-		if e = json.Unmarshal(b.Bytes(), &x); e != nil {
-			panic(e)
-		}
-		return x, nil
-	})
-	nets, err := internal.BaseRulesOutNets.Value(ctx, def)
-	if err != nil {
-		if errors.Is(err, config.ErrNotFound) {
-			return nil
-		}
-		return err
-	}
-	br := BaseRules{
-		Nets: nets,
-	}
-	return cons(br)
 }

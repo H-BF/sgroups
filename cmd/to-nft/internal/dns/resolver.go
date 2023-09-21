@@ -17,28 +17,28 @@ import (
 	"go.uber.org/multierr"
 )
 
-// Addresses -
-type Addresses struct {
+// DomainAddresses -
+type DomainAddresses struct {
 	TTL time.Duration
 	IPs []net.IP
 	Err error
 }
 
-// Resolver -
-type Resolver interface {
-	A(ctx context.Context, domain string) Addresses
-	AAAA(ctx context.Context, domain string) Addresses
+// DomainAddressQuerier -
+type DomainAddressQuerier interface {
+	A(ctx context.Context, domain string) DomainAddresses
+	AAAA(ctx context.Context, domain string) DomainAddresses
 }
 
-// NewResolver -
-func NewResolver(ctx context.Context) (Resolver, error) {
-	var ret resolver
+// NewDomainAddressQuerier -
+func NewDomainAddressQuerier(ctx context.Context) (DomainAddressQuerier, error) {
+	var ret domainResolver
 	err := ret.init(ctx)
 	return ret, err
 }
 
-// resolver DNS address resolver
-type resolver struct {
+// domainResolver DNS address domainResolver
+type domainResolver struct {
 	opts []dns.Option
 }
 
@@ -53,7 +53,7 @@ var (
 )
 
 // init inits options from app config
-func (r *resolver) init(ctx context.Context) (err error) { //nolint:gocyclo
+func (r *domainResolver) init(ctx context.Context) (err error) { //nolint:gocyclo
 	var bkf backoff.Backoff
 	opts := []dns.Option{dns.NoDefNS{}}
 	defer func() {
@@ -162,21 +162,21 @@ func (r *resolver) init(ctx context.Context) (err error) { //nolint:gocyclo
 }
 
 // A -
-func (r resolver) A(ctx context.Context, domain string) (ret Addresses) {
+func (r domainResolver) A(ctx context.Context, domain string) (ret DomainAddresses) {
 	o := dns.QueryA.Ask(ctx, domain, r.opts...)
 	ret.fromDnsAnswer(o)
 	return ret
 }
 
 // AAAA -
-func (r resolver) AAAA(ctx context.Context, domain string) (ret Addresses) {
+func (r domainResolver) AAAA(ctx context.Context, domain string) (ret DomainAddresses) {
 	o := dns.QueryAAAA.Ask(ctx, domain, r.opts...)
 	ret.fromDnsAnswer(o)
 	return ret
 }
 
-func (aa *Addresses) fromDnsAnswer(o dns.AddrAnswer) {
-	*aa = Addresses{}
+func (aa *DomainAddresses) fromDnsAnswer(o dns.AddrAnswer) {
+	*aa = DomainAddresses{}
 	if o.Error != nil {
 		aa.Err = o.Error
 		return

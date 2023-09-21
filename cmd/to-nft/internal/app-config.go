@@ -39,6 +39,9 @@ const (
 	// ExitOnSuccess do exit when we succeeded to apply netfilter config; def-val=false
 	ExitOnSuccess config.ValueT[bool] = "exit-on-success"
 
+	// ContinueOnFailure -
+	ContinueOnFailure config.ValueT[bool] = "continue-on-failure"
+
 	// AppLoggerLevel log level [optional]
 	AppLoggerLevel config.ValueT[string] = "logger/level"
 	// AppGracefulShutdown [optional]

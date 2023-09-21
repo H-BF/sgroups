@@ -30,8 +30,8 @@ func NewNetlinkWatcher(opts ...WatcherOption) (NetlinkWatcher, error) {
 			id = t.WatcherID
 		case scopeOfUpdates:
 			sco |= t
-		case WithAgeOfMaturity:
-			age = t.Age
+		case WithLinger:
+			age = t.Linger
 		case WithNetns:
 			ns = t.Netns
 		default:
@@ -43,10 +43,10 @@ func NewNetlinkWatcher(opts ...WatcherOption) (NetlinkWatcher, error) {
 		return nil, errors.New("nothing to watch")
 	}
 	ret := &netlinkWatcherImpl{
-		id:            id,
-		chClose:       make(chan struct{}),
-		chErrors:      make(chan error),
-		ageOfMaturity: age,
+		id:       id,
+		chClose:  make(chan struct{}),
+		chErrors: make(chan error),
+		linger:   age,
 	}
 	var err error
 	defer func() {
@@ -111,15 +111,15 @@ func NewNetlinkWatcher(opts ...WatcherOption) (NetlinkWatcher, error) {
 
 type (
 	netlinkWatcherImpl struct {
-		id            WatcherID
-		chErrors      chan error
-		chClose       chan struct{}
-		stream        chan []WatcherMsg
-		ageOfMaturity time.Duration
-		onceRun       sync.Once
-		onceClose     sync.Once
-		sel           []reflect.SelectCase
-		netns         *netns.NsHandle
+		id        WatcherID
+		chErrors  chan error
+		chClose   chan struct{}
+		stream    chan []WatcherMsg
+		linger    time.Duration
+		onceRun   sync.Once
+		onceClose sync.Once
+		sel       []reflect.SelectCase
+		netns     *netns.NsHandle
 	}
 
 	// WatcherOption ...
@@ -133,11 +133,11 @@ type (
 		WatcherID
 	}
 
-	//WithAgeOfMaturity - every packet accumulates updates during some duration then
+	//WithLinger - every packet accumulates updates during some duration then
 	//it sends to consumer
-	WithAgeOfMaturity struct {
+	WithLinger struct {
 		WatcherOption
-		Age time.Duration
+		Linger time.Duration
 	}
 
 	// WithNetns select net NS(by name) for watching
@@ -166,7 +166,7 @@ func (w *netlinkWatcherImpl) Stream() <-chan []WatcherMsg {
 	w.onceRun.Do(func() {
 		w.stream = make(chan []WatcherMsg)
 		go func() {
-			age := w.ageOfMaturity
+			age := w.linger
 			if age < time.Second {
 				age = time.Second
 			}

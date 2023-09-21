@@ -389,7 +389,7 @@ func (bt *batch) addSGNetSets() {
 func (bt *batch) addFQDNNetSets() {
 	const api = "add-FQDN-net-sets"
 
-	f := func(IPv int, domain model.FQDN, a dns.Addresses) {
+	f := func(IPv int, domain model.FQDN, a dns.DomainAddresses) {
 		bt.addJob(api, func(tx *Tx) error {
 			nameOfSet := nameUtils{}.nameOfFqdnNetSet(IPv, domain)
 			nets := make([]net.IPNet, len(a.IPs))
@@ -424,11 +424,11 @@ func (bt *batch) addFQDNNetSets() {
 		})
 	}
 
-	bt.sg2fqdnRules.A.Iterate(func(domain model.FQDN, a dns.Addresses) bool {
+	bt.sg2fqdnRules.A.Iterate(func(domain model.FQDN, a dns.DomainAddresses) bool {
 		f(iplib.IP4Version, domain, a)
 		return true
 	})
-	bt.sg2fqdnRules.AAAA.Iterate(func(domain model.FQDN, a dns.Addresses) bool {
+	bt.sg2fqdnRules.AAAA.Iterate(func(domain model.FQDN, a dns.DomainAddresses) bool {
 		f(iplib.IP6Version, domain, a)
 		return true
 	})

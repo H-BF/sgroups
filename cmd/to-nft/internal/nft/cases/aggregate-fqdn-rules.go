@@ -21,14 +21,14 @@ type (
 	SG2FQDNRules struct {
 		SGs   SGs
 		Rules []model.FQDNRule
-		A     dict.RBDict[model.FQDN, dns.Addresses]
-		AAAA  dict.RBDict[model.FQDN, dns.Addresses]
+		A     dict.RBDict[model.FQDN, dns.DomainAddresses]
+		AAAA  dict.RBDict[model.FQDN, dns.DomainAddresses]
 	}
 
 	// FQDNRulesLoader -
 	FQDNRulesLoader struct {
 		SGSrv  SGClient
-		DnsRes dns.Resolver
+		DnsRes dns.DomainAddressQuerier
 	}
 )
 

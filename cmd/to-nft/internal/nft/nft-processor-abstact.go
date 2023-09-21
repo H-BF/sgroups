@@ -41,7 +41,7 @@ type (
 
 	// DnsResolver -
 	DnsResolver struct {
-		dns.Resolver
+		dns.DomainAddressQuerier
 	}
 )
 
