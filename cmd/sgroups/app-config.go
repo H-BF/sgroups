@@ -7,6 +7,10 @@ import (
 )
 
 /*//Sample of config
+api:
+  sgroups:
+    update-period: 30s
+
 logger:
   level: INFO
 

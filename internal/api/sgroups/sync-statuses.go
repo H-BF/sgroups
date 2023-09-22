@@ -15,13 +15,11 @@ import (
 
 // SyncStatuses impl sgService
 func (srv *sgService) SyncStatuses(_ *emptypb.Empty, stream sg.SecGroupService_SyncStatusesServer) (err error) {
-	const (
-		updatePeriod = 3 * time.Second //TODO: In future move 'updatePeriod' onto config
-	)
-
 	defer func() {
 		err = correctError(err)
 	}()
+
+	updatePeriod, _ := UpdatePeriod.Value(srv.appCtx)
 
 	var commitCount int64
 	var prevState *sgroups.SyncStatus
