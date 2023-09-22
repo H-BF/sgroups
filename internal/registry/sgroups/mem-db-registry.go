@@ -61,6 +61,7 @@ func (r *memDbRegisrtyHolder) Writer(_ context.Context) (Writer, error) {
 		return &sGroupsMemDbWriter{
 			sGroupsMemDbReader: sGroupsMemDbReader{reader: t.Reader()},
 			writer:             t.Writer(),
+			subject:            r.Subject(),
 		}, nil
 	default:
 		panic("unexpected behavior reached")

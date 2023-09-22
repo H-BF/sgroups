@@ -41,7 +41,6 @@ var _ Subject = (*closableSubject)(nil)
 
 // ObserversAttach impl Subject interface
 func (sbj *closableSubject) ObserversAttach(obs ...Observer) {
-	observer.NewSubject()
 	if s, ok := sbj.inner.Load(); ok {
 		s.ObserversAttach(obs...)
 	}

@@ -6,13 +6,14 @@ import (
 
 	"github.com/H-BF/sgroups/internal/models/sgroups"
 	"github.com/H-BF/sgroups/internal/patterns"
+	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 
 	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// SyncStatuses2 impl sgService
+// SyncStatuses impl sgService
 func (srv *sgService) SyncStatuses(_ *emptypb.Empty, stream sg.SecGroupService_SyncStatusesServer) (err error) {
 	const (
 		updatePeriod = 3 * time.Second //TODO: In future move 'updatePeriod' onto config
@@ -27,13 +28,11 @@ func (srv *sgService) SyncStatuses(_ *emptypb.Empty, stream sg.SecGroupService_S
 	commitCounter := func(_ patterns.EventType) {
 		atomic.AddInt64(&commitCount, 1)
 	}
-	/*//TODO:
-	1 нужно подключить 'commitCounter' к реджистри Subject на получение события при завершении коммита
-	2 при выходе из 'SyncStatuses' нужно отдключать от реджистри Subject
 
-	ref: https://github.com/H-BF/corlib/tree/master/pkg/patterns/observer
-	*/
-	_ = commitCounter
+	obs := patterns.NewObserver(commitCounter, true, registry.DBUpdated{})
+	srv.reg.Subject().ObserversAttach(obs)
+	defer srv.reg.Subject().ObserversDetach(obs)
+
 	for ctx := stream.Context(); ; {
 		if atomic.SwapInt64(&commitCount, 0) != 0 || prevState == nil {
 			var newState *sgroups.SyncStatus
