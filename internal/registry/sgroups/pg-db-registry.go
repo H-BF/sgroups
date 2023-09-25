@@ -39,11 +39,7 @@ func NewRegistryFromPG(ctx context.Context, dbURL url.URL) (r Registry, err erro
 	ret := &pgDbRegistry{
 		subject: patterns.NewSubject(),
 	}
-	conn, err := pool.Acquire(ctx)
-	if err != nil {
-		return nil, err
-	}
-	go pgListen(ctx, conn.Conn(), ret.subject)
+	ret.runListener(ctx, pool)
 	ret.pool.Store(pool, nil)
 	return ret, nil
 }
@@ -163,30 +159,22 @@ func (imp *pgDbRegistry) Close() error {
 	return nil
 }
 
-func pgListen(ctx context.Context, conn *pgx.Conn, subject patterns.Subject) {
-	defer func() {
-		_ = conn.Close(ctx)
-	}()
-	_, err := conn.Exec(ctx, "listen sync")
-	if err != nil {
-		return
+func (imp *pgDbRegistry) runListener(ctx context.Context, pool *pgxpool.Pool) {
+	dispatcher := map[channelName]ntHandler{
+		"sync": func(_ *Notification) error {
+			imp.subject.Notify(DBUpdated{})
+			return nil
+		},
 	}
-	defer func() {
-		_, err := conn.Exec(ctx, "unlisten sync")
+	listener := newPgListener(dispatcher)
+	listener.connect = func(ctx context.Context) (*pgx.Conn, error) {
+		conn, err := pool.Acquire(ctx)
 		if err != nil {
-			return
+			return nil, err
 		}
-	}()
-	for {
-		notification, err := conn.WaitForNotification(ctx)
-		if err != nil {
-			break
-		}
-		switch notification.Channel {
-		case "sync":
-			subject.Notify(DBUpdated{})
-		default:
-			continue
-		}
+		return conn.Hijack(), nil
 	}
+	go func() {
+		_ = listener.Listen(ctx)
+	}()
 }
