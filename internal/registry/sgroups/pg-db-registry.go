@@ -39,6 +39,11 @@ func NewRegistryFromPG(ctx context.Context, dbURL url.URL) (r Registry, err erro
 	ret := &pgDbRegistry{
 		subject: patterns.NewSubject(),
 	}
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return nil, err
+	}
+	go pgListen(ctx, conn.Conn(), ret.subject)
 	ret.pool.Store(pool, nil)
 	return ret, nil
 }
@@ -132,6 +137,11 @@ func (imp *pgDbRegistry) Writer(ctx context.Context) (w Writer, err error) {
 							_ = t.Rollback(ctx)
 							return
 						}
+						_, e := t.Exec(ctx, "notify sync")
+						if e != nil {
+							_ = t.Rollback(ctx)
+							return
+						}
 					}
 					if e = t.Commit(ctx); e != nil {
 						_ = t.Rollback(ctx)
@@ -151,4 +161,32 @@ func (imp *pgDbRegistry) Close() error {
 		p.Close()
 	})
 	return nil
+}
+
+func pgListen(ctx context.Context, conn *pgx.Conn, subject patterns.Subject) {
+	defer func() {
+		_ = conn.Close(ctx)
+	}()
+	_, err := conn.Exec(ctx, "listen sync")
+	if err != nil {
+		return
+	}
+	defer func() {
+		_, err := conn.Exec(ctx, "unlisten sync")
+		if err != nil {
+			return
+		}
+	}()
+	for {
+		notification, err := conn.WaitForNotification(ctx)
+		if err != nil {
+			break
+		}
+		switch notification.Channel {
+		case "sync":
+			subject.Notify(DBUpdated{})
+		default:
+			continue
+		}
+	}
 }
