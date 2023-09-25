@@ -39,16 +39,19 @@ func NewRegistryFromPG(ctx context.Context, dbURL url.URL) (r Registry, err erro
 	ret := &pgDbRegistry{
 		subject: patterns.NewSubject(),
 	}
-	ret.runListener(ctx, pool)
 	ret.pool.Store(pool, nil)
+	messagesCtx, messagesCancel := context.WithCancel(ctx)
+	ret.cancelPubSub = messagesCancel
+	go ret.listenMessages(messagesCtx)
 	return ret, nil
 }
 
 var _ Registry = (*pgDbRegistry)(nil)
 
 type pgDbRegistry struct {
-	subject patterns.Subject
-	pool    atm.Value[*pgxpool.Pool]
+	subject      patterns.Subject
+	pool         atm.Value[*pgxpool.Pool]
+	cancelPubSub func()
 }
 
 // Subject impl Registry interface
@@ -133,7 +136,7 @@ func (imp *pgDbRegistry) Writer(ctx context.Context) (w Writer, err error) {
 							_ = t.Rollback(ctx)
 							return
 						}
-						_, e := t.Exec(ctx, "notify sync")
+						_, e := t.Exec(ctx, "notify "+NotifyCommit)
 						if e != nil {
 							_ = t.Rollback(ctx)
 							return
@@ -152,29 +155,10 @@ func (imp *pgDbRegistry) Writer(ctx context.Context) (w Writer, err error) {
 
 // Close impl Registry interface
 func (imp *pgDbRegistry) Close() error {
+	imp.cancelPubSub()
 	_ = imp.subject.Close()
 	imp.pool.Clear(func(p *pgxpool.Pool) {
 		p.Close()
 	})
 	return nil
-}
-
-func (imp *pgDbRegistry) runListener(ctx context.Context, pool *pgxpool.Pool) {
-	dispatcher := map[channelName]ntHandler{
-		"sync": func(_ *Notification) error {
-			imp.subject.Notify(DBUpdated{})
-			return nil
-		},
-	}
-	listener := newPgListener(dispatcher)
-	listener.connect = func(ctx context.Context) (*pgx.Conn, error) {
-		conn, err := pool.Acquire(ctx)
-		if err != nil {
-			return nil, err
-		}
-		return conn.Hijack(), nil
-	}
-	go func() {
-		_ = listener.Listen(ctx)
-	}()
 }

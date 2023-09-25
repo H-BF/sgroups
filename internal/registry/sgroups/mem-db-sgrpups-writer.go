@@ -147,7 +147,11 @@ func (wr sGroupsMemDbWriter) SyncSGRules(ctx context.Context, rules []model.SGRu
 
 // Commit impl Writer
 func (wr sGroupsMemDbWriter) Commit() error {
-	return wr.writer.Commit()
+	err := wr.writer.Commit()
+	if err == nil {
+		wr.subject.Notify(DBUpdated{})
+	}
+	return err
 }
 
 // Abort impl Writer
@@ -219,9 +223,6 @@ func (wr sGroupsMemDbWriter) updateSyncStatus(_ context.Context) error {
 		},
 	}
 	err := wr.writer.Upsert(TblSyncStatus, x)
-	if err == nil {
-		wr.subject.Notify(DBUpdated{})
-	}
 	if isInvalidTableErr(err) {
 		err = nil
 	}

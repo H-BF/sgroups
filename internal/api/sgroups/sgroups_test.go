@@ -2,9 +2,10 @@ package sgroups
 
 import (
 	"context"
+	"testing"
+
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
-	"testing"
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
@@ -438,9 +439,9 @@ func (sui *sGroupServiceTests) Test_FindRules() {
 
 func (sui *sGroupServiceTests) Test_SyncStatuses() {
 	stream := makeSyncStatusesStream()
+	chE := make(chan error, 1)
 	go func() {
-		err := sui.srv.SyncStatuses(&emptypb.Empty{}, stream)
-		sui.Require().NoError(err)
+		chE <- sui.srv.SyncStatuses(&emptypb.Empty{}, stream)
 	}()
 
 	makeUpdate := func(networkName string) {
@@ -449,6 +450,7 @@ func (sui *sGroupServiceTests) Test_SyncStatuses() {
 	}
 
 	var resp1, resp2 *api.SyncStatusResp
+
 	makeUpdate("net1")
 	resp1 = <-stream.out
 	sui.Require().NotNil(resp1)
@@ -456,9 +458,12 @@ func (sui *sGroupServiceTests) Test_SyncStatuses() {
 	makeUpdate("net2")
 	resp2 = <-stream.out
 	sui.Require().NotNil(resp2)
+
 	stream.Cancel()
 
 	sui.Require().Less(resp1.UpdatedAt.AsTime(), resp2.UpdatedAt.AsTime())
+	err := <-chE
+	sui.Require().NoError(err)
 }
 
 type syncStatusesStream struct {
@@ -482,8 +487,12 @@ func (s *syncStatusesStream) Context() context.Context {
 }
 
 func (s *syncStatusesStream) Send(resp *api.SyncStatusResp) error {
-	s.out <- resp
-	return nil
+	select {
+	case s.out <- resp:
+		return nil
+	case <-s.ctx.Done():
+		return s.ctx.Err()
+	}
 }
 
 func (s *syncStatusesStream) Cancel() {

@@ -28,11 +28,11 @@ func (srv *sgService) SyncStatuses(_ *emptypb.Empty, stream sg.SecGroupService_S
 	commitCounter := func(_ patterns.EventType) {
 		atomic.AddInt64(&commitCount, 1)
 	}
-
-	obs := patterns.NewObserver(commitCounter, true, registry.DBUpdated{})
-	srv.reg.Subject().ObserversAttach(obs)
-	defer srv.reg.Subject().ObserversDetach(obs)
-
+	if subj := srv.reg.Subject(); subj != nil {
+		obs := patterns.NewObserver(commitCounter, true, registry.DBUpdated{})
+		subj.ObserversAttach(obs)
+		defer subj.ObserversDetach(obs)
+	}
 	for ctx := stream.Context(); ; {
 		if atomic.SwapInt64(&commitCount, 0) != 0 || prevState == nil {
 			var newState *sgroups.SyncStatus
