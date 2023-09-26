@@ -136,8 +136,7 @@ func (imp *pgDbRegistry) Writer(ctx context.Context) (w Writer, err error) {
 							_ = t.Rollback(ctx)
 							return
 						}
-						_, e := t.Exec(ctx, "notify "+NotifyCommit)
-						if e != nil {
+						if _, e = t.Exec(ctx, "notify "+NotifyCommit); e != nil {
 							_ = t.Rollback(ctx)
 							return
 						}
