@@ -2,20 +2,35 @@ package nft
 
 import (
 	"context"
+	"net"
 
-	"github.com/H-BF/sgroups/cmd/to-nft/internal/dns"
+	"github.com/H-BF/sgroups/cmd/to-nft/internal"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
 	"github.com/H-BF/sgroups/internal/config"
+	model "github.com/H-BF/sgroups/internal/models/sgroups"
+
+	"github.com/c-robinson/iplib"
 )
 
 type (
 	// AppliedRules -
 	AppliedRules struct {
 		TargetTable  string
-		SavedNftConf NFTablesConf
 		BaseRules    BaseRules
 		SG2SGRules   cases.SG2SGRules
 		SG2FQDNRules cases.SG2FQDNRules
+	}
+
+	// Patch -
+	Patch interface {
+		isAppliedRulesPatch()
+	}
+
+	// UpdateFqdnNetsets
+	UpdateFqdnNetsets struct {
+		IPVersion int
+		FQDN      model.FQDN
+		Addresses []net.IP
 	}
 
 	// NfTablesProcessorOpt constructor option(s)
@@ -26,6 +41,7 @@ type (
 	// NfTablesProcessor abstract interface
 	NfTablesProcessor interface {
 		ApplyConf(ctx context.Context, conf NetConf) (AppliedRules, error)
+		Patch(ctx context.Context, rules AppliedRules, p Patch) error
 		Close() error
 	}
 
@@ -41,9 +57,27 @@ type (
 
 	// DnsResolver -
 	DnsResolver struct {
-		dns.DomainAddressQuerier
+		internal.DomainAddressQuerier
 	}
 )
+
+var (
+	_ Patch = (*UpdateFqdnNetsets)(nil)
+)
+
+func (UpdateFqdnNetsets) isAppliedRulesPatch() {}
+
+// NetSet -
+func (ns UpdateFqdnNetsets) NetSet() []net.IPNet {
+	isV6 := ns.IPVersion == iplib.IP6Version
+	bits := tern(isV6, net.IPv6len, net.IPv4len) * 8
+	mask := net.CIDRMask(bits, bits)
+	ret := make([]net.IPNet, len(ns.Addresses))
+	for i, ip := range ns.Addresses {
+		ret[i] = net.IPNet{IP: ip, Mask: mask}
+	}
+	return ret
+}
 
 //DNS resolver
 

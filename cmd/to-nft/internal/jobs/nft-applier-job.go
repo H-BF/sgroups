@@ -9,7 +9,9 @@ import (
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	"github.com/H-BF/sgroups/internal/queue"
 
+	"github.com/H-BF/corlib/logger"
 	"github.com/H-BF/corlib/pkg/patterns/observer"
+	"github.com/c-robinson/iplib"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -26,11 +28,12 @@ func NewNftApplierJob(proc nft.NfTablesProcessor, opts ...Option) *NftApplierJob
 		}
 	}
 	ret.Observer = observer.NewObserver(
-		ret.onEvent,
+		ret.incomingEvents,
 		false,
 		applyConfigEvent{},
 		internal.NetlinkUpdates{},
 		internal.SyncStatusValue{},
+		DomainAddressesPatch{},
 	)
 	ret.agentSubject.ObserversAttach(ret)
 	return ret
@@ -44,10 +47,11 @@ type NftApplierJob struct {
 	que          *queue.FIFO
 	syncStatus   *model.SyncStatus
 	netConf      *host.NetConf
+	appliedRules *nft.AppliedRules
 }
 
 type applyConfigEvent struct {
-	observer.EventType
+	observer.TextMessageEvent
 }
 
 // Close -
@@ -74,14 +78,16 @@ func (jb *NftApplierJob) Run(ctx context.Context) error {
 		case internal.NetlinkUpdates:
 			jb.handleNetlinkEvent(ctx, o)
 		case applyConfigEvent:
+			logger.DebugKV(ctx, "notify", o)
 			if err := jb.doApply(ctx); err != nil {
 				return err
 			}
+		case DomainAddressesPatch:
 		}
 	}
 }
 
-func (jb *NftApplierJob) onEvent(ev observer.EventType) { //async recv
+func (jb *NftApplierJob) incomingEvents(ev observer.EventType) { //async recv
 	_ = jb.que.Put(ev)
 }
 
@@ -93,8 +99,9 @@ func (jb *NftApplierJob) handleSyncStatus(ctx context.Context, ev internal.SyncS
 		}
 	}
 	jb.syncStatus = &ev.SyncStatus
-	subj := internal.AgentSubject()
-	subj.Notify(applyConfigEvent{})
+	jb.agentSubject.Notify(applyConfigEvent{
+		TextMessageEvent: observer.NewTextEvent("rulesets repo has changed"),
+	})
 }
 
 func (jb *NftApplierJob) handleNetlinkEvent(ctx context.Context, ev internal.NetlinkUpdates) { //sync recv
@@ -104,13 +111,15 @@ func (jb *NftApplierJob) handleNetlinkEvent(ctx context.Context, ev internal.Net
 	}
 	cnf.UpdFromWatcher(ev.Updates...)
 	if apply := jb.netConf == nil; !apply {
-		apply = !jb.netConf.Eq(cnf)
+		apply = !jb.netConf.IPAdresses.Eq(cnf.IPAdresses)
 		if !apply {
 			return
 		}
 	}
 	jb.netConf = &cnf
-	jb.agentSubject.Notify(applyConfigEvent{})
+	jb.agentSubject.Notify(applyConfigEvent{
+		TextMessageEvent: observer.NewTextEvent("host net conf has changed"),
+	})
 }
 
 func (jb *NftApplierJob) doApply(ctx context.Context) error {
@@ -118,13 +127,37 @@ func (jb *NftApplierJob) doApply(ctx context.Context) error {
 		return nil
 	}
 	appliedRules, err := jb.nftProcessor.ApplyConf(ctx, *jb.netConf)
-	if err == nil {
-		ev := AppliedConfEvent{
-			UID:          uuid.NewV4(),
-			NetConf:      jb.netConf.Clone(),
-			AppliedRules: appliedRules,
-		}
-		jb.agentSubject.Notify(ev)
+	if err != nil {
+		return err
 	}
-	return err
+	jb.appliedRules = &appliedRules
+	ev := AppliedConfEvent{
+		UID:          uuid.NewV4(),
+		NetConf:      jb.netConf.Clone(),
+		AppliedRules: appliedRules,
+	}
+	jb.agentSubject.Notify(ev)
+
+	reqs := make([]observer.EventType, 0,
+		appliedRules.SG2FQDNRules.A.Len()+
+			appliedRules.SG2FQDNRules.AAAA.Len())
+
+	sources := sli(appliedRules.SG2FQDNRules.A, appliedRules.SG2FQDNRules.AAAA)
+	for i, ipV := range sli(iplib.IP4Version, iplib.IP6Version) {
+		sources[i].Iterate(func(domain model.FQDN, addr internal.DomainAddresses) bool {
+			ev := Ask2PatchDomainAddresses{
+				IpVersion: ipV,
+				FQDN:      domain,
+				TTL:       addr.TTL,
+			}
+			reqs = append(reqs, ev)
+			return true
+		})
+	}
+	jb.agentSubject.Notify(reqs...)
+	return nil
+}
+
+func sli[T any](args ...T) []T {
+	return args
 }

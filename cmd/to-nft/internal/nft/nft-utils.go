@@ -7,8 +7,11 @@ import (
 	"net"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
+
+	"github.com/H-BF/corlib/pkg/backoff"
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/c-robinson/iplib"
 	nftLib "github.com/google/nftables"
@@ -176,3 +179,12 @@ func nextSetID() uint32 {
 }
 
 var setID = rand.Uint32() //nolint:gosec
+
+// MakeBatchBackoff -
+func MakeBatchBackoff() backoff.Backoff {
+	return backoff.ExponentialBackoffBuilder().
+		WithMultiplier(1.3).                       //nolint:gomnd
+		WithRandomizationFactor(0).                //nolint:gomnd
+		WithMaxElapsedThreshold(20 * time.Second). //nolint:gomnd
+		Build()
+}

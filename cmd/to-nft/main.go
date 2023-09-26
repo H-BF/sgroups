@@ -7,7 +7,6 @@ import (
 	"time"
 
 	. "github.com/H-BF/sgroups/cmd/to-nft/internal" //nolint:revive
-	"github.com/H-BF/sgroups/cmd/to-nft/internal/dns"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/jobs"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft"
 	"github.com/H-BF/sgroups/internal/app"
@@ -65,6 +64,11 @@ func main() {
 		logger.Fatal(ctx, errors.WithMessage(err, "setup logger"))
 	}
 
+	var dnsResolver DomainAddressQuerier
+	if dnsResolver, err = NewDomainAddressQuerier(ctx); err != nil {
+		logger.Fatal(ctx, errors.WithMessage(err, "setup DNS resolver"))
+	}
+
 	if exitOnSuccess := ExitOnSuccess.MustValue(ctx); exitOnSuccess {
 		o := observer.NewObserver(exitOnSuccessHanler,
 			true,
@@ -73,11 +77,19 @@ func main() {
 		AgentSubject().ObserversAttach(o)
 	}
 
+	go func() {
+		r := jobs.FqdnRefresher{
+			Resolver:  dnsResolver,
+			AgentSubj: AgentSubject(),
+		}
+		r.Run(ctx)
+	}()
+
 	gracefulDuration := AppGracefulShutdown.MustValue(ctx)
 	errc := make(chan error, 1)
 	go func() {
 		defer close(errc)
-		errc <- runNftJob(ctx)
+		errc <- runNftJob(ctx, dnsResolver)
 	}()
 	var jobErr error
 	select {
@@ -105,7 +117,7 @@ func exitOnSuccessHanler(_ observer.EventType) {
 	os.Exit(0)
 }
 
-func runNftJob(ctx context.Context) (err error) {
+func runNftJob(ctx context.Context, resolver DomainAddressQuerier) (err error) {
 	const waitBeforeRestart = 10 * time.Second
 
 	ctx1 := logger.ToContext(ctx,
@@ -116,7 +128,7 @@ func runNftJob(ctx context.Context) (err error) {
 	defer logger.Infof(ctx1, "exit")
 	for {
 		var jb mainJob
-		if err = jb.init(ctx1); err != nil {
+		if err = jb.init(ctx1, resolver); err != nil {
 			break
 		}
 		if err = jb.run(ctx1); err == nil {
@@ -147,8 +159,7 @@ func makeNetlinkWatcher(netNs string) (nl.NetlinkWatcher, error) {
 	return nlWatcher, errors.WithMessage(err, "create net-watcher")
 }
 
-func makeNftprocessor(ctx context.Context, sgClient SGClient, netNs string) (nft.NfTablesProcessor, error) {
-	dns.NewDomainAddressQuerier(ctx)
+func makeNftprocessor(ctx context.Context, sgClient SGClient, dnsRes DomainAddressQuerier, netNs string) (nft.NfTablesProcessor, error) {
 	var opts []nft.NfTablesProcessorOpt
 	if len(netNs) > 0 {
 		opts = append(opts, nft.WithNetNS{NetNS: netNs})
@@ -160,11 +171,7 @@ func makeNftprocessor(ctx context.Context, sgClient SGClient, netNs string) (nft
 	if err != nil {
 		return nil, errors.WithMessage(err, "load base rules")
 	}
-	var dnsQuerier dns.DomainAddressQuerier
-	if dnsQuerier, err = dns.NewDomainAddressQuerier(ctx); err != nil {
-		return nil, err
-	}
-	opts = append(opts, nft.DnsResolver{DomainAddressQuerier: dnsQuerier})
+	opts = append(opts, nft.DnsResolver{DomainAddressQuerier: dnsRes})
 	return nft.NewNfTablesProcessor(sgClient, opts...), nil
 }
 
@@ -190,7 +197,7 @@ func (m *mainJob) cleanup() {
 	}
 }
 
-func (m *mainJob) init(ctx context.Context) (err error) {
+func (m *mainJob) init(ctx context.Context, dnsResolver DomainAddressQuerier) (err error) {
 	defer func() {
 		if err != nil {
 			m.cleanup()
@@ -209,7 +216,7 @@ func (m *mainJob) init(ctx context.Context) (err error) {
 	if m.nlWatcher, err = makeNetlinkWatcher(m.netNs); err != nil {
 		return err
 	}
-	if m.nftProcessor, err = makeNftprocessor(ctx, *m.sgClient, m.netNs); err != nil {
+	if m.nftProcessor, err = makeNftprocessor(ctx, *m.sgClient, dnsResolver, m.netNs); err != nil {
 		return err
 	}
 	return nil

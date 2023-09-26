@@ -9,7 +9,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/H-BF/sgroups/cmd/to-nft/internal/dns"
+	"github.com/H-BF/sgroups/cmd/to-nft/internal"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
 	"github.com/H-BF/sgroups/internal/config"
 	di "github.com/H-BF/sgroups/internal/dict"
@@ -153,11 +153,7 @@ func (bt *batch) execute(ctx context.Context) error {
 		}
 	}()
 	bt.prepare()
-	bkf := backoff.ExponentialBackoffBuilder().
-		WithMultiplier(1.3).                       //nolint:gomnd
-		WithRandomizationFactor(0).                //nolint:gomnd
-		WithMaxElapsedThreshold(20 * time.Second). //nolint:gomnd
-		Build()
+	bkf := MakeBatchBackoff()
 loop:
 	for el := bt.jobs.Front(); el != nil; el = bt.jobs.Front() {
 		it = bt.jobs.Remove(el).(jobItem)
@@ -389,7 +385,7 @@ func (bt *batch) addSGNetSets() {
 func (bt *batch) addFQDNNetSets() {
 	const api = "add-FQDN-net-sets"
 
-	f := func(IPv int, domain model.FQDN, a dns.DomainAddresses) {
+	f := func(IPv int, domain model.FQDN, a internal.DomainAddresses) {
 		bt.addJob(api, func(tx *Tx) error {
 			nameOfSet := nameUtils{}.nameOfFqdnNetSet(IPv, domain)
 			nets := make([]net.IPNet, len(a.IPs))
@@ -424,11 +420,11 @@ func (bt *batch) addFQDNNetSets() {
 		})
 	}
 
-	bt.sg2fqdnRules.A.Iterate(func(domain model.FQDN, a dns.DomainAddresses) bool {
+	bt.sg2fqdnRules.A.Iterate(func(domain model.FQDN, a internal.DomainAddresses) bool {
 		f(iplib.IP4Version, domain, a)
 		return true
 	})
-	bt.sg2fqdnRules.AAAA.Iterate(func(domain model.FQDN, a dns.DomainAddresses) bool {
+	bt.sg2fqdnRules.AAAA.Iterate(func(domain model.FQDN, a internal.DomainAddresses) bool {
 		f(iplib.IP6Version, domain, a)
 		return true
 	})

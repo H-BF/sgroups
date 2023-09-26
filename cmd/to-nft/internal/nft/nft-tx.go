@@ -39,10 +39,12 @@ func NewTx(netNS string) (*Tx, error) {
 
 // Close impl 'Closer'
 func (tx *Tx) Close() error {
-	c := tx.Conn
-	tx.commitOnce.Do(func() {
-		_ = c.CloseLasting()
-	})
+	if tx != nil {
+		c := tx.Conn
+		tx.commitOnce.Do(func() {
+			_ = c.CloseLasting()
+		})
+	}
 	return nil
 }
 

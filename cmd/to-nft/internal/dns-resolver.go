@@ -1,16 +1,14 @@
-package dns
+package internal
 
 import (
 	"context"
 	"net"
 	"time"
 
-	"github.com/H-BF/sgroups/cmd/to-nft/internal"
 	"github.com/H-BF/sgroups/internal/config"
 	"github.com/H-BF/sgroups/internal/dns"
 
 	"github.com/H-BF/corlib/pkg/backoff"
-
 	"github.com/ahmetb/go-linq/v3"
 	bf "github.com/cenkalti/backoff/v4"
 	"github.com/pkg/errors"
@@ -75,8 +73,8 @@ func (r *domainResolver) init(ctx context.Context) (err error) { //nolint:gocycl
 			}
 		}
 	}
-	errF(internal.DnsNameservers.Value(ctx,
-		internal.DnsNameservers.OptSink(func(ips []config.IP) error {
+	errF(DnsNameservers.Value(ctx,
+		DnsNameservers.OptSink(func(ips []config.IP) error {
 			var o dns.WithNameservers
 			linq.From(ips).
 				Select(func(i any) any {
@@ -89,8 +87,8 @@ func (r *domainResolver) init(ctx context.Context) (err error) { //nolint:gocycl
 			return nil
 		}),
 	))(false)
-	errF(internal.DnsProto.Value(ctx,
-		internal.DnsProto.OptSink(func(s string) error {
+	errF(DnsProto.Value(ctx,
+		DnsProto.OptSink(func(s string) error {
 			switch s {
 			case "tcp":
 				opts = append(opts, dns.UseTCP{})
@@ -101,8 +99,8 @@ func (r *domainResolver) init(ctx context.Context) (err error) { //nolint:gocycl
 			return nil
 		}),
 	))(false)
-	errF(internal.DnsPort.Value(ctx,
-		internal.DnsPort.OptSink(func(u uint16) error {
+	errF(DnsPort.Value(ctx,
+		DnsPort.OptSink(func(u uint16) error {
 			if u == 0 {
 				return errPortZero
 			}
@@ -110,8 +108,8 @@ func (r *domainResolver) init(ctx context.Context) (err error) { //nolint:gocycl
 			return nil
 		}),
 	))(false)
-	errF(internal.DnsRetriesTmo.Value(ctx,
-		internal.DnsRetriesTmo.OptSink(func(d time.Duration) error {
+	errF(DnsRetriesTmo.Value(ctx,
+		DnsRetriesTmo.OptSink(func(d time.Duration) error {
 			if d > 0 {
 				bkf = backoff.NewConstantBackOff(d)
 				return nil
@@ -119,8 +117,8 @@ func (r *domainResolver) init(ctx context.Context) (err error) { //nolint:gocycl
 			return errRitriesTimeoutZero
 		}),
 	))(true)
-	errF(internal.DnsRetries.Value(ctx,
-		internal.DnsRetries.OptSink(func(u uint8) error {
+	errF(DnsRetries.Value(ctx,
+		DnsRetries.OptSink(func(u uint8) error {
 			if u > 0 {
 				if bkf == nil {
 					bkf = &bf.ZeroBackOff{}
@@ -131,8 +129,8 @@ func (r *domainResolver) init(ctx context.Context) (err error) { //nolint:gocycl
 			return errRitryCountZero
 		}),
 	))(true)
-	errF(internal.DnsDialDuration.Value(ctx,
-		internal.DnsDialDuration.OptSink(func(d time.Duration) error {
+	errF(DnsDialDuration.Value(ctx,
+		DnsDialDuration.OptSink(func(d time.Duration) error {
 			if d > 0 {
 				opts = append(opts, dns.WithDialDuration(d))
 				return nil
@@ -140,8 +138,8 @@ func (r *domainResolver) init(ctx context.Context) (err error) { //nolint:gocycl
 			return errDialDurationZero
 		}),
 	))(true)
-	errF(internal.DnsWriteDuration.Value(ctx,
-		internal.DnsWriteDuration.OptSink(func(d time.Duration) error {
+	errF(DnsWriteDuration.Value(ctx,
+		DnsWriteDuration.OptSink(func(d time.Duration) error {
 			if d > 0 {
 				opts = append(opts, dns.WithWriteDuration(d))
 				return nil
@@ -149,8 +147,8 @@ func (r *domainResolver) init(ctx context.Context) (err error) { //nolint:gocycl
 			return errWriteDurationZero
 		}),
 	))(true)
-	errF(internal.DnsReadDuration.Value(ctx,
-		internal.DnsReadDuration.OptSink(func(d time.Duration) error {
+	errF(DnsReadDuration.Value(ctx,
+		DnsReadDuration.OptSink(func(d time.Duration) error {
 			if d > 0 {
 				opts = append(opts, dns.WithReadDuration(d))
 				return nil

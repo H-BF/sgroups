@@ -2,15 +2,16 @@ package nft
 
 import (
 	"context"
+	"fmt"
 	"net"
-	"sync"
 
-	"github.com/H-BF/sgroups/cmd/to-nft/internal/dns"
+	"github.com/H-BF/sgroups/cmd/to-nft/internal"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
-	"github.com/ahmetb/go-linq/v3"
 
 	"github.com/H-BF/corlib/logger"
 	sgAPI "github.com/H-BF/protos/pkg/api/sgroups"
+	"github.com/ahmetb/go-linq/v3"
+	nftlib "github.com/google/nftables"
 	"github.com/pkg/errors"
 	"go.uber.org/multierr"
 )
@@ -20,20 +21,6 @@ func NewNfTablesProcessor(client SGClient, opts ...NfTablesProcessorOpt) NfTable
 	ret := &nfTablesProcessorImpl{
 		sgClient: client,
 	}
-
-	{
-		var (
-			o sync.Once
-			e error
-			r dns.DomainAddressQuerier
-		)
-		ret.getDnsResolver = func(ctx context.Context) (dns.DomainAddressQuerier, error) {
-			o.Do(func() {
-				r, e = dns.NewDomainAddressQuerier(ctx)
-			})
-			return r, e
-		}
-	}
 	for _, o := range opts {
 		switch t := o.(type) {
 		case WithNetNS:
@@ -41,12 +28,7 @@ func NewNfTablesProcessor(client SGClient, opts ...NfTablesProcessorOpt) NfTable
 		case BaseRules:
 			ret.baseRules = t
 		case DnsResolver:
-			ret.getDnsResolver = func(_ context.Context) (dns.DomainAddressQuerier, error) {
-				if t.DomainAddressQuerier == nil {
-					return nil, errors.New("has no DNS resolver")
-				}
-				return t.DomainAddressQuerier, nil
-			}
+			ret.dnsResolver = t.DomainAddressQuerier
 		}
 	}
 	return ret
@@ -57,10 +39,10 @@ type (
 	SGClient = sgAPI.SecGroupServiceClient
 
 	nfTablesProcessorImpl struct {
-		sgClient       SGClient
-		netNS          string
-		baseRules      BaseRules
-		getDnsResolver func(context.Context) (dns.DomainAddressQuerier, error)
+		sgClient    SGClient
+		netNS       string
+		baseRules   BaseRules
+		dnsResolver internal.DomainAddressQuerier
 	}
 
 	ipVersion = int
@@ -134,24 +116,52 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, conf NetConf) 
 		WithSg2SgRules(localRules),
 	)
 	if err == nil {
-		applied.SavedNftConf, err = impl.loadNftConfig()
-		if err == nil {
-			log.Debugw("final NFT config done")
-			applied.BaseRules = impl.baseRules
-			applied.TargetTable = pfm.TableName
-		}
+		log.Infof("SUCCEEDED")
+		applied.BaseRules = impl.baseRules
+		applied.TargetTable = pfm.TableName
 	}
 	return applied, err
 }
 
-func (impl *nfTablesProcessorImpl) loadNftConfig() (cnf NFTablesConf, err error) {
-	var tx *Tx
-	if tx, err = NewTx(impl.netNS); err != nil {
-		return cnf, err
+// Patch -
+func (impl *nfTablesProcessorImpl) Patch(ctx context.Context, rules AppliedRules, p Patch) error {
+	tx, err := NewTx(impl.netNS)
+	if err != nil {
+		return err
 	}
 	defer tx.Close()
-	err = cnf.Load(tx.Conn)
-	return cnf, err
+
+	var nftConf NFTablesConf
+	if err = nftConf.Load(tx.Conn); err != nil {
+		return err
+	}
+
+	targetTable := NfTableKey{
+		TableFamily: nftlib.TableFamilyINet,
+		Name:        rules.TargetTable,
+	}
+	switch v := p.(type) {
+	case UpdateFqdnNetsets:
+		netSets := nftConf.Sets.At(targetTable)
+		netsetName := nameUtils{}.
+			nameOfFqdnNetSet(v.IPVersion, v.FQDN)
+		set := netSets.At(netsetName)
+		if set.Set == nil {
+			return nil
+		}
+		elements := setsUtils{}.nets2SetElements(v.NetSet(), v.IPVersion)
+
+		bk := MakeBatchBackoff()
+		_ = bk
+
+		_ = tx.SetAddElements(set.Set, elements)
+		_ = tx.FlushAndClose()
+	default:
+		panic(
+			fmt.Errorf("unsupported PATCH type %#v", p),
+		)
+	}
+	return nil
 }
 
 // Close impl 'NfTablesProcessor'
@@ -173,13 +183,9 @@ func (impl *nfTablesProcessorImpl) loadLocalSG(ctx context.Context, localIPs []n
 
 func (impl *nfTablesProcessorImpl) loadFQDNRules(ctx context.Context, sgs cases.SGs) (cases.SG2FQDNRules, error) {
 	var ret cases.SG2FQDNRules
-	dnsR, err := impl.getDnsResolver(ctx)
-	if err != nil {
-		return ret, errors.WithMessage(err, "DNS resolver is unavailable")
-	}
-	ret, err = cases.FQDNRulesLoader{
+	ret, err := cases.FQDNRulesLoader{
 		SGSrv:  impl.sgClient,
-		DnsRes: dnsR,
+		DnsRes: impl.dnsResolver,
 	}.Load(ctx, sgs)
 	return ret, err
 }

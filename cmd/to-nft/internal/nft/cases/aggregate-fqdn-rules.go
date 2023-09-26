@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/H-BF/corlib/pkg/parallel"
-	"github.com/H-BF/sgroups/cmd/to-nft/internal/dns"
+	"github.com/H-BF/sgroups/cmd/to-nft/internal"
 	conv "github.com/H-BF/sgroups/internal/api/sgroups"
 	"github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
@@ -21,14 +21,14 @@ type (
 	SG2FQDNRules struct {
 		SGs   SGs
 		Rules []model.FQDNRule
-		A     dict.RBDict[model.FQDN, dns.DomainAddresses]
-		AAAA  dict.RBDict[model.FQDN, dns.DomainAddresses]
+		A     dict.RBDict[model.FQDN, internal.DomainAddresses]
+		AAAA  dict.RBDict[model.FQDN, internal.DomainAddresses]
 	}
 
 	// FQDNRulesLoader -
 	FQDNRulesLoader struct {
 		SGSrv  SGClient
-		DnsRes dns.DomainAddressQuerier
+		DnsRes internal.DomainAddressQuerier
 	}
 )
 
@@ -60,18 +60,14 @@ func (ld FQDNRulesLoader) Load(ctx context.Context, sgs SGs) (rr SG2FQDNRules, e
 				_ = rr.SGs.Insert(sg.Name, sg)
 			}
 		}
-		err = ld.fillWithAddresses(ctx, &rr)
+		ld.resolveDomainAddresses(ctx, &rr)
 	}
 	return rr, err
 }
 
-func (ld FQDNRulesLoader) fillWithAddresses(ctx context.Context, rr *SG2FQDNRules) (err error) {
-	const api = "resolve-addresses"
+func (ld FQDNRulesLoader) resolveDomainAddresses(ctx context.Context, rr *SG2FQDNRules) {
 	const parallelism = 8
 
-	defer func() {
-		err = errors.WithMessage(err, api)
-	}()
 	var domains []model.FQDN
 	linq.From(rr.Rules).
 		DistinctBy(func(i any) any {
@@ -80,26 +76,24 @@ func (ld FQDNRulesLoader) fillWithAddresses(ctx context.Context, rr *SG2FQDNRule
 		Select(func(i any) any {
 			return i.(model.FQDNRule).ID.FqdnTo
 		}).ToSlice(&domains)
-	var mx sync.Mutex
-	err = parallel.ExecAbstract(len(domains), parallelism, func(i int) error {
-		domain := domains[i].String()
-		addrA := ld.DnsRes.A(ctx, domain)
-		if addrA.Err != nil {
-			return addrA.Err
+	if ld.DnsRes == nil {
+		for i := range domains {
+			rr.A.Put(domains[i], internal.DomainAddresses{})
+			//rr.AAAA.Put(domains[i], internal.DomainAddresses{})
 		}
-		/*//
-		addrAAAA := ld.DnsRes.AAAA(ctx, domain)
-		if addrAAAA.Err != nil {
-			return addrAAAA.Err
-		}
-		*/
-		mx.Lock()
-		defer mx.Unlock()
-		rr.A.Put(domains[i], addrA)
-		//rr.AAAA.Put(domains[i], addrAAAA)
-		return nil
-	})
-	return err
+	} else {
+		var mx sync.Mutex
+		_ = parallel.ExecAbstract(len(domains), parallelism, func(i int) error {
+			domain := domains[i].String()
+			addrA := ld.DnsRes.A(ctx, domain)
+			//addrAAAA := ld.DnsRes.AAAA(ctx, domain)
+			mx.Lock()
+			defer mx.Unlock()
+			rr.A.Put(domains[i], addrA)
+			//rr.AAAA.Put(domains[i], addrAAAA)
+			return nil
+		})
+	}
 }
 
 // SelectForSG -
