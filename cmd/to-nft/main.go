@@ -17,8 +17,6 @@ import (
 	gs "github.com/H-BF/corlib/pkg/patterns/graceful-shutdown"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -169,17 +167,6 @@ loop0:
 		}
 	}
 	return err
-}
-
-func getSyncStatus(ctx context.Context, c SGClient) (model.SyncStatus, error) {
-	var ret model.SyncStatus
-	resp, err := c.SyncStatus(ctx, new(emptypb.Empty))
-	if err == nil {
-		ret.UpdatedAt = resp.GetUpdatedAt().AsTime()
-	} else if e := errors.Cause(err); status.Code(e) == codes.NotFound {
-		err = nil
-	}
-	return ret, err
 }
 
 func getSyncStatuses(ctx context.Context, c SGClient) <-chan model.SyncStatus {
