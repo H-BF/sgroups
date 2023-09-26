@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"os"
-	"reflect"
 	"time"
 
 	. "github.com/H-BF/sgroups/cmd/to-nft/internal" //nolint:revive
@@ -130,41 +129,16 @@ func runNftJob(ctx context.Context) error { //nolint:gocyclo
 	conf.Init()
 	stm := nlWatcher.Stream()
 
-	sel := []reflect.SelectCase{
-		{
-			Dir:  reflect.SelectRecv,
-			Chan: reflect.ValueOf(ctx.Done()),
-		},
-		{
-			Dir:  reflect.SelectRecv,
-			Chan: reflect.ValueOf(stm),
-		},
-	}
-	if syncCheckInterval, _ := SGroupsSyncStatusInterval.Value(ctx); syncCheckInterval >= time.Second {
-		tc := time.NewTicker(syncCheckInterval)
-		defer tc.Stop()
-		sel = append(sel, reflect.SelectCase{
-			Dir:  reflect.SelectRecv,
-			Chan: reflect.ValueOf(tc.C),
-		})
-	} else {
-		return errors.Errorf("bad config value '%s': '%s'",
-			SGroupsSyncStatusInterval, syncCheckInterval)
-	}
-	var syncStatus model.SyncStatus
+	syncStatusCh := getSyncStatuses(ctx, sgClient)
+	prevStatus := <-syncStatusCh
+
 	var appliedCount int
 loop0:
 	for needApply := false; ; needApply = false {
-		chosen, val, succ := reflect.Select(sel)
-		switch chosen {
-		case 0: //Done() from ctx
+		select {
+		case <-ctx.Done():
 			break loop0
-		case 1: //messages from NetWatcher
-			if !succ {
-				err = nl.ErrUnexpectedlyStopped
-				break loop0
-			}
-			msgs := val.Interface().([]nl.WatcherMsg)
+		case msgs := <-stm:
 			for _, m := range msgs {
 				if e, ok := m.(nl.ErrMsg); ok {
 					if errors.Is(e.Err, nl.ErrUnexpectedlyStopped) {
@@ -174,25 +148,14 @@ loop0:
 					logger.ErrorKV(ctx, "net-watcher", "error", e)
 				}
 			}
-			needApply = conf.UpdFromWatcher(msgs...) != 0 || appliedCount == 0
-			if needApply {
-				var st model.SyncStatus
-				if st, err = getSyncStatus(ctx, sgClient); err != nil {
-					break loop0
-				}
-				syncStatus = st
-			}
-		case 2: //backend watcher from ticker
+			needApply = conf.UpdFromWatcher(msgs...) != 0
+		case st := <-syncStatusCh:
 			if appliedCount != 0 {
-				var st model.SyncStatus
-				if st, err = getSyncStatus(ctx, sgClient); err != nil {
-					break loop0
-				}
-				needApply = !syncStatus.UpdatedAt.Equal(st.UpdatedAt)
-				syncStatus = st
+				needApply = !prevStatus.UpdatedAt.Equal(st.UpdatedAt)
+				prevStatus = st
 			}
 		}
-		if needApply {
+		if needApply || appliedCount == 0 {
 			appliedCount++
 			logger.Infof(ctx, "net-conf will apply now")
 			if err = nftProc.ApplyConf(ctx, conf); err != nil {
@@ -217,4 +180,34 @@ func getSyncStatus(ctx context.Context, c SGClient) (model.SyncStatus, error) {
 		err = nil
 	}
 	return ret, err
+}
+
+func getSyncStatuses(ctx context.Context, c SGClient) <-chan model.SyncStatus {
+	const timeoutBeforeRetry = 10 * time.Second
+
+	ch := make(chan model.SyncStatus)
+	go func() {
+	outer:
+		for {
+			stream, err := c.SyncStatuses(ctx, new(emptypb.Empty))
+			if err == nil {
+				for {
+					syncStatus, err := stream.Recv()
+					if err != nil {
+						break
+					}
+					ch <- model.SyncStatus{UpdatedAt: syncStatus.GetUpdatedAt().AsTime()}
+				}
+			} else {
+				logger.Error(ctx, "Attempt to make grpc call failed:", err)
+			}
+
+			select {
+			case <-ctx.Done():
+				break outer
+			case <-time.After(timeoutBeforeRetry):
+			}
+		}
+	}()
+	return ch
 }
