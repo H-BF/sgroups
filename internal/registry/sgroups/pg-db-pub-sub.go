@@ -15,23 +15,19 @@ const (
 	NotifyCommit = "commit"
 )
 
-var (
-	errListen = errors.New("listen failed")
-)
-
 func (dbimp *pgDbRegistry) listenMessages(ctx context.Context) {
 	pool, ok := dbimp.pool.Load()
 	for ; ok; pool, ok = dbimp.pool.Load() {
 		err := pool.AcquireFunc(ctx, func(c *pgxpool.Conn) error {
 			conn := c.Conn()
 			if _, err := conn.Exec(ctx, "listen "+NotifyCommit); err != nil {
-				return errListen
+				return err
 			}
 
 			for {
 				nt, e := conn.WaitForNotification(ctx)
 				if e != nil {
-					return errListen
+					return e
 				}
 				if nt.Channel == NotifyCommit {
 					dbimp.subject.Notify(DBUpdated{})
@@ -42,13 +38,14 @@ func (dbimp *pgDbRegistry) listenMessages(ctx context.Context) {
 			if errors.Is(err, puddle.ErrClosedPool) {
 				// since there is no place where pool restoring when it closed so just return from here
 				return
-			}
-			if pgconn.SafeToRetry(err) || errors.Is(err, errListen) {
+			} else if pgconn.SafeToRetry(err) {
 				<-time.After(time.Minute)
 				continue
-			}
-			if pgconn.Timeout(err) {
+			} else if pgconn.Timeout(err) {
 				continue
+			} else {
+				// any other error kind
+				return
 			}
 		}
 	}
