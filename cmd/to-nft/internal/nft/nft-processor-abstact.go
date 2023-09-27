@@ -3,6 +3,7 @@ package nft
 import (
 	"context"
 	"net"
+	"time"
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
@@ -15,6 +16,7 @@ import (
 type (
 	// AppliedRules -
 	AppliedRules struct {
+		NetNS        string
 		TargetTable  string
 		BaseRules    BaseRules
 		SG2SGRules   cases.SG2SGRules
@@ -29,6 +31,7 @@ type (
 	// UpdateFqdnNetsets
 	UpdateFqdnNetsets struct {
 		IPVersion int
+		TTL       time.Duration
 		FQDN      model.FQDN
 		Addresses []net.IP
 	}
@@ -41,7 +44,6 @@ type (
 	// NfTablesProcessor abstract interface
 	NfTablesProcessor interface {
 		ApplyConf(ctx context.Context, conf NetConf) (AppliedRules, error)
-		Patch(ctx context.Context, rules AppliedRules, p Patch) error
 		Close() error
 	}
 
@@ -84,3 +86,27 @@ func (ns UpdateFqdnNetsets) NetSet() []net.IPNet {
 func (WithNetNS) isNfTablesProcessorOpt()   {}
 func (BaseRules) isNfTablesProcessorOpt()   {}
 func (DnsResolver) isNfTablesProcessorOpt() {}
+
+// Patch -
+func (rules *AppliedRules) Patch(p Patch, apply func() error) error {
+	switch v := p.(type) {
+	case UpdateFqdnNetsets:
+		if !isIn(v.IPVersion, sli(iplib.IP4Version, iplib.IP6Version)) {
+			return ErrPatchNotApplicable
+		}
+		src := tern(v.IPVersion == iplib.IP4Version,
+			&rules.SG2FQDNRules.A, &rules.SG2FQDNRules.AAAA)
+		if _, ok := src.Get(v.FQDN); !ok {
+			break
+		}
+		if err := apply(); err != nil {
+			return err
+		}
+		src.Put(v.FQDN, internal.DomainAddresses{
+			TTL: v.TTL,
+			IPs: v.Addresses,
+		})
+		return nil
+	}
+	return ErrPatchNotApplicable
+}

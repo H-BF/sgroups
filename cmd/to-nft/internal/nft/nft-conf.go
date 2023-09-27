@@ -58,12 +58,13 @@ func (cnf *NFTablesConf) Load(conn *nftlib.Conn) error {
 	for _, c := range sli(cnf.Tables.Clear, cnf.Chains.Clear, cnf.Sets.Clear) {
 		c()
 	}
+	var err error
 	for _, ld := range sli(cnf.loadTables, cnf.loadSets, cnf.loadChains) {
-		if err := ld(conn); err != nil {
-			return err
+		if err = ld(conn); err != nil {
+			break
 		}
 	}
-	return nil
+	return err
 }
 
 func (cnf *NFTablesConf) loadTables(conn *nftlib.Conn) (err error) {

@@ -10,14 +10,15 @@ import (
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	"github.com/H-BF/sgroups/internal/queue"
 
+	"github.com/H-BF/corlib/logger"
 	"github.com/H-BF/corlib/pkg/patterns/observer"
 	"github.com/c-robinson/iplib"
 )
 
 type (
 
-	// Ask2PatchDomainAddresses -
-	Ask2PatchDomainAddresses struct {
+	// Ask2ResolveDomainAddresses -
+	Ask2ResolveDomainAddresses struct {
 		IpVersion int
 		FQDN      model.FQDN
 		TTL       time.Duration
@@ -25,8 +26,8 @@ type (
 		observer.EventType
 	}
 
-	// DomainAddressesPatch -
-	DomainAddressesPatch struct {
+	// DomainAddresses -
+	DomainAddresses struct {
 		IpVersion int
 		FQDN      model.FQDN
 		DnsAnswer internal.DomainAddresses
@@ -35,7 +36,7 @@ type (
 		observer.EventType
 	}
 
-	fqdn2timer = dict.RBDict[Ask2PatchDomainAddresses, *time.Timer]
+	fqdn2timer = dict.RBDict[Ask2ResolveDomainAddresses, *time.Timer]
 
 	// FqdnRefresher -
 	FqdnRefresher struct {
@@ -46,7 +47,7 @@ type (
 
 func (rf *FqdnRefresher) Run(ctx context.Context) {
 	var activeQueries fqdn2timer
-	defer activeQueries.Iterate(func(_ Ask2PatchDomainAddresses, v *time.Timer) bool {
+	defer activeQueries.Iterate(func(_ Ask2ResolveDomainAddresses, v *time.Timer) bool {
 		_ = v.Stop()
 		return true
 	})
@@ -54,21 +55,30 @@ func (rf *FqdnRefresher) Run(ctx context.Context) {
 	defer que.Close()
 	obs := observer.NewObserver(func(ev observer.EventType) {
 		_ = que.Put(ev)
-	}, false, Ask2PatchDomainAddresses{})
+	}, false, Ask2ResolveDomainAddresses{})
 	defer rf.AgentSubj.ObserversDetach(obs)
 	rf.AgentSubj.ObserversAttach(obs)
+
+	log := logger.FromContext(ctx).Named("dns-refresher")
+	log.Infof("start")
+	defer log.Infof("stop")
 	for events := que.Reader(); ; {
 		select {
 		case <-ctx.Done():
+			log.Infof("will exit cause parent context has cancelled")
 			return
 		case raw, ok := <-events:
 			if !ok {
+				log.Infof("will exit cause it has closed")
 				return
 			}
 			switch ev := raw.(type) {
-			case DomainAddressesPatch:
+			case DomainAddresses:
+				if e := ev.DnsAnswer.Err; e != nil {
+					log.Errorw(e.Error(), "domain", ev.FQDN, "IPv", ev.IpVersion)
+				}
 				rf.AgentSubj.Notify(ev)
-			case Ask2PatchDomainAddresses:
+			case Ask2ResolveDomainAddresses:
 				if activeQueries.At(ev) != nil {
 					return
 				}
@@ -76,6 +86,11 @@ func (rf *FqdnRefresher) Run(ctx context.Context) {
 				if ttl < time.Minute {
 					ttl = time.Minute
 				}
+				log.Debugw("ask-to-resolve",
+					"IPv", ev.IpVersion,
+					"domain", ev.FQDN.String(),
+					"TTL", ev.TTL,
+				)
 				newTimer := time.AfterFunc(ttl, func() {
 					defer activeQueries.Del(ev)
 					ret := rf.resolve(ctx, ev)
@@ -87,8 +102,8 @@ func (rf *FqdnRefresher) Run(ctx context.Context) {
 	}
 }
 
-func (rf *FqdnRefresher) resolve(ctx context.Context, ask Ask2PatchDomainAddresses) DomainAddressesPatch {
-	ret := DomainAddressesPatch{
+func (rf *FqdnRefresher) resolve(ctx context.Context, ask Ask2ResolveDomainAddresses) DomainAddresses {
+	ret := DomainAddresses{
 		IpVersion: ask.IpVersion,
 		FQDN:      ask.FQDN,
 	}
@@ -108,7 +123,7 @@ func (rf *FqdnRefresher) resolve(ctx context.Context, ask Ask2PatchDomainAddress
 }
 
 // Cmp -
-func (a Ask2PatchDomainAddresses) Cmp(other Ask2PatchDomainAddresses) int {
+func (a Ask2ResolveDomainAddresses) Cmp(other Ask2ResolveDomainAddresses) int {
 	if a.IpVersion > other.IpVersion {
 		return 1
 	}

@@ -12,6 +12,7 @@ import (
 	"github.com/H-BF/corlib/logger"
 	"github.com/H-BF/corlib/pkg/patterns/observer"
 	"github.com/c-robinson/iplib"
+	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -33,7 +34,7 @@ func NewNftApplierJob(proc nft.NfTablesProcessor, opts ...Option) *NftApplierJob
 		applyConfigEvent{},
 		internal.NetlinkUpdates{},
 		internal.SyncStatusValue{},
-		DomainAddressesPatch{},
+		DomainAddresses{},
 	)
 	ret.agentSubject.ObserversAttach(ret)
 	return ret
@@ -82,7 +83,31 @@ func (jb *NftApplierJob) Run(ctx context.Context) error {
 			if err := jb.doApply(ctx); err != nil {
 				return err
 			}
-		case DomainAddressesPatch:
+		case DomainAddresses:
+			if jb.appliedRules == nil {
+				break
+			}
+			if o.DnsAnswer.Err == nil {
+				p := nft.UpdateFqdnNetsets{
+					IPVersion: o.IpVersion,
+					TTL:       o.DnsAnswer.TTL,
+					FQDN:      o.FQDN,
+					Addresses: o.DnsAnswer.IPs,
+				}
+				err := nft.PatchAppliedRules(ctx, jb.appliedRules, p)
+				if errors.Is(err, nft.ErrPatchNotApplicable) {
+					break
+				}
+				if err != nil {
+					return err
+				}
+			}
+			ev := Ask2ResolveDomainAddresses{
+				IpVersion: o.IpVersion,
+				FQDN:      o.FQDN,
+				TTL:       o.DnsAnswer.TTL,
+			}
+			jb.agentSubject.Notify(ev)
 		}
 	}
 }
@@ -145,7 +170,7 @@ func (jb *NftApplierJob) doApply(ctx context.Context) error {
 	sources := sli(appliedRules.SG2FQDNRules.A, appliedRules.SG2FQDNRules.AAAA)
 	for i, ipV := range sli(iplib.IP4Version, iplib.IP6Version) {
 		sources[i].Iterate(func(domain model.FQDN, addr internal.DomainAddresses) bool {
-			ev := Ask2PatchDomainAddresses{
+			ev := Ask2ResolveDomainAddresses{
 				IpVersion: ipV,
 				FQDN:      domain,
 				TTL:       addr.TTL,

@@ -142,6 +142,15 @@ func tern[T any](cond bool, a1, a2 T) T {
 	return a2
 }
 
+func isIn[T comparable](test T, vals []T) bool {
+	for i := range vals {
+		if test == vals[i] {
+			return true
+		}
+	}
+	return false
+}
+
 func slice2stringer[t any](ar ...t) fmt.Stringer {
 	return stringer(func() string {
 		b := bytes.NewBuffer(nil)

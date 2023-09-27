@@ -2,7 +2,6 @@ package nft
 
 import (
 	"context"
-	"fmt"
 	"net"
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal"
@@ -11,7 +10,6 @@ import (
 	"github.com/H-BF/corlib/logger"
 	sgAPI "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/ahmetb/go-linq/v3"
-	nftlib "github.com/google/nftables"
 	"github.com/pkg/errors"
 	"go.uber.org/multierr"
 )
@@ -116,52 +114,12 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, conf NetConf) 
 		WithSg2SgRules(localRules),
 	)
 	if err == nil {
-		log.Infof("SUCCEEDED")
 		applied.BaseRules = impl.baseRules
 		applied.TargetTable = pfm.TableName
+		applied.NetNS = impl.netNS
+		log.Infof("SUCCEEDED")
 	}
 	return applied, err
-}
-
-// Patch -
-func (impl *nfTablesProcessorImpl) Patch(ctx context.Context, rules AppliedRules, p Patch) error {
-	tx, err := NewTx(impl.netNS)
-	if err != nil {
-		return err
-	}
-	defer tx.Close()
-
-	var nftConf NFTablesConf
-	if err = nftConf.Load(tx.Conn); err != nil {
-		return err
-	}
-
-	targetTable := NfTableKey{
-		TableFamily: nftlib.TableFamilyINet,
-		Name:        rules.TargetTable,
-	}
-	switch v := p.(type) {
-	case UpdateFqdnNetsets:
-		netSets := nftConf.Sets.At(targetTable)
-		netsetName := nameUtils{}.
-			nameOfFqdnNetSet(v.IPVersion, v.FQDN)
-		set := netSets.At(netsetName)
-		if set.Set == nil {
-			return nil
-		}
-		elements := setsUtils{}.nets2SetElements(v.NetSet(), v.IPVersion)
-
-		bk := MakeBatchBackoff()
-		_ = bk
-
-		_ = tx.SetAddElements(set.Set, elements)
-		_ = tx.FlushAndClose()
-	default:
-		panic(
-			fmt.Errorf("unsupported PATCH type %#v", p),
-		)
-	}
-	return nil
 }
 
 // Close impl 'NfTablesProcessor'
