@@ -79,7 +79,7 @@ func (jb *NftApplierJob) Run(ctx context.Context) error {
 		case internal.NetlinkUpdates:
 			jb.handleNetlinkEvent(ctx, o)
 		case applyConfigEvent:
-			logger.DebugKV(ctx, "notify", o)
+			logger.Info(ctx, o)
 			if err := jb.doApply(ctx); err != nil {
 				return err
 			}

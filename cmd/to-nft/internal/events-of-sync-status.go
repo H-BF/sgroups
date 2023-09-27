@@ -4,9 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/H-BF/corlib/pkg/patterns/observer"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
+	"github.com/H-BF/corlib/logger"
+	"github.com/H-BF/corlib/pkg/patterns/observer"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -37,8 +38,11 @@ type SyncStatusEventSource struct {
 // Run -
 func (ss *SyncStatusEventSource) Run(ctx context.Context) error {
 	if ss.CheckInterval < time.Second {
-		panic("'CheckInterval' is less than 1s")
+		panic("'SyncStatus/CheckInterval' is less than 1s")
 	}
+	log := logger.FromContext(ctx).Named("sync-db-status")
+	log.Info("start")
+	defer log.Info("stop")
 	tc := time.NewTicker(ss.CheckInterval)
 	defer tc.Stop()
 	for {
@@ -48,6 +52,7 @@ func (ss *SyncStatusEventSource) Run(ctx context.Context) error {
 		case <-tc.C:
 			st, e := GetSyncStatus(ctx, ss.SGClient)
 			if e != nil {
+				log.Error(e)
 				ss.AgentSubj.Notify(SyncStatusError{error: e})
 				return e
 			}
