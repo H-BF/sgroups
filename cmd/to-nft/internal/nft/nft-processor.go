@@ -50,8 +50,16 @@ type (
 func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, netConf NetConf) (applied AppliedRules, err error) {
 	const api = "nft/ApplyConf"
 
+	log := logger.FromContext(ctx).Named("nft").Named("ApplyConf")
+	if len(impl.netNS) > 0 {
+		log = log.WithField("net-ns", impl.netNS)
+	}
+	log.Info("begin")
 	defer func() {
-		if err != nil {
+		if err == nil {
+			log.Info("succeeded")
+		} else {
+			log.Error(err)
 			err = errors.WithMessage(multierr.Combine(
 				ErrNfTablesProcessor, err,
 			), api)
@@ -64,15 +72,11 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, netConf NetCon
 		fqdnRules  cases.SG2FQDNRules
 		networks   cases.SGsNetworks
 	)
-	log := logger.FromContext(ctx).Named("nft")
-	if len(impl.netNS) > 0 {
-		log = log.WithField("net-ns", impl.netNS)
-	}
 
 	localIPsV4, loaclIPsV6 := netConf.LocalIPs()
 	allLoaclIPs := append(localIPsV4, loaclIPsV6...)
-
 	log.Infof("start loading data acording host net config")
+
 	log.Debugw("loading SG...", "host-local-IP(s)", slice2stringer(allLoaclIPs...))
 	if localSGs, err = impl.loadLocalSG(ctx, allLoaclIPs); err != nil {
 		return applied, err
@@ -98,8 +102,8 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, netConf NetCon
 	if err = networks.LoadFromSGNames(ctx, impl.sgClient, sgNames); err != nil {
 		return applied, err
 	}
+	log.Info("data loaded; will apply it now")
 
-	log.Infof("data loaded; will apply it now")
 	pfm := BatchPerformer{
 		TableName: "main",
 		Tx: func() (*Tx, error) {
@@ -117,7 +121,6 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, netConf NetCon
 		applied.BaseRules = impl.baseRules
 		applied.TargetTable = pfm.TableName
 		applied.NetNS = impl.netNS
-		log.Info("succeeded")
 	}
 	return applied, err
 }

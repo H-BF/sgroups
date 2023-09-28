@@ -2,6 +2,7 @@ package nft
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"time"
 
@@ -25,10 +26,11 @@ type (
 
 	// Patch -
 	Patch interface {
+		String() string
 		isAppliedRulesPatch()
 	}
 
-	// UpdateFqdnNetsets
+	// UpdateFqdnNetsets - is kind of Patch
 	UpdateFqdnNetsets struct {
 		IPVersion int
 		TTL       time.Duration
@@ -68,6 +70,12 @@ var (
 )
 
 func (UpdateFqdnNetsets) isAppliedRulesPatch() {}
+
+// String impl Stringer interface
+func (p UpdateFqdnNetsets) String() string {
+	return fmt.Sprintf("fqdn-netset(ip-v: %v; domain: '%s'",
+		p.IPVersion, p.FQDN)
+}
 
 // NetSet -
 func (ns UpdateFqdnNetsets) NetSet() []net.IPNet {

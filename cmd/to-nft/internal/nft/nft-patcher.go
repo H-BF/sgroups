@@ -26,7 +26,6 @@ func PatchAppliedRules(ctx context.Context, rules *AppliedRules, p Patch) (err e
 	if len(rules.NetNS) > 0 {
 		log = log.WithField("net-ns", rules.NetNS)
 	}
-	log.Infof("begin")
 	defer func() {
 		if err != nil {
 			log.Errorf("%v", err)
@@ -37,7 +36,7 @@ func PatchAppliedRules(ctx context.Context, rules *AppliedRules, p Patch) (err e
 		for {
 			e := exec.patcher(ctx, rules, p)
 			if e == nil {
-				log.Infof("ok")
+				log.Infof("%s", p)
 				return nil
 			}
 			if errors.Is(e, ErrPatchNotApplicable) {
@@ -48,8 +47,8 @@ func PatchAppliedRules(ctx context.Context, rules *AppliedRules, p Patch) (err e
 				log.Error(e)
 				return e
 			}
-			log.Errorf("%v; will retry after %v",
-				e, pauseDuration)
+			log.Errorf("%s has failed: %v; will retry after %v",
+				p, e, pauseDuration)
 			select {
 			case <-ctx.Done():
 				return ctx.Err()
@@ -88,11 +87,7 @@ func patch2UpdateFqdnNetsets(ctx context.Context, rules *AppliedRules, p Patch) 
 	if err = tx.SetAddElements(set.Set, elements); err != nil {
 		panic(err)
 	}
-	err = tx.FlushAndClose()
-	if err == nil {
-		_ = err
-	}
-	return err
+	return tx.FlushAndClose()
 }
 
 var knownPatchers = map[reflect.Type]struct {
@@ -101,6 +96,6 @@ var knownPatchers = map[reflect.Type]struct {
 }{
 	reflect.ValueOf((*UpdateFqdnNetsets)(nil)).Type().Elem(): {
 		patch2UpdateFqdnNetsets,
-		"update-fqdn-netsets",
+		"fqdn-netsets",
 	},
 }
