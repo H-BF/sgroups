@@ -54,7 +54,8 @@ func (ss *SyncStatusEventSource) Run(ctx context.Context) error {
 			if e != nil {
 				log.Error(e)
 				ss.AgentSubj.Notify(SyncStatusError{error: e})
-				return e
+				//return e
+				break
 			}
 			if st != nil {
 				ss.AgentSubj.Notify(SyncStatusValue{SyncStatus: *st})

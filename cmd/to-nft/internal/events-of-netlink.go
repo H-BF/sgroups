@@ -5,6 +5,7 @@ import (
 
 	"github.com/H-BF/sgroups/pkg/nl"
 
+	"github.com/H-BF/corlib/logger"
 	"github.com/H-BF/corlib/pkg/patterns/observer"
 )
 
@@ -32,8 +33,10 @@ type NetlinkEventSource struct {
 
 // Run -
 func (w *NetlinkEventSource) Run(ctx context.Context) error {
-	stream := w.Stream()
-	for {
+	log := logger.FromContext(ctx).Named("net-conf")
+	log.Info("start")
+	defer log.Info("stop")
+	for stream := w.Stream(); ; {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -49,6 +52,7 @@ func (w *NetlinkEventSource) Run(ctx context.Context) error {
 				case nl.LinkUpdateMsg:
 					ev.Updates = append(ev.Updates, t)
 				case nl.ErrMsg:
+					log.Error(t)
 					w.AgentSubj.Notify(NetlinkError{ErrMsg: t})
 					return t
 				}

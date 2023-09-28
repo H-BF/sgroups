@@ -60,12 +60,12 @@ func (rf *FqdnRefresher) Run(ctx context.Context) {
 	rf.AgentSubj.ObserversAttach(obs)
 
 	log := logger.FromContext(ctx).Named("dns-refresher")
-	log.Infof("start")
-	defer log.Infof("stop")
+	log.Info("start")
+	defer log.Info("stop")
 	for events := que.Reader(); ; {
 		select {
 		case <-ctx.Done():
-			log.Infof("will exit cause parent context has cancelled")
+			log.Info("will exit cause parent context has cancelled")
 			return
 		case raw, ok := <-events:
 			if !ok {
@@ -74,8 +74,11 @@ func (rf *FqdnRefresher) Run(ctx context.Context) {
 			}
 			switch ev := raw.(type) {
 			case DomainAddresses:
+				log1 := log.WithField("domain", ev.FQDN).WithField("ip-v", ev.IpVersion)
 				if e := ev.DnsAnswer.Err; e != nil {
-					log.Errorw(e.Error(), "domain", ev.FQDN, "IPv", ev.IpVersion)
+					log1.Error(e)
+				} else {
+					log1.Debug("ok")
 				}
 				rf.AgentSubj.Notify(ev)
 			case Ask2ResolveDomainAddresses:
@@ -87,9 +90,9 @@ func (rf *FqdnRefresher) Run(ctx context.Context) {
 					ttl = time.Minute
 				}
 				log.Debugw("ask-to-resolve",
-					"IPv", ev.IpVersion,
+					"ip-v", ev.IpVersion,
 					"domain", ev.FQDN.String(),
-					"TTL", ev.TTL,
+					//"ttl", ev.TTL,
 				)
 				newTimer := time.AfterFunc(ttl, func() {
 					defer activeQueries.Del(ev)

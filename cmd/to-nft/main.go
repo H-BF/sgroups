@@ -73,6 +73,7 @@ func main() {
 		o := observer.NewObserver(exitOnSuccessHanler,
 			true,
 			jobs.AppliedConfEvent{},
+			SyncStatusError{},
 		)
 		AgentSubject().ObserversAttach(o)
 	}
@@ -90,6 +91,7 @@ func main() {
 	go func() {
 		defer close(errc)
 		errc <- runNftJob(ctx, dnsResolver)
+		//errc <- runNftJob(ctx, nil)
 	}()
 	var jobErr error
 	select {
@@ -113,7 +115,11 @@ func main() {
 	logger.Info(ctx, "-= BYE =-")
 }
 
-func exitOnSuccessHanler(_ observer.EventType) {
+func exitOnSuccessHanler(ev observer.EventType) {
+	switch ev.(type) {
+	case SyncStatusError:
+		os.Exit(1)
+	}
 	os.Exit(0)
 }
 

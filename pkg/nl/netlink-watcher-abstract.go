@@ -90,7 +90,7 @@ func (e ErrMsg) Error() string {
 	if len(e.WID) == 0 {
 		return e.Err.Error()
 	}
-	return errors.WithMessagef(e.Err, "Netlink watcher ID: %v", e.WID).Error()
+	return errors.WithMessagef(e.Err, "watcher-ID: %v", e.WID).Error()
 }
 
 // String impl 'stringer'

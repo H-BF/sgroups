@@ -43,7 +43,10 @@ func (dict *RBDict[Tk, Tv]) Clear() {
 
 // Len -
 func (dict RBDict[Tk, Tv]) Len() int {
-	return tern(dict.m == nil, 0, dict.m.Size())
+	if dict.m == nil {
+		return 0
+	}
+	return dict.m.Size()
 }
 
 // Del -

@@ -47,7 +47,7 @@ type (
 )
 
 // ApplyConf impl 'NfTablesProcessor'
-func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, conf NetConf) (applied AppliedRules, err error) {
+func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, netConf NetConf) (applied AppliedRules, err error) {
 	const api = "nft/ApplyConf"
 
 	defer func() {
@@ -66,10 +66,10 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, conf NetConf) 
 	)
 	log := logger.FromContext(ctx).Named("nft")
 	if len(impl.netNS) > 0 {
-		log = log.WithField("net-NS", impl.netNS)
+		log = log.WithField("net-ns", impl.netNS)
 	}
 
-	localIPsV4, loaclIPsV6 := conf.LocalIPs()
+	localIPsV4, loaclIPsV6 := netConf.LocalIPs()
 	allLoaclIPs := append(localIPsV4, loaclIPsV6...)
 
 	log.Infof("start loading data acording host net config")
@@ -117,7 +117,7 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, conf NetConf) 
 		applied.BaseRules = impl.baseRules
 		applied.TargetTable = pfm.TableName
 		applied.NetNS = impl.netNS
-		log.Infof("SUCCEEDED")
+		log.Info("succeeded")
 	}
 	return applied, err
 }

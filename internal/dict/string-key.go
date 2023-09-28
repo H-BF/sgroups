@@ -12,6 +12,8 @@ type (
 // Cmp -
 func (a StringCiKey) Cmp(b StringCiKey) int {
 	l, r := string(a), string(b)
-	return tern(strings.EqualFold(l, r),
-		0, strings.Compare(l, r))
+	if strings.EqualFold(l, r) {
+		return 0
+	}
+	return strings.Compare(l, r)
 }

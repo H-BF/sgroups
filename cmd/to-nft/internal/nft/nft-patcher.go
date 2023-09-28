@@ -17,14 +17,14 @@ func PatchAppliedRules(ctx context.Context, rules *AppliedRules, p Patch) (err e
 	exec := knownPatchers[reflect.ValueOf(p).Type()]
 	if exec.patcher == nil {
 		panic(
-			fmt.Errorf("unsupported PATCH type %#v", p),
+			fmt.Errorf("unsupported patch type %#v", p),
 		)
 	}
 	log := logger.FromContext(ctx).
 		Named("nft").
-		WithField("apply-patch", exec.name)
+		WithField("patch", exec.name)
 	if len(rules.NetNS) > 0 {
-		log = log.WithField("net-NS", rules.NetNS)
+		log = log.WithField("net-ns", rules.NetNS)
 	}
 	log.Infof("begin")
 	defer func() {
@@ -37,7 +37,7 @@ func PatchAppliedRules(ctx context.Context, rules *AppliedRules, p Patch) (err e
 		for {
 			e := exec.patcher(ctx, rules, p)
 			if e == nil {
-				log.Infof("done")
+				log.Infof("ok")
 				return nil
 			}
 			if errors.Is(e, ErrPatchNotApplicable) {
@@ -45,6 +45,7 @@ func PatchAppliedRules(ctx context.Context, rules *AppliedRules, p Patch) (err e
 			}
 			pauseDuration := bk.NextBackOff()
 			if pauseDuration == backoff.Stop {
+				log.Error(e)
 				return e
 			}
 			log.Errorf("%v; will retry after %v",
@@ -100,6 +101,6 @@ var knownPatchers = map[reflect.Type]struct {
 }{
 	reflect.ValueOf((*UpdateFqdnNetsets)(nil)).Type().Elem(): {
 		patch2UpdateFqdnNetsets,
-		"Update-FQDN-Netsets",
+		"update-fqdn-netsets",
 	},
 }

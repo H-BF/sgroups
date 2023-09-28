@@ -143,7 +143,7 @@ func (jb *NftApplierJob) handleNetlinkEvent(ctx context.Context, ev internal.Net
 	}
 	jb.netConf = &cnf
 	jb.agentSubject.Notify(applyConfigEvent{
-		TextMessageEvent: observer.NewTextEvent("host net conf has changed"),
+		TextMessageEvent: observer.NewTextEvent("net conf has changed"),
 	})
 }
 
