@@ -59,7 +59,7 @@ func (rf *FqdnRefresher) Run(ctx context.Context) {
 	defer rf.AgentSubj.ObserversDetach(obs)
 	rf.AgentSubj.ObserversAttach(obs)
 
-	log := logger.FromContext(ctx).Named("dns-refresher")
+	log := logger.FromContext(ctx).Named("dns")
 	log.Info("start")
 	defer log.Info("stop")
 	for events := que.Reader(); ; {
@@ -78,7 +78,7 @@ func (rf *FqdnRefresher) Run(ctx context.Context) {
 				if e := ev.DnsAnswer.Err; e != nil {
 					log1.Error(e)
 				} else {
-					log1.Debug("ok")
+					log1.Debug("resolved")
 				}
 				rf.AgentSubj.Notify(ev)
 			case Ask2ResolveDomainAddresses:
@@ -92,7 +92,7 @@ func (rf *FqdnRefresher) Run(ctx context.Context) {
 				log.Debugw("ask-to-resolve",
 					"ip-v", ev.IpVersion,
 					"domain", ev.FQDN.String(),
-					//"ttl", ev.TTL,
+					"after", ttl,
 				)
 				newTimer := time.AfterFunc(ttl, func() {
 					defer activeQueries.Del(ev)

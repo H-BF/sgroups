@@ -21,8 +21,7 @@ func PatchAppliedRules(ctx context.Context, rules *AppliedRules, p Patch) (err e
 		)
 	}
 	log := logger.FromContext(ctx).
-		Named("nft").
-		WithField("patch", exec.name)
+		Named("nft").Named(exec.name)
 	if len(rules.NetNS) > 0 {
 		log = log.WithField("net-ns", rules.NetNS)
 	}
@@ -36,7 +35,7 @@ func PatchAppliedRules(ctx context.Context, rules *AppliedRules, p Patch) (err e
 		for {
 			e := exec.patcher(ctx, rules, p)
 			if e == nil {
-				log.Infof("%s", p)
+				log.Infof("%s is applied", p)
 				return nil
 			}
 			if errors.Is(e, ErrPatchNotApplicable) {
@@ -96,6 +95,6 @@ var knownPatchers = map[reflect.Type]struct {
 }{
 	reflect.ValueOf((*UpdateFqdnNetsets)(nil)).Type().Elem(): {
 		patch2UpdateFqdnNetsets,
-		"fqdn-netsets",
+		"update-fqdn-netsets",
 	},
 }
