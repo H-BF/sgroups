@@ -11,6 +11,7 @@ import (
 	"github.com/H-BF/sgroups/internal/queue"
 
 	"github.com/H-BF/corlib/logger"
+	"github.com/H-BF/corlib/pkg/jsonview"
 	"github.com/H-BF/corlib/pkg/patterns/observer"
 	"github.com/c-robinson/iplib"
 )
@@ -92,7 +93,7 @@ func (rf *FqdnRefresher) Run(ctx context.Context) {
 				log.Debugw("ask-to-resolve",
 					"ip-v", ev.IpVersion,
 					"domain", ev.FQDN.String(),
-					"after", ttl,
+					"after", jsonview.Stringer(ttl),
 				)
 				newTimer := time.AfterFunc(ttl, func() {
 					defer activeQueries.Del(ev)
