@@ -47,6 +47,7 @@ func main() {
 		config.WithDefValue{Key: ServicesDefDialDuration, Val: 10 * time.Second},
 		config.WithDefValue{Key: SGroupsAddress, Val: "tcp://127.0.0.1:9000"},
 		config.WithDefValue{Key: SGroupsSyncStatusInterval, Val: "30s"},
+		config.WithDefValue{Key: SGroupsSyncStatusPush, Val: false},
 		//DNS group
 		config.WithDefValue{Key: DnsNameservers, Val: `["8.8.8.8"]`},
 		config.WithDefValue{Key: DnsProto, Val: "udp"},
@@ -185,6 +186,7 @@ type mainJob struct {
 	appSubject              observer.Subject
 	netNs                   string
 	SyncStatusCheckInterval time.Duration
+	SyncStatusUsePush       bool
 	nftProcessor            nft.NfTablesProcessor
 	sgClient                *SGClient
 	nlWatcher               nl.NetlinkWatcher
@@ -216,6 +218,7 @@ func (m *mainJob) init(ctx context.Context, dnsResolver DomainAddressQuerier) (e
 	}
 	m.continueOnFailure = ContinueOnFailure.MustValue(ctx)
 	m.SyncStatusCheckInterval = SGroupsSyncStatusInterval.MustValue(ctx)
+	m.SyncStatusUsePush = SGroupsSyncStatusPush.MustValue(ctx)
 	if m.sgClient, err = NewSGClient(ctx); err != nil {
 		return err
 	}
@@ -241,6 +244,7 @@ func (m *mainJob) run(ctx context.Context) error {
 		AgentSubj:     m.appSubject,
 		SGClient:      *m.sgClient,
 		CheckInterval: m.SyncStatusCheckInterval,
+		UsePushModel:  m.SyncStatusUsePush,
 	}
 	ctx1, cancel := context.WithCancel(ctx)
 	defer cancel()

@@ -31,7 +31,9 @@ extapi:
     sgroups:
 	  dial-duration: 3s #override default-connect-tmo
       address: tcp://127.0.0.1:9006
-	  check-sync-status: 20s #mandatory
+	  sync-status:
+	    interval: 20s #mandatory
+		push: true
 */
 
 const (
@@ -76,6 +78,8 @@ const (
 	SGroupsAddress config.ValueT[string] = "extapi/svc/sgroups/address"
 	//SGroupsDialDuration sgroups service dial duration [optional]
 	SGroupsDialDuration config.ValueT[time.Duration] = "extapi/svc/sgroups/dial-duration"
-	//SGroupsSyncStatusInterval interval(duration) backend sync-status check [mandatory]
-	SGroupsSyncStatusInterval config.ValueT[time.Duration] = "extapi/svc/sgroups/check-sync-status"
+	//SGroupsSyncStatusInterval interval(duration) backend 'sync-status' check [mandatory]
+	SGroupsSyncStatusInterval config.ValueT[time.Duration] = "extapi/svc/sgroups/sync-status/interval"
+	//SGroupsSyncStatusPush use push model of 'sync-status'
+	SGroupsSyncStatusPush config.ValueT[bool] = "extapi/svc/sgroups/sync-status/push"
 )
