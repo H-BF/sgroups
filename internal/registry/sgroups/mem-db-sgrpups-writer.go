@@ -8,6 +8,7 @@ import (
 	"time"
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
+	"github.com/H-BF/sgroups/internal/patterns"
 	"github.com/hashicorp/go-memdb"
 	"github.com/pkg/errors"
 	"go.uber.org/multierr"
@@ -15,7 +16,8 @@ import (
 
 type sGroupsMemDbWriter struct {
 	sGroupsMemDbReader
-	writer MemDbWriter
+	writer  MemDbWriter
+	subject patterns.Subject
 }
 
 // SyncNetworks impl Writer = update / delete networks
@@ -184,7 +186,11 @@ func (wr sGroupsMemDbWriter) SyncFqdnRules(ctx context.Context, rules []model.FQ
 
 // Commit impl Writer
 func (wr sGroupsMemDbWriter) Commit() error {
-	return wr.writer.Commit()
+	err := wr.writer.Commit()
+	if err == nil {
+		wr.subject.Notify(DBUpdated{})
+	}
+	return err
 }
 
 // Abort impl Writer

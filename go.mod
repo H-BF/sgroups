@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/H-BF/corlib v0.0.5
-	github.com/H-BF/protos v0.4.0
+	github.com/H-BF/protos v0.5.0
 	github.com/ahmetb/go-linq/v3 v3.2.0
 	github.com/c-robinson/iplib v1.0.6
 	github.com/cenkalti/backoff/v4 v4.1.3
@@ -18,6 +18,7 @@ require (
 	github.com/hashicorp/go-memdb v1.3.3
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.25.0
 	github.com/jackc/pgx/v5 v5.4.1
+	github.com/jackc/puddle/v2 v2.2.0
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/miekg/dns v1.1.55
 	github.com/pkg/errors v0.9.1
@@ -36,7 +37,7 @@ require (
 )
 
 //replace github.com/H-BF/corlib v0.0.1 => ../corlib
-//replace github.com/H-BF/protos v0.4.0 => ../protos
+//replace github.com/H-BFF/protos v0.5.0-dev.1 => ../protos
 
 require (
 	github.com/BurntSushi/toml v0.4.1 // indirect
@@ -73,7 +74,6 @@ require (
 	github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
-	github.com/jackc/puddle/v2 v2.2.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/josharian/native v0.0.0-20200817173448-b6b71def0850 // indirect
 	github.com/lib/pq v1.10.2 // indirect

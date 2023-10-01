@@ -104,7 +104,6 @@ type memDbReader struct {
 type memDbWriter struct {
 	*memDbReader
 	memDb
-	commitErr  error
 	commitOnce sync.Once
 }
 
@@ -134,19 +133,18 @@ func (tx *memDbReader) Get(tabName TableID, index IndexID, args ...interface{}) 
 }
 
 func (tx *memDbWriter) Commit() error {
+	err := ErrWriterClosed
 	tx.commitOnce.Do(func() {
-		e := tx.checkIndexesViolation()
-		if e == nil {
-			e = tx.checkIntegrity()
+		if err = tx.checkIndexesViolation(); err == nil {
+			err = tx.checkIntegrity()
 		}
-		if e == nil {
+		if err == nil {
 			tx.tx.Commit()
 		} else {
 			tx.tx.Abort()
-			tx.commitErr = e
 		}
 	})
-	return tx.commitErr
+	return err
 }
 
 func (tx *memDbWriter) Abort() {
