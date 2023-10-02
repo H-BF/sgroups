@@ -28,9 +28,10 @@ import (
 const (
 	//chnFORWARD     = "FORWARD"
 	chnPOSTROUTING = "POSTROUTING"
-	chnPREROUTING  = "PREROUTING"
-	chnFWIN        = "FW-IN"
-	chnFWOUT       = "FW-OUT"
+	//chnPREROUTING  = "PREROUTING"
+	chnINPUT = "INPUT"
+	chnFWIN  = "FW-IN"
+	chnFWOUT = "FW-OUT"
 )
 
 type (
@@ -292,17 +293,18 @@ func (bt *batch) initRootChains() {
 			go2(chnFWOUT).applyRule(chnOutput, tx.Conn)
 
 		chnInput := tx.AddChain(&nftLib.Chain{
-			Name:     chnPREROUTING,
-			Table:    bt.table,
-			Type:     nftLib.ChainTypeFilter,
-			Policy:   val2ptr(nftLib.ChainPolicyAccept),
-			Hooknum:  nftLib.ChainHookPrerouting,
-			Priority: nftLib.ChainPriorityRaw,
-			//Hooknum:  nftLib.ChainHookInput,
-			//Priority: nftLib.ChainPriorityFilter,
+			//Name:   chnPREROUTING,
+			Name:   chnINPUT,
+			Table:  bt.table,
+			Type:   nftLib.ChainTypeFilter,
+			Policy: val2ptr(nftLib.ChainPolicyAccept),
+			//Hooknum:  nftLib.ChainHookPrerouting,
+			//Priority: nftLib.ChainPriorityRaw,
+			Hooknum:  nftLib.ChainHookInput,
+			Priority: nftLib.ChainPriorityFilter,
 		})
-		bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chnPREROUTING)
-		bt.chains.Put(chnPREROUTING, chnInput)
+		bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chnINPUT)
+		bt.chains.Put(chnINPUT, chnInput)
 		beginRule().
 			ctState(nfte.CtStateBitESTABLISHED|nfte.CtStateBitRELATED).
 			accept().applyRule(chnInput, tx.Conn)
