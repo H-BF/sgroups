@@ -54,27 +54,17 @@ func SGroupsRcNetworks() *schema.Resource {
 			RcLabelItems: {
 				Optional:    true,
 				Description: "newtwork list",
-				Type:        schema.TypeList,
-				Elem: &schema.Resource{
-					Description: "network element",
-					Schema: map[string]*schema.Schema{
-						RcLabelName: {
-							Description: "network name",
-							Type:        schema.TypeString,
-							Required:    true,
-						},
-						RcLabelCIDR: {
-							Description: "network in 'CIDR' format",
-							Type:        schema.TypeString,
-							Required:    true,
-							ValidateDiagFunc: func(v interface{}, _ cty.Path) diag.Diagnostics {
-								s := v.(string)
-								if _, _, err := net.ParseCIDR(s); err != nil {
-									return diag.Errorf("bad CIDR '%s': %s", s, err.Error())
-								}
-								return nil
-							},
-						},
+				Type:        schema.TypeMap,
+				Elem: &schema.Schema{
+					Description: "network in 'CIDR' format",
+					Type:        schema.TypeString,
+					Required:    true,
+					ValidateDiagFunc: func(v interface{}, _ cty.Path) diag.Diagnostics {
+						s := v.(string)
+						if _, _, err := net.ParseCIDR(s); err != nil {
+							return diag.Errorf("bad CIDR '%s': %s", s, err.Error())
+						}
+						return nil
 					},
 				},
 			},
@@ -82,14 +72,14 @@ func SGroupsRcNetworks() *schema.Resource {
 	}
 }
 
-type crudNetworks = listedRcCRUD[sgroupsAPI.Network]
+type crudNetworks = mappedRcCRUD[sgroupsAPI.Network]
 
 func networksR(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
 	var h listedResource[sgroupsAPI.Network]
 	h.init("", ";")
 	var req sgroupsAPI.ListNetworksReq
-	items, _ := rd.Get(RcLabelItems).([]any)
-	if err := h.addlist(items, tf2protoNetwork); err != nil {
+	items, _ := rd.Get(RcLabelItems).(map[string]any)
+	if err := h.addMap(items, tf2protoNetwork); err != nil {
 		return diag.FromErr(err)
 	}
 	if len(h.mapped) == 0 {
@@ -108,13 +98,10 @@ func networksR(ctx context.Context, rd *schema.ResourceData, i interface{}) diag
 	for _, n := range resp.GetNetworks() {
 		h.set(n.GetName(), n)
 	}
-	items = items[:0]
+	items = map[string]any{}
 	h.walk(func(k string, nw *sgroupsAPI.Network) bool {
 		if nw != nil {
-			items = append(items, map[string]any{
-				RcLabelName: nw.GetName(),
-				RcLabelCIDR: nw.GetNetwork().GetCIDR(),
-			})
+			items[nw.GetName()] = nw.GetNetwork().GetCIDR()
 		}
 		return true
 	})
@@ -139,13 +126,12 @@ func networksD(ctx context.Context, rd *schema.ResourceData, i interface{}) diag
 	return diag.FromErr(crud.delete(ctx, rd))
 }
 
-func tf2protoNetwork(raw any) (string, *sgroupsAPI.Network, error) {
-	it := raw.(map[string]interface{})
-	name := it[RcLabelName].(string)
-	return name, &sgroupsAPI.Network{
-		Name: name,
+func tf2protoNetwork(key string, raw any) (string, *sgroupsAPI.Network, error) {
+	cidr := raw.(string)
+	return key, &sgroupsAPI.Network{
+		Name: key,
 		Network: &common.Networks_NetIP{
-			CIDR: it[RcLabelCIDR].(string),
+			CIDR: cidr,
 		},
 	}, nil
 }

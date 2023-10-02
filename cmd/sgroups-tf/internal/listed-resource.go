@@ -53,6 +53,17 @@ func (rk *listedResource[T]) addlist(raw []any, c anyConstructor[T]) error {
 	return nil
 }
 
+func (rk *listedResource[T]) addMap(raw map[string]any, c anyConstructorWithKey[T]) error {
+	for key, value := range raw {
+		k, o, e := c(key, value)
+		if e != nil {
+			return e
+		}
+		_ = rk.add(k, o)
+	}
+	return nil
+}
+
 func (rk *listedResource[T]) set(k string, obj *T) bool {
 	k = strings.TrimSpace(k)
 	_, occupied := rk.mapped[k]
