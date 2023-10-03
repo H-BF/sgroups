@@ -2,12 +2,12 @@ package nl
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net"
 
 	"github.com/H-BF/corlib/pkg/jsonview"
 	"github.com/H-BF/sgroups/internal/3d-party/vishvananda/netlink"
+	"github.com/pkg/errors"
 )
 
 type (
@@ -75,6 +75,11 @@ func (e ErrMsg) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// Cause -
+func (e ErrMsg) Cause() error {
+	return e.Err
+}
+
 // String impl 'stringer'
 func (e ErrMsg) String() string {
 	return e.Error()
@@ -82,11 +87,10 @@ func (e ErrMsg) String() string {
 
 // Error impl 'error'
 func (e ErrMsg) Error() string {
-	b, er := e.MarshalJSON()
-	if er != nil {
-		return "<?>" //nolint:goconst
+	if len(e.WID) == 0 {
+		return e.Err.Error()
 	}
-	return string(b)
+	return errors.WithMessagef(e.Err, "watcher-ID: %v", e.WID).Error()
 }
 
 // String impl 'stringer'

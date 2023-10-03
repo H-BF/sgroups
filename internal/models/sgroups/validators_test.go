@@ -39,7 +39,7 @@ func TestValidate_Network(t *testing.T) {
 		fail bool
 	}
 	cases := []item{
-		{Network{nnw("10.10.10.10/32"), "name"}, false},
+		{Network{nnw("10.10.10.10/32"), "n"}, false},
 		{Network{nnw("10.10.10.10/0"), "name"}, false},
 		{Network{nnw("2001:db8:3333:4444:5555:6666:7777:8888/0"), "name"}, false},
 		{Network{nnw("2001:db8:3333:4444:5555:6666:7777:8888/128"), "name"}, false},
@@ -86,26 +86,20 @@ func TestValidate_SecurityGroup(t *testing.T) {
 }
 
 func TestValidate_SGRuleIdentity(t *testing.T) {
-	sg := func(n string, nws ...string) SecurityGroup {
-		return SecurityGroup{
-			Name:     n,
-			Networks: nws,
-		}
-	}
 	type item = struct {
 		id   SGRuleIdentity
 		fail bool
 	}
 	cases := []item{
 		{SGRuleIdentity{}, true},
-		{SGRuleIdentity{SgFrom: sg("n1"), Transport: TCP}, true},
-		{SGRuleIdentity{SgTo: sg("n2"), Transport: TCP}, true},
-		{SGRuleIdentity{SgFrom: sg("n1"), SgTo: sg("n2"), Transport: TCP + 100}, true},
-		{SGRuleIdentity{SgFrom: sg("n1"), SgTo: sg("n2"), Transport: UDP + 100}, true},
-		{SGRuleIdentity{SgFrom: sg("n1"), SgTo: sg("n2"), Transport: TCP}, false},
-		{SGRuleIdentity{SgFrom: sg("n1"), SgTo: sg("n2"), Transport: UDP}, false},
-		{SGRuleIdentity{SgFrom: sg("n1"), SgTo: sg("n2"), Transport: NetworkTransport(100)}, true},
-		{SGRuleIdentity{SgFrom: sg("n1", ""), SgTo: sg("n2", ""), Transport: UDP}, false},
+		{SGRuleIdentity{SgFrom: "n1", Transport: TCP}, true},
+		{SGRuleIdentity{SgTo: "n2", Transport: TCP}, true},
+		{SGRuleIdentity{SgFrom: "n1", SgTo: "n2", Transport: TCP + 100}, true},
+		{SGRuleIdentity{SgFrom: "n1", SgTo: "n2", Transport: UDP + 100}, true},
+		{SGRuleIdentity{SgFrom: "n1", SgTo: "n2", Transport: TCP}, false},
+		{SGRuleIdentity{SgFrom: "n1", SgTo: "n2", Transport: UDP}, false},
+		{SGRuleIdentity{SgFrom: "n1", SgTo: "n2", Transport: NetworkTransport(100)}, true},
+		{SGRuleIdentity{SgFrom: "n1", SgTo: "n2", Transport: UDP}, false},
 	}
 	for i := range cases {
 		c := cases[i]
@@ -164,9 +158,9 @@ func TestValidate_SGRule(t *testing.T) {
 	}
 	r := func(sg1, sg2 SecurityGroup, tr NetworkTransport, ports ...SGRulePorts) SGRule {
 		return SGRule{
-			SGRuleIdentity: SGRuleIdentity{
-				SgTo:      sg2,
-				SgFrom:    sg1,
+			ID: SGRuleIdentity{
+				SgTo:      sg2.Name,
+				SgFrom:    sg1.Name,
 				Transport: tr,
 			},
 			Ports: ports,
@@ -177,7 +171,7 @@ func TestValidate_SGRule(t *testing.T) {
 		fail bool
 	}
 	cases := []item{
-		{r(sg("sg1"), sg("sg2"), TCP), false},
+		{r(sg(" sg1"), sg("sg2"), TCP), false},
 		{r(sg("sg1", ""), sg("sg2"), TCP, rp("", "")), true},
 		{r(sg("sg1", ""), sg("sg2"), TCP, rp("10", "10")), false},
 		{r(sg("", ""), sg("sg2", ""), TCP, rp("10", "10")), true},
@@ -196,6 +190,32 @@ func TestValidate_SGRule(t *testing.T) {
 			require.NoErrorf(t, e, "test case #%v", i)
 		} else {
 			require.Errorf(t, e, "test case #%v", i)
+		}
+	}
+}
+
+func TestValidate_FQDN(t *testing.T) {
+	cases := []struct {
+		val  string
+		fail bool
+	}{
+		{"", true},
+		{" ", true},
+		{"*", true},
+		{"*ex", false},
+		{"*ex.", true},
+		{"*ex.com", false},
+		{"*ex.com.2", false},
+		{"*ex.com.2w", false},
+		{"microsoft.com", false},
+	}
+	for i := range cases {
+		c := cases[i]
+		e := FQDN(c.val).Validate()
+		if !c.fail {
+			require.NoErrorf(t, e, "test case #%v  '%v'", i, c.val)
+		} else {
+			require.Errorf(t, e, "test case #%v  '%v'", i, c.val)
 		}
 	}
 }

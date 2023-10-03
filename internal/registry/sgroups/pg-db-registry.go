@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/H-BF/sgroups/internal/patterns"
 	"github.com/H-BF/sgroups/internal/registry/sgroups/pg"
 	atm "github.com/H-BF/sgroups/pkg/atomic"
 
@@ -35,15 +36,27 @@ func NewRegistryFromPG(ctx context.Context, dbURL url.URL) (r Registry, err erro
 	if pool, err = pgxpool.NewWithConfig(ctx, conf); err != nil {
 		return nil, err
 	}
-	ret := new(pgDbRegistry)
+	ret := &pgDbRegistry{
+		subject: patterns.NewSubject(),
+	}
 	ret.pool.Store(pool, nil)
+	messagesCtx, messagesCancel := context.WithCancel(ctx)
+	ret.cancelPubSub = messagesCancel
+	go ret.listenMessages(messagesCtx)
 	return ret, nil
 }
 
 var _ Registry = (*pgDbRegistry)(nil)
 
 type pgDbRegistry struct {
-	pool atm.Value[*pgxpool.Pool]
+	subject      patterns.Subject
+	pool         atm.Value[*pgxpool.Pool]
+	cancelPubSub func()
+}
+
+// Subject impl Registry interface
+func (imp *pgDbRegistry) Subject() patterns.Subject {
+	return imp.subject
 }
 
 // Reader impl Registry interface
@@ -91,7 +104,7 @@ func (imp *pgDbRegistry) Writer(ctx context.Context) (w Writer, err error) {
 		var txHolder atm.Value[pgx.Tx]
 		var tx pgx.Tx
 		txOpts := pgx.TxOptions{
-			IsoLevel:   pgx.Serializable,
+			IsoLevel:   pgx.RepeatableRead,
 			AccessMode: pgx.ReadWrite,
 		}
 		if tx, err = v.BeginTx(ctx, txOpts); err != nil {
@@ -123,6 +136,10 @@ func (imp *pgDbRegistry) Writer(ctx context.Context) (w Writer, err error) {
 							_ = t.Rollback(ctx)
 							return
 						}
+						if _, e = t.Exec(ctx, "notify "+NotifyCommit); e != nil {
+							_ = t.Rollback(ctx)
+							return
+						}
 					}
 					if e = t.Commit(ctx); e != nil {
 						_ = t.Rollback(ctx)
@@ -137,6 +154,8 @@ func (imp *pgDbRegistry) Writer(ctx context.Context) (w Writer, err error) {
 
 // Close impl Registry interface
 func (imp *pgDbRegistry) Close() error {
+	imp.cancelPubSub()
+	_ = imp.subject.Close()
 	imp.pool.Clear(func(p *pgxpool.Pool) {
 		p.Close()
 	})

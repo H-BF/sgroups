@@ -15,12 +15,12 @@ import (
 type SGClient = sgAPI.ClosableClient
 
 // NewSGClient makes 'sgroups' API client
-func NewSGClient(ctx context.Context) (SGClient, error) {
+func NewSGClient(ctx context.Context) (*SGClient, error) {
 	const api = "NewSGClient"
 
 	addr, err := SGroupsAddress.Value(ctx)
 	if err != nil {
-		return SGClient{}, errors.WithMessage(err, api)
+		return nil, errors.WithMessage(err, api)
 	}
 	var dialDuration time.Duration
 	dialDuration, err = SGroupsDialDuration.Value(ctx)
@@ -31,9 +31,13 @@ func NewSGClient(ctx context.Context) (SGClient, error) {
 		}
 	}
 	if err != nil {
-		return SGClient{}, errors.WithMessage(err, api)
+		return nil, errors.WithMessage(err, api)
 	}
 	bld := grpc_client.FromAddress(addr).
 		WithDialDuration(dialDuration)
-	return sgAPI.NewClosableClient(ctx, bld)
+	var c SGClient
+	if c, err = sgAPI.NewClosableClient(ctx, bld); err != nil {
+		return nil, err
+	}
+	return &c, err
 }

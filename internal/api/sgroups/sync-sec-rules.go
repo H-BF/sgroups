@@ -19,7 +19,7 @@ type syncRules struct {
 	ops   sg.SyncReq_SyncOp
 }
 
-func (snc syncRules) process(ctx context.Context) error {
+func (snc syncRules) process(ctx context.Context) error { //nolint:dupl
 	rules := make([]model.SGRule, 0, len(snc.rules))
 	for _, rl := range snc.rules {
 		var item model.SGRule
@@ -67,7 +67,7 @@ func (nt networkTransport) from(src common.Networks_NetIP_Transport) error {
 	return nil
 }
 
-func (r *rulePorts) from(src []*sg.Rule_Ports) error {
+func (r *rulePorts) from(src []*sg.AccPorts) error {
 	for _, p := range src {
 		var item model.SGRulePorts
 		var e error
@@ -83,14 +83,14 @@ func (r *rulePorts) from(src []*sg.Rule_Ports) error {
 }
 
 func (ri sgRuleIdentity) from(src *sg.Rule) error {
-	ri.SgFrom.Name = src.GetSgFrom()
-	ri.SgTo.Name = src.GetSgTo()
+	ri.SgFrom = src.GetSgFrom()
+	ri.SgTo = src.GetSgTo()
 	return networkTransport{NetworkTransport: &ri.Transport}.
 		from(src.GetTransport())
 }
 
 func (r sgRule) from(src *sg.Rule) error {
-	err := sgRuleIdentity{SGRuleIdentity: &r.SGRuleIdentity}.
+	err := sgRuleIdentity{SGRuleIdentity: &r.ID}.
 		from(src)
 	if err == nil {
 		r.Logs = src.GetLogs()

@@ -76,9 +76,9 @@ func (v ValueT[T]) Value(_ context.Context, opts ...ValueOpt[T]) (T, error) {
 	if err == nil {
 		for _, s := range sinkIn {
 			if err = s(ret); err != nil {
-				return ret, err
+				return ret, errors.WithMessagef(err, "%s: key '%v'", api, v)
 			}
 		}
 	}
-	return ret, errors.WithMessagef(err, "%s: key('%v')", api, v)
+	return ret, errors.WithMessagef(err, "%s: key '%v'", api, v)
 }

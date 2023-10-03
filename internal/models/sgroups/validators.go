@@ -1,6 +1,9 @@
 package sgroups
 
 import (
+	"regexp"
+	"unsafe"
+
 	"github.com/H-BF/corlib/pkg/ranges"
 	oz "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/pkg/errors"
@@ -12,6 +15,9 @@ var (
 
 	// ErrUnexpectedNullPortRange -
 	ErrUnexpectedNullPortRange = errors.New("unexpected null port range")
+
+	// ErrInvalidFQDN -
+	ErrInvalidFQDN = errors.New("invalid FQDN")
 )
 
 // Validatable is a alias to oz.Validatable
@@ -20,7 +26,7 @@ type Validatable = oz.Validatable
 // Validate network model validate
 func (nw Network) Validate() error {
 	return oz.ValidateStruct(&nw,
-		oz.Field(&nw.Name, oz.Required.Error("network name is required")),
+		oz.Field(&nw.Name, oz.Required.Error("network name is required"), oz.Match(reCName)),
 		oz.Field(&nw.Net, oz.By(func(_ interface{}) error {
 			n := len(nw.Net.IP)
 			n1 := len(nw.Net.Mask)
@@ -36,7 +42,7 @@ func (nw Network) Validate() error {
 func (sg SecurityGroup) Validate() error {
 	a := make(map[NetworkName]int)
 	return oz.ValidateStruct(&sg,
-		oz.Field(&sg.Name, oz.Required.Error("security grpoup name is rquired")),
+		oz.Field(&sg.Name, oz.Required.Error("security grpoup name is rquired"), oz.Match(reCName)),
 		oz.Field(&sg.DefaultAction),
 		oz.Field(&sg.Networks,
 			oz.Each(oz.By(func(value interface{}) error {
@@ -55,7 +61,7 @@ func (sg SecurityGroup) Validate() error {
 
 // Validate ChainDefaultAction validator
 func (a ChainDefaultAction) Validate() error {
-	vals, x := [...]any{int(DROP), int(ACCEPT)}, int(a)
+	vals, x := [...]any{int(DEFAULT), int(DROP), int(ACCEPT)}, int(a)
 	return oz.Validate(x, oz.In(vals[:]...).Error("must be in ['DROP', 'ACCEPT']"))
 }
 
@@ -67,14 +73,19 @@ func (nt NetworkTransport) Validate() error {
 
 // Validate validate of SGRuleIdentity
 func (sgRuleKey SGRuleIdentity) Validate() error {
-	vali := func(value any) error {
-		sg := value.(SecurityGroup)
-		return oz.Validate(sg.Name, oz.Required.Error("SG name is required"))
-	}
 	return oz.ValidateStruct(&sgRuleKey,
 		oz.Field(&sgRuleKey.Transport),
-		oz.Field(&sgRuleKey.SgFrom, oz.By(vali), oz.Skip),
-		oz.Field(&sgRuleKey.SgTo, oz.By(vali), oz.Skip),
+		oz.Field(&sgRuleKey.SgFrom, oz.Required),
+		oz.Field(&sgRuleKey.SgTo, oz.Required),
+	)
+}
+
+// Validate validate of FQDNRuleIdentity
+func (o FQDNRuleIdentity) Validate() error {
+	return oz.ValidateStruct(&o,
+		oz.Field(&o.Transport),
+		oz.Field(&o.SgFrom, oz.Required),
+		oz.Field(&o.FqdnTo),
 	)
 }
 
@@ -109,10 +120,10 @@ func (ports SGRulePorts) Validate() error {
 	return err
 }
 
-// Validate validates security group rule
-func (rule SGRule) Validate() error {
+// Validate validates security rule
+func (rule ruleT[T]) Validate() error {
 	return oz.ValidateStruct(&rule,
-		oz.Field(&rule.SGRuleIdentity),
+		oz.Field(&rule.ID),
 		oz.Field(&rule.Ports,
 			//oz.Required.Error("required"),
 			oz.By(func(v any) error {
@@ -138,3 +149,20 @@ func (rule SGRule) Validate() error {
 		),
 	)
 }
+
+// Validate impl Validator
+func (o FQDN) Validate() error {
+	a := unsafe.Slice(
+		unsafe.StringData(string(o)), len(o),
+	)
+	if m := reFQDN.Match(a); !m || len(a) > 255 {
+		return ErrInvalidFQDN
+	}
+	return nil
+}
+
+var (
+	reCName = regexp.MustCompile(`^\w(?:.*\w)?$`)
+
+	reFQDN = regexp.MustCompile(`(?ims)^([a-z0-9\*][a-z0-9_-]{1,62}){1}(\.[a-z0-9_][a-z0-9_-]{0,62})*$`)
+)

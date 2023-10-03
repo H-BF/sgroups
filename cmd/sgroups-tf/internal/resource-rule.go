@@ -31,9 +31,9 @@ ports:
 const RcRule = SGroupsProvider + "_rule"
 
 // SGroupsRcRule -
-func SGroupsRcRule() *schema.Resource {
+func SGroupsRcRule() *schema.Resource { //nolint:dupl
 	return &schema.Resource{
-		Description:   "SG rule element",
+		Description:   "SG rule",
 		ReadContext:   ruleR,
 		CreateContext: ruleC,
 		UpdateContext: func(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
@@ -43,20 +43,7 @@ func SGroupsRcRule() *schema.Resource {
 			return ruleUD(ctx, rd, i, false)
 		},
 		Schema: map[string]*schema.Schema{ //nolint:dupl
-			RcLabelProto: {
-				Description: "ip-proto tcp|udp",
-				Type:        schema.TypeString,
-				Required:    true,
-				ValidateDiagFunc: func(i interface{}, p cty.Path) diag.Diagnostics {
-					s := i.(string)
-					ok := strings.EqualFold(common.Networks_NetIP_TCP.String(), s) ||
-						strings.EqualFold(common.Networks_NetIP_UDP.String(), s)
-					if ok {
-						return nil
-					}
-					return diag.Errorf("bad proto: '%s'", s)
-				},
-			},
+			RcLabelProto: netProtoSchema(),
 			RcLabelSgFrom: {
 				Description: "SG from",
 				Type:        schema.TypeString,
@@ -73,28 +60,7 @@ func SGroupsRcRule() *schema.Resource {
 				Optional:    true,
 				Default:     false,
 			},
-			RcLabelRulePorts: {
-				Description:      "access ports",
-				Type:             schema.TypeList,
-				Optional:         true,
-				DiffSuppressFunc: diffSuppressSGRulePorts,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						RcLabelSPorts: {
-							Description:      "source port or ports range",
-							Type:             schema.TypeString,
-							ValidateDiagFunc: validatePortOrRange,
-							Optional:         true,
-						},
-						RcLabelDPorts: {
-							Description:      "dest port or poprts range",
-							Type:             schema.TypeString,
-							ValidateDiagFunc: validatePortOrRange,
-							Optional:         true,
-						},
-					},
-				},
-			},
+			RcLabelRulePorts: accPortsSchema(),
 		},
 	}
 }
@@ -116,7 +82,7 @@ func ruleR(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Dia
 		if mr, err = utils.Proto2ModelSGRule(rule); err != nil {
 			return diag.FromErr(err)
 		}
-		if mr.Transport == tp {
+		if mr.ID.Transport == tp {
 			rc, err := modelRule2tf(&mr)
 			if err != nil {
 				return diag.FromErr(err)
@@ -131,7 +97,7 @@ func ruleR(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Dia
 					}
 				}
 			}
-			rd.SetId(mr.SGRuleIdentity.String())
+			rd.SetId(mr.ID.String())
 			return nil
 		}
 	}
@@ -139,7 +105,7 @@ func ruleR(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Dia
 	return nil
 }
 
-func ruleC(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
+func ruleC(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics { //nolint:dupl
 	rule, err := rd2protoRule(rd, true)
 	if err != nil {
 		return diag.FromErr(err)
@@ -211,4 +177,46 @@ func rd2protoRule(rd *schema.ResourceData, withPorts bool) (*sgroupsAPI.Rule, er
 	}
 	_, ret, err := tf2protoRule(raw)
 	return ret, err
+}
+
+func netProtoSchema() *schema.Schema {
+	return &schema.Schema{
+		Description: "ip-proto tcp|udp",
+		Type:        schema.TypeString,
+		Required:    true,
+		ValidateDiagFunc: func(i interface{}, p cty.Path) diag.Diagnostics {
+			s := i.(string)
+			ok := strings.EqualFold(common.Networks_NetIP_TCP.String(), s) ||
+				strings.EqualFold(common.Networks_NetIP_UDP.String(), s)
+			if ok {
+				return nil
+			}
+			return diag.Errorf("bad proto: '%s'", s)
+		},
+	}
+}
+
+func accPortsSchema() *schema.Schema {
+	return &schema.Schema{
+		Description:      "access ports",
+		Type:             schema.TypeList,
+		Optional:         true,
+		DiffSuppressFunc: diffSuppressSGRulePorts,
+		Elem: &schema.Resource{
+			Schema: map[string]*schema.Schema{
+				RcLabelSPorts: {
+					Description:      "source port or ports range",
+					Type:             schema.TypeString,
+					ValidateDiagFunc: validatePortOrRange,
+					Optional:         true,
+				},
+				RcLabelDPorts: {
+					Description:      "dest port or poprts range",
+					Type:             schema.TypeString,
+					ValidateDiagFunc: validatePortOrRange,
+					Optional:         true,
+				},
+			},
+		},
+	}
 }

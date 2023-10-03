@@ -6,12 +6,15 @@ import (
 	"reflect"
 	"sync"
 	"sync/atomic"
+
+	"github.com/H-BF/sgroups/internal/patterns"
 )
 
 type (
 	emptyRegistry struct{}
 
 	memDbRegisrtyHolder struct {
+		subject patterns.Subject
 		atomic.Value
 	}
 
@@ -23,7 +26,9 @@ type (
 
 // NewRegistryFromMemDB new Registry from MemDB
 func NewRegistryFromMemDB(m MemDB) Registry {
-	ret := new(memDbRegisrtyHolder)
+	ret := &memDbRegisrtyHolder{
+		subject: patterns.NewSubject(),
+	}
 	ret.Store(
 		reflect.ValueOf(&memRegistryInner{MemDB: m}),
 	)
@@ -41,6 +46,11 @@ var (
 	ErrReaderClosed = errors.New("reader is closed")
 )
 
+// Subject  -
+func (r *memDbRegisrtyHolder) Subject() patterns.Subject {
+	return r.subject
+}
+
 // Writer impl Registry
 func (r *memDbRegisrtyHolder) Writer(_ context.Context) (Writer, error) {
 	v := r.Value.Load().(reflect.Value).Interface()
@@ -51,6 +61,7 @@ func (r *memDbRegisrtyHolder) Writer(_ context.Context) (Writer, error) {
 		return &sGroupsMemDbWriter{
 			sGroupsMemDbReader: sGroupsMemDbReader{reader: t.Reader()},
 			writer:             t.Writer(),
+			subject:            r.Subject(),
 		}, nil
 	default:
 		panic("unexpected behavior reached")
@@ -74,6 +85,7 @@ func (r *memDbRegisrtyHolder) Reader(_ context.Context) (Reader, error) {
 
 // Close closed db
 func (r *memDbRegisrtyHolder) Close() error {
+	_ = r.subject.Close()
 	v := r.Value.Load().(reflect.Value).Interface()
 	if t, _ := v.(*memRegistryInner); t != nil {
 		t.Once.Do(func() {

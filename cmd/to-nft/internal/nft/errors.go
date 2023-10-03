@@ -7,9 +7,12 @@ import (
 )
 
 var (
-	//ErrNfTablesProcessor points to error came from 'NfTablesProcessor'
-	ErrNfTablesProcessor = errors.New("NfTablesProcessor")
+	// ErrNfTablesProcessor points to error came from 'NfTablesProcessor'
+	ErrNfTablesProcessor = errors.New("NfTablesProcessor error")
 
-	//ErrPortRange is a port range error
+	// ErrPortRange is a port range error
 	ErrPortRange = errors.Errorf("out of port range [0, %v)", math.MaxUint16)
+
+	// ErrPatchNotApplicable
+	ErrPatchNotApplicable = errors.New("patch is not applicable")
 )

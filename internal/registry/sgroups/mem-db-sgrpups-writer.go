@@ -8,6 +8,7 @@ import (
 	"time"
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
+	"github.com/H-BF/sgroups/internal/patterns"
 	"github.com/hashicorp/go-memdb"
 	"github.com/pkg/errors"
 	"go.uber.org/multierr"
@@ -15,7 +16,8 @@ import (
 
 type sGroupsMemDbWriter struct {
 	sGroupsMemDbReader
-	writer MemDbWriter
+	writer  MemDbWriter
+	subject patterns.Subject
 }
 
 // SyncNetworks impl Writer = update / delete networks
@@ -105,7 +107,7 @@ func (wr sGroupsMemDbWriter) SyncSecurityGroups(ctx context.Context, sgs []model
 }
 
 // SyncSGRules impl Writer = update / delete security group rules
-func (wr sGroupsMemDbWriter) SyncSGRules(ctx context.Context, rules []model.SGRule, scope Scope, opts ...Option) error {
+func (wr sGroupsMemDbWriter) SyncSGRules(ctx context.Context, rules []model.SGRule, scope Scope, opts ...Option) error { //nolint:dupl
 	const api = "mem-db/SyncSGRules"
 
 	it, err := wr.writer.Get(TblSecRules, indexID)
@@ -143,9 +145,52 @@ func (wr sGroupsMemDbWriter) SyncSGRules(ctx context.Context, rules []model.SGRu
 	return errors.WithMessage(err, api)
 }
 
+// SyncFqdnRules impl Writer = update / delete FQQN rules
+func (wr sGroupsMemDbWriter) SyncFqdnRules(ctx context.Context, rules []model.FQDNRule, scope Scope, opts ...Option) error { //nolint:dupl
+	const api = "mem-db/SyncFqdnRules"
+
+	it, err := wr.writer.Get(TblFqdnRules, indexID)
+	if err != nil {
+		return errors.WithMessage(err, api)
+	}
+	var ft filterTree[model.FQDNRule]
+	if !ft.init(scope) {
+		return errors.Errorf("bad scope")
+	}
+	it = memdb.NewFilterIterator(it, func(i interface{}) bool {
+		r := *i.(*model.FQDNRule)
+		return !ft.invoke(r)
+	})
+
+	var changed bool
+	h := syncHelper[model.FQDNRule, string]{
+		delete: func(obj *model.FQDNRule) error {
+			e := wr.writer.Delete(TblFqdnRules, obj)
+			if errors.Is(e, memdb.ErrNotFound) {
+				return nil
+			}
+			changed = changed || e == nil
+			return e
+		},
+		upsert: func(obj *model.FQDNRule) error {
+			e := wr.writer.Upsert(TblFqdnRules, obj)
+			changed = changed || e == nil
+			return e
+		},
+	}
+	if err = h.doSync(rules, it, opts...); err == nil && changed {
+		err = wr.updateSyncStatus(ctx)
+	}
+	return errors.WithMessage(err, api)
+}
+
 // Commit impl Writer
 func (wr sGroupsMemDbWriter) Commit() error {
-	return wr.writer.Commit()
+	err := wr.writer.Commit()
+	if err == nil {
+		wr.subject.Notify(DBUpdated{})
+	}
+	return err
 }
 
 // Abort impl Writer
@@ -200,13 +245,21 @@ func (wr sGroupsMemDbWriter) afterDeleteSGs(ctx context.Context, sgs []model.Sec
 	for i := range sgs {
 		names = append(names, sgs[i].Name)
 	}
-	scope := Or(SGFrom(names[0], names[1:]...), SGTo(names[0], names[1:]...))
 
-	//delete related SGRule(s)
-	err := wr.SyncSGRules(ctx, nil,
-		scope, SyncOmitInsert{}, SyncOmitUpdate{})
+	// delete related SGRule(s)
+	err1 := wr.SyncSGRules(ctx, nil,
+		Or(SGFrom(names[0], names[1:]...), SGTo(names[0], names[1:]...)),
+		SyncOmitInsert{}, SyncOmitUpdate{})
 
-	return errors.WithMessage(err, "delete related SGRule(s)")
+	// delete related FQDNRule(s)
+	err2 := wr.SyncFqdnRules(ctx, nil,
+		SGFrom(names[0], names[1:]...),
+		SyncOmitInsert{}, SyncOmitUpdate{})
+
+	return multierr.Combine(
+		errors.WithMessage(err1, "delete related SGRule(s)"),
+		errors.WithMessage(err2, "delete related FQDNRule(s)"),
+	)
 }
 
 func (wr sGroupsMemDbWriter) updateSyncStatus(_ context.Context) error {
@@ -308,7 +361,9 @@ func (h syncHelper[T, TKey]) extractKey(obj T) (TKey, error) {
 	case model.SecurityGroup:
 		vSrc = reflect.ValueOf(a.Name)
 	case model.SGRule:
-		vSrc = reflect.ValueOf(a.IdentityHash())
+		vSrc = reflect.ValueOf(a.ID.IdentityHash())
+	case model.FQDNRule:
+		vSrc = reflect.ValueOf(a.ID.IdentityHash())
 	default:
 		return k, errors.Errorf("key-extractor: no extraction from '%T' type", obj)
 	}
@@ -353,6 +408,9 @@ func (h syncHelper[T, TKey]) isEQ(l, r T) bool {
 		}
 	case model.SGRule:
 		rt := any(r).(model.SGRule)
+		return lt.IsEq(rt)
+	case model.FQDNRule:
+		rt := any(r).(model.FQDNRule)
 		return lt.IsEq(rt)
 	default:
 	}

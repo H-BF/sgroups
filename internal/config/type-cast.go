@@ -15,6 +15,8 @@ type KnownValueTypes interface {
 	time.Time |
 		NetCIDR |
 		~[]NetCIDR |
+		IP |
+		~[]IP |
 		~int | ~uint |
 		~int64 | ~uint64 |
 		~int32 | ~uint32 |
@@ -124,4 +126,7 @@ func init() {
 
 	regTypeCastFunc(typeCastNetCIDR)
 	regTypeCastFunc(typeCastNetCIDRSlice)
+
+	regTypeCastFunc(typeCastIP)
+	regTypeCastFunc(typeCastIPSlice)
 }
