@@ -116,7 +116,7 @@ func (jb *NftApplierJob) incomingEvents(ev observer.EventType) { //async recv
 	_ = jb.que.Put(ev)
 }
 
-func (jb *NftApplierJob) handleSyncStatus(ctx context.Context, ev internal.SyncStatusValue) { //sync recv
+func (jb *NftApplierJob) handleSyncStatus(_ context.Context, ev internal.SyncStatusValue) { //sync recv
 	if apply := jb.syncStatus == nil; !apply {
 		apply = ev.UpdatedAt.After(jb.syncStatus.UpdatedAt)
 		if !apply {
@@ -129,7 +129,7 @@ func (jb *NftApplierJob) handleSyncStatus(ctx context.Context, ev internal.SyncS
 	})
 }
 
-func (jb *NftApplierJob) handleNetlinkEvent(ctx context.Context, ev internal.NetlinkUpdates) { //sync recv
+func (jb *NftApplierJob) handleNetlinkEvent(_ context.Context, ev internal.NetlinkUpdates) { //sync recv
 	var cnf host.NetConf
 	if jb.netConf != nil {
 		cnf = jb.netConf.Clone()

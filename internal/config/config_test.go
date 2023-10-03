@@ -144,7 +144,7 @@ func Test_IP_Json(t *testing.T) {
 	require.Equal(t, v, v1)
 }
 
-func Test_IP_Slice_FromConfig(t *testing.T) {
+func Test_IP_Slice_FromConfig(t *testing.T) { //nolint:dupl
 	const data = `
 dns:
    resolvers: ["192.168.1.0", "192.168.2.0"]   
@@ -167,7 +167,7 @@ dns:
 	require.Equal(t, "192.168.2.0", ret[1].String())
 }
 
-func Test_IPnet_Slice_FromConfig(t *testing.T) {
+func Test_IPnet_Slice_FromConfig(t *testing.T) { //nolint:dupl
 	const data = `
 net:
    list: ["10.10.1.0/24", "10.10.2.0/24"]   

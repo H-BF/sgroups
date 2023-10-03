@@ -75,7 +75,7 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, netConf NetCon
 
 	localIPsV4, loaclIPsV6 := netConf.LocalIPs()
 	allLoaclIPs := append(localIPsV4, loaclIPsV6...)
-	log.Infof("start loading data acording host net config")
+	log.Infof("start loading data according host net config")
 
 	log.Debugw("loading SG...", "host-local-IP(s)", slice2stringer(allLoaclIPs...))
 	if localSGs, err = impl.loadLocalSG(ctx, allLoaclIPs); err != nil {

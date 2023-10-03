@@ -29,11 +29,11 @@ extapi:
   svc:
     def-daial-duration: 10s
     sgroups:
-	  dial-duration: 3s #override default-connect-tmo
+      dial-duration: 3s #override default-connect-tmo
       address: tcp://127.0.0.1:9006
 	  sync-status:
-	    interval: 20s #mandatory
-		push: true
+        interval: 20s #mandatory
+        push: true
 */
 
 const (

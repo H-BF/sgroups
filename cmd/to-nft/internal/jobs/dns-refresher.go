@@ -66,7 +66,7 @@ func (rf *FqdnRefresher) Run(ctx context.Context) {
 	for events := que.Reader(); ; {
 		select {
 		case <-ctx.Done():
-			log.Info("will exit cause parent context has cancelled")
+			log.Info("will exit cause parent context has canceled")
 			return
 		case raw, ok := <-events:
 			if !ok {

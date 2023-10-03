@@ -137,7 +137,7 @@ func (sgsNws *SGsNetworks) LoadFromSGNames(ctx context.Context, client SGClient,
 
 	sgsNws.Clear()
 	var mx sync.Mutex
-	err := parallel.ExecAbstract(len(sgNames), 8, func(i int) error {
+	err := parallel.ExecAbstract(len(sgNames), 8, func(i int) error { //nolint:gomnd
 		req := sgAPI.GetSgSubnetsReq{SgName: sgNames[i]}
 		resp, e := client.GetSgSubnets(ctx, &req)
 		if e != nil {

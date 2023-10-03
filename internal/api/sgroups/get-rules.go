@@ -36,7 +36,6 @@ func sgAccPorts2proto(src []model.SGRulePorts) ([]*sg.AccPorts, error) {
 		ret = append(ret, &sg.AccPorts{S: string(s), D: string(d)})
 	}
 	return ret, nil
-
 }
 
 func sgRule2proto(src model.SGRule) (*sg.Rule, error) {

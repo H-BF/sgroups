@@ -67,7 +67,7 @@ func typeCastIP(data any) (IP, error) {
 	return ret, err
 }
 
-func typeCastIPSlice(data any) ([]IP, error) {
+func typeCastIPSlice(data any) ([]IP, error) { //nolint:dupl
 	var ret []IP
 	var err error
 	switch v := data.(type) {

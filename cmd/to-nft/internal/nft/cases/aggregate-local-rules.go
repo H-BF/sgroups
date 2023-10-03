@@ -109,6 +109,7 @@ func (rules SG2SGRules) TemplatesOutRules() RulesOutTemplates { //nolint:dupl
 		Proto model.NetworkTransport
 	}
 	var res RulesOutTemplates
+	//nolint:dupl
 	linq.From(rules.Out).
 		GroupBy(
 			func(i any) any {
@@ -143,6 +144,7 @@ func (rules SG2SGRules) TemplatesInRules() []RulesInTemplate { //nolint:dupl
 		Proto model.NetworkTransport
 	}
 	var res []RulesInTemplate
+	//nolint:dupl
 	linq.From(rules.In).
 		GroupBy(
 			func(i any) any {

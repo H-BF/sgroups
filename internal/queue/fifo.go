@@ -59,13 +59,14 @@ func (que *FIFO) Close() error {
 	cv := que.cv
 	cl := que.close
 	que.closeOnce.Do(func() {
+		const waitBeforeBroadcast = 10 * time.Millisecond
 		doClose = true
 		close(cl)
 		for {
 			select {
 			case <-stopped:
 				return
-			case <-time.After(10 * time.Millisecond):
+			case <-time.After(waitBeforeBroadcast):
 				cv.Broadcast()
 			}
 		}

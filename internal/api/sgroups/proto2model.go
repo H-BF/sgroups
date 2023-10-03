@@ -9,7 +9,7 @@ import (
 
 // Proto2ModelNetwork converts Network (proto --> model)
 func Proto2ModelNetwork(protoNw *sg.Network) (model.Network, error) {
-	const api = "proto2model-Network-conv"
+	const api = "proto2model-Network-conv" //nolint:gosec
 	var ret network
 	err := ret.from(protoNw)
 	return ret.Network, errors.WithMessage(err, api)
