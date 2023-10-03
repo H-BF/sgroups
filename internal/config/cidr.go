@@ -63,7 +63,7 @@ func typeCastNetCIDR(data any) (NetCIDR, error) {
 	return ret, err
 }
 
-func typeCastNetCIDRSlice(data any) ([]NetCIDR, error) {
+func typeCastNetCIDRSlice(data any) ([]NetCIDR, error) { //nolint:dupl
 	var ret []NetCIDR
 	var err error
 	switch v := data.(type) {
