@@ -51,7 +51,10 @@ func SGroupsRcSGs() *schema.Resource {
 	}
 }
 
-type crudSGs = listedRcCRUD[sgroupsAPI.SecGroup]
+type crudSGs = listedRcCRUD[
+	sgroupsAPI.SecGroup,
+	anyConstructor[sgroupsAPI.SecGroup],
+]
 
 func sgsR(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
 	var h listedResource[sgroupsAPI.SecGroup]

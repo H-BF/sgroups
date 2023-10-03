@@ -80,7 +80,10 @@ func SGroupsRcRules() *schema.Resource {
 	}
 }
 
-type crudRules = listedRcCRUD[sgroupsAPI.Rule]
+type crudRules = listedRcCRUD[
+	sgroupsAPI.Rule,
+	anyConstructor[sgroupsAPI.Rule],
+]
 
 func rulesR(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
 	items, _ := rd.Get(RcLabelItems).([]any)
