@@ -541,13 +541,13 @@ func (bt *batch) populateSG2FQDNOutRules(tm cases.RulesOutTemplate, outChainName
 	IPvv := sli(iplib.IP4Version, iplib.IP6Version)
 	var names nameUtils
 	for i := range rules {
-		i, rule := i, rules[i]
+		i, rule := i, rules[i] //nolint:govet
 		detailsName := names.nameOfSG2FQDNRuleDetails(
 			rule.ID.Transport, rule.ID.SgFrom, rule.ID.FqdnTo,
 		)
 		rd := bt.ruleDetails.At(detailsName)
 		for j := range IPvv {
-			j, IPv := j, IPvv[j]
+			j, IPv := j, IPvv[j] //nolint:govet
 			daddrSetName := names.nameOfFqdnNetSet(IPv, rule.ID.FqdnTo)
 			for n := range rd.accports {
 				ports := rd.accports[n]

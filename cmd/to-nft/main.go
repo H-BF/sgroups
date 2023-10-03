@@ -201,7 +201,7 @@ func (m *mainJob) cleanup() {
 		_ = m.nftProcessor.Close()
 	}
 	if m.sgClient != nil {
-		m.sgClient.CloseConn()
+		m.sgClient.CloseConn() //nolint:errcheck
 	}
 }
 

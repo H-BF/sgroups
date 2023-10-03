@@ -124,7 +124,7 @@ func (ss *SyncStatusEventSource) pull(ctx context.Context, tc *time.Ticker, log 
 			if e == nil && st != nil {
 				ss.AgentSubj.Notify(SyncStatusValue{SyncStatus: *st})
 			}
-			if e := errors.Cause(e); e != nil && status.Code(e) != codes.Canceled {
+			if e = errors.Cause(e); e != nil && status.Code(e) != codes.Canceled {
 				log.Error(e)
 				ss.AgentSubj.Notify(SyncStatusError{error: e})
 			}
