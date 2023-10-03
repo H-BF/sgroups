@@ -18,6 +18,9 @@ const (
 
 	// TblFqdnRules table 'fqdn rules'
 	TblFqdnRules
+
+	// TblSgIcmpRules table SG:ICMP<4|6> rules
+	TblSgIcmpRules
 )
 
 // SchemaName database scheme name
@@ -29,9 +32,10 @@ func (tid TableID) String() string {
 }
 
 var tableID2string = map[TableID]string{
-	TblNetworks:   "tbl_network",
-	TblSecGroups:  "tbl_sg",
-	TblSecRules:   "tbl_sgrule",
-	TblSyncStatus: "tbl_sync_status",
-	TblFqdnRules:  "tbl_fqdnrule",
+	TblNetworks:    "tbl_network",
+	TblSecGroups:   "tbl_sg",
+	TblSecRules:    "tbl_sgrule",
+	TblSyncStatus:  "tbl_sync_status",
+	TblFqdnRules:   "tbl_fqdnrule",
+	TblSgIcmpRules: "tbl_sg_icmp_rule",
 }

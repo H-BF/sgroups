@@ -7,6 +7,7 @@ import (
 	"github.com/H-BF/corlib/pkg/ranges"
 	oz "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/pkg/errors"
+	"go.uber.org/multierr"
 )
 
 var (
@@ -18,6 +19,9 @@ var (
 
 	// ErrInvalidFQDN -
 	ErrInvalidFQDN = errors.New("invalid FQDN")
+
+	// ErrInvalidICMP -
+	ErrInvalidICMP = errors.New("invalid ICMP")
 )
 
 // Validatable is a alias to oz.Validatable
@@ -157,6 +161,23 @@ func (o FQDN) Validate() error {
 	)
 	if m := reFQDN.Match(a); !m || len(a) > 255 {
 		return ErrInvalidFQDN
+	}
+	return nil
+}
+
+// Validate impl Validator
+func (o ICMP) Validate() error {
+	e := oz.ValidateStruct(&o,
+		oz.Field(&o.IPv, oz.In(4, 6).Error("IPv should be in [4,6]")),
+		oz.Field(&o.Types, oz.By(func(_ any) error {
+			if o.Types.Len() == 0 {
+				return errors.Errorf("Types cannot be empty")
+			}
+			return nil
+		})),
+	)
+	if e != nil {
+		return multierr.Combine(ErrInvalidICMP, e)
 	}
 	return nil
 }

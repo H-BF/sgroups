@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/H-BF/sgroups/internal/dict"
+
 	"github.com/H-BF/corlib/pkg/ranges"
 	"github.com/pkg/errors"
 )
@@ -35,6 +37,12 @@ type (
 
 	// FQDN -
 	FQDN string
+
+	// ICMP -
+	ICMP struct {
+		IPv   int               // Use in IP net version 4 or 6
+		Types dict.RBSet[uint8] // Use ICMP message types set of [0-254]
+	}
 
 	// Network is IP network
 	Network struct {
@@ -93,6 +101,14 @@ type (
 		IsEq(T) bool
 		IdentityHash() string
 		String() string
+	}
+
+	// SgIcmpRule SG->ICMP default rule
+	SgIcmpRule struct {
+		Sg    string
+		Icmp  ICMP
+		Logs  bool
+		Trace bool
 	}
 )
 
@@ -270,4 +286,23 @@ func (o FQDN) Cmp(other FQDN) int {
 		return -1
 	}
 	return 1
+}
+
+// IdentityHash -
+func (o SgIcmpRule) IdentityHash() string {
+	return o.String()
+}
+
+// String -
+func (o SgIcmpRule) String() string {
+	return fmt.Sprintf("sg('%s'):icmp%v", o.Sg, o.Icmp.IPv)
+}
+
+// IsEq -
+func (o SgIcmpRule) IsEq(other SgIcmpRule) bool {
+	return o.Logs == other.Logs &&
+		o.Trace == other.Trace &&
+		o.Sg == other.Sg &&
+		o.Icmp.IPv == other.Icmp.IPv &&
+		o.Icmp.Types.Eq(&o.Icmp.Types)
 }
