@@ -172,7 +172,7 @@ func (rd *pgDbReader) argsForListSGRules(scope Scope) ([]any, error) {
 }
 
 // ListSGRules impl Reader interface
-func (rd *pgDbReader) ListSGRules(ctx context.Context, consume func(model.SGRule) error, scope Scope) error {
+func (rd *pgDbReader) ListSGRules(ctx context.Context, consume func(model.SGRule) error, scope Scope) error { //nolint:dupl
 	const (
 		qry = "select sg_from, sg_to, proto, ports, logs from sgroups.list_sg_rule($1, $2)"
 	)
@@ -187,6 +187,52 @@ func (rd *pgDbReader) ListSGRules(ctx context.Context, consume func(model.SGRule
 		}
 		scanner := pgx.RowToStructByName[pg.SGRule]
 		return pgxIterateRowsAndClose(rows, scanner, func(rule pg.SGRule) error {
+			m, e1 := rule.ToModel()
+			if e1 != nil {
+				return e
+			}
+			return consume(m)
+		})
+	})
+}
+
+func (rd *pgDbReader) argsForListFQDNRules(scope Scope) ([]any, error) {
+	var fromSg []string
+	args := []any{pgx.QueryExecModeDescribeExec, nil}
+	switch sc := scope.(type) {
+	case scopedSGFrom:
+		if fromSg == nil {
+			fromSg = make([]string, 0, len(sc))
+		}
+		for s := range sc {
+			fromSg = append(fromSg, s)
+		}
+	case noScope:
+	default:
+		return nil, errors.WithMessagef(ErrUnexpectedScope, "%#v", scope)
+	}
+	if fromSg != nil {
+		args[1] = fromSg
+	}
+	return args, nil
+}
+
+// ListFqdnRules impl Reader interface
+func (rd *pgDbReader) ListFqdnRules(ctx context.Context, consume func(model.FQDNRule) error, scope Scope) error { //nolint:dupl
+	const (
+		qry = "select sg_from, fqdn_to, proto, ports, logs from sgroups.list_fqdn_rule($1)"
+	)
+	args, err := rd.argsForListFQDNRules(scope)
+	if err != nil {
+		return err
+	}
+	return rd.doIt(ctx, func(c *pgx.Conn) error {
+		rows, e := c.Query(ctx, qry, args...)
+		if e != nil {
+			return e
+		}
+		scanner := pgx.RowToStructByName[pg.SG2FQDNRule]
+		return pgxIterateRowsAndClose(rows, scanner, func(rule pg.SG2FQDNRule) error {
 			m, e1 := rule.ToModel()
 			if e1 != nil {
 				return e

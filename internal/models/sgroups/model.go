@@ -1,6 +1,7 @@
 package sgroups
 
 import (
+	"bytes"
 	"crypto/md5" //nolint:gosec
 	"encoding/hex"
 	"fmt"
@@ -32,6 +33,9 @@ type (
 	// NetworkName net nam
 	NetworkName = string
 
+	// FQDN -
+	FQDN string
+
 	// Network is IP network
 	Network struct {
 		Net  net.IPNet
@@ -49,9 +53,16 @@ type (
 
 	// SGRuleIdentity security rule ID as key
 	SGRuleIdentity struct {
-		SgFrom    SecurityGroup
-		SgTo      SecurityGroup
 		Transport NetworkTransport
+		SgFrom    string
+		SgTo      string
+	}
+
+	// FQDNRuleIdentity -
+	FQDNRuleIdentity struct {
+		Transport NetworkTransport
+		SgFrom    string
+		FqdnTo    FQDN
 	}
 
 	// SGRulePorts source and destination port ranges
@@ -61,16 +72,33 @@ type (
 	}
 
 	// SGRule security rule for From-To security groups
-	SGRule struct {
-		SGRuleIdentity
-		Ports []SGRulePorts
-		Logs  bool
-	}
+	SGRule = ruleT[SGRuleIdentity]
+
+	// FQDNRule  security rule for From SG to FQDN
+	FQDNRule = ruleT[FQDNRuleIdentity]
 
 	// SyncStatus succeeded sync-op status
 	SyncStatus struct {
 		UpdatedAt time.Time
 	}
+
+	ruleT[T any] struct {
+		ID    T
+		Ports []SGRulePorts
+		Logs  bool
+	}
+
+	ruleID[T any] interface {
+		Validate() error
+		IsEq(T) bool
+		IdentityHash() string
+		String() string
+	}
+)
+
+var (
+	_ ruleID[SGRuleIdentity]   = (*SGRuleIdentity)(nil)
+	_ ruleID[FQDNRuleIdentity] = (*FQDNRuleIdentity)(nil)
 )
 
 // PortRangeFactory ...
@@ -97,8 +125,11 @@ const (
 )
 
 const (
+	// DEFAULT is mean default action
+	DEFAULT ChainDefaultAction = iota
+
 	// DROP drop action net packet
-	DROP ChainDefaultAction = iota
+	DROP
 
 	// ACCEPT accept action net packet
 	ACCEPT
@@ -121,13 +152,15 @@ func (nt NetworkTransport) String() string {
 
 // String impl Stringer
 func (a ChainDefaultAction) String() string {
-	return [...]string{"drop", "accept"}[a]
+	return [...]string{"default", "drop", "accept"}[a]
 }
 
 // FromString inits from string
 func (a *ChainDefaultAction) FromString(s string) error {
 	const api = "ChainDefaultAction/FromString"
 	switch strings.ToLower(s) {
+	case "defuault":
+		*a = DEFAULT
 	case "drop":
 		*a = DROP
 	case "accept":
@@ -155,23 +188,45 @@ func (nt *NetworkTransport) FromString(s string) error {
 // IdentityHash makes ID as hash for SGRule
 func (sgRuleKey SGRuleIdentity) IdentityHash() string {
 	hasher := md5.New() //nolint:gosec
-	hasher.Write([]byte(sgRuleKey.SgFrom.Name))
-	hasher.Write([]byte(sgRuleKey.SgTo.Name))
+	hasher.Write([]byte(sgRuleKey.SgFrom))
+	hasher.Write([]byte(sgRuleKey.SgTo))
+	hasher.Write([]byte(sgRuleKey.Transport.String()))
+	return strings.ToLower(hex.EncodeToString(hasher.Sum(nil)))
+}
+
+// IdentityHash makes ID as hash for FQDNRuleIdentity
+func (sgRuleKey FQDNRuleIdentity) IdentityHash() string {
+	hasher := md5.New() //nolint:gosec
+	hasher.Write([]byte(sgRuleKey.SgFrom))
+	hasher.Write(bytes.ToLower([]byte(sgRuleKey.FqdnTo)))
 	hasher.Write([]byte(sgRuleKey.Transport.String()))
 	return strings.ToLower(hex.EncodeToString(hasher.Sum(nil)))
 }
 
 // IsEq -
 func (sgRuleKey SGRuleIdentity) IsEq(other SGRuleIdentity) bool {
-	return sgRuleKey.SgFrom.Name == other.SgFrom.Name &&
-		sgRuleKey.SgTo.Name == other.SgTo.Name &&
+	return sgRuleKey.SgFrom == other.SgFrom &&
+		sgRuleKey.SgTo == other.SgTo &&
+		sgRuleKey.Transport == other.Transport
+}
+
+// IsEq -
+func (sgRuleKey FQDNRuleIdentity) IsEq(other FQDNRuleIdentity) bool {
+	return sgRuleKey.SgFrom == other.SgFrom &&
+		sgRuleKey.FqdnTo.IsEq(other.FqdnTo) &&
 		sgRuleKey.Transport == other.Transport
 }
 
 // String impl Stringer
 func (sgRuleKey SGRuleIdentity) String() string {
 	return fmt.Sprintf("%s:'%s'-'%s'",
-		sgRuleKey.Transport, sgRuleKey.SgFrom.Name, sgRuleKey.SgTo.Name)
+		sgRuleKey.Transport, sgRuleKey.SgFrom, sgRuleKey.SgTo)
+}
+
+// String impl Stringer
+func (sgRuleKey FQDNRuleIdentity) String() string {
+	return fmt.Sprintf("%s:'%s'-'%s'",
+		sgRuleKey.Transport, sgRuleKey.SgFrom, sgRuleKey.FqdnTo)
 }
 
 // FromString init from string
@@ -184,14 +239,35 @@ func (sgRuleKey *SGRuleIdentity) FromString(s string) error {
 	if err := sgRuleKey.Transport.FromString(r[1]); err != nil {
 		return errors.WithMessage(err, api)
 	}
-	sgRuleKey.SgFrom.Name = r[2]
-	sgRuleKey.SgTo.Name = r[3]
+	sgRuleKey.SgFrom = r[2]
+	sgRuleKey.SgTo = r[3]
 	return nil
 }
 
 // IsEq -
-func (rule SGRule) IsEq(other SGRule) bool {
-	return rule.SGRuleIdentity.IsEq(other.SGRuleIdentity) &&
+func (rule ruleT[T]) IsEq(other ruleT[T]) bool {
+	return any(rule.ID).(ruleID[T]).IsEq(other.ID) &&
 		AreRulePortsEq(rule.Ports, other.Ports) &&
 		rule.Logs == other.Logs
+}
+
+// String impl Stringer
+func (o FQDN) String() string {
+	return string(o)
+}
+
+// IsEq chacke if is Eq with no case
+func (o FQDN) IsEq(other FQDN) bool {
+	return strings.EqualFold(string(o), string(other))
+}
+
+// Cmp compare no case
+func (o FQDN) Cmp(other FQDN) int {
+	if strings.EqualFold(string(o), string(other)) {
+		return 0
+	}
+	if o < other {
+		return -1
+	}
+	return 1
 }

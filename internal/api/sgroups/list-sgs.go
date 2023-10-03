@@ -38,6 +38,8 @@ func (srv *sgService) ListSecurityGroups(ctx context.Context, req *sg.ListSecuri
 
 func sgDefaultAction2proto(m sgroups.ChainDefaultAction) (ret sg.SecGroup_DefaultAction, err error) {
 	switch m {
+	case sgroups.DEFAULT:
+		ret = sg.SecGroup_DEFAULT
 	case sgroups.ACCEPT:
 		ret = sg.SecGroup_ACCEPT
 	case sgroups.DROP:

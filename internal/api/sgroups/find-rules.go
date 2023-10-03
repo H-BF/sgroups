@@ -12,6 +12,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// FindRules impl SecGroupServiceServer
 func (srv *sgService) FindRules(ctx context.Context, req *sg.FindRulesReq) (resp *sg.RulesResp, err error) {
 	defer func() {
 		err = correctError(err)
@@ -32,11 +33,41 @@ func (srv *sgService) FindRules(ctx context.Context, req *sg.FindRulesReq) (resp
 	err = reader.ListSGRules(ctx, func(rule model.SGRule) error {
 		r, e := sgRule2proto(rule)
 		if e != nil {
-			return errors.WithMessagef(e, "convert SGRule '%s' to proto", rule)
+			return errors.WithMessagef(e, "convert SGRule '%s' to proto", rule.ID)
 		}
 		resp.Rules = append(resp.Rules, r)
 		return nil
 	}, registry.And(sc1, sc2))
+	if err != nil {
+		return nil,
+			status.Errorf(codes.Internal, "reason: %v", err)
+	}
+	return resp, nil
+}
+
+// FindFqdnRules impl SecGroupServiceServer
+func (srv *sgService) FindFqdnRules(ctx context.Context, req *sg.FindFqdnRulesReq) (resp *sg.FqdnRulesResp, err error) {
+	defer func() {
+		err = correctError(err)
+	}()
+	var reader registry.Reader
+	if reader, err = srv.registryReader(ctx); err != nil {
+		return nil, err
+	}
+	defer reader.Close() //lint:nolint
+	var sc registry.Scope = registry.NoScope
+	if s := req.GetSgFrom(); len(s) > 0 {
+		sc = registry.SGFrom(s[0], s[1:]...)
+	}
+	resp = new(sg.FqdnRulesResp)
+	err = reader.ListFqdnRules(ctx, func(rule model.FQDNRule) error {
+		r, e := sgFqdnRule2proto(rule)
+		if e != nil {
+			return errors.WithMessagef(e, "convert FQDNRule '%s' to proto", rule.ID)
+		}
+		resp.Rules = append(resp.Rules, r)
+		return nil
+	}, sc)
 	if err != nil {
 		return nil,
 			status.Errorf(codes.Internal, "reason: %v", err)

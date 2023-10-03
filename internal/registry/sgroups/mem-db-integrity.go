@@ -10,8 +10,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// IntegrityChecker4Rules checks SG Rules restrictions
-func IntegrityChecker4Rules() IntegrityChecker {
+// IntegrityChecker4SGRules checks SG Rules restrictions
+func IntegrityChecker4SGRules() IntegrityChecker {
 	const api = "Integrity-of-SGRules"
 
 	return func(reader MemDbReader) error {
@@ -24,7 +24,7 @@ func IntegrityChecker4Rules() IntegrityChecker {
 		}
 		for x := it.Next(); x != nil; x = it.Next() {
 			r := x.(*model.SGRule)
-			sgn := [...]string{r.SgFrom.Name, r.SgTo.Name}
+			sgn := [...]string{r.ID.SgFrom, r.ID.SgTo}
 			for _, n := range sgn {
 				i, e := reader.First(TblSecGroups, indexID, n)
 				if e != nil {
@@ -36,6 +36,32 @@ func IntegrityChecker4Rules() IntegrityChecker {
 			}
 		}
 
+		return nil
+	}
+}
+
+// IntegrityChecker4FqdnRules checks SG Rules restrictions
+func IntegrityChecker4FqdnRules() IntegrityChecker {
+	const api = "Integrity-of-FqdnRules"
+
+	return func(reader MemDbReader) error {
+		it, err := reader.Get(TblFqdnRules, indexID)
+		if err != nil {
+			return errors.WithMessage(err, api)
+		}
+		if it == nil {
+			return nil
+		}
+		for x := it.Next(); x != nil; x = it.Next() {
+			r := x.(*model.FQDNRule)
+			i, e := reader.First(TblSecGroups, indexID, r.ID.SgFrom)
+			if e != nil {
+				return errors.WithMessagef(e, "%s: find ref to SG '%s'", api, r.ID.SgFrom)
+			}
+			if i == nil {
+				return errors.Errorf("%s: not found ref to SG '%s'", api, r.ID.SgFrom)
+			}
+		}
 		return nil
 	}
 }

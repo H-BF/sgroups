@@ -4,17 +4,20 @@ package sgroups
 type TableID int
 
 const (
-	//TblNetworks table 'networks'
+	// TblNetworks table 'networks'
 	TblNetworks TableID = iota
 
-	//TblSecGroups table 'security groups'
+	// TblSecGroups table 'security groups'
 	TblSecGroups
 
-	//TblSecRules table 'security rules'
+	// TblSecRules table 'security rules'
 	TblSecRules
 
-	//TblSecRules table 'sync-status'
+	// TblSecRules table 'sync-status'
 	TblSyncStatus
+
+	// TblFqdnRules table 'fqdn rules'
+	TblFqdnRules
 )
 
 // SchemaName database scheme name
@@ -22,5 +25,13 @@ const SchemaName = "sgroups"
 
 // String stringer interface impl
 func (tid TableID) String() string {
-	return [...]string{"tbl_network", "tbl_sg", "tbl_rule", "tbl_sync_status"}[tid]
+	return tableID2string[tid]
+}
+
+var tableID2string = map[TableID]string{
+	TblNetworks:   "tbl_network",
+	TblSecGroups:  "tbl_sg",
+	TblSecRules:   "tbl_sgrule",
+	TblSyncStatus: "tbl_sync_status",
+	TblFqdnRules:  "tbl_fqdnrule",
 }

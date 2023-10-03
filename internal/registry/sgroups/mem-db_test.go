@@ -22,8 +22,10 @@ type memDbSuite struct {
 
 func (sui *memDbSuite) SetupTest() {
 	sui.Require().Nil(sui.reg)
-	db, err := NewMemDB(TblNetworks, TblSecGroups, TblSecRules, TblSyncStatus,
-		IntegrityChecker4SG(), IntegrityChecker4Rules(), IntegrityChecker4Networks())
+	db, err := NewMemDB(TblNetworks, TblSecGroups,
+		TblSecRules, TblSyncStatus, TblFqdnRules,
+		IntegrityChecker4SG(), IntegrityChecker4SGRules(),
+		IntegrityChecker4Networks(), IntegrityChecker4FqdnRules())
 	sui.Require().NoError(err)
 	sui.reg = NewRegistryFromMemDB(db)
 	sui.db = db
@@ -80,9 +82,9 @@ func (sui *memDbSuite) newRulePorts(s, d model.PortSource) model.SGRulePorts {
 	return model.SGRulePorts{S: a, D: b}
 }
 
-func (sui *memDbSuite) newSGRule(sgFrom, sgTo model.SecurityGroup, t model.NetworkTransport, ports ...model.SGRulePorts) model.SGRule {
+func (sui *memDbSuite) newSGRule(sgFrom, sgTo string, t model.NetworkTransport, ports ...model.SGRulePorts) model.SGRule {
 	return model.SGRule{
-		SGRuleIdentity: model.SGRuleIdentity{
+		ID: model.SGRuleIdentity{
 			Transport: t,
 			SgFrom:    sgFrom,
 			SgTo:      sgTo,
@@ -94,9 +96,9 @@ func (sui *memDbSuite) newSGRule(sgFrom, sgTo model.SecurityGroup, t model.Netwo
 func (sui *memDbSuite) TestSGRuleIsEq() {
 	r := func(from, to string, t model.NetworkTransport, ports ...model.SGRulePorts) model.SGRule {
 		return model.SGRule{
-			SGRuleIdentity: model.SGRuleIdentity{
-				SgFrom:    model.SecurityGroup{Name: from},
-				SgTo:      model.SecurityGroup{Name: to},
+			ID: model.SGRuleIdentity{
+				SgFrom:    from,
+				SgTo:      to,
 				Transport: t,
 			},
 			Ports: ports,
@@ -403,10 +405,10 @@ func (sui *memDbSuite) TestSyncSGRules() {
 	err = w.Commit()
 	sui.Require().NoError(err)
 
-	r1 := sui.newSGRule(sg1, sg2, model.TCP, p("10", "10"), p("20", "20"))
-	r2 := sui.newSGRule(sg1, sg2, model.UDP, p("10", "10"), p("20", ""))
+	r1 := sui.newSGRule(sg1.Name, sg2.Name, model.TCP, p("10", "10"), p("20", "20"))
+	r2 := sui.newSGRule(sg1.Name, sg2.Name, model.UDP, p("10", "10"), p("20", ""))
 	{
-		eq := r1.SGRuleIdentity.IsEq(r2.SGRuleIdentity)
+		eq := r1.ID.IsEq(r2.ID)
 		sui.Require().False(eq)
 	}
 
@@ -435,19 +437,19 @@ func (sui *memDbSuite) TestSyncSGRules() {
 	reader := sui.regReader()
 	rules := make(map[string]model.SGRule)
 	rules0 := map[string]model.SGRule{
-		r1.IdentityHash(): r1,
-		r2.IdentityHash(): r2,
+		r1.ID.IdentityHash(): r1,
+		r2.ID.IdentityHash(): r2,
 	}
 	err = reader.ListSGRules(ctx, func(rule model.SGRule) error {
-		rules[rule.IdentityHash()] = rule
+		rules[rule.ID.IdentityHash()] = rule
 		return nil
 	}, NoScope)
 	sui.Require().NoError(err)
 	sui.Require().Equal(len(rules0), len(rules))
 	for k, v := range rules0 {
 		rule, ok := rules[k]
-		sui.Require().Truef(ok, "%s)", v.SGRuleIdentity)
-		sui.Require().Truef(v.IsEq(rule), "%s)", v.SGRuleIdentity)
+		sui.Require().Truef(ok, "%s)", v.ID)
+		sui.Require().Truef(v.IsEq(rule), "%s)", v.ID)
 	}
 
 	//delete one Rule from DB

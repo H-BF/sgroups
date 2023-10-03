@@ -1,22 +1,15 @@
 package nft
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
 	"net"
-	"strings"
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
-	"github.com/H-BF/sgroups/internal/config"
-	pkgErr "github.com/H-BF/sgroups/pkg/errors"
 
 	"github.com/H-BF/corlib/logger"
-	pkgNet "github.com/H-BF/corlib/pkg/net"
 	sgAPI "github.com/H-BF/protos/pkg/api/sgroups"
-	nftLib "github.com/google/nftables"
+	"github.com/ahmetb/go-linq/v3"
 	"github.com/pkg/errors"
 	"go.uber.org/multierr"
 )
@@ -31,7 +24,9 @@ func NewNfTablesProcessor(client SGClient, opts ...NfTablesProcessorOpt) NfTable
 		case WithNetNS:
 			ret.netNS = t.NetNS
 		case BaseRules:
-			ret.baseRules = &t
+			ret.baseRules = t
+		case DnsResolver:
+			ret.dnsResolver = t.DomainAddressQuerier
 		}
 	}
 	return ret
@@ -42,56 +37,92 @@ type (
 	SGClient = sgAPI.SecGroupServiceClient
 
 	nfTablesProcessorImpl struct {
-		sgClient  SGClient
-		netNS     string
-		baseRules *BaseRules
+		sgClient    SGClient
+		netNS       string
+		baseRules   BaseRules
+		dnsResolver internal.DomainAddressQuerier
 	}
 
 	ipVersion = int
 )
 
 // ApplyConf impl 'NfTablesProcessor'
-func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, conf NetConf) error {
-	const api = "ApplyConf"
+func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, netConf NetConf) (applied AppliedRules, err error) {
+	const api = "nft/ApplyConf"
+
+	log := logger.FromContext(ctx).Named("nft").Named("ApplyConf")
+	if len(impl.netNS) > 0 {
+		log = log.WithField("net-ns", impl.netNS)
+	}
+	log.Info("begin")
+	defer func() {
+		if err == nil {
+			log.Info("succeeded")
+		} else {
+			log.Error(err)
+			err = errors.WithMessage(multierr.Combine(
+				ErrNfTablesProcessor, err,
+			), api)
+		}
+	}()
 
 	var (
-		err        error
-		localRules cases.LocalRules
+		localRules cases.SG2SGRules
 		localSGs   cases.SGs
+		fqdnRules  cases.SG2FQDNRules
+		networks   cases.SGsNetworks
 	)
 
-	localIPsV4, loaclIPsV6 := conf.LocalIPs()
+	localIPsV4, loaclIPsV6 := netConf.LocalIPs()
 	allLoaclIPs := append(localIPsV4, loaclIPsV6...)
-	if err = localSGs.LoadFromIPs(ctx, impl.sgClient, allLoaclIPs); err != nil {
-		return multierr.Combine(ErrNfTablesProcessor,
-			err, pkgErr.ErrDetails{Api: api, Details: allLoaclIPs})
-	}
-	if err = localRules.Load(ctx, impl.sgClient, localSGs); err != nil {
-		return multierr.Combine(ErrNfTablesProcessor,
-			err, pkgErr.ErrDetails{Api: api})
+	log.Infof("start loading data acording host net config")
+
+	log.Debugw("loading SG...", "host-local-IP(s)", slice2stringer(allLoaclIPs...))
+	if localSGs, err = impl.loadLocalSG(ctx, allLoaclIPs); err != nil {
+		return applied, err
 	}
 
-	tblMain := &nftLib.Table{
-		Name:   "main",
-		Family: nftLib.TableFamilyINet,
+	stringerOfLocalSGs := slice2stringer(localSGs.Names()...)
+	log.Debugw("loading SG-SG rules...", "local-SG(s)", stringerOfLocalSGs)
+	if localRules, err = impl.loadLocalRules(ctx, localSGs); err != nil {
+		return applied, err
 	}
+	applied.SG2SGRules = localRules
 
-	log := logger.FromContext(ctx).Named("nft")
-	if len(impl.netNS) > 0 {
-		log = log.WithField("NetNS", impl.netNS)
+	log.Debugw("loading SG-FQDN rules...", "local-SG(s)", stringerOfLocalSGs)
+	if fqdnRules, err = impl.loadFQDNRules(ctx, localSGs); err != nil {
+		return applied, err
 	}
-	btch := batch{
-		log: log,
-		txProvider: func() (*nfTablesTx, error) {
-			return nfTx(impl.netNS)
+	applied.SG2FQDNRules = fqdnRules
+
+	var sgNames []string
+	linq.From(append(localRules.SGs.Names(), fqdnRules.SGs.Names()...)).
+		Distinct().ToSlice(&sgNames)
+	log.Debugw("loading networks...", "SG(s)", slice2stringer(sgNames...))
+	if err = networks.LoadFromSGNames(ctx, impl.sgClient, sgNames); err != nil {
+		return applied, err
+	}
+	log.Info("data loaded; will apply it now")
+
+	pfm := BatchPerformer{
+		TableName: "main",
+		Tx: func() (*Tx, error) {
+			return NewTx(impl.netNS)
 		},
 	}
-	err = btch.execute(ctx, tblMain, localRules, impl.baseRules)
-	if err != nil {
-		return multierr.Combine(ErrNfTablesProcessor, err,
-			pkgErr.ErrDetails{Api: api})
+	err = pfm.Exec(ctx,
+		WithLogger(log),
+		WithNetworks(networks),
+		WithBaseRules(impl.baseRules),
+		WithSg2FqdnRules(fqdnRules),
+		WithSg2SgRules(localRules),
+	)
+	if err == nil {
+		applied.BaseRules = impl.baseRules
+		applied.TargetTable = pfm.TableName
+		applied.NetNS = impl.netNS
 	}
-	return nil
+	return applied, err
 }
 
 // Close impl 'NfTablesProcessor'
@@ -99,43 +130,23 @@ func (impl *nfTablesProcessorImpl) Close() error {
 	return nil
 }
 
-// IfBaseRulesFromConfig -
-func IfBaseRulesFromConfig(ctx context.Context, cons func(BaseRules) error) error {
-	def := internal.BaseRulesOutNets.OptDefaulter(func() ([]config.NetCIDR, error) {
-		a, e := internal.SGroupsAddress.Value(ctx)
-		if e != nil {
-			return nil, e
-		}
-		var ep *pkgNet.Endpoint
-		if ep, e = pkgNet.ParseEndpoint(a); e != nil {
-			return nil, e
-		}
-		if ep.Network() != "tcp" {
-			return nil, config.ErrNotFound
-		}
-		h, _, _ := ep.HostPort()
-		ip := net.ParseIP(h)
-		if ip == nil {
-			return nil, errors.Errorf("'sgroups' server address must be an in 'IP' form; we got(%s)", a)
-		}
-		ips := ip.String()
-		b := bytes.NewBuffer(nil)
-		_, _ = fmt.Fprintf(b, `["%s/%s"]`, ips, tern(strings.ContainsAny(ips, ":"), "128", "32"))
-		var x []config.NetCIDR
-		if e = json.Unmarshal(b.Bytes(), &x); e != nil {
-			panic(e)
-		}
-		return x, nil
-	})
-	nets, err := internal.BaseRulesOutNets.Value(ctx, def)
-	if err != nil {
-		if errors.Is(err, config.ErrNotFound) {
-			return nil
-		}
-		return err
-	}
-	br := BaseRules{
-		Nets: nets,
-	}
-	return cons(br)
+func (impl *nfTablesProcessorImpl) loadLocalRules(ctx context.Context, localSGs cases.SGs) (cases.SG2SGRules, error) {
+	var ret cases.SG2SGRules
+	err := ret.Load(ctx, impl.sgClient, localSGs)
+	return ret, err
+}
+
+func (impl *nfTablesProcessorImpl) loadLocalSG(ctx context.Context, localIPs []net.IP) (cases.SGs, error) {
+	var ret cases.SGs
+	err := ret.LoadFromIPs(ctx, impl.sgClient, localIPs)
+	return ret, err
+}
+
+func (impl *nfTablesProcessorImpl) loadFQDNRules(ctx context.Context, sgs cases.SGs) (cases.SG2FQDNRules, error) {
+	var ret cases.SG2FQDNRules
+	ret, err := cases.FQDNRulesLoader{
+		SGSrv:  impl.sgClient,
+		DnsRes: impl.dnsResolver,
+	}.Load(ctx, sgs)
+	return ret, err
 }

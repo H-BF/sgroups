@@ -4,28 +4,28 @@ import (
 	"context"
 	"flag"
 	"os"
-	"reflect"
 	"time"
 
 	. "github.com/H-BF/sgroups/cmd/to-nft/internal" //nolint:revive
+	"github.com/H-BF/sgroups/cmd/to-nft/internal/jobs"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft"
 	"github.com/H-BF/sgroups/internal/app"
 	"github.com/H-BF/sgroups/internal/config"
-	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	"github.com/H-BF/sgroups/pkg/nl"
 
 	"github.com/H-BF/corlib/logger"
+	"github.com/H-BF/corlib/pkg/parallel"
 	gs "github.com/H-BF/corlib/pkg/patterns/graceful-shutdown"
+	"github.com/H-BF/corlib/pkg/patterns/observer"
 	"github.com/pkg/errors"
+	"go.uber.org/multierr"
 	"go.uber.org/zap"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func main() {
 	flag.Parse()
 	SetupContext()
+	SetupAgentSubject()
 	ctx := app.Context()
 	logger.SetLevel(zap.InfoLevel)
 	logger.Info(ctx, "-= HELLO =-")
@@ -39,6 +39,7 @@ func main() {
 		config.WithAcceptEnvironment{EnvPrefix: "NFT"},
 		config.WithSourceFile{FileName: ConfigFile},
 		config.WithDefValue{Key: ExitOnSuccess, Val: false},
+		config.WithDefValue{Key: ContinueOnFailure, Val: false},
 		//config.WithDefValue{Key: BaseRulesOutNets, Val: `["192.168.1.0/24","192.168.2.0/24"]`},
 		config.WithDefValue{Key: AppLoggerLevel, Val: "DEBUG"},
 		config.WithDefValue{Key: AppGracefulShutdown, Val: 10 * time.Second},
@@ -46,6 +47,16 @@ func main() {
 		config.WithDefValue{Key: ServicesDefDialDuration, Val: 10 * time.Second},
 		config.WithDefValue{Key: SGroupsAddress, Val: "tcp://127.0.0.1:9000"},
 		config.WithDefValue{Key: SGroupsSyncStatusInterval, Val: "30s"},
+		config.WithDefValue{Key: SGroupsSyncStatusPush, Val: false},
+		//DNS group
+		config.WithDefValue{Key: DnsNameservers, Val: `["8.8.8.8"]`},
+		config.WithDefValue{Key: DnsProto, Val: "udp"},
+		config.WithDefValue{Key: DnsPort, Val: 53},
+		config.WithDefValue{Key: DnsRetries, Val: 3},
+		config.WithDefValue{Key: DnsRetriesTmo, Val: "1s"},
+		config.WithDefValue{Key: DnsDialDuration, Val: "3s"},
+		config.WithDefValue{Key: DnsWriteDuration, Val: "5s"},
+		config.WithDefValue{Key: DnsReadDuration, Val: "5s"},
 	)
 	if err != nil {
 		logger.Fatal(ctx, err)
@@ -54,14 +65,34 @@ func main() {
 		logger.Fatal(ctx, errors.WithMessage(err, "setup logger"))
 	}
 
-	gracefulDuration, _ := AppGracefulShutdown.Value(ctx)
-	errc := make(chan error, 1)
+	var dnsResolver DomainAddressQuerier
+	if dnsResolver, err = NewDomainAddressQuerier(ctx); err != nil {
+		logger.Fatal(ctx, errors.WithMessage(err, "setup DNS resolver"))
+	}
+
+	if exitOnSuccess := ExitOnSuccess.MustValue(ctx); exitOnSuccess {
+		o := observer.NewObserver(exitOnSuccessHanler,
+			true,
+			jobs.AppliedConfEvent{},
+			SyncStatusError{},
+		)
+		AgentSubject().ObserversAttach(o)
+	}
 
 	go func() {
-		logger.Infof(ctx, "nft-processor start")
-		errc <- runNftJob(ctx)
-		close(errc)
-		logger.Infof(ctx, "nft-processor stop")
+		r := jobs.FqdnRefresher{
+			Resolver:  dnsResolver,
+			AgentSubj: AgentSubject(),
+		}
+		r.Run(ctx)
+	}()
+
+	gracefulDuration := AppGracefulShutdown.MustValue(ctx)
+	errc := make(chan error, 1)
+	go func() {
+		defer close(errc)
+		errc <- runNftJob(ctx, dnsResolver)
+		//errc <- runNftJob(ctx, nil)
 	}()
 	var jobErr error
 	select {
@@ -85,136 +116,158 @@ func main() {
 	logger.Info(ctx, "-= BYE =-")
 }
 
-func runNftJob(ctx context.Context) error { //nolint:gocyclo
-	var (
-		err           error
-		exitOnSuccess bool
-		sgClient      SGClient
-		nlWatcher     nl.NetlinkWatcher
-		nftProc       nft.NfTablesProcessor
+func exitOnSuccessHanler(ev observer.EventType) {
+	switch ev.(type) {
+	case SyncStatusError:
+		os.Exit(1)
+	}
+	os.Exit(0)
+}
+
+func runNftJob(ctx context.Context, resolver DomainAddressQuerier) (err error) {
+	const waitBeforeRestart = 10 * time.Second
+
+	ctx1 := logger.ToContext(ctx,
+		logger.FromContext(ctx).Named("main"),
 	)
-	if exitOnSuccess, err = ExitOnSuccess.Value(ctx); err != nil {
-		return err
-	}
 
-	if sgClient, err = NewSGClient(ctx); err != nil {
-		return err
-	}
-	defer sgClient.CloseConn() //nolint:errcheck
-
-	netNs, _ := NetNS.Value(ctx)
-	netWathOpts := []nl.WatcherOption{
-		nl.WithAgeOfMaturity{Age: 10 * time.Second},
-		nl.WithNetns{Netns: netNs},
-	}
-	if nlWatcher, err = nl.NewNetlinkWatcher(netWathOpts...); err != nil {
-		return errors.WithMessage(err, "create net-watcher")
-	}
-	defer nlWatcher.Close()
-
-	var opts []nft.NfTablesProcessorOpt
-	if len(netNs) > 0 {
-		opts = append(opts, nft.WithNetNS{NetNS: netNs})
-	}
-	err = nft.IfBaseRulesFromConfig(ctx, func(br nft.BaseRules) error {
-		opts = append(opts, br)
-		return nil
-	})
-	if err != nil {
-		return errors.WithMessage(err, "load base rules")
-	}
-	nftProc = nft.NewNfTablesProcessor(sgClient, opts...)
-	defer nftProc.Close()
-
-	var conf nft.NetConf
-	conf.Init()
-	stm := nlWatcher.Stream()
-
-	sel := []reflect.SelectCase{
-		{
-			Dir:  reflect.SelectRecv,
-			Chan: reflect.ValueOf(ctx.Done()),
-		},
-		{
-			Dir:  reflect.SelectRecv,
-			Chan: reflect.ValueOf(stm),
-		},
-	}
-	if syncCheckInterval, _ := SGroupsSyncStatusInterval.Value(ctx); syncCheckInterval >= time.Second {
-		tc := time.NewTicker(syncCheckInterval)
-		defer tc.Stop()
-		sel = append(sel, reflect.SelectCase{
-			Dir:  reflect.SelectRecv,
-			Chan: reflect.ValueOf(tc.C),
-		})
-	} else {
-		return errors.Errorf("bad config value '%s': '%s'",
-			SGroupsSyncStatusInterval, syncCheckInterval)
-	}
-	var syncStatus model.SyncStatus
-	var appliedCount int
-loop0:
-	for needApply := false; ; needApply = false {
-		chosen, val, succ := reflect.Select(sel)
-		switch chosen {
-		case 0: //Done() from ctx
-			break loop0
-		case 1: //messages from NetWatcher
-			if !succ {
-				err = nl.ErrUnexpectedlyStopped
-				break loop0
-			}
-			msgs := val.Interface().([]nl.WatcherMsg)
-			for _, m := range msgs {
-				if e, ok := m.(nl.ErrMsg); ok {
-					if errors.Is(e.Err, nl.ErrUnexpectedlyStopped) {
-						err = e
-						break loop0
-					}
-					logger.ErrorKV(ctx, "net-watcher", "error", e)
-				}
-			}
-			needApply = conf.UpdFromWatcher(msgs...) != 0 || appliedCount == 0
-			if needApply {
-				var st model.SyncStatus
-				if st, err = getSyncStatus(ctx, sgClient); err != nil {
-					break loop0
-				}
-				syncStatus = st
-			}
-		case 2: //backend watcher from ticker
-			if appliedCount != 0 {
-				var st model.SyncStatus
-				if st, err = getSyncStatus(ctx, sgClient); err != nil {
-					break loop0
-				}
-				needApply = !syncStatus.UpdatedAt.Equal(st.UpdatedAt)
-				syncStatus = st
-			}
+	logger.Infof(ctx1, "start")
+	defer logger.Infof(ctx1, "exit")
+	for {
+		var jb mainJob
+		if err = jb.init(ctx1, resolver); err != nil {
+			break
 		}
-		if needApply {
-			appliedCount++
-			logger.Infof(ctx, "net-conf will apply now")
-			if err = nftProc.ApplyConf(ctx, conf); err != nil {
-				logger.Errorf(ctx, "net-conf din`t apply")
-				break
-			}
-			logger.Infof(ctx, "net-conf applied")
-			if exitOnSuccess {
-				break loop0
-			}
+		if err = jb.run(ctx1); err == nil {
+			break
+		}
+		if !jb.continueOnFailure {
+			break
+		}
+		logger.Errorf(ctx1, "%v", err)
+		logger.Infof(ctx1, "will retry after '%s'", waitBeforeRestart)
+		select {
+		case <-time.After(waitBeforeRestart):
+		case <-ctx.Done():
+			return nil
 		}
 	}
 	return err
 }
 
-func getSyncStatus(ctx context.Context, c SGClient) (model.SyncStatus, error) {
-	var ret model.SyncStatus
-	resp, err := c.SyncStatus(ctx, new(emptypb.Empty))
-	if err == nil {
-		ret.UpdatedAt = resp.GetUpdatedAt().AsTime()
-	} else if e := errors.Cause(err); status.Code(e) == codes.NotFound {
-		err = nil
+func makeNetlinkWatcher(netNs string) (nl.NetlinkWatcher, error) {
+	opts := []nl.WatcherOption{
+		nl.WithLinger{Linger: 10 * time.Second},
 	}
-	return ret, err
+	if len(netNs) > 0 {
+		opts = append(opts, nl.WithNetns{Netns: netNs})
+	}
+	nlWatcher, err := nl.NewNetlinkWatcher(opts...)
+	return nlWatcher, errors.WithMessage(err, "create net-watcher")
+}
+
+func makeNftprocessor(ctx context.Context, sgClient SGClient, dnsRes DomainAddressQuerier, netNs string) (nft.NfTablesProcessor, error) {
+	var opts []nft.NfTablesProcessorOpt
+	if len(netNs) > 0 {
+		opts = append(opts, nft.WithNetNS{NetNS: netNs})
+	}
+	err := nft.IfBaseRulesFromConfig(ctx, func(br nft.BaseRules) error {
+		opts = append(opts, br)
+		return nil
+	})
+	if err != nil {
+		return nil, errors.WithMessage(err, "load base rules")
+	}
+	opts = append(opts, nft.DnsResolver{DomainAddressQuerier: dnsRes})
+	return nft.NewNfTablesProcessor(sgClient, opts...), nil
+}
+
+type mainJob struct {
+	appSubject              observer.Subject
+	netNs                   string
+	SyncStatusCheckInterval time.Duration
+	SyncStatusUsePush       bool
+	nftProcessor            nft.NfTablesProcessor
+	sgClient                *SGClient
+	nlWatcher               nl.NetlinkWatcher
+	continueOnFailure       bool
+}
+
+func (m *mainJob) cleanup() {
+	if m.nlWatcher != nil {
+		_ = m.nlWatcher.Close()
+	}
+	if m.nftProcessor != nil {
+		_ = m.nftProcessor.Close()
+	}
+	if m.sgClient != nil {
+		m.sgClient.CloseConn()
+	}
+}
+
+func (m *mainJob) init(ctx context.Context, dnsResolver DomainAddressQuerier) (err error) {
+	defer func() {
+		if err != nil {
+			m.cleanup()
+		}
+	}()
+	m.appSubject = AgentSubject()
+	m.netNs, err = NetNS.Value(ctx)
+	if err != nil && !errors.Is(err, config.ErrNotFound) {
+		return err
+	}
+	m.continueOnFailure = ContinueOnFailure.MustValue(ctx)
+	m.SyncStatusCheckInterval = SGroupsSyncStatusInterval.MustValue(ctx)
+	m.SyncStatusUsePush = SGroupsSyncStatusPush.MustValue(ctx)
+	if m.sgClient, err = NewSGClient(ctx); err != nil {
+		return err
+	}
+	if m.nlWatcher, err = makeNetlinkWatcher(m.netNs); err != nil {
+		return err
+	}
+	if m.nftProcessor, err = makeNftprocessor(ctx, *m.sgClient, dnsResolver, m.netNs); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (m *mainJob) run(ctx context.Context) error {
+	defer m.cleanup()
+	jb := jobs.NewNftApplierJob(m.nftProcessor,
+		jobs.WithAgentSubject{Subject: m.appSubject})
+	defer jb.Close()
+	nle := NetlinkEventSource{
+		AgentSubj:      m.appSubject,
+		NetlinkWatcher: m.nlWatcher,
+	}
+	ste := SyncStatusEventSource{
+		AgentSubj:     m.appSubject,
+		SGClient:      *m.sgClient,
+		CheckInterval: m.SyncStatusCheckInterval,
+		UsePushModel:  m.SyncStatusUsePush,
+	}
+	ctx1, cancel := context.WithCancel(ctx)
+	defer cancel()
+	ff := []func() error{
+		func() error {
+			return jb.Run(ctx1)
+		},
+		func() error {
+			return nle.Run(ctx1)
+		},
+		func() error {
+			return ste.Run(ctx1)
+		},
+	}
+	errs := make([]error, len(ff))
+	_ = parallel.ExecAbstract(len(ff), 2, func(i int) error {
+		if e := ff[i](); e != nil {
+			cancel()
+			if !errors.Is(e, context.Canceled) {
+				errs[i] = e
+			}
+		}
+		return nil
+	})
+	return multierr.Combine(errs...)
 }

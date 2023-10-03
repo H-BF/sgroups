@@ -122,6 +122,10 @@ func makeSyncReq[T any](op sgroupsAPI.SyncReq_SyncOp, arg []*T) *sgroupsAPI.Sync
 		ret.Subject = &sgroupsAPI.SyncReq_Networks{
 			Networks: &sgroupsAPI.SyncNetworks{Networks: v},
 		}
+	case []*sgroupsAPI.FqdnRule:
+		ret.Subject = &sgroupsAPI.SyncReq_FqdnRules{
+			FqdnRules: &sgroupsAPI.SyncFqdnRules{Rules: v},
+		}
 	default:
 		panic("UB")
 	}

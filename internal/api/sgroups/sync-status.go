@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/H-BF/sgroups/internal/models/sgroups"
-	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 
 	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	"google.golang.org/grpc/codes"
@@ -18,13 +17,9 @@ func (srv *sgService) SyncStatus(ctx context.Context, _ *emptypb.Empty) (resp *s
 	defer func() {
 		err = correctError(err)
 	}()
-	var reader registry.Reader
-	if reader, err = srv.registryReader(ctx); err != nil {
-		return nil, err
-	}
-	defer reader.Close() //lint:nolint
+
 	var st *sgroups.SyncStatus
-	st, err = reader.GetSyncStatus(ctx)
+	st, err = srv.getSyncStatus(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -34,4 +29,15 @@ func (srv *sgService) SyncStatus(ctx context.Context, _ *emptypb.Empty) (resp *s
 	return &sg.SyncStatusResp{
 		UpdatedAt: timestamppb.New(st.UpdatedAt),
 	}, nil
+}
+
+func (srv *sgService) getSyncStatus(ctx context.Context) (*sgroups.SyncStatus, error) {
+	reader, err := srv.registryReader(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = reader.Close()
+	}()
+	return reader.GetSyncStatus(ctx)
 }

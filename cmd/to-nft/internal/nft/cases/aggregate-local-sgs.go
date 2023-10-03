@@ -8,11 +8,11 @@ import (
 
 	sgAPI "github.com/H-BF/protos/pkg/api/sgroups"
 	conv "github.com/H-BF/sgroups/internal/api/sgroups"
+	"github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
 	"github.com/H-BF/corlib/pkg/parallel"
 	"github.com/H-BF/corlib/pkg/slice"
-	"github.com/ahmetb/go-linq/v3"
 	"github.com/c-robinson/iplib"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
@@ -36,15 +36,45 @@ type (
 	}
 
 	// SGs local SG(s) related to IP(s)
-	SGs map[SgName]*SG
+	SGs struct {
+		dict.HDict[SgName, *SG]
+	}
+
+	// SGsNetworks -
+	SGsNetworks struct {
+		dict.HDict[string, []model.Network]
+	}
 )
+
+// LoadFromNames load SG from its names
+func (loc *SGs) LoadFromNames(ctx context.Context, client SGClient, names []string) (err error) {
+	const api = "SG(s)/LoadFromNames"
+
+	defer func() {
+		err = errors.WithMessage(err, api)
+	}()
+	if len(names) == 0 {
+		return nil
+	}
+	req := sgAPI.ListSecurityGroupsReq{SgNames: names}
+	var resp *sgAPI.ListSecurityGroupsResp
+	if resp, err = client.ListSecurityGroups(ctx, &req); err != nil {
+		return err
+	}
+	for _, g := range resp.GetGroups() {
+		var sg SG
+		if sg.SecurityGroup, err = conv.Proto2ModelSG(g); err != nil {
+			return err
+		}
+		_ = loc.Insert(sg.Name, &sg)
+	}
+	return nil
+}
 
 // LoadFromIPs it loads Local SGs by IPs
 func (loc *SGs) LoadFromIPs(ctx context.Context, client SGClient, localIPs []net.IP) error {
 	const api = "SG(s)/LoadFromIPs"
-	if *loc == nil {
-		*loc = make(SGs)
-	}
+
 	if len(localIPs) == 0 {
 		return nil
 	}
@@ -67,10 +97,10 @@ func (loc *SGs) LoadFromIPs(ctx context.Context, client SGClient, localIPs []net
 		}
 		mx.Lock()
 		defer mx.Unlock()
-		it := (*loc)[sg.Name]
+		it := loc.At(sg.Name)
 		if it == nil {
 			it = &SG{SecurityGroup: sg}
-			(*loc)[sg.Name] = it
+			loc.Put(sg.Name, it)
 		}
 		switch len(srcIP) {
 		case net.IPv4len:
@@ -83,60 +113,52 @@ func (loc *SGs) LoadFromIPs(ctx context.Context, client SGClient, localIPs []net
 	if err := parallel.ExecAbstract(len(localIPs), 8, job); err != nil { //nolint:gomnd
 		return errors.WithMessage(err, api)
 	}
-	for _, it := range *loc {
-		lst := []*iplib.ByIP{&it.IPsV4, &it.IPsV6}
-		for _, ips := range lst {
+	loc.Iterate(func(_ string, it *SG) bool {
+		for _, ips := range []*iplib.ByIP{&it.IPsV4, &it.IPsV6} {
 			sort.Sort(*ips)
 			_ = slice.DedupSlice(ips, func(i, j int) bool {
 				l, r := (*ips)[i], (*ips)[j]
 				return l.Equal(r)
 			})
 		}
-	}
+		return true
+	})
 	return nil
-}
-
-// LoadFromRules it loads Local SGs from SG rules
-func (loc *SGs) LoadFromRules(ctx context.Context, client SGClient, rules []model.SGRule) error {
-	const api = "SG(s)/LoadFromRules"
-
-	if *loc == nil {
-		*loc = make(SGs)
-	}
-	usedSG := make([]string, 0, len(rules)*2)
-	linq.From(rules).
-		SelectMany(func(i any) linq.Query {
-			r := i.(model.SGRule)
-			return linq.From([...]string{r.SgFrom.Name, r.SgTo.Name})
-		}).Distinct().ToSlice(&usedSG)
-
-	if len(usedSG) == 0 {
-		return nil
-	}
-	sgsResp, err := client.ListSecurityGroups(ctx, &sgAPI.ListSecurityGroupsReq{SgNames: usedSG})
-	if err != nil {
-		return errors.WithMessage(err, api)
-	}
-	linq.From(sgsResp.GetGroups()).
-		ForEach(func(i any) {
-			if err != nil {
-				return
-			}
-			g := i.(*sgAPI.SecGroup)
-			if sg, e := conv.Proto2ModelSG(g); e != nil {
-				err = e
-			} else {
-				(*loc)[sg.Name] = &SG{SecurityGroup: sg}
-			}
-		})
-	return errors.WithMessage(err, api)
 }
 
 // Names get local SG(s) names
 func (loc SGs) Names() []SgName {
-	ret := make([]SgName, 0, len(loc))
-	for n := range loc {
-		ret = append(ret, n)
-	}
-	return ret
+	return loc.Keys()
+}
+
+// LoadFromSGNames -
+func (sgsNws *SGsNetworks) LoadFromSGNames(ctx context.Context, client SGClient, sgNames []string) error {
+	const api = "SG(s)/Networks/Load"
+
+	sgsNws.Clear()
+	var mx sync.Mutex
+	err := parallel.ExecAbstract(len(sgNames), 8, func(i int) error {
+		req := sgAPI.GetSgSubnetsReq{SgName: sgNames[i]}
+		resp, e := client.GetSgSubnets(ctx, &req)
+		if e != nil {
+			if status.Code(errors.Cause(e)) == codes.NotFound {
+				return nil
+			}
+			return e
+		}
+		protoNws := resp.GetNetworks()
+		nws := make([]model.Network, 0, len(protoNws))
+		for _, nw := range protoNws {
+			var m model.Network
+			if m, e = conv.Proto2ModelNetwork(nw); e != nil {
+				return e
+			}
+			nws = append(nws, m)
+		}
+		mx.Lock()
+		defer mx.Unlock()
+		sgsNws.Put(sgNames[i], nws)
+		return nil
+	})
+	return errors.WithMessage(err, api)
 }

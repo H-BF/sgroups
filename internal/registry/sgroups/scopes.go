@@ -43,6 +43,8 @@ type (
 
 	scopedSGRuleIdentity map[string]model.SGRuleIdentity
 
+	scopedFqdnRuleIdentity map[string]model.FQDNRuleIdentity
+
 	scopedSG     map[string]struct{}
 	scopedSGFrom map[string]struct{}
 	scopedSGTo   map[string]struct{}
@@ -50,7 +52,8 @@ type (
 	//KindOfScope all kind of scope
 	KindOfScope interface {
 		Scope
-		scopedIPs | scopedNetworks | ScopedNetTransport | scopedSGRuleIdentity |
+		scopedIPs | scopedNetworks | ScopedNetTransport |
+			scopedSGRuleIdentity | scopedFqdnRuleIdentity |
 			scopedSGFrom | scopedSGTo | scopedSG |
 			scopedAnd | scopedOr | scopedNot | noScope
 	}
@@ -131,25 +134,35 @@ func NetworkNames(names ...model.NetworkName) Scope {
 func SGRule(others ...model.SGRule) Scope {
 	ret := scopedSGRuleIdentity{}
 	for _, o := range others {
-		ret[o.IdentityHash()] = o.SGRuleIdentity
+		ret[o.ID.IdentityHash()] = o.ID
 	}
 	return ret
 }
 
-func (scopedNot) privateScope()            {}
-func (scopedOr) privateScope()             {}
-func (scopedAnd) privateScope()            {}
-func (noScope) privateScope()              {}
-func (scopedIPs) privateScope()            {}
-func (scopedNetworks) privateScope()       {}
-func (scopedSG) privateScope()             {}
-func (scopedSGFrom) privateScope()         {}
-func (scopedSGTo) privateScope()           {}
-func (ScopedNetTransport) privateScope()   {}
-func (scopedSGRuleIdentity) privateScope() {}
+// FQDNRule makes FQDN rule scope
+func FQDNRule(others ...model.FQDNRule) Scope {
+	ret := scopedFqdnRuleIdentity{}
+	for _, o := range others {
+		ret[o.ID.IdentityHash()] = o.ID
+	}
+	return ret
+}
+
+func (scopedNot) privateScope()              {}
+func (scopedOr) privateScope()               {}
+func (scopedAnd) privateScope()              {}
+func (noScope) privateScope()                {}
+func (scopedIPs) privateScope()              {}
+func (scopedNetworks) privateScope()         {}
+func (scopedSG) privateScope()               {}
+func (scopedSGFrom) privateScope()           {}
+func (scopedSGTo) privateScope()             {}
+func (ScopedNetTransport) privateScope()     {}
+func (scopedSGRuleIdentity) privateScope()   {}
+func (scopedFqdnRuleIdentity) privateScope() {}
 
 type filterKindArg interface {
-	model.Network | model.SecurityGroup | model.SGRule
+	model.Network | model.SecurityGroup | model.SGRule | model.FQDNRule
 }
 
 type filterTree[filterArgT filterKindArg] struct {
@@ -265,18 +278,11 @@ func (p *scopedNetworks) inSG(sg model.SecurityGroup) bool {
 	return false
 }
 
-func (p *scopedNetworks) inSGRule(rule model.SGRule) bool {
-	return p.inSG(rule.SgFrom) ||
-		p.inSG(rule.SgTo)
-}
-
 func (p scopedNetworks) meta() metaInfo {
 	return metaInfo{
 		reflect.TypeOf((*model.SecurityGroup)(nil)).Elem(): reflect.ValueOf(p.inSG),
 
 		reflect.TypeOf((*model.Network)(nil)).Elem(): reflect.ValueOf(p.inNetwork),
-
-		reflect.TypeOf((*model.SGRule)(nil)).Elem(): reflect.ValueOf(p.inSGRule),
 	}
 }
 
@@ -292,18 +298,25 @@ func (p scopedSG) meta() metaInfo {
 }
 
 func (p scopedSGFrom) inSGRule(rule model.SGRule) bool {
-	_, ok := p[rule.SgFrom.Name]
+	_, ok := p[rule.ID.SgFrom]
+	return ok
+}
+
+func (p scopedSGFrom) inFqdnRule(rule model.FQDNRule) bool {
+	_, ok := p[rule.ID.SgFrom]
 	return ok
 }
 
 func (p scopedSGFrom) meta() metaInfo {
 	return metaInfo{
 		reflect.TypeOf((*model.SGRule)(nil)).Elem(): reflect.ValueOf(p.inSGRule),
+
+		reflect.TypeOf((*model.FQDNRule)(nil)).Elem(): reflect.ValueOf(p.inFqdnRule),
 	}
 }
 
 func (p scopedSGTo) inSGRule(rule model.SGRule) bool {
-	_, ok := p[rule.SgTo.Name]
+	_, ok := p[rule.ID.SgTo]
 	return ok
 }
 
@@ -314,7 +327,7 @@ func (p scopedSGTo) meta() metaInfo {
 }
 
 func (p ScopedNetTransport) inSGRule(rule model.SGRule) bool {
-	return rule.Transport == model.NetworkTransport(p)
+	return rule.ID.Transport == model.NetworkTransport(p)
 }
 
 func (p ScopedNetTransport) meta() metaInfo {
@@ -324,7 +337,7 @@ func (p ScopedNetTransport) meta() metaInfo {
 }
 
 func (p scopedSGRuleIdentity) inSGRule(rule model.SGRule) bool {
-	h := rule.IdentityHash()
+	h := rule.ID.IdentityHash()
 	_, ok := p[h]
 	return ok
 }
@@ -332,5 +345,17 @@ func (p scopedSGRuleIdentity) inSGRule(rule model.SGRule) bool {
 func (p scopedSGRuleIdentity) meta() metaInfo {
 	return metaInfo{
 		reflect.TypeOf((*model.SGRule)(nil)).Elem(): reflect.ValueOf(p.inSGRule),
+	}
+}
+
+func (p scopedFqdnRuleIdentity) inFQDNRule(rule model.FQDNRule) bool {
+	h := rule.ID.IdentityHash()
+	_, ok := p[h]
+	return ok
+}
+
+func (p scopedFqdnRuleIdentity) meta() metaInfo {
+	return metaInfo{
+		reflect.TypeOf((*model.FQDNRule)(nil)).Elem(): reflect.ValueOf(p.inFQDNRule),
 	}
 }
