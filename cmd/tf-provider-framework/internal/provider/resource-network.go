@@ -29,11 +29,11 @@ type networkResourceModel struct {
 	Cidr types.String `tfsdk:"cidr"`
 }
 
-func (nr *networkResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
+func (nr *networkResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_network"
 }
 
-func (nr *networkResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
+func (nr *networkResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Single network resource",
 		Attributes: map[string]schema.Attribute{
@@ -59,7 +59,7 @@ func (nr *networkResource) Configure(_ context.Context, req resource.ConfigureRe
 	if !ok {
 		resp.Diagnostics.AddError(
 			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected *grpc.ClientConn, got: %T.", req.ProviderData),
+			fmt.Sprintf("Expected sgroups GRPC client, got: %T.", req.ProviderData),
 		)
 
 		return
@@ -79,17 +79,7 @@ func (nr *networkResource) Create(ctx context.Context, req resource.CreateReques
 	}
 
 	// Convert from Terraform data model into GRPC data model
-	var sn protos.SyncNetworks
-	sn.Networks = append(sn.Networks, &protos.Network{
-		Name:    plan.Name.ValueString(),
-		Network: &common.Networks_NetIP{CIDR: plan.Cidr.ValueString()},
-	})
-	syncReq := protos.SyncReq{
-		SyncOp: protos.SyncReq_Upsert,
-		Subject: &protos.SyncReq_Networks{
-			Networks: &sn,
-		},
-	}
+	syncReq := reqFromNetworkResource(plan, protos.SyncReq_Upsert)
 
 	// Send GRPC request
 	if _, err := nr.client.Sync(ctx, &syncReq); err != nil {
@@ -144,11 +134,61 @@ func (nr *networkResource) Read(ctx context.Context, req resource.ReadRequest, r
 }
 
 func (nr *networkResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	//TODO implement me
-	panic("implement me")
+	var plan, state networkResourceModel
+
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if !plan.Name.Equal(state.Name) {
+		resp.Diagnostics.AddError(
+			"Error updating network",
+			"Unable change network name")
+		return
+	}
+
+	syncReq := reqFromNetworkResource(plan, protos.SyncReq_Upsert)
+
+	if _, err := nr.client.Sync(ctx, &syncReq); err != nil {
+		resp.Diagnostics.AddError(
+			"Error updating network",
+			"Could not update network: "+err.Error())
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
 }
 
 func (nr *networkResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	//TODO implement me
-	panic("implement me")
+	var state networkResourceModel
+
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	delReq := reqFromNetworkResource(state, protos.SyncReq_Delete)
+
+	if _, err := nr.client.Sync(ctx, &delReq); err != nil {
+		resp.Diagnostics.AddError(
+			"Error deleting network",
+			"Could not delete network: "+err.Error())
+		return
+	}
+}
+
+func reqFromNetworkResource(model networkResourceModel, operation protos.SyncReq_SyncOp) protos.SyncReq {
+	var sn protos.SyncNetworks
+	sn.Networks = append(sn.Networks, &protos.Network{
+		Name:    model.Name.ValueString(),
+		Network: &common.Networks_NetIP{CIDR: model.Cidr.ValueString()},
+	})
+	return protos.SyncReq{
+		SyncOp: operation,
+		Subject: &protos.SyncReq_Networks{
+			Networks: &sn,
+		},
+	}
 }
