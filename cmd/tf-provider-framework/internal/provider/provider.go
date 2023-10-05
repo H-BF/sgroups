@@ -104,7 +104,7 @@ func (s *sgroupsProvider) DataSources(_ context.Context) []func() datasource.Dat
 func (s *sgroupsProvider) Resources(_ context.Context) []func() resource.Resource {
 
 	return []func() resource.Resource{
-		NewNetworkResource,
+		NewNetworksResource,
 		NewSgResource,
 	}
 }
