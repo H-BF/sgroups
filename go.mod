@@ -17,6 +17,7 @@ require (
 	github.com/hashicorp/go-hclog v1.5.0
 	github.com/hashicorp/go-memdb v1.3.3
 	github.com/hashicorp/terraform-plugin-framework v1.4.0
+	github.com/hashicorp/terraform-plugin-framework-validators v0.12.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.25.0
 	github.com/jackc/pgx/v5 v5.4.1
 	github.com/jackc/puddle/v2 v2.2.0

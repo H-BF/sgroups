@@ -32,11 +32,11 @@ type providerConfig struct {
 	DialDuration types.String `tfsdk:"dial_duration"`
 }
 
-func (s *sgroupsProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
+func (s *sgroupsProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
 	resp.TypeName = "sgroups"
 }
 
-func (s *sgroupsProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
+func (s *sgroupsProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"address": schema.StringAttribute{
@@ -90,21 +90,22 @@ func (s *sgroupsProvider) Configure(ctx context.Context, req provider.ConfigureR
 		return
 	}
 
-	client := sgAPI.NewClient(c)
+	sgClient := sgAPI.NewClient(c)
 
-	resp.DataSourceData = client
-	resp.ResourceData = client
+	resp.DataSourceData = sgClient
+	resp.ResourceData = sgClient
 }
 
-func (s *sgroupsProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
+func (s *sgroupsProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 
 	return []func() datasource.DataSource{}
 }
 
-func (s *sgroupsProvider) Resources(ctx context.Context) []func() resource.Resource {
+func (s *sgroupsProvider) Resources(_ context.Context) []func() resource.Resource {
 
 	return []func() resource.Resource{
 		NewNetworkResource,
+		NewSgResource,
 	}
 }
 

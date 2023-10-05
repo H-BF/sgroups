@@ -3,10 +3,12 @@ package provider
 import (
 	"context"
 	"fmt"
+
 	"github.com/H-BF/protos/pkg/api/common"
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/H-BF/sgroups/cmd/tf-provider-framework/internal/validators"
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
+
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -127,6 +129,7 @@ func (nr *networkResource) Read(ctx context.Context, req resource.ReadRequest, r
 		resp.Diagnostics.AddError(
 			"Error reading network state",
 			fmt.Sprintf("Network with name %s doesn't exist", state.Name.ValueString()))
+		return
 	}
 
 	// Save updated data into Terraform state
