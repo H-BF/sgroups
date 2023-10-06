@@ -181,12 +181,12 @@ func (nr *networksResource) Update(ctx context.Context, req resource.UpdateReque
 		}
 	}
 
-	createReq := plan.asSyncReq(protos.SyncReq_Upsert)
+	updateReq := plan.asSyncReq(protos.SyncReq_Upsert)
 
-	if _, err := nr.client.Sync(ctx, &createReq); err != nil {
+	if _, err := nr.client.Sync(ctx, &updateReq); err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating networks",
-			"Could not create networks: "+err.Error())
+			"Could not update networks: "+err.Error())
 		return
 	}
 
