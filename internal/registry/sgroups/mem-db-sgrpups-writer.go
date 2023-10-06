@@ -1,14 +1,12 @@
 package sgroups
 
 import (
-	"bytes"
 	"context"
-	"net"
-	"reflect"
 	"time"
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	"github.com/H-BF/sgroups/internal/patterns"
+
 	"github.com/hashicorp/go-memdb"
 	"github.com/pkg/errors"
 	"go.uber.org/multierr"
@@ -40,6 +38,9 @@ func (wr sGroupsMemDbWriter) SyncNetworks(ctx context.Context, networks []model.
 	var deleted []model.Network
 	var changed bool
 	h := syncHelper[model.Network, string]{
+		keyExtract: func(n *model.Network) string {
+			return n.Name
+		},
 		delete: func(obj *model.Network) error {
 			e := wr.writer.Delete(TblNetworks, obj)
 			if e == nil || errors.Is(e, memdb.ErrNotFound) {
@@ -83,6 +84,9 @@ func (wr sGroupsMemDbWriter) SyncSecurityGroups(ctx context.Context, sgs []model
 	var deleted []model.SecurityGroup
 	var changed bool
 	h := syncHelper[model.SecurityGroup, string]{
+		keyExtract: func(sg *model.SecurityGroup) string {
+			return sg.Name
+		},
 		upsert: func(obj *model.SecurityGroup) error {
 			e := wr.writer.Upsert(TblSecGroups, obj)
 			changed = changed || e == nil
@@ -124,7 +128,10 @@ func (wr sGroupsMemDbWriter) SyncSGRules(ctx context.Context, rules []model.SGRu
 	})
 
 	var changed bool
-	h := syncHelper[model.SGRule, string]{
+	h := syncHelper[model.SGRule, model.SGRuleIdentity]{
+		keyExtract: func(rt *model.SGRule) model.SGRuleIdentity {
+			return rt.ID
+		},
 		delete: func(obj *model.SGRule) error {
 			e := wr.writer.Delete(TblSecRules, obj)
 			if errors.Is(e, memdb.ErrNotFound) {
@@ -163,7 +170,10 @@ func (wr sGroupsMemDbWriter) SyncFqdnRules(ctx context.Context, rules []model.FQ
 	})
 
 	var changed bool
-	h := syncHelper[model.FQDNRule, string]{
+	h := syncHelper[model.FQDNRule, model.FQDNRuleIdentity]{
+		keyExtract: func(rt *model.FQDNRule) model.FQDNRuleIdentity {
+			return rt.ID
+		},
 		delete: func(obj *model.FQDNRule) error {
 			e := wr.writer.Delete(TblFqdnRules, obj)
 			if errors.Is(e, memdb.ErrNotFound) {
@@ -173,6 +183,55 @@ func (wr sGroupsMemDbWriter) SyncFqdnRules(ctx context.Context, rules []model.FQ
 			return e
 		},
 		upsert: func(obj *model.FQDNRule) error {
+			e := wr.writer.Upsert(TblFqdnRules, obj)
+			changed = changed || e == nil
+			return e
+		},
+	}
+	if err = h.doSync(rules, it, opts...); err == nil && changed {
+		err = wr.updateSyncStatus(ctx)
+	}
+	return errors.WithMessage(err, api)
+}
+
+// SyncSgIcmpRules impl Writer = update / delete ICMP:SG rules
+func (wr sGroupsMemDbWriter) SyncSgIcmpRules(ctx context.Context, rules []model.SgIcmpRule, scope Scope, opts ...Option) error { //nolint:dupl
+	const api = "mem-db/SyncSgIcmpRules"
+
+	it, err := wr.writer.Get(TblSgIcmpRules, indexID)
+	if err != nil {
+		return errors.WithMessage(err, api)
+	}
+	var ft filterTree[model.SgIcmpRule]
+	if !ft.init(scope) {
+		return errors.Errorf("bad scope")
+	}
+	it = memdb.NewFilterIterator(it, func(i interface{}) bool {
+		r := *i.(*model.SgIcmpRule)
+		return !ft.invoke(r)
+	})
+
+	type kT struct {
+		IPv uint8
+		Sg  string
+	}
+	var changed bool
+	h := syncHelper[model.SgIcmpRule, kT]{
+		keyExtract: func(r *model.SgIcmpRule) kT {
+			return kT{
+				IPv: r.Icmp.IPv,
+				Sg:  r.Sg,
+			}
+		},
+		delete: func(obj *model.SgIcmpRule) error {
+			e := wr.writer.Delete(TblFqdnRules, obj)
+			if errors.Is(e, memdb.ErrNotFound) {
+				return nil
+			}
+			changed = changed || e == nil
+			return e
+		},
+		upsert: func(obj *model.SgIcmpRule) error {
 			e := wr.writer.Upsert(TblFqdnRules, obj)
 			changed = changed || e == nil
 			return e
@@ -256,9 +315,15 @@ func (wr sGroupsMemDbWriter) afterDeleteSGs(ctx context.Context, sgs []model.Sec
 		SGFrom(names[0], names[1:]...),
 		SyncOmitInsert{}, SyncOmitUpdate{})
 
+	// delete related SgIcmpRule(s)
+	err3 := wr.SyncSgIcmpRules(ctx, nil,
+		SG(names...), SyncOmitInsert{}, SyncOmitUpdate{})
+
+	const delRel = "delete related"
 	return multierr.Combine(
-		errors.WithMessage(err1, "delete related SGRule(s)"),
-		errors.WithMessage(err2, "delete related FQDNRule(s)"),
+		errors.WithMessagef(err1, "%s SGRule(s)", delRel),
+		errors.WithMessagef(err2, "%s FQDNRule(s)", delRel),
+		errors.WithMessagef(err3, "%s SgIcmpRule(s)", delRel),
 	)
 }
 
@@ -276,8 +341,9 @@ func (wr sGroupsMemDbWriter) updateSyncStatus(_ context.Context) error {
 	return err
 }
 
-type syncHelper[T any, TKey comparable] struct {
+type syncHelper[T interface{ IsEq(T) bool }, TKey comparable] struct {
 	cur, new    map[TKey]T
+	keyExtract  func(*T) TKey
 	preprocess  func() error
 	upsert      func(*T) error
 	delete      func(*T) error
@@ -288,37 +354,28 @@ func (h *syncHelper[T, TKey]) load(newValues []T, curValIt MemDbIterator) error 
 	h.cur = make(map[TKey]T)
 	h.new = make(map[TKey]T)
 	for _, v := range newValues {
-		if e := h.addNew(v); e != nil {
-			return e
-		}
+		h.add2new(v)
 	}
 	for v := curValIt.Next(); v != nil; v = curValIt.Next() {
-		if e := h.addCurrent(*v.(*T)); e != nil {
-			return e
-		}
+		h.add2current(*v.(*T))
 	}
 	return nil
 }
 
-func (h syncHelper[T, TKey]) add(v T, toCurrent bool) error {
-	k, e := h.extractKey(v)
-	if e != nil {
-		return e
-	}
-	if toCurrent {
+func (h syncHelper[T, TKey]) add(v T, toCurrent bool) {
+	if k := h.keyExtract(&v); toCurrent {
 		h.cur[k] = v
 	} else {
 		h.new[k] = v
 	}
-	return nil
 }
 
-func (h syncHelper[T, TKey]) addNew(v T) error {
-	return h.add(v, false)
+func (h syncHelper[T, TKey]) add2new(v T) {
+	h.add(v, false)
 }
 
-func (h syncHelper[T, TKey]) addCurrent(v T) error {
-	return h.add(v, true)
+func (h syncHelper[T, TKey]) add2current(v T) {
+	h.add(v, true)
 }
 
 func (h syncHelper[T, TKey]) diff(opts ...Option) (upd, ins, del []T) { //nolint:gocyclo
@@ -337,7 +394,7 @@ func (h syncHelper[T, TKey]) diff(opts ...Option) (upd, ins, del []T) { //nolint
 		for keyNew, vNew := range h.new {
 			if vCur, ok := h.cur[keyNew]; !ok && i {
 				ins = append(ins, vNew)
-			} else if ok && u && !h.isEQ(vNew, vCur) {
+			} else if ok && u && !vNew.IsEq(vCur) {
 				upd = append(upd, vNew)
 			}
 		}
@@ -350,71 +407,6 @@ func (h syncHelper[T, TKey]) diff(opts ...Option) (upd, ins, del []T) { //nolint
 		}
 	}
 	return
-}
-
-func (h syncHelper[T, TKey]) extractKey(obj T) (TKey, error) {
-	var k TKey
-	var vSrc reflect.Value
-	switch a := any(obj).(type) {
-	case model.Network:
-		vSrc = reflect.ValueOf(a.Name)
-	case model.SecurityGroup:
-		vSrc = reflect.ValueOf(a.Name)
-	case model.SGRule:
-		vSrc = reflect.ValueOf(a.ID.IdentityHash())
-	case model.FQDNRule:
-		vSrc = reflect.ValueOf(a.ID.IdentityHash())
-	default:
-		return k, errors.Errorf("key-extractor: no extraction from '%T' type", obj)
-	}
-	vDest := reflect.ValueOf(&k).Elem()
-	if !vDest.Type().ConvertibleTo(vSrc.Type()) {
-		return k, errors.Errorf("key-extractor: unable convert from '%T' to '%T'",
-			obj, k)
-	}
-	vDest.Set(vSrc.Convert(vDest.Type()))
-	return k, nil
-}
-
-func (h syncHelper[T, TKey]) isEQ(l, r T) bool {
-	switch lt := any(l).(type) {
-	case net.IPNet:
-		rt := any(r).(net.IPNet)
-		return lt.IP.Equal(rt.IP) &&
-			bytes.Equal(lt.Mask, rt.Mask)
-	case model.Network:
-		rt := any(r).(model.Network)
-		var h syncHelper[net.IPNet, string]
-		return h.isEQ(lt.Net, rt.Net)
-	case model.SecurityGroup:
-		rt := any(r).(model.SecurityGroup)
-		eq := lt.DefaultAction == rt.DefaultAction &&
-			lt.Logs == rt.Logs &&
-			lt.Trace == rt.Trace &&
-			len(lt.Networks) == len(rt.Networks)
-		if eq {
-			a := make(map[model.NetworkName]bool, len(lt.Networks))
-			for _, nwName := range lt.Networks {
-				a[nwName] = true
-			}
-			for _, nwName := range rt.Networks {
-				if ok := a[nwName]; ok {
-					delete(a, nwName)
-					continue
-				}
-				return false
-			}
-			return len(a) == 0
-		}
-	case model.SGRule:
-		rt := any(r).(model.SGRule)
-		return lt.IsEq(rt)
-	case model.FQDNRule:
-		rt := any(r).(model.FQDNRule)
-		return lt.IsEq(rt)
-	default:
-	}
-	return false
 }
 
 func (h syncHelper[T, TKey]) doSync(newValues []T, curValIt MemDbIterator, opts ...Option) error {

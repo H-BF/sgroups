@@ -61,6 +61,16 @@ func (set *impSet[T, F]) Put(k T) {
 	set.Dict.Put(k, struct{}{})
 }
 
+// PutMany -
+func (set *impSet[T, F]) PutMany(vals ...T) {
+	if len(vals) > 0 {
+		set.init()
+		for _, k := range vals {
+			set.Dict.Put(k, struct{}{})
+		}
+	}
+}
+
 // Insert -
 func (set *impSet[T, F]) Insert(k T) bool {
 	set.init()

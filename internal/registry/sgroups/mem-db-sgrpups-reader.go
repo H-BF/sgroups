@@ -76,6 +76,11 @@ func (rd sGroupsMemDbReader) ListFqdnRules(_ context.Context, consume func(model
 	return memDbListObjects(rd.reader, scope, TblFqdnRules, consume)
 }
 
+// ListSgIcmpRule impl Reader
+func (rd sGroupsMemDbReader) ListSgIcmpRule(_ context.Context, consume func(model.SgIcmpRule) error, scope Scope) error {
+	return memDbListObjects(rd.reader, scope, TblSgIcmpRules, consume)
+}
+
 // ListSGRules impl Reader
 func (rd sGroupsMemDbReader) Close() error {
 	return nil

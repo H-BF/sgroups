@@ -219,3 +219,24 @@ func TestValidate_FQDN(t *testing.T) {
 		}
 	}
 }
+
+func Test_Validate_ICMP(t *testing.T) {
+	var x ICMP
+	require.Error(t, x.Validate())
+	x.IPv = 1
+	require.Error(t, x.Validate())
+	x.IPv = 4
+	x.Types.Put(1)
+	require.NoError(t, x.Validate())
+}
+
+func Test_Validate_SgIcmpRule(t *testing.T) {
+	var r SgIcmpRule
+	e := r.Validate()
+	require.Error(t, e)
+	r.Sg = "/123/"
+	r.Icmp.IPv = 6
+	r.Icmp.Types.Put(1)
+	e = r.Validate()
+	require.NoError(t, e)
+}

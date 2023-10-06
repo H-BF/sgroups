@@ -162,7 +162,8 @@ func (scopedSGRuleIdentity) privateScope()   {}
 func (scopedFqdnRuleIdentity) privateScope() {}
 
 type filterKindArg interface {
-	model.Network | model.SecurityGroup | model.SGRule | model.FQDNRule
+	model.Network | model.SecurityGroup |
+		model.SGRule | model.FQDNRule | model.SgIcmpRule
 }
 
 type filterTree[filterArgT filterKindArg] struct {
@@ -286,14 +287,21 @@ func (p scopedNetworks) meta() metaInfo {
 	}
 }
 
-func (p scopedSG) inSG(rule model.SecurityGroup) bool {
-	_, ok := p[rule.Name]
+func (p scopedSG) inSG(sg model.SecurityGroup) bool {
+	_, ok := p[sg.Name]
+	return ok
+}
+
+func (p scopedSG) inSgIcmpRule(rule model.SgIcmpRule) bool {
+	_, ok := p[rule.Sg]
 	return ok
 }
 
 func (p scopedSG) meta() metaInfo {
 	return metaInfo{
 		reflect.TypeOf((*model.SecurityGroup)(nil)).Elem(): reflect.ValueOf(p.inSG),
+
+		reflect.TypeOf((*model.SgIcmpRule)(nil)).Elem(): reflect.ValueOf(p.inSgIcmpRule),
 	}
 }
 

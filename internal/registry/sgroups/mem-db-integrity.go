@@ -16,6 +16,9 @@ func IntegrityChecker4SGRules() IntegrityChecker {
 
 	return func(reader MemDbReader) error {
 		it, err := reader.Get(TblSecRules, indexID)
+		if isInvalidTableErr(err) {
+			return nil
+		}
 		if err != nil {
 			return errors.WithMessage(err, api)
 		}
@@ -46,6 +49,9 @@ func IntegrityChecker4FqdnRules() IntegrityChecker {
 
 	return func(reader MemDbReader) error {
 		it, err := reader.Get(TblFqdnRules, indexID)
+		if isInvalidTableErr(err) {
+			return nil
+		}
 		if err != nil {
 			return errors.WithMessage(err, api)
 		}
@@ -72,6 +78,9 @@ func IntegrityChecker4SG() IntegrityChecker {
 
 	return func(reader MemDbReader) error {
 		it, e := reader.Get(TblSecGroups, indexID)
+		if isInvalidTableErr(e) {
+			return nil
+		}
 		if e != nil {
 			return errors.WithMessage(e, api)
 		}
@@ -121,6 +130,9 @@ func IntegrityChecker4Networks() IntegrityChecker {
 	}
 	return func(reader MemDbReader) error {
 		it, e := reader.Get(TblNetworks, indexID)
+		if isInvalidTableErr(e) {
+			return nil
+		}
 		if e != nil {
 			return errors.WithMessage(e, api)
 		}
@@ -176,6 +188,32 @@ func IntegrityChecker4Networks() IntegrityChecker {
 					return errors.Errorf("%s: networks %s and %s seem have overlapped region",
 						api, b.n, bds[i-1].n)
 				}
+			}
+		}
+		return nil
+	}
+}
+
+// IntegrityChecker4Networks checks if every network does overlap another one
+func IntegrityChecker4SgIcmpRules() IntegrityChecker {
+	const api = "Integrity-of-SgIcmpRules"
+
+	return func(reader MemDbReader) error {
+		it, e := reader.Get(TblSgIcmpRules, indexID)
+		if isInvalidTableErr(e) {
+			return nil
+		}
+		if e != nil {
+			return errors.WithMessage(e, api)
+		}
+		for x := it.Next(); x != nil; x = it.Next() {
+			r := x.(*model.SgIcmpRule)
+			i, e := reader.First(TblSecGroups, indexID, r.Sg)
+			if e != nil {
+				return errors.WithMessagef(e, "%s: find ref to SG '%s'", api, r.Sg)
+			}
+			if i == nil {
+				return errors.Errorf("%s: not found ref to SG '%s'", api, r.Sg)
 			}
 		}
 		return nil

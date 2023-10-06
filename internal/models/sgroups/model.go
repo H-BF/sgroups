@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net"
-	"regexp"
 	"strings"
 	"time"
 
@@ -38,9 +37,9 @@ type (
 	// FQDN -
 	FQDN string
 
-	// ICMP -
+	// ICMP an ICMP proto spec
 	ICMP struct {
-		IPv   int               // Use in IP net version 4 or 6
+		IPv   uint8             // Use in IP net version 4 or 6
 		Types dict.RBSet[uint8] // Use ICMP message types set of [0-254]
 	}
 
@@ -103,7 +102,7 @@ type (
 		String() string
 	}
 
-	// SgIcmpRule SG->ICMP default rule
+	// SgIcmpRule ICMP:SG default rule
 	SgIcmpRule struct {
 		Sg    string
 		Icmp  ICMP
@@ -122,15 +121,6 @@ var PortRangeFactory = ranges.IntsFactory(PortNumber(0))
 
 // PortRangeFull port range [0, 65535]
 var PortRangeFull = PortRangeFactory.Range(0, false, ^PortNumber(0), false)
-
-var sgRuleIdentityRE = regexp.MustCompile(`^\s*(\w+)\s*:\s*'(` +
-	sgNameRePatt +
-	`)'\s*-\s*'(` +
-	sgNameRePatt + `)'`)
-
-const (
-	sgNameRePatt = `[\w\>\<\:\*\.\+\-\@\#\=\~\%\$\/\\]+`
-)
 
 const (
 	// TCP ...
@@ -201,6 +191,27 @@ func (nt *NetworkTransport) FromString(s string) error {
 	return nil
 }
 
+// IsEq -
+func (nw Network) IsEq(other Network) bool {
+	return nw.Name == other.Name &&
+		nw.Net.IP.Equal(other.Net.IP) &&
+		bytes.Equal(nw.Net.Mask, other.Net.Mask)
+}
+
+// IsEq -
+func (sg SecurityGroup) IsEq(other SecurityGroup) bool {
+	eq := sg.DefaultAction == other.DefaultAction &&
+		sg.Logs == other.Logs &&
+		sg.Trace == other.Trace
+	if eq {
+		var a, b dict.HSet[string]
+		a.PutMany(sg.Networks...)
+		b.PutMany(other.Networks...)
+		eq = a.Eq(&b)
+	}
+	return eq
+}
+
 // IdentityHash makes ID as hash for SGRule
 func (sgRuleKey SGRuleIdentity) IdentityHash() string {
 	hasher := md5.New() //nolint:gosec
@@ -235,29 +246,15 @@ func (sgRuleKey FQDNRuleIdentity) IsEq(other FQDNRuleIdentity) bool {
 
 // String impl Stringer
 func (sgRuleKey SGRuleIdentity) String() string {
-	return fmt.Sprintf("%s:'%s'-'%s'",
+	return fmt.Sprintf("%s:sg(%s)sg(%s)",
 		sgRuleKey.Transport, sgRuleKey.SgFrom, sgRuleKey.SgTo)
 }
 
 // String impl Stringer
 func (sgRuleKey FQDNRuleIdentity) String() string {
-	return fmt.Sprintf("%s:'%s'-'%s'",
-		sgRuleKey.Transport, sgRuleKey.SgFrom, sgRuleKey.FqdnTo)
-}
-
-// FromString init from string
-func (sgRuleKey *SGRuleIdentity) FromString(s string) error {
-	const api = "SGRuleIdentity/FromString"
-	r := sgRuleIdentityRE.FindStringSubmatch(s)
-	if len(r) != 4 { //nolint:gomnd
-		return errors.Errorf("%s: bad source(%s)", api, s)
-	}
-	if err := sgRuleKey.Transport.FromString(r[1]); err != nil {
-		return errors.WithMessage(err, api)
-	}
-	sgRuleKey.SgFrom = r[2]
-	sgRuleKey.SgTo = r[3]
-	return nil
+	return fmt.Sprintf("%s:sg(%s)fqdn(%s)", sgRuleKey.Transport,
+		sgRuleKey.SgFrom,
+		strings.ToLower(sgRuleKey.FqdnTo.String()))
 }
 
 // IsEq -
@@ -295,7 +292,10 @@ func (o SgIcmpRule) IdentityHash() string {
 
 // String -
 func (o SgIcmpRule) String() string {
-	return fmt.Sprintf("sg('%s'):icmp%v", o.Sg, o.Icmp.IPv)
+	if o.Icmp.IPv == 6 {
+		return fmt.Sprintf("icmp6:sg(%s)", o.Sg)
+	}
+	return fmt.Sprintf("icmp:sg(%s)", o.Sg)
 }
 
 // IsEq -

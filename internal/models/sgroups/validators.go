@@ -7,7 +7,6 @@ import (
 	"github.com/H-BF/corlib/pkg/ranges"
 	oz "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/pkg/errors"
-	"go.uber.org/multierr"
 )
 
 var (
@@ -19,9 +18,6 @@ var (
 
 	// ErrInvalidFQDN -
 	ErrInvalidFQDN = errors.New("invalid FQDN")
-
-	// ErrInvalidICMP -
-	ErrInvalidICMP = errors.New("invalid ICMP")
 )
 
 // Validatable is a alias to oz.Validatable
@@ -167,23 +163,28 @@ func (o FQDN) Validate() error {
 
 // Validate impl Validator
 func (o ICMP) Validate() error {
-	e := oz.ValidateStruct(&o,
-		oz.Field(&o.IPv, oz.In(4, 6).Error("IPv should be in [4,6]")),
+	return oz.ValidateStruct(&o,
+		oz.Field(&o.IPv, oz.Required, oz.In(uint8(4), uint8(6)).Error("IPv should be in [4,6]")),
 		oz.Field(&o.Types, oz.By(func(_ any) error {
 			if o.Types.Len() == 0 {
-				return errors.Errorf("Types cannot be empty")
+				return errors.Errorf("cannot be empty")
 			}
 			return nil
 		})),
 	)
-	if e != nil {
-		return multierr.Combine(ErrInvalidICMP, e)
-	}
-	return nil
+}
+
+// Validate impl Validator
+func (o SgIcmpRule) Validate() error {
+	return oz.ValidateStruct(&o,
+		oz.Field(&o.Sg, oz.Required.Error("security grpoup name is rquired"),
+			oz.Match(reCName)),
+		oz.Field(&o.Icmp),
+	)
 }
 
 var (
-	reCName = regexp.MustCompile(`^\w(?:.*\w)?$`)
+	reCName = regexp.MustCompile(`^[\S](.*[\S])?$`)
 
 	reFQDN = regexp.MustCompile(`(?ims)^([a-z0-9\*][a-z0-9_-]{1,62}){1}(\.[a-z0-9_][a-z0-9_-]{0,62})*$`)
 )

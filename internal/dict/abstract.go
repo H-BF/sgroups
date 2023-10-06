@@ -31,6 +31,7 @@ type (
 		Len() int
 		Del(keys ...T)
 		Put(k T)
+		PutMany(vals ...T)
 		Insert(k T) bool
 		Contains(k T) bool
 		Iterate(f func(k T) bool)
