@@ -109,6 +109,12 @@ type (
 		Logs  bool
 		Trace bool
 	}
+
+	// SgIcmpRuleID ICMP:SG rule ID
+	SgIcmpRuleID struct {
+		Sg  string
+		IPv uint8
+	}
 )
 
 var (
@@ -305,4 +311,12 @@ func (o SgIcmpRule) IsEq(other SgIcmpRule) bool {
 		o.Sg == other.Sg &&
 		o.Icmp.IPv == other.Icmp.IPv &&
 		o.Icmp.Types.Eq(&o.Icmp.Types)
+}
+
+// ID -
+func (o SgIcmpRule) ID() SgIcmpRuleID {
+	return SgIcmpRuleID{
+		Sg:  o.Sg,
+		IPv: o.Icmp.IPv,
+	}
 }

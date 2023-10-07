@@ -74,3 +74,32 @@ func (srv *sgService) FindFqdnRules(ctx context.Context, req *sg.FindFqdnRulesRe
 	}
 	return resp, nil
 }
+
+// FindSgIcmpRules impl SecGroupServiceServer
+func (srv *sgService) FindSgIcmpRules(ctx context.Context, req *sg.FindSgIcmpRulesReq) (resp *sg.SgIcmpRulesResp, err error) {
+	defer func() {
+		err = correctError(err)
+	}()
+	var reader registry.Reader
+	if reader, err = srv.registryReader(ctx); err != nil {
+		return nil, err
+	}
+	defer reader.Close() //lint:nolint
+	var sc registry.Scope = registry.NoScope
+	if sgs := req.GetSg(); len(sgs) > 0 {
+		sc = registry.SG(sgs...)
+	}
+	resp = new(sg.SgIcmpRulesResp)
+	reader.ListSgIcmpRule(ctx, func(rule model.SgIcmpRule) error {
+		r, e := sgIcmpRule2proto(rule)
+		if e == nil {
+			resp.Rules = append(resp.Rules, r)
+		}
+		return errors.WithMessagef(e, "convert SgIcmpRule '%s' to proto", rule)
+	}, sc)
+	if err != nil {
+		return nil,
+			status.Errorf(codes.Internal, "reason: %v", err)
+	}
+	return resp, nil
+}

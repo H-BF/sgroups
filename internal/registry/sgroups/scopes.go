@@ -45,18 +45,11 @@ type (
 
 	scopedFqdnRuleIdentity map[string]model.FQDNRuleIdentity
 
+	scopedSgIcmpIdentity map[string]model.SgIcmpRuleID
+
 	scopedSG     map[string]struct{}
 	scopedSGFrom map[string]struct{}
 	scopedSGTo   map[string]struct{}
-
-	//KindOfScope all kind of scope
-	KindOfScope interface {
-		Scope
-		scopedIPs | scopedNetworks | ScopedNetTransport |
-			scopedSGRuleIdentity | scopedFqdnRuleIdentity |
-			scopedSGFrom | scopedSGTo | scopedSG |
-			scopedAnd | scopedOr | scopedNot | noScope
-	}
 )
 
 // ErrUnexpectedScope -
@@ -130,8 +123,8 @@ func NetworkNames(names ...model.NetworkName) Scope {
 	return ret
 }
 
-// SGRule makes SG rule scope
-func SGRule(others ...model.SGRule) Scope {
+// PKScopeOfSGRules makes SG rule scope
+func PKScopeOfSGRules(others ...model.SGRule) Scope {
 	ret := scopedSGRuleIdentity{}
 	for _, o := range others {
 		ret[o.ID.IdentityHash()] = o.ID
@@ -139,11 +132,20 @@ func SGRule(others ...model.SGRule) Scope {
 	return ret
 }
 
-// FQDNRule makes FQDN rule scope
-func FQDNRule(others ...model.FQDNRule) Scope {
+// PKScopeOfFQDNRules makes FQDN rule scope
+func PKScopeOfFQDNRules(others ...model.FQDNRule) Scope {
 	ret := scopedFqdnRuleIdentity{}
 	for _, o := range others {
 		ret[o.ID.IdentityHash()] = o.ID
+	}
+	return ret
+}
+
+// PKScopeOfSgIcmpRules makes SG:ICMP prinary rule scope
+func PKScopeOfSgIcmpRules(rules ...model.SgIcmpRule) Scope {
+	ret := scopedSgIcmpIdentity{}
+	for _, r := range rules {
+		ret[r.IdentityHash()] = r.ID()
 	}
 	return ret
 }
@@ -160,6 +162,7 @@ func (scopedSGTo) privateScope()             {}
 func (ScopedNetTransport) privateScope()     {}
 func (scopedSGRuleIdentity) privateScope()   {}
 func (scopedFqdnRuleIdentity) privateScope() {}
+func (scopedSgIcmpIdentity) privateScope()   {}
 
 type filterKindArg interface {
 	model.Network | model.SecurityGroup |
@@ -365,5 +368,17 @@ func (p scopedFqdnRuleIdentity) inFQDNRule(rule model.FQDNRule) bool {
 func (p scopedFqdnRuleIdentity) meta() metaInfo {
 	return metaInfo{
 		reflect.TypeOf((*model.FQDNRule)(nil)).Elem(): reflect.ValueOf(p.inFQDNRule),
+	}
+}
+
+func (p scopedSgIcmpIdentity) inSgIcmpRule(rule model.SgIcmpRule) bool {
+	h := rule.IdentityHash()
+	_, ok := p[h]
+	return ok
+}
+
+func (p scopedSgIcmpIdentity) meta() metaInfo {
+	return metaInfo{
+		reflect.TypeOf((*model.SgIcmpRule)(nil)).Elem(): reflect.ValueOf(p.inSgIcmpRule),
 	}
 }

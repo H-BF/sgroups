@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -31,25 +32,65 @@ func (srv *sgService) Sync(ctx context.Context, req *sg.SyncReq) (ret *emptypb.E
 	switch sbj := req.GetSubject().(type) {
 	case *sg.SyncReq_Networks:
 		nws := sbj.Networks.GetNetworks()
-		err = syncNetworks{wr: wr, networks: nws, ops: ops}.
-			process(ctx)
+		err = syncNetworks(ctx, wr.SyncNetworks, nws, ops)
 	case *sg.SyncReq_Groups:
 		groups := sbj.Groups.GetGroups()
-		err = syncGroups{wr: wr, ops: ops, groups: groups}.
-			process(ctx)
+		err = syncSecurityGroups(ctx, wr.SyncSecurityGroups, groups, ops)
 	case *sg.SyncReq_SgRules:
 		rules := sbj.SgRules.GetRules()
-		err = syncRules{wr: wr, ops: ops, rules: rules}.
-			process(ctx)
+		err = syncSGRules(ctx, wr.SyncSGRules, rules, ops)
 	case *sg.SyncReq_FqdnRules:
 		rules := sbj.FqdnRules.GetRules()
-		err = syncFqdnRules{wr: wr, ops: ops, rules: rules}.
-			process(ctx)
+		err = syncFQDNRules(ctx, wr.SyncFqdnRules, rules, ops)
+	case *sg.SyncReq_SgIcmpRules:
+		rules := sbj.SgIcmpRules.GetRules()
+		err = syncSgIcmpRule(ctx, wr.SyncSgIcmpRules, rules, ops)
 	default:
-		err = status.Error(codes.InvalidArgument, "unsupported subject type")
+		err = status.Error(codes.InvalidArgument, "sync unsupported subject type")
 	}
 	if errors.Is(err, registry.ErrValidate) {
 		err = status.Errorf(codes.InvalidArgument, "%s", err.Error())
+	}
+	return ret, err
+}
+
+type syncerF[TModel any] func(context.Context, []TModel, registry.Scope, ...registry.Option) error
+
+type syncAlg[TModel any, TProto proto.Message] struct {
+	makePrimaryKeyScope func([]TModel) registry.Scope
+	proto2model         func(TProto) (TModel, error)
+}
+
+func (hlp syncAlg[TModel, TProto]) process(ctx context.Context, snk syncerF[TModel], in []TProto, op sg.SyncReq_SyncOp) error {
+	modelObjs := make([]TModel, len(in))
+	var err error
+	for i := range in {
+		modelObjs[i], err = hlp.proto2model(in[i])
+		if err != nil {
+			return status.Error(codes.InvalidArgument, err.Error())
+		}
+	}
+	var opts []registry.Option
+	if opts, err = syncOptionsFromProto(op); err != nil {
+		return err
+	}
+	var sc registry.Scope = registry.NoScope
+	if op == sg.SyncReq_Delete {
+		sc = hlp.makePrimaryKeyScope(modelObjs)
+		modelObjs = nil
+	}
+	return snk(ctx, modelObjs, sc, opts...)
+}
+
+func syncOptionsFromProto(o sg.SyncReq_SyncOp) (ret []registry.Option, err error) {
+	switch o {
+	case sg.SyncReq_Upsert:
+		ret = append(ret, registry.SyncOmitDelete{})
+	case sg.SyncReq_Delete:
+		ret = append(ret, registry.SyncOmitInsert{}, registry.SyncOmitUpdate{})
+	case sg.SyncReq_FullSync:
+	default:
+		err = status.Error(codes.InvalidArgument, "unsupported sync option")
 	}
 	return ret, err
 }

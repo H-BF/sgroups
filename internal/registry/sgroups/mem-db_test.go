@@ -451,7 +451,7 @@ func (sui *memDbSuite) TestSyncSGRules() {
 
 	//delete one Rule from DB
 	w = sui.regWriter()
-	err = w.SyncSGRules(ctx, nil, SGRule(r1))
+	err = w.SyncSGRules(ctx, nil, PKScopeOfSGRules(r1))
 	sui.Require().NoError(err)
 	err = w.Commit()
 	sui.Require().NoError(err)

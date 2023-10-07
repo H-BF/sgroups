@@ -68,6 +68,26 @@ func sgFqdnRule2proto(src model.FQDNRule) (*sg.FqdnRule, error) {
 	return &ret, e
 }
 
+func sgIcmpRule2proto(src model.SgIcmpRule) (*sg.SgIcmpRule, error) {
+	ret := new(sg.SgIcmpRule)
+	ret.Logs = src.Logs
+	ret.Trace = src.Trace
+	ret.Sg = src.Sg
+	switch src.Icmp.IPv {
+	case 4:
+		ret.ICMP.IPv = common.IpAddrFamily_IPv4
+	case 6:
+		ret.ICMP.IPv = common.IpAddrFamily_IPv6
+	default:
+		return nil, errors.Errorf("got unsupported IPv(%v)", src.Icmp.IPv)
+	}
+	src.Icmp.Types.Iterate(func(t uint8) bool {
+		ret.ICMP.Types = append(ret.ICMP.Types, uint32(t))
+		return true
+	})
+	return ret, nil
+}
+
 func (srv *sgService) GetRules(ctx context.Context, req *sg.GetRulesReq) (resp *sg.RulesResp, err error) {
 	defer func() {
 		err = correctError(err)

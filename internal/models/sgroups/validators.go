@@ -165,12 +165,6 @@ func (o FQDN) Validate() error {
 func (o ICMP) Validate() error {
 	return oz.ValidateStruct(&o,
 		oz.Field(&o.IPv, oz.Required, oz.In(uint8(4), uint8(6)).Error("IPv should be in [4,6]")),
-		oz.Field(&o.Types, oz.By(func(_ any) error {
-			if o.Types.Len() == 0 {
-				return errors.Errorf("cannot be empty")
-			}
-			return nil
-		})),
 	)
 }
 
@@ -184,7 +178,7 @@ func (o SgIcmpRule) Validate() error {
 }
 
 var (
-	reCName = regexp.MustCompile(`^[\S](.*[\S])?$`)
+	reCName = regexp.MustCompile(`^\S(.*\S)?$`)
 
 	reFQDN = regexp.MustCompile(`(?ims)^([a-z0-9\*][a-z0-9_-]{1,62}){1}(\.[a-z0-9_][a-z0-9_-]{0,62})*$`)
 )
