@@ -77,6 +77,7 @@ func AllTables() MemDbOption {
 	return MemDBTables([]TableID{
 		TblNetworks, TblSecGroups, TblSecRules,
 		TblSyncStatus, TblFqdnRules, TblSgIcmpRules,
+		TblSgSgIcmpRules,
 	})
 }
 

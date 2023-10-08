@@ -9,12 +9,13 @@ func (tid TableID) memDbSchema() MemDbSchemaInit {
 }
 
 var tableID2MemDbSchemaInit = map[TableID]MemDbSchemaInit{
-	TblNetworks:    memDbNetworksSchema,
-	TblSecGroups:   memDbSecGroupsSchema,
-	TblSecRules:    memDbSgRulesSchema,
-	TblSyncStatus:  memDbSyncStatusSchema,
-	TblFqdnRules:   memDbFqdnRulesSchema,
-	TblSgIcmpRules: memSgIcmpRulesSchema,
+	TblNetworks:      memDbNetworksSchema,
+	TblSecGroups:     memDbSecGroupsSchema,
+	TblSecRules:      memDbSgRulesSchema,
+	TblSyncStatus:    memDbSyncStatusSchema,
+	TblFqdnRules:     memDbFqdnRulesSchema,
+	TblSgIcmpRules:   memSgIcmpRulesSchema,
+	TblSgSgIcmpRules: memSgSgIcmpRulesSchema,
 }
 
 func memDbNetworksSchema(schema *MemDbSchema) {
@@ -90,15 +91,22 @@ func memSgIcmpRulesSchema(schema *MemDbSchema) {
 			indexID: {
 				Name:    indexID,
 				Unique:  true,
-				Indexer: SgIcmpIdIndexer{IndexID: indexID},
+				Indexer: SgIcmpIdIndexer{},
 			},
-			/*//
-			indexSG: {
-				Name:    indexSG,
-				Unique:  false,
-				Indexer: SgIcmpIdIndexer{IndexID: indexSG},
+		},
+	}
+}
+
+func memSgSgIcmpRulesSchema(schema *MemDbSchema) {
+	tbl := TblSgSgIcmpRules.String()
+	schema.Tables[tbl] = &MemDbTableSchema{
+		Name: tbl,
+		Indexes: map[string]*MemDbIndexSchema{
+			indexID: {
+				Name:    indexID,
+				Unique:  true,
+				Indexer: SgSgIcmpIdIndexer{},
 			},
-			*/
 		},
 	}
 }

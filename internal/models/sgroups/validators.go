@@ -177,6 +177,18 @@ func (o SgIcmpRule) Validate() error {
 	)
 }
 
+// Validate impl Validator
+func (o SgSgIcmpRule) Validate() error {
+	const msg = "security grpoup name is rquired"
+	return oz.ValidateStruct(&o,
+		oz.Field(&o.SgFrom, oz.Required.Error(msg),
+			oz.Match(reCName)),
+		oz.Field(&o.SgTo, oz.Required.Error(msg),
+			oz.Match(reCName)),
+		oz.Field(&o.Icmp),
+	)
+}
+
 var (
 	reCName = regexp.MustCompile(`^\S(.*\S)?$`)
 

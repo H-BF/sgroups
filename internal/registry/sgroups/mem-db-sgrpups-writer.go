@@ -194,7 +194,7 @@ func (wr sGroupsMemDbWriter) SyncFqdnRules(ctx context.Context, rules []model.FQ
 	return errors.WithMessage(err, api)
 }
 
-// SyncSgIcmpRules impl Writer = update / delete ICMP:SG rules
+// SyncSgIcmpRules impl Writer = update / delete SG:ICMP rules
 func (wr sGroupsMemDbWriter) SyncSgIcmpRules(ctx context.Context, rules []model.SgIcmpRule, scope Scope, opts ...Option) error { //nolint:dupl
 	const api = "mem-db/SyncSgIcmpRules"
 
@@ -211,20 +211,13 @@ func (wr sGroupsMemDbWriter) SyncSgIcmpRules(ctx context.Context, rules []model.
 		return !ft.invoke(r)
 	})
 
-	type kT struct {
-		IPv uint8
-		Sg  string
-	}
 	var changed bool
-	h := syncHelper[model.SgIcmpRule, kT]{
-		keyExtract: func(r *model.SgIcmpRule) kT {
-			return kT{
-				IPv: r.Icmp.IPv,
-				Sg:  r.Sg,
-			}
+	h := syncHelper[model.SgIcmpRule, model.SgIcmpRuleID]{
+		keyExtract: func(r *model.SgIcmpRule) model.SgIcmpRuleID {
+			return r.ID()
 		},
 		delete: func(obj *model.SgIcmpRule) error {
-			e := wr.writer.Delete(TblFqdnRules, obj)
+			e := wr.writer.Delete(TblSgIcmpRules, obj)
 			if errors.Is(e, memdb.ErrNotFound) {
 				return nil
 			}
@@ -232,7 +225,49 @@ func (wr sGroupsMemDbWriter) SyncSgIcmpRules(ctx context.Context, rules []model.
 			return e
 		},
 		upsert: func(obj *model.SgIcmpRule) error {
-			e := wr.writer.Upsert(TblFqdnRules, obj)
+			e := wr.writer.Upsert(TblSgIcmpRules, obj)
+			changed = changed || e == nil
+			return e
+		},
+	}
+	if err = h.doSync(rules, it, opts...); err == nil && changed {
+		err = wr.updateSyncStatus(ctx)
+	}
+	return errors.WithMessage(err, api)
+}
+
+// SyncSgSgIcmpRules impl Writer = update / delete SG-SG:ICMP rules
+func (wr sGroupsMemDbWriter) SyncSgSgIcmpRules(ctx context.Context, rules []model.SgSgIcmpRule, scope Scope, opts ...Option) error { //nolint:dupl
+	const api = "mem-db/SyncSgSgIcmpRules"
+
+	it, err := wr.writer.Get(TblSgSgIcmpRules, indexID)
+	if err != nil {
+		return errors.WithMessage(err, api)
+	}
+	var ft filterTree[model.SgIcmpRule]
+	if !ft.init(scope) {
+		return errors.Errorf("bad scope")
+	}
+	it = memdb.NewFilterIterator(it, func(i interface{}) bool {
+		r := *i.(*model.SgIcmpRule)
+		return !ft.invoke(r)
+	})
+
+	var changed bool
+	h := syncHelper[model.SgSgIcmpRule, model.SgSgIcmpRuleID]{
+		keyExtract: func(r *model.SgSgIcmpRule) model.SgSgIcmpRuleID {
+			return r.ID()
+		},
+		delete: func(obj *model.SgSgIcmpRule) error {
+			e := wr.writer.Delete(TblSgSgIcmpRules, obj)
+			if errors.Is(e, memdb.ErrNotFound) {
+				return nil
+			}
+			changed = changed || e == nil
+			return e
+		},
+		upsert: func(obj *model.SgSgIcmpRule) error {
+			e := wr.writer.Upsert(TblSgSgIcmpRules, obj)
 			changed = changed || e == nil
 			return e
 		},
@@ -319,11 +354,17 @@ func (wr sGroupsMemDbWriter) afterDeleteSGs(ctx context.Context, sgs []model.Sec
 	err3 := wr.SyncSgIcmpRules(ctx, nil,
 		SG(names...), SyncOmitInsert{}, SyncOmitUpdate{})
 
+	// delete related SgSgIcmpRule(s)
+	err4 := wr.SyncSgSgIcmpRules(ctx, nil,
+		Or(SGFrom(names[0], names[1:]...), SGTo(names[0], names[1:]...)),
+		SyncOmitInsert{}, SyncOmitUpdate{})
+
 	const delRel = "delete related"
 	return multierr.Combine(
 		errors.WithMessagef(err1, "%s SGRule(s)", delRel),
 		errors.WithMessagef(err2, "%s FQDNRule(s)", delRel),
 		errors.WithMessagef(err3, "%s SgIcmpRule(s)", delRel),
+		errors.WithMessagef(err4, "%s SgSgIcmpRule(s)", delRel),
 	)
 }
 

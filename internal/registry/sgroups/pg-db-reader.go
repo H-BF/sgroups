@@ -243,7 +243,15 @@ func (rd *pgDbReader) ListFqdnRules(ctx context.Context, consume func(model.FQDN
 }
 
 // ListSgIcmpRule impl Reader
-func (rd *pgDbReader) ListSgIcmpRule(ctx context.Context, consume func(model.SgIcmpRule) error, scope Scope) error {
+func (rd *pgDbReader) ListSgIcmpRules(ctx context.Context, consume func(model.SgIcmpRule) error, scope Scope) error {
+	_ = ctx
+	_ = consume
+	_ = scope
+	return errors.New("not impl")
+}
+
+// ListSgSgIcmpRules impl Reader
+func (rd *pgDbReader) ListSgSgIcmpRules(ctx context.Context, consume func(model.SgSgIcmpRule) error, scope Scope) error {
 	_ = ctx
 	_ = consume
 	_ = scope

@@ -77,8 +77,13 @@ func (rd sGroupsMemDbReader) ListFqdnRules(_ context.Context, consume func(model
 }
 
 // ListSgIcmpRule impl Reader
-func (rd sGroupsMemDbReader) ListSgIcmpRule(_ context.Context, consume func(model.SgIcmpRule) error, scope Scope) error {
+func (rd sGroupsMemDbReader) ListSgIcmpRules(_ context.Context, consume func(model.SgIcmpRule) error, scope Scope) error {
 	return memDbListObjects(rd.reader, scope, TblSgIcmpRules, consume)
+}
+
+// ListSgSgIcmpRule impl Reader
+func (rd sGroupsMemDbReader) ListSgSgIcmpRules(_ context.Context, consume func(model.SgSgIcmpRule) error, scope Scope) error {
+	return memDbListObjects(rd.reader, scope, TblSgSgIcmpRules, consume)
 }
 
 // ListSGRules impl Reader

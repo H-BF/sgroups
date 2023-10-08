@@ -24,9 +24,10 @@ type (
 	FQDNRuleIdIndexer struct{} //nolint:revive
 
 	// SgIcmpIdIndexer -
-	SgIcmpIdIndexer struct {
-		IndexID
-	}
+	SgIcmpIdIndexer struct{}
+
+	// SgSgIcmpIdIndexer -
+	SgSgIcmpIdIndexer struct{}
 )
 
 // FromObject impl Indexer
@@ -124,14 +125,31 @@ func (idx SgIcmpIdIndexer) FromArgs(args ...interface{}) ([]byte, error) { //nol
 	arg := reflect.Indirect(reflect.ValueOf(args[0])).Interface()
 	switch a := arg.(type) {
 	case model.SgIcmpRule:
-		switch idx.IndexID {
-		case indexID:
-			_, _ = fmt.Fprintf(b, "%s\x00", a.IdentityHash())
-		case indexSG:
-			_, _ = fmt.Fprintf(b, "%s\x00", a.Sg)
-		default:
-			return nil, errors.Errorf("SgIcmpIdIndexer: uexpcted index ID(%s)", idx.IndexID)
-		}
+		_, _ = fmt.Fprintf(b, "%s\x00", a.ID().IdentityHash())
+	default:
+		return nil, errors.New("SgIcmpIdIndexer: unsupported data type")
+	}
+	return b.Bytes(), nil
+}
+
+// FromObject impl Indexer
+func (idx SgSgIcmpIdIndexer) FromObject(obj interface{}) (bool, []byte, error) {
+	val, err := idx.FromArgs(obj)
+	return len(val) != 0, val, err
+}
+
+// FromArgs impl Indexer
+func (idx SgSgIcmpIdIndexer) FromArgs(args ...interface{}) ([]byte, error) { //nolint:dupl
+	if len(args) != 1 {
+		return nil, errors.New("must provide only a single argument")
+	}
+	b := bytes.NewBuffer(nil)
+	arg := reflect.Indirect(reflect.ValueOf(args[0])).Interface()
+	switch a := arg.(type) {
+	case model.SgSgIcmpRule:
+		_, _ = fmt.Fprintf(b, "%s\x00", a.ID().IdentityHash())
+	default:
+		return nil, errors.New("SgSgIcmpIdIndexer: unsupported data type")
 	}
 	return b.Bytes(), nil
 }

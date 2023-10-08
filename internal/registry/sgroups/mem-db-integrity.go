@@ -38,7 +38,6 @@ func IntegrityChecker4SGRules() IntegrityChecker {
 				}
 			}
 		}
-
 		return nil
 	}
 }
@@ -194,7 +193,7 @@ func IntegrityChecker4Networks() IntegrityChecker {
 	}
 }
 
-// IntegrityChecker4Networks checks if every network does overlap another one
+// IntegrityChecker4SgIcmpRules -
 func IntegrityChecker4SgIcmpRules() IntegrityChecker {
 	const api = "Integrity-of-SgIcmpRules"
 
@@ -214,6 +213,34 @@ func IntegrityChecker4SgIcmpRules() IntegrityChecker {
 			}
 			if i == nil {
 				return errors.Errorf("%s: not found ref to SG '%s'", api, r.Sg)
+			}
+		}
+		return nil
+	}
+}
+
+// IntegrityChecker4SgIcmpRules -
+func IntegrityChecker4SgSgIcmpRules() IntegrityChecker {
+	const api = "Integrity-of-SgSgIcmpRules"
+
+	return func(reader MemDbReader) error {
+		it, e := reader.Get(TblSgSgIcmpRules, indexID)
+		if isInvalidTableErr(e) {
+			return nil
+		}
+		if e != nil {
+			return errors.WithMessage(e, api)
+		}
+		for x := it.Next(); x != nil; x = it.Next() {
+			r := x.(*model.SgSgIcmpRule)
+			for _, sg := range [...]string{r.SgFrom, r.SgTo} {
+				i, e := reader.First(TblSecGroups, indexID, sg)
+				if e != nil {
+					return errors.WithMessagef(e, "%s: find ref to SG '%s'", api, sg)
+				}
+				if i == nil {
+					return errors.Errorf("%s: not found ref to SG '%s'", api, sg)
+				}
 			}
 		}
 		return nil

@@ -102,7 +102,7 @@ type (
 		String() string
 	}
 
-	// SgIcmpRule ICMP:SG default rule
+	// SgIcmpRule SG:ICMP default rule
 	SgIcmpRule struct {
 		Sg    string
 		Icmp  ICMP
@@ -110,10 +110,26 @@ type (
 		Trace bool
 	}
 
-	// SgIcmpRuleID ICMP:SG rule ID
+	// SgIcmpRuleID SG:ICMP rule ID
 	SgIcmpRuleID struct {
-		Sg  string
 		IPv uint8
+		Sg  string
+	}
+
+	// SgSgIcmpRule SG-SG:ICMP default rule
+	SgSgIcmpRule struct {
+		SgFrom string
+		SgTo   string
+		Icmp   ICMP
+		Logs   bool
+		Trace  bool
+	}
+
+	// SgSgIcmpRuleID SG-SG:ICMP rule ID
+	SgSgIcmpRuleID struct {
+		IPv    uint8
+		SgFrom string
+		SgTo   string
 	}
 )
 
@@ -292,16 +308,13 @@ func (o FQDN) Cmp(other FQDN) int {
 }
 
 // IdentityHash -
-func (o SgIcmpRule) IdentityHash() string {
+func (o SgIcmpRuleID) IdentityHash() string {
 	return o.String()
 }
 
 // String -
-func (o SgIcmpRule) String() string {
-	if o.Icmp.IPv == 6 {
-		return fmt.Sprintf("icmp6:sg(%s)", o.Sg)
-	}
-	return fmt.Sprintf("icmp:sg(%s)", o.Sg)
+func (o SgIcmpRuleID) String() string {
+	return fmt.Sprintf("sg(%s):icmp%v", o.Sg, o.IPv)
 }
 
 // IsEq -
@@ -319,4 +332,32 @@ func (o SgIcmpRule) ID() SgIcmpRuleID {
 		Sg:  o.Sg,
 		IPv: o.Icmp.IPv,
 	}
+}
+
+// IsEq -
+func (o SgSgIcmpRule) IsEq(other SgSgIcmpRule) bool {
+	return o.Logs == other.Logs &&
+		o.Trace == other.Trace &&
+		o.SgFrom == other.SgFrom &&
+		o.Icmp.IPv == other.Icmp.IPv &&
+		o.Icmp.Types.Eq(&o.Icmp.Types)
+}
+
+// ID -
+func (o SgSgIcmpRule) ID() SgSgIcmpRuleID {
+	return SgSgIcmpRuleID{
+		SgFrom: o.SgFrom,
+		SgTo:   o.SgTo,
+		IPv:    o.Icmp.IPv,
+	}
+}
+
+// IdentityHash -
+func (o SgSgIcmpRuleID) IdentityHash() string {
+	return o.String()
+}
+
+// String -
+func (o SgSgIcmpRuleID) String() string {
+	return fmt.Sprintf("sg(%s)sg(%s)icmp%v", o.SgFrom, o.SgTo, o.IPv)
 }

@@ -145,7 +145,8 @@ func PKScopeOfFQDNRules(others ...model.FQDNRule) Scope {
 func PKScopeOfSgIcmpRules(rules ...model.SgIcmpRule) Scope {
 	ret := scopedSgIcmpIdentity{}
 	for _, r := range rules {
-		ret[r.IdentityHash()] = r.ID()
+		id := r.ID()
+		ret[id.IdentityHash()] = id
 	}
 	return ret
 }
@@ -166,7 +167,8 @@ func (scopedSgIcmpIdentity) privateScope()   {}
 
 type filterKindArg interface {
 	model.Network | model.SecurityGroup |
-		model.SGRule | model.FQDNRule | model.SgIcmpRule
+		model.SGRule | model.FQDNRule | model.SgIcmpRule |
+		model.SgSgIcmpRule
 }
 
 type filterTree[filterArgT filterKindArg] struct {
@@ -372,7 +374,7 @@ func (p scopedFqdnRuleIdentity) meta() metaInfo {
 }
 
 func (p scopedSgIcmpIdentity) inSgIcmpRule(rule model.SgIcmpRule) bool {
-	h := rule.IdentityHash()
+	h := rule.ID().IdentityHash()
 	_, ok := p[h]
 	return ok
 }
