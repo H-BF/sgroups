@@ -244,12 +244,12 @@ func (wr sGroupsMemDbWriter) SyncSgSgIcmpRules(ctx context.Context, rules []mode
 	if err != nil {
 		return errors.WithMessage(err, api)
 	}
-	var ft filterTree[model.SgIcmpRule]
+	var ft filterTree[model.SgSgIcmpRule]
 	if !ft.init(scope) {
 		return errors.Errorf("bad scope")
 	}
 	it = memdb.NewFilterIterator(it, func(i interface{}) bool {
-		r := *i.(*model.SgIcmpRule)
+		r := *i.(*model.SgSgIcmpRule)
 		return !ft.invoke(r)
 	})
 
