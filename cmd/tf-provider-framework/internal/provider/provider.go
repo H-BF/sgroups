@@ -16,9 +16,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func New() func() provider.Provider { //TODO: 'New' => poor naming
+func NewProvider(version string) func() provider.Provider {
 	return func() provider.Provider {
-		return &sgroupsProvider{}
+		return &sgroupsProvider{
+			version: version,
+		}
 	}
 }
 
@@ -26,7 +28,9 @@ var (
 	_ provider.Provider = (*sgroupsProvider)(nil)
 )
 
-type sgroupsProvider struct{}
+type sgroupsProvider struct {
+	version string
+}
 
 type providerConfig struct {
 	Address      types.String `tfsdk:"address"`
@@ -35,7 +39,7 @@ type providerConfig struct {
 
 func (s *sgroupsProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
 	resp.TypeName = "sgroups"
-	//TODO: Need version
+	resp.Version = s.version
 }
 
 func (s *sgroupsProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
@@ -100,7 +104,7 @@ func (s *sgroupsProvider) Configure(ctx context.Context, req provider.ConfigureR
 
 func (s *sgroupsProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 
-	return []func() datasource.DataSource{} //TODO: return NIL
+	return nil
 }
 
 func (s *sgroupsProvider) Resources(_ context.Context) []func() resource.Resource {

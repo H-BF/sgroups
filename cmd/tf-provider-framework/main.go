@@ -11,6 +11,7 @@ import (
 
 var (
 	address = "registry.terraform.io/h-bf/sgroups"
+	version = "dev"
 )
 
 func main() {
@@ -26,7 +27,7 @@ func main() {
 		Debug:   debug,
 	}
 
-	err := providerserver.Serve(context.Background(), provider.New(), opts)
+	err := providerserver.Serve(context.Background(), provider.NewProvider(version), opts)
 
 	if err != nil {
 		log.Fatal(err.Error())
