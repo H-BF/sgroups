@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
@@ -185,7 +184,4 @@ func (c *CollectionResource[T, S]) Configure(_ context.Context, req resource.Con
 var (
 	_ resource.Resource              = &CollectionResource[networkItem, protos.SyncNetworks]{}
 	_ resource.ResourceWithConfigure = &CollectionResource[networkItem, protos.SyncNetworks]{}
-
-	errGRPCCall       = errors.New("GRPC call error")
-	errNotEnoughItems = errors.New("resource doesn't contain any items")
 )

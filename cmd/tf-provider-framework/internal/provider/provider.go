@@ -2,6 +2,9 @@ package provider
 
 import (
 	"context"
+	"os"
+	"time"
+
 	"github.com/H-BF/sgroups/cmd/tf-provider-framework/internal/validators"
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
 	client "github.com/H-BF/sgroups/internal/grpc-client"
@@ -11,18 +14,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"os"
-	"time"
 )
 
-func New() func() provider.Provider {
+func New() func() provider.Provider { //TODO: 'New' => poor naming
 	return func() provider.Provider {
 		return &sgroupsProvider{}
 	}
 }
 
 var (
-	_ provider.Provider = &sgroupsProvider{}
+	_ provider.Provider = (*sgroupsProvider)(nil)
 )
 
 type sgroupsProvider struct{}
@@ -34,6 +35,7 @@ type providerConfig struct {
 
 func (s *sgroupsProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
 	resp.TypeName = "sgroups"
+	//TODO: Need version
 }
 
 func (s *sgroupsProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
@@ -85,8 +87,8 @@ func (s *sgroupsProvider) Configure(ctx context.Context, req provider.ConfigureR
 		New(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Unable to Create Sgroups GRPC Client",
-			"Sgroups GRPC Client Error: "+err.Error())
+			"create Sgroups client",
+			"reason: "+err.Error())
 		return
 	}
 
@@ -98,7 +100,7 @@ func (s *sgroupsProvider) Configure(ctx context.Context, req provider.ConfigureR
 
 func (s *sgroupsProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 
-	return []func() datasource.DataSource{}
+	return []func() datasource.DataSource{} //TODO: return NIL
 }
 
 func (s *sgroupsProvider) Resources(_ context.Context) []func() resource.Resource {

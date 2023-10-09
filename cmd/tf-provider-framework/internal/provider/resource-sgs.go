@@ -43,7 +43,7 @@ type (
 		Logs          types.Bool   `tfsdk:"logs"`
 		Trace         types.Bool   `tfsdk:"trace"`
 		DefaultAction types.String `tfsdk:"default_action"`
-		Networks      types.String `tfsdk:"networks"`
+		Networks      types.String `tfsdk:"networks"` //TODO: types.String -> types.Set
 	}
 )
 
@@ -105,11 +105,7 @@ func listSgs(ctx context.Context, state sgsResourceModel, client *sgAPI.Client) 
 
 	listResp, err := client.ListSecurityGroups(ctx, &listReq)
 	if err != nil {
-		return sgsResourceModel{}, errGRPCCall
-	}
-
-	if g := listResp.GetGroups(); len(g) == 0 {
-		return sgsResourceModel{}, errNotEnoughItems
+		return sgsResourceModel{}, err
 	}
 
 	newItems := make(map[string]sgItem, len(state.Items))

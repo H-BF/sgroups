@@ -66,11 +66,7 @@ func listNetworks(ctx context.Context, state networksResourceModel, client *sgAP
 
 	listResp, err := client.ListNetworks(ctx, &listReq)
 	if err != nil {
-		return networksResourceModel{}, errGRPCCall
-	}
-
-	if srcNetworks := listResp.GetNetworks(); len(srcNetworks) == 0 {
-		return networksResourceModel{}, errNotEnoughItems
+		return networksResourceModel{}, err
 	}
 
 	newItems := make(map[string]networkItem, len(state.Items))
