@@ -15,6 +15,7 @@ import (
 type (
 	SingleResource interface {
 		ResourceAttributes() map[string]schema.Attribute
+		Changed(oldState SingleResource) bool
 	}
 
 	protoSubject interface {
@@ -119,10 +120,10 @@ func (c *CollectionResource[T, S]) Update(ctx context.Context, req resource.Upda
 	}
 
 	itemsToDelete := map[string]T{}
-	for name, networkFeatures := range state.Items {
+	for name, itemFeatures := range state.Items {
 		if _, ok := plan.Items[name]; !ok {
 			// if item is missing in plan state - delete it
-			itemsToDelete[name] = networkFeatures
+			itemsToDelete[name] = itemFeatures
 		}
 	}
 
@@ -143,16 +144,30 @@ func (c *CollectionResource[T, S]) Update(ctx context.Context, req resource.Upda
 		}
 	}
 
-	updateReq, diags := plan.asSyncReq(ctx, protos.SyncReq_Upsert, c.toProto)
-	if diags.HasError() {
-		resp.Diagnostics.Append(diags...)
-		return
+	itemsToUpdate := map[string]T{}
+	for name, itemFeatures := range plan.Items {
+		// in plan state can have unchanged items which should be ignored
+		// missing items before and changed items should be updated
+		if oldItemFeatures, ok := state.Items[name]; !ok || itemFeatures.Changed(oldItemFeatures) {
+			itemsToUpdate[name] = itemFeatures
+		}
 	}
-	if _, err := c.client.Sync(ctx, updateReq); err != nil {
-		resp.Diagnostics.AddError(
-			"Error updating resource",
-			"Could not update resource: "+err.Error())
-		return
+
+	if len(itemsToUpdate) > 0 {
+		tempModel := CollectionResourceModel[T, S]{
+			Items: itemsToUpdate,
+		}
+		updateReq, diags := tempModel.asSyncReq(ctx, protos.SyncReq_Upsert, c.toProto)
+		if diags.HasError() {
+			resp.Diagnostics.Append(diags...)
+			return
+		}
+		if _, err := c.client.Sync(ctx, updateReq); err != nil {
+			resp.Diagnostics.AddError(
+				"Error updating resource",
+				"Could not update resource: "+err.Error())
+			return
+		}
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)

@@ -77,6 +77,19 @@ func (item sgItem) ResourceAttributes() map[string]schema.Attribute {
 	}
 }
 
+func (item sgItem) Changed(oldState SingleResource) bool {
+	oldSg, ok := oldState.(sgItem)
+	if !ok {
+		panic("sgItem type expected")
+	}
+	var changed bool
+	changed = !item.Logs.Equal(oldSg.Logs)
+	changed = !item.Trace.Equal(oldSg.Trace)
+	changed = !item.DefaultAction.Equal(oldSg.DefaultAction)
+	changed = !item.Networks.Equal(oldSg.Networks)
+	return changed
+}
+
 func sgsToProto(
 	ctx context.Context, items map[string]sgItem,
 ) (*protos.SyncSecurityGroups, diag.Diagnostics) {

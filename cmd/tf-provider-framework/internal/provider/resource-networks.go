@@ -49,7 +49,15 @@ func (item networkItem) ResourceAttributes() map[string]schema.Attribute {
 	}
 }
 
-func networksToProto(ctx context.Context, items map[string]networkItem) (*protos.SyncNetworks, diag.Diagnostics) {
+func (item networkItem) Changed(oldState SingleResource) bool {
+	oldNetwork, ok := oldState.(networkItem)
+	if !ok {
+		panic("networkItem type expected")
+	}
+	return !item.Cidr.Equal(oldNetwork.Cidr)
+}
+
+func networksToProto(_ context.Context, items map[string]networkItem) (*protos.SyncNetworks, diag.Diagnostics) {
 	sn := &protos.SyncNetworks{}
 	var diags diag.Diagnostics
 	for name, netFeatures := range items {
