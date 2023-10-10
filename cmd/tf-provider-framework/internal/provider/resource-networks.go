@@ -8,6 +8,7 @@ import (
 	"github.com/H-BF/sgroups/cmd/tf-provider-framework/internal/validators"
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -48,25 +49,29 @@ func (item networkItem) ResourceAttributes() map[string]schema.Attribute {
 	}
 }
 
-func networksToProto(items map[string]networkItem) *protos.SyncNetworks {
+func networksToProto(ctx context.Context, items map[string]networkItem) (*protos.SyncNetworks, diag.Diagnostics) {
 	sn := &protos.SyncNetworks{}
+	var diags diag.Diagnostics
 	for name, netFeatures := range items {
 		sn.Networks = append(sn.Networks, &protos.Network{
 			Name:    name,
 			Network: &common.Networks_NetIP{CIDR: netFeatures.Cidr.ValueString()},
 		})
 	}
-	return sn
+	return sn, diags
 }
 
-func listNetworks(ctx context.Context, state networksResourceModel, client *sgAPI.Client) (networksResourceModel, error) {
+func listNetworks(ctx context.Context, state networksResourceModel, client *sgAPI.Client) (networksResourceModel, diag.Diagnostics) {
+	var diags diag.Diagnostics
 	listReq := protos.ListNetworksReq{
 		NeteworkNames: state.getNames(),
 	}
 
 	listResp, err := client.ListNetworks(ctx, &listReq)
 	if err != nil {
-		return networksResourceModel{}, err
+		diags.AddError("Error reading resource state",
+			"Could not perform ListNetworks GRPC call: "+err.Error())
+		return networksResourceModel{}, diags
 	}
 
 	newItems := make(map[string]networkItem, len(state.Items))

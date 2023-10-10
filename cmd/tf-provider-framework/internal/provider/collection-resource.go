@@ -7,6 +7,7 @@ import (
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
 
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 )
@@ -32,8 +33,8 @@ type (
 		suffix      string
 		description Description
 		client      *sgAPI.Client
-		toProto     func(map[string]T) *S
-		read        func(ctx context.Context, model CollectionResourceModel[T, S], client *sgAPI.Client) (CollectionResourceModel[T, S], error)
+		toProto     func(context.Context, map[string]T) (*S, diag.Diagnostics)
+		read        func(context.Context, CollectionResourceModel[T, S], *sgAPI.Client) (CollectionResourceModel[T, S], diag.Diagnostics)
 		sr          SingleResource
 	}
 )
@@ -67,7 +68,11 @@ func (c *CollectionResource[T, S]) Create(ctx context.Context, req resource.Crea
 	}
 
 	// Convert from Terraform data model into GRPC data model
-	syncReq := plan.asSyncReq(protos.SyncReq_Upsert, c.toProto)
+	syncReq, diags := plan.asSyncReq(ctx, protos.SyncReq_Upsert, c.toProto)
+	if diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
 
 	// Send GRPC request
 	if _, err := c.client.Sync(ctx, syncReq); err != nil {
@@ -91,11 +96,13 @@ func (c *CollectionResource[T, S]) Read(ctx context.Context, req resource.ReadRe
 	}
 
 	// Create GRPC request and convert response to Terraform data model
-	var err error
-	if state, err = c.read(ctx, state, c.client); err != nil {
-		resp.Diagnostics.AddError(
-			"Error reading resource state",
-			err.Error())
+	var diags diag.Diagnostics
+	if state, diags = c.read(ctx, state, c.client); diags.HasError() {
+		for _, diagError := range diags.Errors() {
+			resp.Diagnostics.AddError(
+				"Error reading resource state",
+				diagError.Summary()+":"+diagError.Detail())
+		}
 	}
 
 	// Save updated data into Terraform state
@@ -123,8 +130,11 @@ func (c *CollectionResource[T, S]) Update(ctx context.Context, req resource.Upda
 		tempModel := CollectionResourceModel[T, S]{
 			Items: itemsToDelete,
 		}
-		delReq := tempModel.asSyncReq(protos.SyncReq_Delete, c.toProto)
-
+		delReq, diags := tempModel.asSyncReq(ctx, protos.SyncReq_Delete, c.toProto)
+		if diags.HasError() {
+			resp.Diagnostics.Append(diags...)
+			return
+		}
 		if _, err := c.client.Sync(ctx, delReq); err != nil {
 			resp.Diagnostics.AddError(
 				"Error updating resource",
@@ -133,8 +143,11 @@ func (c *CollectionResource[T, S]) Update(ctx context.Context, req resource.Upda
 		}
 	}
 
-	updateReq := plan.asSyncReq(protos.SyncReq_Upsert, c.toProto)
-
+	updateReq, diags := plan.asSyncReq(ctx, protos.SyncReq_Upsert, c.toProto)
+	if diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
 	if _, err := c.client.Sync(ctx, updateReq); err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating resource",
@@ -153,7 +166,11 @@ func (c *CollectionResource[T, S]) Delete(ctx context.Context, req resource.Dele
 		return
 	}
 
-	delReq := state.asSyncReq(protos.SyncReq_Delete, c.toProto)
+	delReq, diags := state.asSyncReq(ctx, protos.SyncReq_Delete, c.toProto)
+	if diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
 
 	if _, err := c.client.Sync(ctx, delReq); err != nil {
 		resp.Diagnostics.AddError(

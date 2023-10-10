@@ -8,6 +8,7 @@ import (
 	"github.com/H-BF/sgroups/cmd/tf-provider-framework/internal/validators"
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
 	client "github.com/H-BF/sgroups/internal/grpc-client"
+
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
@@ -16,7 +17,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func NewProvider(version string) func() provider.Provider {
+func Factory(version string) func() provider.Provider {
 	return func() provider.Provider {
 		return &sgroupsProvider{
 			version: version,
