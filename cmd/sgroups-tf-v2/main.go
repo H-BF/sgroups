@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"flag"
-	"log"
+	"os"
 
 	"github.com/H-BF/sgroups/cmd/sgroups-tf-v2/internal/provider"
+
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 var (
@@ -20,16 +22,13 @@ func main() {
 	flag.BoolVar(&debug, "debug", false, "set to true to run the provider with support for debuggers")
 	flag.Parse()
 
-	//address = "terraform.local/h-bf/sgroups"
-
 	opts := providerserver.ServeOpts{
 		Address: address,
 		Debug:   debug,
 	}
-
-	err := providerserver.Serve(context.Background(), provider.Factory(version), opts)
-
-	if err != nil {
-		log.Fatal(err.Error())
+	ctx := context.Background()
+	if err := providerserver.Serve(ctx, provider.Factory(version), opts); err != nil {
+		tflog.Error(ctx, err.Error())
+		os.Exit(1)
 	}
 }
