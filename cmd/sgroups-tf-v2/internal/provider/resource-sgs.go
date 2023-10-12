@@ -78,22 +78,17 @@ func (item sgItem) ResourceAttributes() map[string]schema.Attribute {
 }
 
 func (item sgItem) Changed(oldState SingleResource) bool {
-	oldSg, ok := oldState.(sgItem)
-	if !ok {
-		panic("sgItem type expected")
-	}
-	var changed bool
-	changed = !item.Logs.Equal(oldSg.Logs)
-	changed = !item.Trace.Equal(oldSg.Trace)
-	changed = !item.DefaultAction.Equal(oldSg.DefaultAction)
-	changed = !item.Networks.Equal(oldSg.Networks)
-	return changed
+	oldSg := oldState.(sgItem)
+	return !(item.Logs.Equal(oldSg.Logs) &&
+		item.Trace.Equal(oldSg.Trace) &&
+		item.DefaultAction.Equal(oldSg.DefaultAction) &&
+		item.Networks.Equal(oldSg.Networks))
 }
 
 func sgsToProto(
 	ctx context.Context, items map[string]sgItem,
 ) (*protos.SyncSecurityGroups, diag.Diagnostics) {
-	syncGroups := &protos.SyncSecurityGroups{}
+	var syncGroups protos.SyncSecurityGroups
 	var diags diag.Diagnostics
 	for name, sgFeatures := range items {
 		da := sgFeatures.DefaultAction.ValueString()
@@ -110,33 +105,35 @@ func sgsToProto(
 			Logs:          sgFeatures.Logs.ValueBool(),
 		})
 	}
-	return syncGroups, diags
+	return &syncGroups, diags
 }
 
 func listSgs(ctx context.Context, state sgsResourceModel, client *sgAPI.Client) (sgsResourceModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
-	listReq := protos.ListSecurityGroupsReq{
-		SgNames: state.getNames(),
+	var err error
+	var listResp *protos.ListSecurityGroupsResp
+	if names := state.getNames(); len(names) > 0 {
+		listReq := protos.ListSecurityGroupsReq{
+			SgNames: names,
+		}
+		listResp, err = client.ListSecurityGroups(ctx, &listReq)
+		if err != nil {
+			diags.AddError("reading SG state", err.Error())
+			return sgsResourceModel{}, diags
+		}
 	}
-
-	listResp, err := client.ListSecurityGroups(ctx, &listReq)
-	if err != nil {
-		diags.AddError("Error reading resource state",
-			"Could not perform ListSecurityGroups GRPC call: "+err.Error())
-		return sgsResourceModel{}, diags
-	}
-
 	newItems := make(map[string]sgItem, len(state.Items))
 	for _, sg := range listResp.GetGroups() {
-		if sg != nil {
-			networks, d := types.SetValueFrom(ctx, types.StringType, sg.GetNetworks())
-			diags.Append(d...)
-			newItems[sg.GetName()] = sgItem{
-				Logs:          types.BoolValue(sg.GetLogs()),
-				Trace:         types.BoolValue(sg.GetTrace()),
-				DefaultAction: types.StringValue(sg.GetDefaultAction().String()),
-				Networks:      networks,
-			}
+		networks, d := types.SetValueFrom(ctx, types.StringType, sg.GetNetworks())
+		diags.Append(d...)
+		if d.HasError() {
+			return sgsResourceModel{}, diags
+		}
+		newItems[sg.GetName()] = sgItem{
+			Logs:          types.BoolValue(sg.GetLogs()),
+			Trace:         types.BoolValue(sg.GetTrace()),
+			DefaultAction: types.StringValue(sg.GetDefaultAction().String()),
+			Networks:      networks,
 		}
 	}
 	state.Items = newItems
