@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/H-BF/sgroups/cmd/tf-provider-framework/internal/validators"
+	"github.com/H-BF/sgroups/cmd/sgroups-tf-v2/internal/validators"
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
 	client "github.com/H-BF/sgroups/internal/grpc-client"
 

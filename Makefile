@@ -122,6 +122,17 @@ sgroups-tf:
 	$(GO) build -ldflags="$(LDFLAGS)" -o $(OUT) $(CURDIR)/cmd/$(APP) &&\
 	echo -=OK=- 
 
+.PHONY: sgroups-tf-v2	
+sgroups-tf-v2: | go-deps ##build SGroups Terraform provider V2 
+sgroups-tf-v2: APP=sgroups-tf-v2
+sgroups-tf-v2: OUT=$(CURDIR)/bin/terraform-provider-sgroups
+sgroups-tf-v2:
+	@echo build \"$(APP)\" for OS/ARCH=\"$(os)/$(arch)\" ... && \
+	echo into \"$(OUT)\" && \
+	env GOOS=$(os) GOARCH=$(arch) CGO_ENABLED=0 \
+	$(GO) build -ldflags="$(LDFLAGS)" -o $(OUT) $(CURDIR)/cmd/$(APP) &&\
+	echo -=OK=- 
+
 
 GOOSE_REPO:=https://github.com/pressly/goose
 GOOSE_LATEST_VERSION:= $(shell git ls-remote --tags --refs --sort='v:refname' $(GOOSE_REPO)|tail -1|egrep -o "v[0-9]+.*")
