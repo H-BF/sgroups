@@ -90,7 +90,7 @@ func (srv *sgService) FindSgIcmpRules(ctx context.Context, req *sg.FindSgIcmpRul
 		sc = registry.SG(sgs...)
 	}
 	resp = new(sg.SgIcmpRulesResp)
-	reader.ListSgIcmpRules(ctx, func(rule model.SgIcmpRule) error {
+	err = reader.ListSgIcmpRules(ctx, func(rule model.SgIcmpRule) error {
 		r, e := sgIcmpRule2proto(rule)
 		if e == nil {
 			resp.Rules = append(resp.Rules, r)
@@ -122,7 +122,7 @@ func (srv *sgService) FindSgSgIcmpRules(ctx context.Context, req *sg.FindSgSgIcm
 		sc2 = registry.SGTo(sgs[0], sgs[1:]...)
 	}
 	resp = new(sg.SgSgIcmpRulesResp)
-	reader.ListSgSgIcmpRules(ctx, func(rule model.SgSgIcmpRule) error {
+	err = reader.ListSgSgIcmpRules(ctx, func(rule model.SgSgIcmpRule) error {
 		r, e := sgSgIcmpRule2proto(rule)
 		if e == nil {
 			resp.Rules = append(resp.Rules, r)

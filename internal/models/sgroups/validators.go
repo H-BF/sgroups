@@ -164,7 +164,8 @@ func (o FQDN) Validate() error {
 // Validate impl Validator
 func (o ICMP) Validate() error {
 	return oz.ValidateStruct(&o,
-		oz.Field(&o.IPv, oz.Required, oz.In(uint8(4), uint8(6)).Error("IPv should be in [4,6]")),
+		oz.Field(&o.IPv, oz.Required, oz.In(uint8(IPv4), uint8(IPv6)).
+			Error("IPv should be in [4,6]")),
 	)
 }
 

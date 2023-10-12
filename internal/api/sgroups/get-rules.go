@@ -76,9 +76,9 @@ func sgIcmpRule2proto(src model.SgIcmpRule) (*sg.SgIcmpRule, error) {
 	ret.Trace = src.Trace
 	ret.Sg = src.Sg
 	switch src.Icmp.IPv {
-	case 4:
+	case model.IPv4:
 		ret.ICMP.IPv = common.IpAddrFamily_IPv4
-	case 6:
+	case model.IPv6:
 		ret.ICMP.IPv = common.IpAddrFamily_IPv6
 	default:
 		return nil, errors.Errorf("got unsupported IPv(%v)", src.Icmp.IPv)
@@ -99,9 +99,9 @@ func sgSgIcmpRule2proto(src model.SgSgIcmpRule) (*sg.SgSgIcmpRule, error) {
 	ret.SgFrom = src.SgFrom
 	ret.SgTo = src.SgTo
 	switch src.Icmp.IPv {
-	case 4:
+	case model.IPv4:
 		ret.ICMP.IPv = common.IpAddrFamily_IPv4
-	case 6:
+	case model.IPv6:
 		ret.ICMP.IPv = common.IpAddrFamily_IPv6
 	default:
 		return nil, errors.Errorf("got unsupported IPv(%v)", src.Icmp.IPv)

@@ -119,7 +119,7 @@ func IntegrityChecker4SG() IntegrityChecker {
 }
 
 // IntegrityChecker4Networks checks if every network does overlap another one
-func IntegrityChecker4Networks() IntegrityChecker {
+func IntegrityChecker4Networks() IntegrityChecker { //nolint:gocyclo
 	const api = "Integrity-of-Networks"
 
 	type bound struct {

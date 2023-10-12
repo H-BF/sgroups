@@ -5,7 +5,7 @@ import (
 )
 
 // HDict hashed dictionary
-type HDict[Tk comparable, Tv any] struct {	
+type HDict[Tk comparable, Tv any] struct {
 	hmap[Tk, Tv]
 }
 

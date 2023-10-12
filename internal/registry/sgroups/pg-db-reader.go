@@ -253,7 +253,7 @@ func (rd *pgDbReader) argsForListSgIcmpRules(scope Scope) ([]any, error) {
 }
 
 // ListSgIcmpRule impl Reader
-func (rd *pgDbReader) ListSgIcmpRules(ctx context.Context, consume func(model.SgIcmpRule) error, scope Scope) error {
+func (rd *pgDbReader) ListSgIcmpRules(ctx context.Context, consume func(model.SgIcmpRule) error, scope Scope) error { //nolint:dupl
 	const (
 		qry = "select ip_v, types, sg, logs, trace from sgroups.list_sg_icmp_rule($1)"
 	)
@@ -315,7 +315,7 @@ func (rd *pgDbReader) argsForListSgSgIcmpRules(scope Scope) ([]any, error) {
 }
 
 // ListSgSgIcmpRules impl Reader
-func (rd *pgDbReader) ListSgSgIcmpRules(ctx context.Context, consume func(model.SgSgIcmpRule) error, scope Scope) error {
+func (rd *pgDbReader) ListSgSgIcmpRules(ctx context.Context, consume func(model.SgSgIcmpRule) error, scope Scope) error { //nolint:dupl
 	const (
 		qry = "select ip_v, types, sg_from, sg_to, logs, trace from sgroups.list_sg_sg_icmp_rule($1, $2)"
 	)

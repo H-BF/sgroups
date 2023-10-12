@@ -195,7 +195,8 @@ func (wr sGroupsMemDbWriter) SyncFqdnRules(ctx context.Context, rules []model.FQ
 }
 
 // SyncSgIcmpRules impl Writer = update / delete SG:ICMP rules
-func (wr sGroupsMemDbWriter) SyncSgIcmpRules(ctx context.Context, rules []model.SgIcmpRule, scope Scope, opts ...Option) error { //nolint:dupl
+func (wr sGroupsMemDbWriter) SyncSgIcmpRules(ctx context.Context, //nolint:dupl
+	rules []model.SgIcmpRule, scope Scope, opts ...Option) error {
 	const api = "mem-db/SyncSgIcmpRules"
 
 	it, err := wr.writer.Get(TblSgIcmpRules, indexID)
@@ -237,7 +238,8 @@ func (wr sGroupsMemDbWriter) SyncSgIcmpRules(ctx context.Context, rules []model.
 }
 
 // SyncSgSgIcmpRules impl Writer = update / delete SG-SG:ICMP rules
-func (wr sGroupsMemDbWriter) SyncSgSgIcmpRules(ctx context.Context, rules []model.SgSgIcmpRule, scope Scope, opts ...Option) error { //nolint:dupl
+func (wr sGroupsMemDbWriter) SyncSgSgIcmpRules(ctx context.Context, //nolint:dupl
+	rules []model.SgSgIcmpRule, scope Scope, opts ...Option) error {
 	const api = "mem-db/SyncSgSgIcmpRules"
 
 	it, err := wr.writer.Get(TblSgSgIcmpRules, indexID)

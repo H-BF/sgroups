@@ -145,6 +145,13 @@ var PortRangeFactory = ranges.IntsFactory(PortNumber(0))
 var PortRangeFull = PortRangeFactory.Range(0, false, ^PortNumber(0), false)
 
 const (
+	// IPv4 IP family v4
+	IPv4 = 4
+	// IPv6 IP family v6
+	IPv6 = 6
+)
+
+const (
 	// TCP ...
 	TCP NetworkTransport = iota
 

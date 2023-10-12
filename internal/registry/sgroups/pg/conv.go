@@ -264,9 +264,9 @@ func (o *SG2FQDNRule) FromModel(m sgm.FQDNRule) error {
 // ToModel -
 func (o ICMP) ToModel() (ret sgm.ICMP, err error) {
 	switch o.IPv {
-	case ipv4:
+	case pgIPv4:
 		ret.IPv = 4
-	case ipv6:
+	case pgIPv6:
 		ret.IPv = 6
 	default:
 		return ret, errors.Errorf("got unknown IP family (%v) from PG", o.IPv)
@@ -282,10 +282,10 @@ func (o ICMP) ToModel() (ret sgm.ICMP, err error) {
 
 func ipFamilyFromModel(ipv uint8) (ret IpFamily, err error) {
 	switch ipv {
-	case 4:
-		ret = ipv4
-	case 6:
-		ret = ipv6
+	case sgm.IPv4:
+		ret = pgIPv4
+	case sgm.IPv6:
+		ret = pgIPv6
 	default:
 		err = errors.Errorf("cannot convert (%v) IP family", ipv)
 	}
@@ -343,8 +343,8 @@ func (o *SgSgIcmpRule) FromModel(m sgm.SgSgIcmpRule) error {
 }
 
 const (
-	ipv4 = "IPv4"
-	ipv6 = "IPv6"
+	pgIPv4 = "IPv4"
+	pgIPv6 = "IPv6"
 )
 
 var (
