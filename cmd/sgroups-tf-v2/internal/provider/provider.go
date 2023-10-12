@@ -73,18 +73,18 @@ func (s *sgroupsProvider) Configure(ctx context.Context, req provider.ConfigureR
 		return
 	}
 
-	// Get env vars first, so if config provides them then they will be overwritten
-	address := lookupEnvWithDefault("SGROUPS_ADDRESS", "tcp://127.0.0.1:9000")
-	dialDuration := lookupEnvWithDefault("SGROUPS_DIAL_DURATION", "10s")
-
-	if config.Address.ValueString() != "" {
-		address = config.Address.ValueString()
+	var address string
+	var dialDuration string
+	if v := config.Address.ValueString(); v != "" {
+		address = v
+	} else {
+		address = lookupEnvWithDefault("SGROUPS_ADDRESS", "tcp://127.0.0.1:9000")
 	}
-
-	if config.DialDuration.ValueString() != "" {
-		dialDuration = config.DialDuration.ValueString()
+	if v := config.DialDuration.ValueString(); v != "" {
+		dialDuration = v
+	} else {
+		dialDuration = lookupEnvWithDefault("SGROUPS_DIAL_DURATION", "10s")
 	}
-
 	connDuration, _ := time.ParseDuration(dialDuration)
 
 	c, err := client.FromAddress(address).
@@ -92,7 +92,7 @@ func (s *sgroupsProvider) Configure(ctx context.Context, req provider.ConfigureR
 		New(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"create Sgroups client",
+			"create sgroups client",
 			"reason: "+err.Error())
 		return
 	}
@@ -104,12 +104,10 @@ func (s *sgroupsProvider) Configure(ctx context.Context, req provider.ConfigureR
 }
 
 func (s *sgroupsProvider) DataSources(_ context.Context) []func() datasource.DataSource {
-
 	return nil
 }
 
 func (s *sgroupsProvider) Resources(_ context.Context) []func() resource.Resource {
-
 	return []func() resource.Resource{
 		NewNetworksResource,
 		NewSgsResource,
