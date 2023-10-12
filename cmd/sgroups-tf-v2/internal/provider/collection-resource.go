@@ -18,7 +18,7 @@ type (
 		Changed(oldState SingleResource) bool
 	}
 
-	protoSubject interface {
+	subjectOfSync interface {
 		protos.SyncNetworks |
 			protos.SyncSecurityGroups |
 			protos.SyncSGRules |
@@ -30,7 +30,7 @@ type (
 		ItemsDescription    string
 	}
 
-	CollectionResource[T SingleResource, S protoSubject] struct {
+	CollectionResource[T SingleResource, S subjectOfSync] struct {
 		suffix      string
 		description Description
 		client      *sgAPI.Client
@@ -69,7 +69,7 @@ func (c *CollectionResource[T, S]) Create(ctx context.Context, req resource.Crea
 	}
 
 	// Convert from Terraform data model into GRPC data model
-	syncReq, diags := plan.asSyncReq(ctx, protos.SyncReq_Upsert, c.toProto)
+	syncReq, diags := plan.toSyncReq(ctx, protos.SyncReq_Upsert, c.toProto)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return
@@ -131,15 +131,16 @@ func (c *CollectionResource[T, S]) Update(ctx context.Context, req resource.Upda
 		tempModel := CollectionResourceModel[T, S]{
 			Items: itemsToDelete,
 		}
-		delReq, diags := tempModel.asSyncReq(ctx, protos.SyncReq_Delete, c.toProto)
+		delReq, diags := tempModel.toSyncReq(ctx, protos.SyncReq_Delete, c.toProto)
 		if diags.HasError() {
 			resp.Diagnostics.Append(diags...)
 			return
 		}
 		if _, err := c.client.Sync(ctx, delReq); err != nil {
+			//c.description.ResourceDescription
 			resp.Diagnostics.AddError(
-				"Error updating resource",
-				"Could not delete resource: "+err.Error())
+				"delete "+c.description.ItemsDescription,
+				err.Error())
 			return
 		}
 	}
@@ -157,15 +158,15 @@ func (c *CollectionResource[T, S]) Update(ctx context.Context, req resource.Upda
 		tempModel := CollectionResourceModel[T, S]{
 			Items: itemsToUpdate,
 		}
-		updateReq, diags := tempModel.asSyncReq(ctx, protos.SyncReq_Upsert, c.toProto)
+		updateReq, diags := tempModel.toSyncReq(ctx, protos.SyncReq_Upsert, c.toProto)
 		if diags.HasError() {
 			resp.Diagnostics.Append(diags...)
 			return
 		}
 		if _, err := c.client.Sync(ctx, updateReq); err != nil {
 			resp.Diagnostics.AddError(
-				"Error updating resource",
-				"Could not update resource: "+err.Error())
+				"update "+c.description.ItemsDescription,
+				err.Error())
 			return
 		}
 	}
@@ -181,7 +182,7 @@ func (c *CollectionResource[T, S]) Delete(ctx context.Context, req resource.Dele
 		return
 	}
 
-	delReq, diags := state.asSyncReq(ctx, protos.SyncReq_Delete, c.toProto)
+	delReq, diags := state.toSyncReq(ctx, protos.SyncReq_Delete, c.toProto)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return
@@ -189,8 +190,8 @@ func (c *CollectionResource[T, S]) Delete(ctx context.Context, req resource.Dele
 
 	if _, err := c.client.Sync(ctx, delReq); err != nil {
 		resp.Diagnostics.AddError(
-			"Error deleting networks",
-			"Could not delete networks: "+err.Error())
+			"delete "+c.description.ItemsDescription,
+			err.Error())
 		return
 	}
 }
@@ -203,13 +204,11 @@ func (c *CollectionResource[T, S]) Configure(_ context.Context, req resource.Con
 	client, ok := req.ProviderData.(sgAPI.Client)
 	if !ok {
 		resp.Diagnostics.AddError(
-			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected sgroups GRPC client, got: %T.", req.ProviderData),
+			"unexpected Data Source type",
+			fmt.Sprintf("Expected sgroups client but got: %T.", req.ProviderData),
 		)
-
 		return
 	}
-
 	c.client = &client
 }
 

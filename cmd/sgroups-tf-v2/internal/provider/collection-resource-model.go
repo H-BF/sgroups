@@ -2,18 +2,19 @@ package provider
 
 import (
 	"context"
+
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"golang.org/x/exp/maps"
 )
 
 type (
-	CollectionResourceModel[T any, S protoSubject] struct {
+	CollectionResourceModel[T any, S subjectOfSync] struct {
 		Items map[string]T `tfsdk:"items"`
 	}
 )
 
-func (model *CollectionResourceModel[T, S]) asSyncReq(
+func (model *CollectionResourceModel[T, S]) toSyncReq(
 	ctx context.Context, operation protos.SyncReq_SyncOp,
 	toProto func(context.Context, map[string]T) (*S, diag.Diagnostics),
 ) (*protos.SyncReq, diag.Diagnostics) {

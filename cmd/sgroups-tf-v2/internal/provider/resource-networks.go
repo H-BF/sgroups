@@ -17,8 +17,8 @@ import (
 
 func NewNetworksResource() resource.Resource {
 	d := Description{
-		ResourceDescription: "Collection of networks",
-		ItemsDescription:    "Mapping from network name to it features (for example CIDR)",
+		ResourceDescription: "mapped 'Name' -> 'Network' resources",
+		ItemsDescription:    "Networks",
 	}
 	return &networksResource{
 		suffix:      "_networks",

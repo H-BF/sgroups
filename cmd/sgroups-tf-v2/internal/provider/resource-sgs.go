@@ -18,8 +18,8 @@ import (
 
 func NewSgsResource() resource.Resource {
 	d := Description{
-		ResourceDescription: "Collection of security groups",
-		ItemsDescription:    "Mapping from SG name to it features",
+		ResourceDescription: "mapped 'Name' -> 'Security Group' resource",
+		ItemsDescription:    "Security Groups",
 	}
 	return &sgsResource{
 		suffix:      "_groups",
