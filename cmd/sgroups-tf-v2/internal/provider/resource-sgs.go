@@ -22,11 +22,10 @@ func NewSgsResource() resource.Resource {
 		ItemsDescription:    "Security Groups",
 	}
 	return &sgsResource{
-		suffix:      "_groups",
-		description: d,
-		toProto:     sgsToProto,
-		read:        listSgs,
-		sr:          sgItem{},
+		suffix:       "_groups",
+		description:  d,
+		toSubjOfSync: sgsToProto,
+		read:         listSgs,
 	}
 }
 
@@ -77,8 +76,7 @@ func (item sgItem) ResourceAttributes() map[string]schema.Attribute {
 	}
 }
 
-func (item sgItem) Changed(oldState SingleResource) bool {
-	oldSg := oldState.(sgItem)
+func (item sgItem) IsDiffer(oldSg sgItem) bool {
 	return !(item.Logs.Equal(oldSg.Logs) &&
 		item.Trace.Equal(oldSg.Trace) &&
 		item.DefaultAction.Equal(oldSg.DefaultAction) &&

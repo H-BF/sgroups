@@ -13,9 +13,9 @@ import (
 )
 
 type (
-	SingleResource interface {
+	SingleResource[T any] interface {
 		ResourceAttributes() map[string]schema.Attribute
-		Changed(oldState SingleResource) bool
+		IsDiffer(T) bool
 	}
 
 	subjectOfSync interface {
@@ -30,13 +30,12 @@ type (
 		ItemsDescription    string
 	}
 
-	CollectionResource[T SingleResource, S subjectOfSync] struct {
-		suffix      string
-		description Description
-		client      *sgAPI.Client
-		toProto     func(context.Context, map[string]T) (*S, diag.Diagnostics)
-		read        func(context.Context, CollectionResourceModel[T, S], *sgAPI.Client) (CollectionResourceModel[T, S], diag.Diagnostics)
-		sr          SingleResource
+	CollectionResource[T SingleResource[T], S subjectOfSync] struct {
+		suffix       string
+		description  Description
+		client       *sgAPI.Client
+		toSubjOfSync func(context.Context, map[string]T) (*S, diag.Diagnostics)
+		read         func(context.Context, CollectionResourceModel[T, S], *sgAPI.Client) (CollectionResourceModel[T, S], diag.Diagnostics)
 	}
 )
 
@@ -45,6 +44,7 @@ func (c *CollectionResource[T, S]) Metadata(_ context.Context, req resource.Meta
 }
 
 func (c *CollectionResource[T, S]) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
+	var sr T
 	resp.Schema = schema.Schema{
 		Description: c.description.ResourceDescription,
 		Attributes: map[string]schema.Attribute{
@@ -52,7 +52,7 @@ func (c *CollectionResource[T, S]) Schema(_ context.Context, _ resource.SchemaRe
 				Description: c.description.ItemsDescription,
 				Required:    true,
 				NestedObject: schema.NestedAttributeObject{
-					Attributes: c.sr.ResourceAttributes(),
+					Attributes: sr.ResourceAttributes(),
 				},
 			},
 		},
@@ -69,7 +69,7 @@ func (c *CollectionResource[T, S]) Create(ctx context.Context, req resource.Crea
 	}
 
 	// Convert from Terraform data model into GRPC data model
-	syncReq, diags := plan.toSyncReq(ctx, protos.SyncReq_Upsert, c.toProto)
+	syncReq, diags := plan.toSyncReq(ctx, protos.SyncReq_Upsert, c.toSubjOfSync)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return
@@ -78,8 +78,8 @@ func (c *CollectionResource[T, S]) Create(ctx context.Context, req resource.Crea
 	// Send GRPC request
 	if _, err := c.client.Sync(ctx, syncReq); err != nil {
 		resp.Diagnostics.AddError(
-			"Error creating resource",
-			"Could not create resource: "+err.Error())
+			"create "+c.description.ItemsDescription,
+			err.Error())
 		return
 	}
 
@@ -101,7 +101,7 @@ func (c *CollectionResource[T, S]) Read(ctx context.Context, req resource.ReadRe
 	if state, diags = c.read(ctx, state, c.client); diags.HasError() {
 		for _, diagError := range diags.Errors() {
 			resp.Diagnostics.AddError(
-				"Error reading resource state",
+				"read "+c.description.ItemsDescription,
 				diagError.Summary()+":"+diagError.Detail())
 		}
 	}
@@ -131,7 +131,7 @@ func (c *CollectionResource[T, S]) Update(ctx context.Context, req resource.Upda
 		tempModel := CollectionResourceModel[T, S]{
 			Items: itemsToDelete,
 		}
-		delReq, diags := tempModel.toSyncReq(ctx, protos.SyncReq_Delete, c.toProto)
+		delReq, diags := tempModel.toSyncReq(ctx, protos.SyncReq_Delete, c.toSubjOfSync)
 		if diags.HasError() {
 			resp.Diagnostics.Append(diags...)
 			return
@@ -149,7 +149,7 @@ func (c *CollectionResource[T, S]) Update(ctx context.Context, req resource.Upda
 	for name, itemFeatures := range plan.Items {
 		// in plan state can have unchanged items which should be ignored
 		// missing items before and changed items should be updated
-		if oldItemFeatures, ok := state.Items[name]; !ok || itemFeatures.Changed(oldItemFeatures) {
+		if oldItemFeatures, ok := state.Items[name]; !ok || itemFeatures.IsDiffer(oldItemFeatures) {
 			itemsToUpdate[name] = itemFeatures
 		}
 	}
@@ -158,7 +158,7 @@ func (c *CollectionResource[T, S]) Update(ctx context.Context, req resource.Upda
 		tempModel := CollectionResourceModel[T, S]{
 			Items: itemsToUpdate,
 		}
-		updateReq, diags := tempModel.toSyncReq(ctx, protos.SyncReq_Upsert, c.toProto)
+		updateReq, diags := tempModel.toSyncReq(ctx, protos.SyncReq_Upsert, c.toSubjOfSync)
 		if diags.HasError() {
 			resp.Diagnostics.Append(diags...)
 			return
@@ -182,7 +182,7 @@ func (c *CollectionResource[T, S]) Delete(ctx context.Context, req resource.Dele
 		return
 	}
 
-	delReq, diags := state.toSyncReq(ctx, protos.SyncReq_Delete, c.toProto)
+	delReq, diags := state.toSyncReq(ctx, protos.SyncReq_Delete, c.toSubjOfSync)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return

@@ -21,11 +21,10 @@ func NewNetworksResource() resource.Resource {
 		ItemsDescription:    "Networks",
 	}
 	return &networksResource{
-		suffix:      "_networks",
-		description: d,
-		toProto:     networksToProto,
-		read:        listNetworks,
-		sr:          networkItem{},
+		suffix:       "_networks",
+		description:  d,
+		toSubjOfSync: networksToProto,
+		read:         listNetworks,
 	}
 }
 
@@ -49,12 +48,8 @@ func (item networkItem) ResourceAttributes() map[string]schema.Attribute {
 	}
 }
 
-func (item networkItem) Changed(oldState SingleResource) bool {
-	oldNetwork, ok := oldState.(networkItem)
-	if !ok {
-		panic("networkItem type expected")
-	}
-	return !item.Cidr.Equal(oldNetwork.Cidr)
+func (item networkItem) IsDiffer(oldState networkItem) bool {
+	return !item.Cidr.Equal(oldState.Cidr)
 }
 
 func networksToProto(_ context.Context, items map[string]networkItem) (*protos.SyncNetworks, diag.Diagnostics) {
