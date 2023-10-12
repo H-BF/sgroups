@@ -69,7 +69,9 @@ func sgFqdnRule2proto(src model.FQDNRule) (*sg.FqdnRule, error) {
 }
 
 func sgIcmpRule2proto(src model.SgIcmpRule) (*sg.SgIcmpRule, error) {
-	ret := new(sg.SgIcmpRule)
+	ret := sg.SgIcmpRule{
+		ICMP: new(common.ICMP),
+	}
 	ret.Logs = src.Logs
 	ret.Trace = src.Trace
 	ret.Sg = src.Sg
@@ -85,11 +87,13 @@ func sgIcmpRule2proto(src model.SgIcmpRule) (*sg.SgIcmpRule, error) {
 		ret.ICMP.Types = append(ret.ICMP.Types, uint32(t))
 		return true
 	})
-	return ret, nil
+	return &ret, nil
 }
 
 func sgSgIcmpRule2proto(src model.SgSgIcmpRule) (*sg.SgSgIcmpRule, error) {
-	ret := new(sg.SgSgIcmpRule)
+	ret := sg.SgSgIcmpRule{
+		ICMP: new(common.ICMP),
+	}
 	ret.Logs = src.Logs
 	ret.Trace = src.Trace
 	ret.SgFrom = src.SgFrom
@@ -106,7 +110,7 @@ func sgSgIcmpRule2proto(src model.SgSgIcmpRule) (*sg.SgSgIcmpRule, error) {
 		ret.ICMP.Types = append(ret.ICMP.Types, uint32(t))
 		return true
 	})
-	return ret, nil
+	return &ret, nil
 }
 
 func (srv *sgService) GetRules(ctx context.Context, req *sg.GetRulesReq) (resp *sg.RulesResp, err error) {
