@@ -40,20 +40,6 @@ func (model *CollectionResourceModel[T, S]) toSyncReq(
 	return req, nil
 }
 
-func (model *CollectionResourceModel[T, S]) itemsToDelete(priorState *CollectionResourceModel[T, S]) CollectionResourceModel[T, S] {
-	itemsToDelete := map[string]T{}
-	for name, itemFeatures := range priorState.Items {
-		if _, ok := model.Items[name]; !ok {
-			itemsToDelete[name] = itemFeatures
-		}
-	}
-
-	modelToDelete := CollectionResourceModel[T, S]{
-		Items: itemsToDelete,
-	}
-	return modelToDelete
-}
-
 func (model *CollectionResourceModel[T, S]) getNames() []string {
 	return maps.Keys(model.Items)
 }
