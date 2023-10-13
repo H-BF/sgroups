@@ -112,6 +112,7 @@ func (s *sgroupsProvider) Resources(_ context.Context) []func() resource.Resourc
 		NewNetworksResource,
 		NewSgsResource,
 		NewFqdnRulesResource,
+		NewSgToSgRulesResource,
 	}
 }
 

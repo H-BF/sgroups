@@ -24,11 +24,19 @@ func fromFqdnRule(rule *protos.FqdnRule) ruleKey {
 	}
 }
 
-func restoreSgToFqdnKey(key string) (ruleKey, error) {
+func fromSgRule(rule *protos.Rule) ruleKey {
+	return ruleKey{
+		proto: rule.GetTransport(),
+		from:  rule.GetSgFrom(),
+		to:    rule.GetSgTo(),
+	}
+}
+
+func restoreBase(key string) (ruleKey, string, error) {
 	var ret ruleKey
 	idx := strings.Index(key, ":")
 	if idx == -1 {
-		return ret, errors.Errorf("bad proto in key: %s", key)
+		return ret, "", errors.Errorf("bad proto in key: %s", key)
 	}
 	protoName, rest := key[:idx], key[idx+1:]
 	protoValue := common.Networks_NetIP_Transport_value[strings.ToUpper(protoName)]
@@ -36,9 +44,37 @@ func restoreSgToFqdnKey(key string) (ruleKey, error) {
 
 	from, rest, err := extractPart("sg", rest)
 	if err != nil {
-		return ret, err
+		return ret, "", err
 	}
 	ret.from = from
+
+	return ret, rest, nil
+}
+
+func restoreSgToSgKey(key string) (ruleKey, error) {
+	ret, rest, err := restoreBase(key)
+	if err != nil {
+		return ret, nil
+	}
+
+	to, rest, err := extractPart("sg", rest)
+	if err != nil {
+		return ret, err
+	}
+	ret.to = to
+
+	if len(rest) != 0 {
+		return ret, errors.Errorf("unexpected rest data: %s", rest)
+	}
+
+	return ret, nil
+}
+
+func restoreSgToFqdnKey(key string) (ruleKey, error) {
+	ret, rest, err := restoreBase(key)
+	if err != nil {
+		return ret, nil
+	}
 
 	to, rest, err := extractPart("fqdn", rest)
 	if err != nil {

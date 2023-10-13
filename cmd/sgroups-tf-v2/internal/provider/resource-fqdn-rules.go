@@ -104,7 +104,6 @@ func fqdnRulesToProto(ctx context.Context, items map[string]fqdnRuleItem) (*prot
 			Logs:      features.Logs.ValueBool(),
 			Ports:     features.portsToProto(),
 		})
-
 	}
 	return syncFqdnRules, diags
 }
@@ -112,7 +111,7 @@ func fqdnRulesToProto(ctx context.Context, items map[string]fqdnRuleItem) (*prot
 func listFqdnRules(ctx context.Context, state fqdnRulesResourceModel, client *sgAPI.Client) (fqdnRulesResourceModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
-	sgNames, err := getSgNames(state.Items)
+	sgNames, _, err := getSgNames(state.Items, restoreSgToFqdnKey)
 	if err != nil {
 		diags.AddError("Error reading resource state",
 			"Cannot parse rule keys: "+err.Error())
@@ -152,16 +151,17 @@ func listFqdnRules(ctx context.Context, state fqdnRulesResourceModel, client *sg
 	return state, diags
 }
 
-func getSgNames(items map[string]fqdnRuleItem) ([]string, error) {
-	var sgNames []string
+func getSgNames(items map[string]ruleItem, restore func(string) (ruleKey, error)) ([]string, []string, error) {
+	var sgFromNames, sgToNames []string
 
 	for key := range items {
-		keyData, err := restoreSgToFqdnKey(key)
+		keyData, err := restore(key)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		sgNames = append(sgNames, keyData.from)
+		sgFromNames = append(sgFromNames, keyData.from)
+		sgToNames = append(sgToNames, keyData.to)
 	}
 
-	return sgNames, nil
+	return sgFromNames, sgToNames, nil
 }
