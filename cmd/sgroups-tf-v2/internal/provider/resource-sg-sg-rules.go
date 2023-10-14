@@ -83,7 +83,6 @@ func (item sgSgRule) IsDiffer(other sgSgRule) bool {
 }
 
 func (item sgSgRule) ResourceAttributes() map[string]schema.Attribute {
-	ap := AccessPorts{}
 	return map[string]schema.Attribute{
 		"proto": schema.StringAttribute{
 			Description: "IP-L4 proto <tcp|udp>",
@@ -113,7 +112,7 @@ func (item sgSgRule) ResourceAttributes() map[string]schema.Attribute {
 			Description: "access ports",
 			Optional:    true,
 			NestedObject: schema.NestedAttributeObject{
-				Attributes: ap.ResourceAttributes(),
+				Attributes: AccessPorts{}.ResourceAttributes(),
 			},
 			PlanModifiers: []planmodifier.List{ListAccessPortsModifier()},
 		},
