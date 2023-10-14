@@ -2,7 +2,6 @@ package provider
 
 import (
 	"context"
-	"errors"
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
@@ -11,7 +10,7 @@ import (
 
 func ListAccessPortsModifier() planmodifier.List {
 	return &listAccessPortsModifier{
-		description: "plan to modify access ports list",
+		description: "plan to modify access ports",
 	}
 }
 
@@ -55,13 +54,13 @@ func (*listAccessPortsModifier) PlanModifyList(ctx context.Context, req planmodi
 	stateModelPorts, err := toModelPorts(statePorts)
 	if err != nil {
 		resp.Diagnostics.AddError("Plan modifier error",
-			"State value conversion failed: "+err.Error())
+			err.Error())
 		return
 	}
 	planModelPorts, err := toModelPorts(planPorts)
 	if err != nil {
 		resp.Diagnostics.AddError("Plan modifier error",
-			"Plan value conversion failed: "+err.Error())
+			err.Error())
 		return
 	}
 
@@ -75,20 +74,19 @@ func toModelPorts(ports []AccessPorts) ([]model.SGRulePorts, error) {
 
 	for _, port := range ports {
 		var err error
-		sourceRanges, err := model.PortSource(port.Source.ValueString()).ToPortRanges()
+		var sourceRanges model.PortRanges
+		var destRanges model.PortRanges
+		sourceRanges, err = model.PortSource(port.Source.ValueString()).ToPortRanges()
 		if err != nil {
-			return ret, errors.New("source ports conversion error: " + err.Error())
+			return ret, err
 		}
-		destRanges, err := model.PortSource(port.Destination.ValueString()).ToPortRanges()
+		destRanges, err = model.PortSource(port.Destination.ValueString()).ToPortRanges()
 		if err != nil {
-			return ret, errors.New("destination ports conversion error: " + err.Error())
+			return ret, err
 		}
 		modelPorts := model.SGRulePorts{
 			S: sourceRanges,
 			D: destRanges,
-		}
-		if modelPorts.Validate() != nil {
-			return nil, errors.New("Validation failed: " + err.Error())
 		}
 		ret = append(ret, modelPorts)
 	}
