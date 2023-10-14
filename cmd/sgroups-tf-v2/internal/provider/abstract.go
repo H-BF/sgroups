@@ -13,6 +13,14 @@ import (
 )
 
 type (
+	/*//
+	// KeyOps -
+	KeyOps[T any] interface {
+		String() string
+		FromString(string) error
+	}
+	*/
+
 	SingleResource[T any] interface {
 		ResourceAttributes() map[string]schema.Attribute
 		IsDiffer(T) bool

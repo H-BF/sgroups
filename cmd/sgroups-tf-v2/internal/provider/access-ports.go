@@ -9,13 +9,13 @@ import (
 )
 
 type (
-	AccessPort struct {
+	AccessPorts struct {
 		Source      types.String `tfsdk:"s"`
 		Destination types.String `tfsdk:"d"`
 	}
 )
 
-func (p AccessPort) ResourceAttributes() map[string]schema.Attribute {
+func (p AccessPorts) ResourceAttributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"s": schema.StringAttribute{
 			Description: "source port/ports range",
@@ -32,7 +32,7 @@ func (p AccessPort) ResourceAttributes() map[string]schema.Attribute {
 	}
 }
 
-func (p AccessPort) toProto() *protos.AccPorts {
+func (p AccessPorts) toProto() *protos.AccPorts {
 	return &protos.AccPorts{
 		S: p.Source.ValueString(),
 		D: p.Destination.ValueString(),

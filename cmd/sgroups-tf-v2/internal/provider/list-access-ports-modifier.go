@@ -45,7 +45,7 @@ func (*listAccessPortsModifier) PlanModifyList(ctx context.Context, req planmodi
 		return
 	}
 
-	var statePorts, planPorts []AccessPort
+	var statePorts, planPorts []AccessPorts
 	resp.Diagnostics.Append(req.StateValue.ElementsAs(ctx, &statePorts, false)...)
 	resp.Diagnostics.Append(req.PlanValue.ElementsAs(ctx, &planPorts, false)...)
 	if resp.Diagnostics.HasError() {
@@ -70,7 +70,7 @@ func (*listAccessPortsModifier) PlanModifyList(ctx context.Context, req planmodi
 	}
 }
 
-func toModelPorts(ports []AccessPort) ([]model.SGRulePorts, error) {
+func toModelPorts(ports []AccessPorts) ([]model.SGRulePorts, error) {
 	var ret []model.SGRulePorts
 
 	for _, port := range ports {
