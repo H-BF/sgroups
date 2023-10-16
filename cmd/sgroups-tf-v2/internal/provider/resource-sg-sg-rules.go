@@ -128,11 +128,9 @@ func sgSgRules2SyncSubj(ctx context.Context, items map[string]sgSgRule) (*protos
 			diags.AddError("ports conv", err.Error())
 			return nil, diags
 		}
-		proto := features.Proto.ValueString()
-		upperProto := strings.ToUpper(
-			proto,
-		)
-		protoValue, ok := common.Networks_NetIP_Transport_value[upperProto]
+		protoValue, ok := common.Networks_NetIP_Transport_value[strings.ToUpper(
+			features.Proto.ValueString(),
+		)]
 		if !ok {
 			diags.AddError(
 				"proto conv",

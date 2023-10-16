@@ -6,6 +6,7 @@ import (
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
 
+	"github.com/ahmetb/go-linq/v3"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -24,8 +25,8 @@ func NewSgsResource() resource.Resource {
 	return &sgsResource{
 		suffix:       "_groups",
 		description:  d,
-		toSubjOfSync: sgsToProto,
-		read:         listSgs,
+		toSubjOfSync: sgs2SyncSubj,
+		read:         readSgs,
 	}
 }
 
@@ -35,6 +36,7 @@ type (
 	sgsResourceModel = CollectionResourceModel[sgItem, protos.SyncSecurityGroups]
 
 	sgItem struct {
+		Name          types.String `tfsdk:"name"`
 		Logs          types.Bool   `tfsdk:"logs"`
 		Trace         types.Bool   `tfsdk:"trace"`
 		DefaultAction types.String `tfsdk:"default_action"`
@@ -44,6 +46,10 @@ type (
 
 func (item sgItem) ResourceAttributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
+		"name": schema.StringAttribute{
+			Description: "security group name",
+			Required:    true,
+		},
 		"logs": schema.BoolAttribute{
 			Description: "Enables logs on security group",
 			Optional:    true,
@@ -77,18 +83,19 @@ func (item sgItem) ResourceAttributes() map[string]schema.Attribute {
 }
 
 func (item sgItem) IsDiffer(oldSg sgItem) bool {
-	return !(item.Logs.Equal(oldSg.Logs) &&
+	return !(item.Name.Equal(oldSg.Name) &&
+		item.Logs.Equal(oldSg.Logs) &&
 		item.Trace.Equal(oldSg.Trace) &&
 		item.DefaultAction.Equal(oldSg.DefaultAction) &&
 		item.Networks.Equal(oldSg.Networks))
 }
 
-func sgsToProto(
+func sgs2SyncSubj(
 	ctx context.Context, items map[string]sgItem,
 ) (*protos.SyncSecurityGroups, diag.Diagnostics) {
 	var syncGroups protos.SyncSecurityGroups
 	var diags diag.Diagnostics
-	for name, sgFeatures := range items {
+	for _, sgFeatures := range items {
 		da := sgFeatures.DefaultAction.ValueString()
 		var networks []string
 		diags.Append(sgFeatures.Networks.ElementsAs(ctx, &networks, true)...)
@@ -96,7 +103,7 @@ func sgsToProto(
 			return nil, diags
 		}
 		syncGroups.Groups = append(syncGroups.Groups, &protos.SecGroup{
-			Name:          name,
+			Name:          sgFeatures.Name.ValueString(),
 			Networks:      networks,
 			DefaultAction: protos.SecGroup_DefaultAction(protos.SecGroup_DefaultAction_value[da]),
 			Trace:         sgFeatures.Trace.ValueBool(),
@@ -106,34 +113,43 @@ func sgsToProto(
 	return &syncGroups, diags
 }
 
-func listSgs(ctx context.Context, state sgsResourceModel, client *sgAPI.Client) (sgsResourceModel, diag.Diagnostics) {
-	var diags diag.Diagnostics
-	var err error
-	var listResp *protos.ListSecurityGroupsResp
-	if names := state.getNames(); len(names) > 0 {
-		listReq := protos.ListSecurityGroupsReq{
-			SgNames: names,
-		}
+func readSgs(ctx context.Context, state sgsResourceModel, client *sgAPI.Client) (sgsResourceModel, diag.Diagnostics) {
+	var (
+		diags    diag.Diagnostics
+		err      error
+		listResp *protos.ListSecurityGroupsResp
+	)
+	newState := sgsResourceModel{Items: make(map[string]sgItem)}
+	if len(state.Items) > 0 {
+		var listReq protos.ListSecurityGroupsReq
+		linq.From(state.Items).
+			Select(func(i interface{}) interface{} {
+				return i.(linq.KeyValue).Value.(sgItem).Name.ValueString()
+			}).Distinct().ToSlice(&listReq.SgNames)
 		listResp, err = client.ListSecurityGroups(ctx, &listReq)
 		if err != nil {
 			diags.AddError("reading SG state", err.Error())
 			return sgsResourceModel{}, diags
 		}
 	}
-	newItems := make(map[string]sgItem, len(state.Items))
+
 	for _, sg := range listResp.GetGroups() {
-		networks, d := types.SetValueFrom(ctx, types.StringType, sg.GetNetworks())
-		diags.Append(d...)
-		if d.HasError() {
-			return sgsResourceModel{}, diags
-		}
-		newItems[sg.GetName()] = sgItem{
-			Logs:          types.BoolValue(sg.GetLogs()),
-			Trace:         types.BoolValue(sg.GetTrace()),
-			DefaultAction: types.StringValue(sg.GetDefaultAction().String()),
-			Networks:      networks,
+		if sg != nil {
+			networks, d := types.SetValueFrom(ctx, types.StringType, sg.GetNetworks())
+			diags.Append(d...)
+			if d.HasError() {
+				return sgsResourceModel{}, diags
+			}
+			if _, ok := state.Items[sg.GetName()]; ok {
+				newState.Items[sg.GetName()] = sgItem{
+					Name:          types.StringValue(sg.GetName()),
+					Logs:          types.BoolValue(sg.GetLogs()),
+					Trace:         types.BoolValue(sg.GetTrace()),
+					DefaultAction: types.StringValue(sg.GetDefaultAction().String()),
+					Networks:      networks,
+				}
+			}
 		}
 	}
-	state.Items = newItems
-	return state, diags
+	return newState, diags
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/H-BF/sgroups/cmd/sgroups-tf-v2/internal/validators"
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
 
+	"github.com/ahmetb/go-linq/v3"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -23,8 +24,8 @@ func NewNetworksResource() resource.Resource {
 	return &networksResource{
 		suffix:       "_networks",
 		description:  d,
-		toSubjOfSync: networksToProto,
-		read:         listNetworks,
+		toSubjOfSync: networks2SyncSubj,
+		read:         readNetworks,
 	}
 }
 
@@ -33,12 +34,17 @@ type (
 	networksResourceModel = CollectionResourceModel[networkItem, protos.SyncNetworks]
 
 	networkItem struct {
+		Name types.String `tfsdk:"name"`
 		Cidr types.String `tfsdk:"cidr"`
 	}
 )
 
 func (item networkItem) ResourceAttributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
+		"name": schema.StringAttribute{
+			Description: "security group name",
+			Required:    true,
+		},
 		"cidr": schema.StringAttribute{
 			Required: true,
 			Validators: []validator.String{
@@ -49,40 +55,53 @@ func (item networkItem) ResourceAttributes() map[string]schema.Attribute {
 }
 
 func (item networkItem) IsDiffer(oldState networkItem) bool {
-	return !item.Cidr.Equal(oldState.Cidr)
+	return !(item.Name.Equal(oldState.Name) &&
+		item.Cidr.Equal(oldState.Cidr))
 }
 
-func networksToProto(_ context.Context, items map[string]networkItem) (*protos.SyncNetworks, diag.Diagnostics) {
+func networks2SyncSubj(_ context.Context, items map[string]networkItem) (*protos.SyncNetworks, diag.Diagnostics) {
 	sn := &protos.SyncNetworks{}
 	var diags diag.Diagnostics
-	for name, netFeatures := range items {
+	for _, netFeatures := range items {
 		sn.Networks = append(sn.Networks, &protos.Network{
-			Name:    name,
+			Name:    netFeatures.Name.ValueString(),
 			Network: &common.Networks_NetIP{CIDR: netFeatures.Cidr.ValueString()},
 		})
 	}
 	return sn, diags
 }
 
-func listNetworks(ctx context.Context, state networksResourceModel, client *sgAPI.Client) (networksResourceModel, diag.Diagnostics) {
-	var diags diag.Diagnostics
-	listReq := protos.ListNetworksReq{
-		NeteworkNames: state.getNames(),
-	}
+func readNetworks(ctx context.Context, state networksResourceModel, client *sgAPI.Client) (networksResourceModel, diag.Diagnostics) {
+	var (
+		diags    diag.Diagnostics
+		err      error
+		listResp *protos.ListNetworksResp
+	)
+	newState := networksResourceModel{Items: make(map[string]networkItem)}
+	if len(state.Items) > 0 {
+		var listReq protos.ListNetworksReq
 
-	listResp, err := client.ListNetworks(ctx, &listReq)
-	if err != nil {
-		diags.AddError("Error reading resource state",
-			"Could not perform ListNetworks GRPC call: "+err.Error())
-		return networksResourceModel{}, diags
-	}
+		linq.From(state.Items).Select(func(i interface{}) interface{} {
+			return i.(linq.KeyValue).Value.(networkItem).Name.ValueString()
+		}).Distinct().ToSlice(&listReq.NeteworkNames)
 
-	newItems := make(map[string]networkItem, len(state.Items))
-	for _, nw := range listResp.GetNetworks() {
-		if nw != nil {
-			newItems[nw.GetName()] = networkItem{Cidr: types.StringValue(nw.GetNetwork().GetCIDR())}
+		listResp, err = client.ListNetworks(ctx, &listReq)
+		if err != nil {
+			diags.AddError("Error reading resource state",
+				"Could not perform ListNetworks GRPC call: "+err.Error())
+			return networksResourceModel{}, diags
 		}
 	}
 
-	return state, nil
+	for _, nw := range listResp.GetNetworks() {
+		if nw != nil {
+			if _, ok := state.Items[nw.GetName()]; ok {
+				newState.Items[nw.GetName()] = networkItem{
+					Name: types.StringValue(nw.GetName()),
+					Cidr: types.StringValue(nw.GetNetwork().GetCIDR())}
+			}
+		}
+	}
+
+	return newState, nil
 }

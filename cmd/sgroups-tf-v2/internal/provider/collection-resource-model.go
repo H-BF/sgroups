@@ -5,7 +5,6 @@ import (
 
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"golang.org/x/exp/maps"
 )
 
 type (
@@ -38,8 +37,4 @@ func (model *CollectionResourceModel[T, S]) toSyncReq(
 	}
 
 	return req, nil
-}
-
-func (model *CollectionResourceModel[T, S]) getNames() []string {
-	return maps.Keys(model.Items)
 }
