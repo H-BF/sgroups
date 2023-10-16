@@ -9,8 +9,8 @@ import (
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
-	"github.com/ahmetb/go-linq/v3"
 
+	"github.com/ahmetb/go-linq/v3"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -63,19 +63,19 @@ func (k sgSgRuleKey) String() string {
 // Key -
 func (item sgSgRule) Key() *sgSgRuleKey {
 	return &sgSgRuleKey{
-		proto:  item.Proto.String(),
-		sgFrom: item.SgFrom.String(),
-		sgTo:   item.SgTo.String(),
+		proto:  item.Proto.ValueString(),
+		sgFrom: item.SgFrom.ValueString(),
+		sgTo:   item.SgTo.ValueString(),
 	}
 }
 
 func (item sgSgRule) IsDiffer(other sgSgRule) bool {
 	var itemModelPorts, otherModelPorts []model.SGRulePorts
 
-	// `toModelPorts` can not be failed because its validate then created in `fqdnRulesToProto`
+	// `toModelPorts` can not be failed because its validate then created
 	itemModelPorts, _ = toModelPorts(item.Ports)
 	otherModelPorts, _ = toModelPorts(other.Ports)
-	return !(strings.EqualFold(item.Proto.String(), other.Proto.String()) &&
+	return !(strings.EqualFold(item.Proto.ValueString(), other.Proto.ValueString()) &&
 		item.SgFrom.Equal(other.SgFrom) &&
 		item.SgTo.Equal(other.SgTo) &&
 		item.Logs.Equal(other.Logs) &&
@@ -95,7 +95,7 @@ func (item sgSgRule) ResourceAttributes() map[string]schema.Attribute {
 			},
 		},
 		"sg_from": schema.StringAttribute{
-			Description: "Security Group to",
+			Description: "Security Group from",
 			Required:    true,
 		},
 		"sg_to": schema.StringAttribute{
@@ -128,18 +128,20 @@ func sgSgRules2SyncSubj(ctx context.Context, items map[string]sgSgRule) (*protos
 			diags.AddError("ports conv", err.Error())
 			return nil, diags
 		}
-		protoValue, ok := common.Networks_NetIP_Transport_value[strings.ToUpper(
-			features.Proto.String(),
-		)]
+		proto := features.Proto.ValueString()
+		upperProto := strings.ToUpper(
+			proto,
+		)
+		protoValue, ok := common.Networks_NetIP_Transport_value[upperProto]
 		if !ok {
 			diags.AddError(
 				"proto conv",
-				fmt.Sprintf("no proto conv tor value(%s)", features.Proto.String()))
+				fmt.Sprintf("no proto conv tor value(%s)", features.Proto.ValueString()))
 			return nil, diags
 		}
 		syncObj.Rules = append(syncObj.Rules, &protos.Rule{
-			SgFrom:    features.SgFrom.String(),
-			SgTo:      features.SgTo.String(),
+			SgFrom:    features.SgFrom.ValueString(),
+			SgTo:      features.SgTo.ValueString(),
 			Transport: common.Networks_NetIP_Transport(protoValue),
 			Logs:      features.Logs.ValueBool(),
 			Ports:     portsToProto(features.Ports),
@@ -156,11 +158,11 @@ func readSgSgRules(ctx context.Context, state sgToSgRulesResourceModel, client *
 		var req protos.FindRulesReq
 		linq.From(state.Items).
 			Select(func(i interface{}) interface{} {
-				return i.(linq.KeyValue).Value.(sgSgRule).SgFrom
+				return i.(linq.KeyValue).Value.(sgSgRule).SgFrom.ValueString()
 			}).Distinct().ToSlice(&req.SgFrom)
 		linq.From(state.Items).
 			Select(func(i interface{}) interface{} {
-				return i.(linq.KeyValue).Value.(sgSgRule).SgTo
+				return i.(linq.KeyValue).Value.(sgSgRule).SgTo.ValueString()
 			}).Distinct().ToSlice(&req.SgTo)
 		var err error
 		if resp, err = client.FindRules(ctx, &req); err != nil {

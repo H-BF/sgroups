@@ -10,9 +10,8 @@ import (
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
-	"github.com/ahmetb/go-linq/v3"
-	"github.com/pkg/errors"
 
+	"github.com/ahmetb/go-linq/v3"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -21,6 +20,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/pkg/errors"
 )
 
 func NewFqdnRulesResource() resource.Resource {
@@ -82,9 +82,9 @@ func (k sgFqdnRuleKey) String() string {
 // Key -
 func (item sgFqdnRule) Key() *sgFqdnRuleKey {
 	return &sgFqdnRuleKey{
-		proto:  item.Proto.String(),
-		sgFrom: item.SgFrom.String(),
-		fqdnTo: item.Fqdn.String(),
+		proto:  item.Proto.ValueString(),
+		sgFrom: item.SgFrom.ValueString(),
+		fqdnTo: item.Fqdn.ValueString(),
 	}
 }
 
@@ -128,14 +128,14 @@ func (item sgFqdnRule) ResourceAttributes() map[string]schema.Attribute {
 func (item sgFqdnRule) IsDiffer(other sgFqdnRule) bool {
 	var itemModelPorts, otherModelPorts []model.SGRulePorts
 
-	// `toModelPorts` can not be failed because its validate then created in `fqdnRulesToProto`
+	// `toModelPorts` can not be failed because its validate then created
 	itemModelPorts, _ = toModelPorts(item.Ports)
 	otherModelPorts, _ = toModelPorts(other.Ports)
 
-	return !(strings.EqualFold(item.Proto.String(), other.Proto.String()) &&
+	return !(strings.EqualFold(item.Proto.ValueString(), other.Proto.ValueString()) &&
 		item.SgFrom.Equal(other.SgFrom) &&
-		model.FQDN(item.Fqdn.String()).
-			IsEq(model.FQDN(other.Fqdn.String())) &&
+		model.FQDN(item.Fqdn.ValueString()).
+			IsEq(model.FQDN(other.Fqdn.ValueString())) &&
 		item.Logs.Equal(other.Logs) &&
 		model.AreRulePortsEq(itemModelPorts, otherModelPorts))
 }
@@ -158,17 +158,17 @@ func sgFqdnRules2SyncSubj(ctx context.Context, items map[string]sgFqdnRule) (*pr
 			return nil, diags
 		}
 		protoValue, ok := common.Networks_NetIP_Transport_value[strings.ToUpper(
-			features.Proto.String(),
+			features.Proto.ValueString(),
 		)]
 		if !ok {
 			diags.AddError(
 				"proto conv",
-				fmt.Sprintf("no proto conv tor value(%s)", features.Proto.String()))
+				fmt.Sprintf("no proto conv tor value(%s)", features.Proto.ValueString()))
 			return nil, diags
 		}
 		syncFqdnRules.Rules = append(syncFqdnRules.Rules, &protos.FqdnRule{
-			SgFrom:    features.SgFrom.String(),
-			FQDN:      features.Fqdn.String(),
+			SgFrom:    features.SgFrom.ValueString(),
+			FQDN:      features.Fqdn.ValueString(),
 			Transport: common.Networks_NetIP_Transport(protoValue),
 			Logs:      features.Logs.ValueBool(),
 			Ports:     portsToProto(features.Ports),
@@ -186,7 +186,7 @@ func readFqdnRules(ctx context.Context, state fqdnRulesResourceModel, client *sg
 		var req protos.FindFqdnRulesReq
 		linq.From(state.Items).
 			Select(func(i interface{}) interface{} {
-				return i.(linq.KeyValue).Value.(sgFqdnRule).SgFrom
+				return i.(linq.KeyValue).Value.(sgFqdnRule).SgFrom.ValueString()
 			}).Distinct().ToSlice(&req.SgFrom)
 		if resp, err = client.FindFqdnRules(ctx, &req); err != nil {
 			diags.AddError("read sg-fqdn rules", err.Error())
