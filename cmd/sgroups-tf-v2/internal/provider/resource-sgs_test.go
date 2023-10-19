@@ -46,10 +46,10 @@ func TestAccSgs(t *testing.T) {
 		defaultAction: "ACCEPT",
 		network_names: []string{"nw3", "nw4"}}
 
-	thirdTestData := firstTestData
-	thirdTestData.logs = false
-	thirdTestData.trace = false
-	thirdTestData.network_names = []string{"nw1", "nw5"}
+	changedFirstTestData := firstTestData
+	changedFirstTestData.logs = false
+	changedFirstTestData.trace = false
+	changedFirstTestData.network_names = []string{"nw1", "nw5"}
 
 	resource.Test(t, resource.TestCase{
 		ProtoV6ProviderFactories: testAccProviders,
@@ -77,13 +77,13 @@ func TestAccSgs(t *testing.T) {
 				},
 			},
 			{
-				Config: sgsConfig(thirdTestData),
+				Config: sgsConfig(changedFirstTestData),
 				Check: func(tState *terraform.State) error {
-					sg := getSg(ctx, t, thirdTestData.name)
+					sg := getSg(ctx, t, changedFirstTestData.name)
 					if sg == nil {
-						return fmt.Errorf("sg %s not found", thirdTestData.name)
+						return fmt.Errorf("sg %s not found", changedFirstTestData.name)
 					}
-					if err := sgAssert(sg, thirdTestData); err != nil {
+					if err := sgAssert(sg, changedFirstTestData); err != nil {
 						return err
 					}
 
