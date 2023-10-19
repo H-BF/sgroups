@@ -2,7 +2,6 @@ package provider
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 )
 
@@ -34,6 +33,40 @@ resource "sgroups_groups" "test" {
 			networks = [%s]
 		}
 `
+	sgSgRulesTemplate = `
+resource "sgroups_rules" "test" {
+	items = {
+		%s
+	}
+}`
+	sgSgRuleItemTemplate = `
+		"%s" = {
+			proto = "%s"
+            sg_from = "%s"
+            sg_to = "%s"
+            logs = %t
+            ports = [
+				%s
+            ]
+		}
+`
+	sgFqdnRulesTemplate = `
+resource "sgroups_fqdn_rules" "test" {
+	items = {
+		%s
+	}
+}`
+	sgFqdnRuleItemTemplate = `
+		"%s" = {
+			proto = "%s"
+			sg_from = "%s"
+			fqdn = "%s"
+			logs = %t
+			ports = [
+				%s
+			]
+		}
+`
 )
 
 type (
@@ -52,6 +85,27 @@ type (
 		trace         bool
 		defaultAction string
 		network_names []string
+	}
+
+	sgSgRuleTestData struct {
+		proto string
+		from  string
+		to    string
+		logs  bool
+		ports []accPorts
+	}
+
+	sgFqdnRuleTestData struct {
+		proto string
+		from  string
+		to    string
+		logs  bool
+		ports []accPorts
+	}
+
+	accPorts struct {
+		d string
+		s string
 	}
 )
 
@@ -72,6 +126,50 @@ func (d sgTestData) Format() string {
 		d.trace,
 		d.defaultAction,
 		strings.Join(nets, ","))
+}
+
+func (d sgSgRuleTestData) Format() string {
+	portsData := make([]string, 0, len(d.ports))
+	for _, ports := range d.ports {
+		portsData = append(portsData, ports.Format())
+	}
+	return fmt.Sprintf(sgSgRuleItemTemplate,
+		d.FormatKey(),
+		d.proto,
+		d.from,
+		d.to,
+		d.logs,
+		strings.Join(portsData, ",\n"))
+}
+
+func (d sgSgRuleTestData) FormatKey() string {
+	return fmt.Sprintf("%s:sg(%s)sg(%s)", d.proto, d.from, d.to)
+}
+
+func (d sgFqdnRuleTestData) Format() string {
+	portsData := make([]string, 0, len(d.ports))
+	for _, ports := range d.ports {
+		portsData = append(portsData, ports.Format())
+	}
+	return fmt.Sprintf(sgFqdnRuleItemTemplate,
+		d.FormatKey(),
+		d.proto,
+		d.from,
+		d.to,
+		d.logs,
+		strings.Join(portsData, ",\n"))
+}
+
+func (d sgFqdnRuleTestData) FormatKey() string {
+	return fmt.Sprintf("%s:sg(%s)fqdn(%s)", d.proto, d.from, d.to)
+}
+
+func (d accPorts) Format() string {
+	template := `{
+			d = "%s"
+			s = "%s"
+		}`
+	return fmt.Sprintf(template, d.d, d.s)
 }
 
 func buildConfig(configTemplate string, fst testDataItem, others ...testDataItem) string {
