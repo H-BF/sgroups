@@ -28,8 +28,8 @@ resource "sgroups_groups" "test" {
 	sgItemTemplate = `
 		"%s" = {
 			name = "%s"
-			logs = "%s"
-			trace = "%s"
+			logs = %t
+			trace = %t
 			default_action = "%s"
 			networks = [%s]
 		}
@@ -68,8 +68,8 @@ func (d sgTestData) Format() string {
 	return fmt.Sprintf(sgItemTemplate,
 		d.name,
 		d.name,
-		strconv.FormatBool(d.logs),
-		strconv.FormatBool(d.trace),
+		d.logs,
+		d.trace,
 		d.defaultAction,
 		strings.Join(nets, ","))
 }

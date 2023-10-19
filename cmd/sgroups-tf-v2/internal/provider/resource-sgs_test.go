@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -62,7 +61,7 @@ func TestAccSgs(t *testing.T) {
 					if sg == nil {
 						return fmt.Errorf("sg %s not found", firstTestData.name)
 					}
-					if err := sgAssert(t, sg, firstTestData); err != nil {
+					if err := sgAssert(sg, firstTestData); err != nil {
 						return err
 					}
 
@@ -70,7 +69,7 @@ func TestAccSgs(t *testing.T) {
 					if sg == nil {
 						return fmt.Errorf("sg %s not found", secondTestData.name)
 					}
-					if err := sgAssert(t, sg, secondTestData); err != nil {
+					if err := sgAssert(sg, secondTestData); err != nil {
 						return err
 					}
 
@@ -84,7 +83,7 @@ func TestAccSgs(t *testing.T) {
 					if sg == nil {
 						return fmt.Errorf("sg %s not found", thirdTestData.name)
 					}
-					if err := sgAssert(t, sg, thirdTestData); err != nil {
+					if err := sgAssert(sg, thirdTestData); err != nil {
 						return err
 					}
 
@@ -114,15 +113,16 @@ func getSg(ctx context.Context, t *testing.T, sgName string) *protos.SecGroup {
 	return resp.GetGroups()[0]
 }
 
-func sgAssert(t *testing.T, sg *protos.SecGroup, td sgTestData) error {
+func sgAssert(sg *protos.SecGroup, td sgTestData) error {
 	if sg.GetLogs() != td.logs {
-		return fmt.Errorf("sg Logs %s differs from configured %s", strconv.FormatBool(sg.GetLogs()), strconv.FormatBool(td.logs))
+		return fmt.Errorf("sg Logs %t differs from configured %t", sg.GetLogs(), td.logs)
 	}
 	if sg.GetTrace() != td.trace {
-		return fmt.Errorf("sg Trace %s differs from configured %s", strconv.FormatBool(sg.GetTrace()), strconv.FormatBool(td.trace))
+		return fmt.Errorf("sg Trace %t differs from configured %t", sg.GetTrace(), td.trace)
 	}
 	if sg.GetDefaultAction().String() != td.defaultAction {
-		return fmt.Errorf("sg Default Action %s differs from configured %s", sg.GetDefaultAction().String(), td.defaultAction)
+		return fmt.Errorf("sg Default Action %s differs from configured %s",
+			sg.GetDefaultAction().String(), td.defaultAction)
 	}
 
 	sgNets := sg.GetNetworks()
@@ -138,7 +138,8 @@ func sgAssert(t *testing.T, sg *protos.SecGroup, td sgTestData) error {
 	})
 
 	if strings.Join(sgNets, ",") != strings.Join(tdNets, ",") {
-		return fmt.Errorf("sg Networks %s differs from configured %s", sgNets, td.network_names)
+		return fmt.Errorf("sg Networks %s differs from configured %s",
+			sgNets, td.network_names)
 	}
 
 	return nil
