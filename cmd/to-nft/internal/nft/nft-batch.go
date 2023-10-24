@@ -363,6 +363,7 @@ func (bt *batch) addSGNetSets() {
 		}
 		nwsV4, nwsV6 := cases.SeparateNetworks(nws)
 		for i, nets := range sli(nwsV4, nwsV6) {
+			nets := nets
 			isV6 := i > 0
 			ipV := tern(isV6, iplib.IP6Version, iplib.IP4Version)
 			if elements := (setsUtils{}).nets2SetElements(nets, ipV); len(elements) > 0 {
