@@ -32,19 +32,16 @@ func (SpecOfSgs) typeName() string {
 // TODO: define all templates
 const templates = `
 {{define "networks"}}
-{{range $K, $V := .Spec}}
-  {{$K}} = {
-    name = "{{$V.Name}}"
-    cidr = "{{$V.Cidr}}"
+  items = { 
+    {{range $K, $V := .Spec}}
+    {{$K}} = {
+      name = "{{$V.Name}}"
+      cidr = "{{$V.Cidr}}"
+    } 
+    {{end}}
   }
-{{end}}
 {{end}}
 {{define "security-groups"}}
-{{range $K, $V := .Spec}}
-  {{$K}} = {
-    name = "{{$V.Name}}"    
-  }
-{{end}}
 {{end}}
 resource "sgroups_<type-name>" "{{.Name}}" {
 {{template "<type-name>" .}}
