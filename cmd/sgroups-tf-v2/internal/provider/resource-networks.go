@@ -54,9 +54,9 @@ func (item networkItem) ResourceAttributes() map[string]schema.Attribute {
 	}
 }
 
-func (item networkItem) IsDiffer(oldState networkItem) bool {
-	return !(item.Name.Equal(oldState.Name) &&
-		item.Cidr.Equal(oldState.Cidr))
+func (item networkItem) IsDiffer(other networkItem) bool {
+	return !(item.Name.Equal(other.Name) &&
+		item.Cidr.Equal(other.Cidr))
 }
 
 func networks2SyncSubj(_ context.Context, items map[string]networkItem) (*protos.SyncNetworks, diag.Diagnostics) {
@@ -87,19 +87,16 @@ func readNetworks(ctx context.Context, state networksResourceModel, client *sgAP
 
 		listResp, err = client.ListNetworks(ctx, &listReq)
 		if err != nil {
-			diags.AddError("Error reading resource state",
-				"Could not perform ListNetworks GRPC call: "+err.Error())
+			diags.AddError("read networks", err.Error())
 			return networksResourceModel{}, diags
 		}
 	}
 
 	for _, nw := range listResp.GetNetworks() {
-		if nw != nil {
-			if _, ok := state.Items[nw.GetName()]; ok {
-				newState.Items[nw.GetName()] = networkItem{
-					Name: types.StringValue(nw.GetName()),
-					Cidr: types.StringValue(nw.GetNetwork().GetCIDR())}
-			}
+		if _, ok := state.Items[nw.GetName()]; ok {
+			newState.Items[nw.GetName()] = networkItem{
+				Name: types.StringValue(nw.GetName()),
+				Cidr: types.StringValue(nw.GetNetwork().GetCIDR())}
 		}
 	}
 

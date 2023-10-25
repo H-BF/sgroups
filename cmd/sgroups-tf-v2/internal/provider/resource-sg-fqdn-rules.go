@@ -163,7 +163,7 @@ func sgFqdnRules2SyncSubj(ctx context.Context, items map[string]sgFqdnRule) (*pr
 		if !ok {
 			diags.AddError(
 				"proto conv",
-				fmt.Sprintf("no proto conv tor value(%s)", features.Proto.ValueString()))
+				fmt.Sprintf("no proto conv for value(%s)", features.Proto.ValueString()))
 			return nil, diags
 		}
 		syncFqdnRules.Rules = append(syncFqdnRules.Rules, &protos.FqdnRule{

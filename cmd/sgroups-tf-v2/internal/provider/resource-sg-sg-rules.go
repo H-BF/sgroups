@@ -134,7 +134,7 @@ func sgSgRules2SyncSubj(ctx context.Context, items map[string]sgSgRule) (*protos
 		if !ok {
 			diags.AddError(
 				"proto conv",
-				fmt.Sprintf("no proto conv tor value(%s)", features.Proto.ValueString()))
+				fmt.Sprintf("no proto conv for value(%s)", features.Proto.ValueString()))
 			return nil, diags
 		}
 		syncObj.Rules = append(syncObj.Rules, &protos.Rule{

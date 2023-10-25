@@ -82,12 +82,12 @@ func (item sgItem) ResourceAttributes() map[string]schema.Attribute {
 	}
 }
 
-func (item sgItem) IsDiffer(oldSg sgItem) bool {
-	return !(item.Name.Equal(oldSg.Name) &&
-		item.Logs.Equal(oldSg.Logs) &&
-		item.Trace.Equal(oldSg.Trace) &&
-		item.DefaultAction.Equal(oldSg.DefaultAction) &&
-		item.Networks.Equal(oldSg.Networks))
+func (item sgItem) IsDiffer(other sgItem) bool {
+	return !(item.Name.Equal(other.Name) &&
+		item.Logs.Equal(other.Logs) &&
+		item.Trace.Equal(other.Trace) &&
+		item.DefaultAction.Equal(other.DefaultAction) &&
+		item.Networks.Equal(other.Networks))
 }
 
 func sgs2SyncSubj(
@@ -128,26 +128,24 @@ func readSgs(ctx context.Context, state sgsResourceModel, client *sgAPI.Client) 
 			}).Distinct().ToSlice(&listReq.SgNames)
 		listResp, err = client.ListSecurityGroups(ctx, &listReq)
 		if err != nil {
-			diags.AddError("reading SG state", err.Error())
-			return sgsResourceModel{}, diags
+			diags.AddError("read security groups", err.Error())
+			return newState, diags
 		}
 	}
 
 	for _, sg := range listResp.GetGroups() {
-		if sg != nil {
-			networks, d := types.SetValueFrom(ctx, types.StringType, sg.GetNetworks())
-			diags.Append(d...)
-			if d.HasError() {
-				return sgsResourceModel{}, diags
-			}
-			if _, ok := state.Items[sg.GetName()]; ok {
-				newState.Items[sg.GetName()] = sgItem{
-					Name:          types.StringValue(sg.GetName()),
-					Logs:          types.BoolValue(sg.GetLogs()),
-					Trace:         types.BoolValue(sg.GetTrace()),
-					DefaultAction: types.StringValue(sg.GetDefaultAction().String()),
-					Networks:      networks,
-				}
+		networks, d := types.SetValueFrom(ctx, types.StringType, sg.GetNetworks())
+		diags.Append(d...)
+		if d.HasError() {
+			return sgsResourceModel{}, diags
+		}
+		if _, ok := state.Items[sg.GetName()]; ok {
+			newState.Items[sg.GetName()] = sgItem{
+				Name:          types.StringValue(sg.GetName()),
+				Logs:          types.BoolValue(sg.GetLogs()),
+				Trace:         types.BoolValue(sg.GetTrace()),
+				DefaultAction: types.StringValue(sg.GetDefaultAction().String()),
+				Networks:      networks,
 			}
 		}
 	}
