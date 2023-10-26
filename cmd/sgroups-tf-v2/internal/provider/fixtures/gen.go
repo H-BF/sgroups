@@ -9,7 +9,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-//go:embed *.yaml
+//go:embed */*.yaml
 var data embed.FS
 
 type (

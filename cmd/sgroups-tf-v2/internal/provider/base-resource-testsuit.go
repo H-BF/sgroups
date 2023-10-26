@@ -2,16 +2,57 @@ package provider
 
 import (
 	"context"
+	"time"
 
 	"github.com/H-BF/protos/pkg/api/common"
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
+	client "github.com/H-BF/sgroups/internal/grpc-client"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
+	"github.com/stretchr/testify/suite"
 )
 
-func createTestNetworks(ctx context.Context, client *sgAPI.Client) (func(), error) {
+type baseResourceTests struct {
+	suite.Suite
+
+	ctx               context.Context
+	sgClient          sgAPI.ClosableClient
+	providerFactories map[string]func() (tfprotov6.ProviderServer, error)
+	cleanDB           func()
+}
+
+func (sui *baseResourceTests) SetupSuite() {
+	sui.ctx = context.Background()
+
+	address := lookupEnvWithDefault("SGROUPS_ADDRESS", "tcp://127.0.0.1:9000")
+	dialDuration := lookupEnvWithDefault("SGROUPS_DIAL_DURATION", "10s")
+	connDuration, err := time.ParseDuration(dialDuration)
+	sui.Require().Nil(err)
+
+	builder := client.FromAddress(address).
+		WithDialDuration(connDuration)
+
+	sui.sgClient, err = sgAPI.NewClosableClient(sui.ctx, builder)
+	sui.Require().Nil(err)
+
+	sui.providerFactories = map[string]func() (tfprotov6.ProviderServer, error){
+		"sgroups": providerserver.NewProtocol6WithError(Factory("test")()),
+	}
+}
+
+func (sui *baseResourceTests) TearDownSuite() {
+	if sui.cleanDB != nil {
+		sui.cleanDB()
+	}
+	err := sui.sgClient.CloseConn()
+	sui.Require().NoError(err)
+}
+
+func (sui *baseResourceTests) createTestNetworks() {
 	netsData := map[string]string{
 		"nw1": "100.10.10.0/24",
 		"nw2": "100.20.10.0/24",
@@ -32,19 +73,20 @@ func createTestNetworks(ctx context.Context, client *sgAPI.Client) (func(), erro
 			Networks: &syncNetworks,
 		},
 	}
-	_, err := client.Sync(ctx, &req)
-	deleteNetworks := func() {
-		_, _ = client.Sync(ctx, &protos.SyncReq{
+	_, err := sui.sgClient.Sync(sui.ctx, &req)
+	sui.Require().NoError(err)
+	sui.cleanDB = func() {
+		_, err = sui.sgClient.Sync(sui.ctx, &protos.SyncReq{
 			SyncOp: protos.SyncReq_Delete,
 			Subject: &protos.SyncReq_Networks{
 				Networks: &syncNetworks,
 			},
 		})
+		sui.Require().NoError(err)
 	}
-	return deleteNetworks, err
 }
 
-func createTestSecGroups(ctx context.Context, client *sgAPI.Client) (func(), error) {
+func (sui *baseResourceTests) createTestSecGroups() {
 	sgsData := []sgTestData{
 		{
 			name:          "sg1",
@@ -72,10 +114,7 @@ func createTestSecGroups(ctx context.Context, client *sgAPI.Client) (func(), err
 		},
 	}
 
-	deleteNetworks, err := createTestNetworks(ctx, client)
-	if err != nil {
-		return nil, err
-	}
+	sui.createTestNetworks()
 
 	syncSg := protos.SyncSecurityGroups{}
 	for _, sgData := range sgsData {
@@ -95,21 +134,23 @@ func createTestSecGroups(ctx context.Context, client *sgAPI.Client) (func(), err
 			Groups: &syncSg,
 		},
 	}
-	_, err = client.Sync(ctx, &req)
-	deleteNetworksAndSgs := func() {
-		_, _ = client.Sync(ctx, &protos.SyncReq{
+	_, err := sui.sgClient.Sync(sui.ctx, &req)
+	sui.Require().NoError(err)
+
+	deleteNetworks := sui.cleanDB
+	sui.cleanDB = func() {
+		_, err := sui.sgClient.Sync(sui.ctx, &protos.SyncReq{
 			SyncOp: protos.SyncReq_Delete,
 			Subject: &protos.SyncReq_Groups{
 				Groups: &syncSg,
 			},
 		})
+		sui.Require().NoError(err)
 		deleteNetworks()
 	}
-
-	return deleteNetworksAndSgs, err
 }
 
-func areRulePortsEq(rulePorts []*protos.AccPorts, testDataPorts []accPorts) (bool, error) {
+func (sui *baseResourceTests) areRulePortsEq(rulePorts []*protos.AccPorts, testDataPorts []accPorts) bool {
 	var rPorts, tdPorts []AccessPorts
 	for _, p := range rulePorts {
 		rPorts = append(rPorts, AccessPorts{
@@ -126,14 +167,10 @@ func areRulePortsEq(rulePorts []*protos.AccPorts, testDataPorts []accPorts) (boo
 	}
 
 	rModelPorts, err := toModelPorts(rPorts)
-	if err != nil {
-		return false, err
-	}
+	sui.Require().NoError(err)
 
 	tdModelPorts, err := toModelPorts(tdPorts)
-	if err != nil {
-		return false, err
-	}
+	sui.Require().NoError(err)
 
-	return model.AreRulePortsEq(rModelPorts, tdModelPorts), nil
+	return model.AreRulePortsEq(rModelPorts, tdModelPorts)
 }

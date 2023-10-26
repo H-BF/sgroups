@@ -2,12 +2,13 @@ package provider
 
 import (
 	"context"
-	"fmt"
+	"strings"
 	"testing"
 
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
+	"github.com/H-BF/sgroups/cmd/sgroups-tf-v2/internal/provider/fixtures"
+	"github.com/stretchr/testify/suite"
 
-	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
@@ -26,79 +27,66 @@ import (
      как работать с фикстурами - есть пример в этой-же папке
 */
 
-var (
-	firstCidr  = "10.10.10.0/24"
-	secondCidr = "20.20.20.0/24"
-	thirdCidr  = "30.30.30.0/24"
-)
+type networksTests struct {
+	baseResourceTests
+}
 
 func TestAccNetworks(t *testing.T) {
-	ctx := context.Background()
-	rName1 := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
-	rName2 := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+	suite.Run(t, new(networksTests))
+}
 
-	if net := getNetwork(ctx, t, rName1); net != nil {
-		t.Errorf("there are network %s already", rName1)
+func (sui *networksTests) TestNetworks() {
+	var creationFixture, modificationFixture fixtures.NetworksRC
+
+	sui.Require().NoError(creationFixture.LoadFixture("networks/c.yml"))
+	sui.Require().NoError(modificationFixture.LoadFixture("networks/m.yml"))
+
+	for _, net := range creationFixture.Spec {
+		sui.Require().Nilf(sui.getNetwork(net.Name), "there are network %s already", net.Name)
 	}
 
-	if net := getNetwork(ctx, t, rName2); net != nil {
-		t.Errorf("there are network %s already", rName1)
-	}
-
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProviders,
+	resource.Test(sui.T(), resource.TestCase{
+		ProtoV6ProviderFactories: sui.providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: networksConfig(networkTestData{name: rName1, cidr: firstCidr}, networkTestData{name: rName2, cidr: secondCidr}),
-				Check: func(tState *terraform.State) error {
-					net := getNetwork(ctx, t, rName1)
-					if net == nil {
-						return fmt.Errorf("network %s not found", rName1)
-					}
-					if net.GetNetwork().CIDR != firstCidr {
-						return fmt.Errorf("network CIDR %s differs from configured %s", net.GetNetwork().CIDR, firstCidr)
-					}
-
-					net = getNetwork(ctx, t, rName2)
-					if net == nil {
-						return fmt.Errorf("network %s not found", rName2)
-					}
-					if net.GetNetwork().CIDR != secondCidr {
-						return fmt.Errorf("network CIDR %s differs from configured %s", net.GetNetwork().CIDR, secondCidr)
+				Config: sui.fixtureTfConfig(creationFixture),
+				Check: func(_ *terraform.State) error {
+					for _, netData := range creationFixture.Spec {
+						net := sui.getNetwork(netData.Name)
+						sui.Require().NotNilf(net, "network %s not found", netData.Name)
+						sui.Require().Equal(net.GetNetwork().CIDR, netData.Cidr)
 					}
 					return nil
 				},
 			},
 			{
-				Config: networksConfig(networkTestData{name: rName1, cidr: thirdCidr}),
-				Check: func(tState *terraform.State) error {
-					net := getNetwork(ctx, t, rName1)
-					if net == nil {
-						return fmt.Errorf("network %s not found", rName1)
-					}
-					if net.GetNetwork().CIDR != thirdCidr {
-						return fmt.Errorf("network CIDR %s differs from configured %s", net.GetNetwork().CIDR, thirdCidr)
+				Config: sui.fixtureTfConfig(modificationFixture),
+				Check: func(_ *terraform.State) error {
+					for _, netData := range modificationFixture.Spec {
+						net := sui.getNetwork(netData.Name)
+						sui.Require().NotNilf(net, "network %s not found", netData.Name)
+						sui.Require().Equal(net.GetNetwork().CIDR, netData.Cidr)
 					}
 
-					net = getNetwork(ctx, t, rName2)
-					if net != nil {
-						return fmt.Errorf("network %s should be deleted", rName2)
+					for name, netData := range creationFixture.Spec {
+						if _, contains := modificationFixture.Spec[name]; !contains {
+							net := sui.getNetwork(netData.Name)
+							sui.Require().Nilf(net, "network %s should be deleted", netData.Name)
+						}
 					}
+
 					return nil
 				},
 			},
 		},
 	})
-
 }
 
-func getNetwork(ctx context.Context, t *testing.T, netName string) *protos.Network {
-	resp, err := testAccSgClient.ListNetworks(context.Background(), &protos.ListNetworksReq{
+func (sui *networksTests) getNetwork(netName string) *protos.Network {
+	resp, err := sui.sgClient.ListNetworks(context.Background(), &protos.ListNetworksReq{
 		NeteworkNames: []string{netName},
 	})
-	if err != nil {
-		t.Errorf("list networks: %v", err)
-	}
+	sui.Require().NoError(err)
 
 	if len(resp.GetNetworks()) == 0 {
 		return nil
@@ -107,6 +95,8 @@ func getNetwork(ctx context.Context, t *testing.T, netName string) *protos.Netwo
 	return resp.GetNetworks()[0]
 }
 
-func networksConfig(fst testDataItem, others ...testDataItem) string {
-	return buildConfig(networksTemplate, fst, others...)
+func (sui *networksTests) fixtureTfConfig(f fixtures.NetworksRC) string {
+	config := new(strings.Builder)
+	sui.Require().NoError(f.TfRcConf(config))
+	return config.String()
 }
