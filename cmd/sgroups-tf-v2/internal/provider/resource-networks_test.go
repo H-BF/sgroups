@@ -13,20 +13,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 )
 
-/*//TODO: в общем тесты выглядят как булшит
-                     начинаем раунды исправлений
-1. изучаем пакет https://pkg.go.dev/github.com/stretchr/testify/suite
-   - создаем базовый съют
-     - там инициализируем провайдер
-	 - всё что в provider_test.go/var/init  = л и к в и д и р у е м
-	 - testutils.go test-data-utils.go = в корзину
-   - для каждого ресурса от создаем съют от базового
-     - делаем съют-тест
-2. конфиги типа networksConfig sgSgRulesConfig - в топку, делаем всё через фикстуры
-   - фикстуры пишем в папку ./fixtures
-     как работать с фикстурами - есть пример в этой-же папке
-*/
-
 type networksTests struct {
 	baseResourceTests
 }
