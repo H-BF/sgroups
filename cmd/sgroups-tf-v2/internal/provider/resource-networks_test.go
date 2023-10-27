@@ -2,15 +2,17 @@ package provider
 
 import (
 	"context"
+	"net"
 	"strings"
 	"testing"
 
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/H-BF/sgroups/cmd/sgroups-tf-v2/internal/provider/fixtures"
-	"github.com/stretchr/testify/suite"
+	domain "github.com/H-BF/sgroups/internal/models/sgroups"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/stretchr/testify/suite"
 )
 
 type networksTests struct {
@@ -22,50 +24,64 @@ func TestAccNetworks(t *testing.T) {
 }
 
 func (sui *networksTests) TestNetworks() {
-	var creationFixture, modificationFixture fixtures.NetworksRC
-
-	sui.Require().NoError(creationFixture.LoadFixture("networks/c.yml"))
-	sui.Require().NoError(modificationFixture.LoadFixture("networks/m.yml"))
-
-	for _, net := range creationFixture.Spec {
-		sui.Require().Nilf(sui.getNetwork(net.Name), "there are network %s already", net.Name)
+	testData := fixtures.AccTests{
+		Ctx: context.Background(),
 	}
 
-	resource.Test(sui.T(), resource.TestCase{
+	testData.LoadFixture(sui.T(), "sample-acc-test.yaml")
+
+	testData.InitBackend(sui.T(), sui.sgClient)
+
+	initialProto := testData.InitialBackend.Networks.Decode()
+	var initialDomain fixtures.DomainRcList[domain.Network]
+	fixtures.Backend2Domain(initialProto, &initialDomain)
+	initialDict := initialDomain.ToDict()
+
+	resourceTestCase := resource.TestCase{
 		ProtoV6ProviderFactories: sui.providerFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: sui.fixtureTfConfig(creationFixture),
-				Check: func(_ *terraform.State) error {
-					for _, netData := range creationFixture.Spec {
-						net := sui.getNetwork(netData.Name)
-						sui.Require().NotNilf(net, "network %s not found", netData.Name)
-						sui.Require().Equal(net.GetNetwork().CIDR, netData.Cidr)
-					}
-					return nil
-				},
-			},
-			{
-				Config: sui.fixtureTfConfig(modificationFixture),
-				Check: func(_ *terraform.State) error {
-					for _, netData := range modificationFixture.Spec {
-						net := sui.getNetwork(netData.Name)
-						sui.Require().NotNilf(net, "network %s not found", netData.Name)
-						sui.Require().Equal(net.GetNetwork().CIDR, netData.Cidr)
-					}
+	}
+	createTest := true
+	for tcName, tc := range testData.Cases {
+		var expectedDomain, notExpectedDomain fixtures.DomainRcList[domain.Network]
+		expectedProto := tc.Expected.Networks.Decode()
+		fixtures.Backend2Domain(expectedProto, &expectedDomain)
+		notExpectedProto := tc.NotExpeced.Networks.Decode()
+		fixtures.Backend2Domain(notExpectedProto, &notExpectedDomain)
 
-					for name, netData := range creationFixture.Spec {
-						if _, contains := modificationFixture.Spec[name]; !contains {
-							net := sui.getNetwork(netData.Name)
-							sui.Require().Nilf(net, "network %s should be deleted", netData.Name)
+		resourceTestCase.Steps = append(resourceTestCase.Steps, resource.TestStep{
+			Config: tc.TfConfig,
+			PreConfig: func() {
+				if createTest {
+					expectedDomain.ToDict().Iterate(func(k string, v domain.Network) bool {
+						if _, initial := initialDict.Get(k); !initial {
+							sui.Require().Nilf(sui.getNetwork(v.Name), "%s : there are network %s already", tcName, k)
 						}
-					}
-
-					return nil
-				},
+						return true
+					})
+				}
 			},
-		},
-	})
+			Check: func(_ *terraform.State) error {
+				expectedDomain.ToDict().Iterate(func(k string, v domain.Network) bool {
+					network := sui.getNetwork(v.Name)
+					sui.Require().NotNilf(network, "%s : network %s not found", tcName, k)
+					_, gotNet, _ := net.ParseCIDR(network.GetNetwork().GetCIDR())
+					sui.Require().Equalf(v.Net, *gotNet, "%s : network cidr differ", tcName)
+					return true
+				})
+
+				notExpectedDomain.ToDict().Iterate(func(k string, v domain.Network) bool {
+					network := sui.getNetwork(v.Name)
+					sui.Require().Nilf(network, "%s : network %s should be deleted", tcName, k)
+					return true
+				})
+				return nil
+			},
+		})
+
+		createTest = false
+	}
+
+	resource.Test(sui.T(), resourceTestCase)
 }
 
 func (sui *networksTests) getNetwork(netName string) *protos.Network {
