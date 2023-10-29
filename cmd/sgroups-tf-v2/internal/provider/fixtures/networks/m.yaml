@@ -1,5 +1,0 @@
-name: nws1
-spec:
-  net1:
-    name: net1
-    cidr: "3.3.3.3/32"

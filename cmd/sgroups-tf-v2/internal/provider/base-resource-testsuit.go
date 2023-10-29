@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/H-BF/protos/pkg/api/common"
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
 	client "github.com/H-BF/sgroups/internal/grpc-client"
@@ -50,104 +49,6 @@ func (sui *baseResourceTests) TearDownSuite() {
 	}
 	err := sui.sgClient.CloseConn()
 	sui.Require().NoError(err)
-}
-
-func (sui *baseResourceTests) createTestNetworks() {
-	netsData := map[string]string{
-		"nw1": "100.10.10.0/24",
-		"nw2": "100.20.10.0/24",
-		"nw3": "100.30.10.0/24",
-		"nw4": "100.40.10.0/24",
-		"nw5": "100.50.10.0/24",
-	}
-	syncNetworks := protos.SyncNetworks{}
-	for name, cidr := range netsData {
-		syncNetworks.Networks = append(syncNetworks.Networks, &protos.Network{
-			Name:    name,
-			Network: &common.Networks_NetIP{CIDR: cidr},
-		})
-	}
-	req := protos.SyncReq{
-		SyncOp: protos.SyncReq_Upsert,
-		Subject: &protos.SyncReq_Networks{
-			Networks: &syncNetworks,
-		},
-	}
-	_, err := sui.sgClient.Sync(sui.ctx, &req)
-	sui.Require().NoError(err)
-	sui.cleanDB = func() {
-		_, err = sui.sgClient.Sync(sui.ctx, &protos.SyncReq{
-			SyncOp: protos.SyncReq_Delete,
-			Subject: &protos.SyncReq_Networks{
-				Networks: &syncNetworks,
-			},
-		})
-		sui.Require().NoError(err)
-	}
-}
-
-func (sui *baseResourceTests) createTestSecGroups() {
-	sgsData := []sgTestData{
-		{
-			name:          "sg1",
-			defaultAction: "ACCEPT",
-			network_names: []string{"nw1"},
-		},
-		{
-			name:          "sg2",
-			logs:          true,
-			trace:         true,
-			defaultAction: "DROP",
-			network_names: []string{"nw2"},
-		},
-		{
-			name:          "sg3",
-			defaultAction: "ACCEPT",
-			network_names: []string{"nw3", "nw5"},
-		},
-		{
-			name:          "sg4",
-			logs:          true,
-			trace:         true,
-			defaultAction: "DROP",
-			network_names: []string{"nw4"},
-		},
-	}
-
-	sui.createTestNetworks()
-
-	syncSg := protos.SyncSecurityGroups{}
-	for _, sgData := range sgsData {
-		da := protos.SecGroup_DefaultAction_value[sgData.defaultAction]
-		syncSg.Groups = append(syncSg.Groups, &protos.SecGroup{
-			Name:          sgData.name,
-			Networks:      sgData.network_names,
-			DefaultAction: protos.SecGroup_DefaultAction(da),
-			Trace:         sgData.trace,
-			Logs:          sgData.logs,
-		})
-	}
-
-	req := protos.SyncReq{
-		SyncOp: protos.SyncReq_Upsert,
-		Subject: &protos.SyncReq_Groups{
-			Groups: &syncSg,
-		},
-	}
-	_, err := sui.sgClient.Sync(sui.ctx, &req)
-	sui.Require().NoError(err)
-
-	deleteNetworks := sui.cleanDB
-	sui.cleanDB = func() {
-		_, err := sui.sgClient.Sync(sui.ctx, &protos.SyncReq{
-			SyncOp: protos.SyncReq_Delete,
-			Subject: &protos.SyncReq_Groups{
-				Groups: &syncSg,
-			},
-		})
-		sui.Require().NoError(err)
-		deleteNetworks()
-	}
 }
 
 func (sui *baseResourceTests) toDomainPorts(rulePorts []*protos.AccPorts) []domain.SGRulePorts {

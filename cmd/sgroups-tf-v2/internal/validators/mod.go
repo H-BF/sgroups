@@ -2,12 +2,14 @@ package validators
 
 import (
 	"fmt"
+	"net"
+	"time"
+
 	pkgNet "github.com/H-BF/corlib/pkg/net"
+
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"net"
-	"time"
 )
 
 func IsDuration() validator.String {
