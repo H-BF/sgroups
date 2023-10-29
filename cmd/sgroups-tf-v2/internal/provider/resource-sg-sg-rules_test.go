@@ -26,7 +26,7 @@ func (sui *sgSgRulesTests) TestSgsgRules() {
 		Ctx: sui.ctx,
 	}
 
-	testData.LoadFixture(sui.T(), "sg-sg-rules.yaml")
+	testData.LoadFixture(sui.T(), "data/sg-sg-rules.yaml")
 
 	testData.InitBackend(sui.T(), sui.sgClient)
 
@@ -39,7 +39,7 @@ func (sui *sgSgRulesTests) TestSgsgRules() {
 		var expectedDomain, notExpectedDomain fixtures.DomainRcList[domain.SGRule]
 		expectedProto := tc.Expected.SgSgRules.Decode()
 		fixtures.Backend2Domain(expectedProto, &expectedDomain)
-		notExpectedProto := tc.NotExpeced.SgSgRules.Decode()
+		notExpectedProto := tc.NonExpected.SgSgRules.Decode()
 		fixtures.Backend2Domain(notExpectedProto, &notExpectedDomain)
 
 		step := resource.TestStep{

@@ -42,6 +42,18 @@ func (rcl BackendRcList[B]) Decode() (ret []*B) {
 	return ret
 }
 
+// Encode -
+func (rcl *BackendRcList[B]) Encode(objs []*B) {
+	*rcl = nil
+	for _, o := range objs {
+		d, e := protojson.Marshal(any(o).(protoreflect.ProtoMessage))
+		if e != nil {
+			panic(e)
+		}
+		*rcl = append(*rcl, unsafe.String(unsafe.SliceData(d), len(d)))
+	}
+}
+
 // Backend2Domain -
 func Backend2Domain[B BackendRC, D DomainRC](in []*B, ret *DomainRcList[D]) {
 	for _, p := range in {

@@ -26,7 +26,7 @@ func (sui *sgFqdnRulesTests) TestSgFqdnRules() {
 		Ctx: sui.ctx,
 	}
 
-	testData.LoadFixture(sui.T(), "sg-fqdn-rules.yaml")
+	testData.LoadFixture(sui.T(), "data/sg-fqdn-rules.yaml")
 
 	testData.InitBackend(sui.T(), sui.sgClient)
 
@@ -39,7 +39,7 @@ func (sui *sgFqdnRulesTests) TestSgFqdnRules() {
 		var expectedDomain, notExpectedDomain fixtures.DomainRcList[domain.FQDNRule]
 		expectedProto := tc.Expected.SgFqdnRules.Decode()
 		fixtures.Backend2Domain(expectedProto, &expectedDomain)
-		notExpectedProto := tc.NotExpeced.SgFqdnRules.Decode()
+		notExpectedProto := tc.NonExpected.SgFqdnRules.Decode()
 		fixtures.Backend2Domain(notExpectedProto, &notExpectedDomain)
 
 		step := resource.TestStep{

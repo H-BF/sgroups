@@ -28,7 +28,7 @@ func (sui *sgsTests) TestSgs() {
 		Ctx: sui.ctx,
 	}
 
-	testData.LoadFixture(sui.T(), "sgs.yaml")
+	testData.LoadFixture(sui.T(), "data/sgs.yaml")
 
 	testData.InitBackend(sui.T(), sui.sgClient)
 
@@ -41,7 +41,7 @@ func (sui *sgsTests) TestSgs() {
 		var expectedDomain, notExpectedDomain fixtures.DomainRcList[domain.SecurityGroup]
 		expectedProto := tc.Expected.SecGroups.Decode()
 		fixtures.Backend2Domain(expectedProto, &expectedDomain)
-		notExpectedProto := tc.NotExpeced.SecGroups.Decode()
+		notExpectedProto := tc.NonExpected.SecGroups.Decode()
 		fixtures.Backend2Domain(notExpectedProto, &notExpectedDomain)
 
 		step := resource.TestStep{

@@ -1,7 +1,10 @@
 package provider
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
@@ -19,6 +22,7 @@ type baseResourceTests struct {
 	suite.Suite
 
 	ctx               context.Context
+	ctxCancel         func()
 	sgClient          sgAPI.ClosableClient
 	providerFactories map[string]func() (tfprotov6.ProviderServer, error)
 	cleanDB           func()
@@ -26,6 +30,9 @@ type baseResourceTests struct {
 
 func (sui *baseResourceTests) SetupSuite() {
 	sui.ctx = context.Background()
+	if dl, ok := sui.T().Deadline(); ok {
+		sui.ctx, sui.ctxCancel = context.WithDeadline(sui.ctx, dl)
+	}
 
 	address := lookupEnvWithDefault("SGROUPS_ADDRESS", "tcp://127.0.0.1:9000")
 	dialDuration := lookupEnvWithDefault("SGROUPS_DIAL_DURATION", "10s")
@@ -36,7 +43,7 @@ func (sui *baseResourceTests) SetupSuite() {
 		WithDialDuration(connDuration)
 
 	sui.sgClient, err = sgAPI.NewClosableClient(sui.ctx, builder)
-	sui.Require().Nil(err)
+	sui.Require().NoError(err)
 
 	sui.providerFactories = map[string]func() (tfprotov6.ProviderServer, error){
 		"sgroups": providerserver.NewProtocol6WithError(Factory("test")()),
@@ -49,6 +56,20 @@ func (sui *baseResourceTests) TearDownSuite() {
 	}
 	err := sui.sgClient.CloseConn()
 	sui.Require().NoError(err)
+	if sui.ctxCancel != nil {
+		sui.ctxCancel()
+	}
+}
+
+func slice2string[T fmt.Stringer](args ...T) string {
+	data := bytes.NewBuffer(nil)
+	for i, o := range args {
+		if i > 0 {
+			_, _ = data.WriteString(";  ")
+		}
+		_, _ = fmt.Fprintf(data, "%s", o)
+	}
+	return strings.ReplaceAll(data.String(), `"`, "'")
 }
 
 func (sui *baseResourceTests) toDomainPorts(rulePorts []*protos.AccPorts) []domain.SGRulePorts {

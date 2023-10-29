@@ -35,17 +35,14 @@ func (lst DomainRcList[T]) ToDict() (ret dict.HDict[string, T]) {
 }
 
 // AnyIn -
-func (lst DomainRcList[T]) AnyIn(other DomainRcList[T]) bool {
+func (lst DomainRcList[T]) AnyIn(other DomainRcList[T], fullCompare bool) bool {
 	if len(lst) == 0 {
 		return false
 	}
 	x := other.ToDict()
-	if x.Len() == 0 {
-		return false
-	}
 	for _, it := range lst {
 		v, ok := x.Get(extractKey(it))
-		if ok {
+		if ok && fullCompare {
 			ok = isEQ(it, v)
 		}
 		if ok {
@@ -56,17 +53,11 @@ func (lst DomainRcList[T]) AnyIn(other DomainRcList[T]) bool {
 }
 
 // AllIn -
-func (lst DomainRcList[T]) AllIn(other DomainRcList[T]) bool {
-	if len(lst) == 0 {
-		return false
-	}
+func (lst DomainRcList[T]) AllIn(other DomainRcList[T], fullCompare bool) bool {
 	x := other.ToDict()
-	if x.Len() == 0 {
-		return false
-	}
 	for _, it := range lst {
 		v, ok := x.Get(extractKey(it))
-		if ok {
+		if ok && fullCompare {
 			ok = isEQ(it, v)
 		}
 		if !ok {

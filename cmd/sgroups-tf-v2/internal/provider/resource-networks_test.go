@@ -1,8 +1,7 @@
 package provider
 
 import (
-	"context"
-	"net"
+	"fmt"
 	"testing"
 
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
@@ -23,79 +22,44 @@ func TestAccNetworks(t *testing.T) {
 }
 
 func (sui *networksTests) TestNetworks() {
-	testData := fixtures.AccTests{
-		Ctx: sui.ctx,
-	}
-
-	testData.LoadFixture(sui.T(), "networks.yaml")
-
+	testData := fixtures.AccTests{Ctx: sui.ctx}
+	testData.LoadFixture(sui.T(), "data/networks.yaml")
 	testData.InitBackend(sui.T(), sui.sgClient)
-
-	initialProto := testData.InitialBackend.Networks.Decode()
-	var initialDomain fixtures.DomainRcList[domain.Network]
-	fixtures.Backend2Domain(initialProto, &initialDomain)
-	initialDict := initialDomain.ToDict()
-
 	resourceTestCase := resource.TestCase{
 		ProtoV6ProviderFactories: sui.providerFactories,
 	}
-	createTest := true
 	for _, tc := range testData.Cases {
-		tc := tc
-		var expectedDomain, notExpectedDomain fixtures.DomainRcList[domain.Network]
-		expectedProto := tc.Expected.Networks.Decode()
-		fixtures.Backend2Domain(expectedProto, &expectedDomain)
-		notExpectedProto := tc.NotExpeced.Networks.Decode()
-		fixtures.Backend2Domain(notExpectedProto, &notExpectedDomain)
-
-		step := resource.TestStep{
+		tcName := tc.TestName
+		expectedBackendNws := tc.Expected.Networks.Decode()
+		nonExpectedBackendNws := tc.NonExpected.Networks.Decode()
+		resourceTestCase.Steps = append(resourceTestCase.Steps, resource.TestStep{
 			Config: tc.TfConfig,
 			Check: func(_ *terraform.State) error {
-				expectedDomain.ToDict().Iterate(func(k string, v domain.Network) bool {
-					network := sui.getNetwork(v.Name)
-					sui.Require().NotNilf(network, "%s : network %s not found", tc.TestName, k)
-					_, gotNet, _ := net.ParseCIDR(network.GetNetwork().GetCIDR())
-					sui.Require().Equalf(v.Net, *gotNet, "%s : network cidr differ", tc.TestName)
-					return true
-				})
-
-				notExpectedDomain.ToDict().Iterate(func(k string, v domain.Network) bool {
-					network := sui.getNetwork(v.Name)
-					sui.Require().Nilf(network, "%s : network %s should be deleted", tc.TestName, k)
-					return true
-				})
+				if len(expectedBackendNws)+len(nonExpectedBackendNws) > 0 {
+					allNws := sui.listAllNetworks()
+					var expChecker fixtures.ExpectationsChecker[protos.Network, domain.Network]
+					expChecker.Init(allNws)
+					if !expChecker.WeExpectFindAll(expectedBackendNws) {
+						return fmt.Errorf("on check '%s' we expect to find all Networks[%s] in [%s]",
+							tcName, slice2string(expectedBackendNws...),
+							slice2string(allNws...))
+					}
+					if !expChecker.WeDontExpectFindAny(nonExpectedBackendNws) {
+						return fmt.Errorf("on check '%s' we dont expect to find any Network[%s] in [%s]",
+							tcName, slice2string(nonExpectedBackendNws...),
+							slice2string(allNws...))
+					}
+				}
 				return nil
 			},
-		}
-
-		if createTest {
-			step.PreConfig = func() {
-				expectedDomain.ToDict().Iterate(func(k string, v domain.Network) bool {
-					if _, initial := initialDict.Get(k); !initial {
-						sui.Require().Nilf(sui.getNetwork(v.Name), "%s : there are network %s already", tc.TestName, k)
-					}
-					return true
-				})
-			}
-		}
-
-		resourceTestCase.Steps = append(resourceTestCase.Steps, step)
-
-		createTest = false
+		})
 	}
 
 	resource.Test(sui.T(), resourceTestCase)
 }
 
-func (sui *networksTests) getNetwork(netName string) *protos.Network {
-	resp, err := sui.sgClient.ListNetworks(context.Background(), &protos.ListNetworksReq{
-		NeteworkNames: []string{netName},
-	})
+func (sui *networksTests) listAllNetworks() []*protos.Network {
+	resp, err := sui.sgClient.ListNetworks(sui.ctx, &protos.ListNetworksReq{})
 	sui.Require().NoError(err)
-
-	if len(resp.GetNetworks()) == 0 {
-		return nil
-	}
-
-	return resp.GetNetworks()[0]
+	return resp.GetNetworks()
 }

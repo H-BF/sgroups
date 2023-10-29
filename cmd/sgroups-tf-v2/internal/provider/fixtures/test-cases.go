@@ -14,10 +14,10 @@ type BackendClient = protos.SecGroupServiceClient
 
 // AccTestCase -
 type AccTestCase struct {
-	TestName   string       `yaml:"name"`
-	TfConfig   string       `yaml:"tf-config"`
-	Expected   BackendState `yaml:"expected-backend"`
-	NotExpeced BackendState `yaml:"not-expected-backend"`
+	TestName    string       `yaml:"name"`
+	TfConfig    string       `yaml:"tf-config"`
+	Expected    BackendState `yaml:"expected-backend"`
+	NonExpected BackendState `yaml:"not-expected-backend"`
 }
 
 // AccTests -
@@ -39,7 +39,7 @@ func (acc *AccTests) LoadFixture(t *testing.T, fixtureName string) {
 // InitBackend -
 func (acc *AccTests) InitBackend(t *testing.T, c BackendClient) {
 	req := protos.SyncReq{
-		SyncOp: protos.SyncReq_Upsert,
+		SyncOp: protos.SyncReq_FullSync,
 	}
 	if nws := acc.InitialBackend.Networks; len(nws) > 0 {
 		req.Subject = &protos.SyncReq_Networks{
