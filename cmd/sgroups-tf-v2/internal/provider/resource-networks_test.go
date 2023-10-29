@@ -2,6 +2,7 @@ package provider
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
@@ -18,6 +19,7 @@ type networksTests struct {
 }
 
 func TestAccNetworks(t *testing.T) {
+	os.Setenv("TF_ACC", "1")
 	suite.Run(t, new(networksTests))
 }
 

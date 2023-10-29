@@ -93,6 +93,12 @@ func (sui *sgsTests) getSg(sgName string) *protos.SecGroup {
 	return resp.GetGroups()[0]
 }
 
+/*//TODO: Хочется спросить "Да что же он такое несет, черт возьми?!"
+короче =
+  - убрать этот подобный булшит
+  - посмотреть как сделано в resource-networks_test.go - сделать подобно
+*/
+
 func (sui *sgsTests) sgAssert(testName string, actual *protos.SecGroup, expected domain.SecurityGroup) {
 	sui.Require().Equalf(expected.Logs, actual.GetLogs(),
 		"%s : sg Logs expected to be %t", testName, expected.Logs)
