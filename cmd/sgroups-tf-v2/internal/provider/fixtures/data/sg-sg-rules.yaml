@@ -69,109 +69,109 @@ initial-backend:
       "trace": true
     }
 cases:
-  - name: "add-new-sg-sg-rules"
-    tf-config: |
-      resource "sgroups_rules" "sg-sg-rules-set-1" {
-        items = {
-          "tcp:sg(group1)sg(group2)" = {
-            proto = "tcp"
-            sg_from = "group1"
-            sg_to = "group2"
-            ports = [
-              {
-                d = "80,443"
-                s = "1000-2000"
-              }
-            ]
-            logs = true
-          }
-          "udp:sg(group3)sg(group4)" = {
-            proto = "udp"
-            sg_from = "group3"
-            sg_to = "group4"
-            ports = [
-              {
-                d = "15000-16000"
-                s = "15000-16000"
-              }
-            ]
-            logs = true
-          }
+- name: "add-new-sg-sg-rules"
+  tf-config: |
+    resource "sgroups_rules" "sg-sg-rules-set-1" {
+      items = {
+        "tcp:sg(group1)sg(group2)" = {
+          proto = "tcp"
+          sg_from = "group1"
+          sg_to = "group2"
+          ports = [
+            {
+              d = "80,443"
+              s = "1000-2000"
+            }
+          ]
+          logs = true
+        }
+        "udp:sg(group3)sg(group4)" = {
+          proto = "udp"
+          sg_from = "group3"
+          sg_to = "group4"
+          ports = [
+            {
+              d = "15000-16000"
+              s = "15000-16000"
+            }
+          ]
+          logs = true
         }
       }
-    expected-backend:
-      sg-sg-rules:
-      - |
-        {
-          "logs": true,
-          "ports": [
-            {
-              "d": "80,443",
-              "s": "1000-2000"
-            }
-          ],
-          "sgFrom": "group1",
-          "sgTo": "group2",
-          "transport": "TCP"
-        }
-      - |
-        {
-          "logs": true,
-          "ports": [
-            {
-              "d": "15000-16000",
-              "s": "15000-16000"
-            }
-          ],
-          "sgFrom": "group3",
-          "sgTo": "group4",
-          "transport": "UDP"
-        }
-  - name: "change-first-and-delete-second"
-    tf-config: |
-      resource "sgroups_rules" "sg-sg-rules-set-1" {
-        items = {
-          "tcp:sg(group1)sg(group2)" = {
-            proto = "tcp"
-            sg_from = "group1"
-            sg_to = "group2"
-            ports = [
-              {
-                d = "22,80,443"
-                s = "3000-4000"
-              }
-            ]
-            logs = false
+    }
+  expected-backend:
+    sg-sg-rules:
+    - |
+      {
+        "logs": true,
+        "ports": [
+          {
+            "d": "80,443",
+            "s": "1000-2000"
           }
+        ],
+        "sgFrom": "group1",
+        "sgTo": "group2",
+        "transport": "TCP"
+      }
+    - |
+      {
+        "logs": true,
+        "ports": [
+          {
+            "d": "15000-16000",
+            "s": "15000-16000"
+          }
+        ],
+        "sgFrom": "group3",
+        "sgTo": "group4",
+        "transport": "UDP"
+      }
+- name: "change-first-and-delete-second"
+  tf-config: |
+    resource "sgroups_rules" "sg-sg-rules-set-1" {
+      items = {
+        "tcp:sg(group1)sg(group2)" = {
+          proto = "tcp"
+          sg_from = "group1"
+          sg_to = "group2"
+          ports = [
+            {
+              d = "22,80,443"
+              s = "3000-4000"
+            }
+          ]
+          logs = false
         }
       }
-    expected-backend:
-      sg-sg-rules:
-      - |
-        {
-          "logs": false,
-          "ports": [
-            {
-              "d": "22,80,443",
-              "s": "3000-4000"
-            }
-          ],
-          "sgFrom": "group1",
-          "sgTo": "group2",
-          "transport": "TCP"
-        }
-    not-expected-backend:
-      sg-sg-rules:
-      - |
-        {
-          "logs": true,
-          "ports": [
-            {
-              "d": "15000-16000",
-              "s": "15000-16000"
-            }
-          ],
-          "sgFrom": "group3",
-          "sgTo": "group4",
-          "transport": "UDP"
-        }
+    }
+  expected-backend:
+    sg-sg-rules:
+    - |
+      {
+        "logs": false,
+        "ports": [
+          {
+            "d": "22,80,443",
+            "s": "3000-4000"
+          }
+        ],
+        "sgFrom": "group1",
+        "sgTo": "group2",
+        "transport": "TCP"
+      }
+  not-expected-backend:
+    sg-sg-rules:
+    - |
+      {
+        "logs": true,
+        "ports": [
+          {
+            "d": "15000-16000",
+            "s": "15000-16000"
+          }
+        ],
+        "sgFrom": "group3",
+        "sgTo": "group4",
+        "transport": "UDP"
+      }
