@@ -14,6 +14,7 @@ type BackendClient = protos.SecGroupServiceClient
 
 // AccTestCase -
 type AccTestCase struct {
+	TestName   string       `yaml:"name"`
 	TfConfig   string       `yaml:"tf-config"`
 	Expected   BackendState `yaml:"expected-backend"`
 	NotExpeced BackendState `yaml:"not-expected-backend"`
@@ -22,8 +23,8 @@ type AccTestCase struct {
 // AccTests -
 type AccTests struct {
 	Ctx            context.Context
-	InitialBackend BackendState           `yaml:"initial-backend"`
-	Cases          map[string]AccTestCase `yaml:"cases"`
+	InitialBackend BackendState  `yaml:"initial-backend"`
+	Cases          []AccTestCase `yaml:"cases"`
 }
 
 // LoadFixture -

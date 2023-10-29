@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"net"
-	"strings"
 	"testing"
 
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
@@ -28,7 +27,7 @@ func (sui *networksTests) TestNetworks() {
 		Ctx: context.Background(),
 	}
 
-	testData.LoadFixture(sui.T(), "sample-acc-test.yaml")
+	testData.LoadFixture(sui.T(), "networks.yaml")
 
 	testData.InitBackend(sui.T(), sui.sgClient)
 
@@ -41,42 +40,46 @@ func (sui *networksTests) TestNetworks() {
 		ProtoV6ProviderFactories: sui.providerFactories,
 	}
 	createTest := true
-	for tcName, tc := range testData.Cases {
+	for _, tc := range testData.Cases {
+		tc := tc
 		var expectedDomain, notExpectedDomain fixtures.DomainRcList[domain.Network]
 		expectedProto := tc.Expected.Networks.Decode()
 		fixtures.Backend2Domain(expectedProto, &expectedDomain)
 		notExpectedProto := tc.NotExpeced.Networks.Decode()
 		fixtures.Backend2Domain(notExpectedProto, &notExpectedDomain)
 
-		resourceTestCase.Steps = append(resourceTestCase.Steps, resource.TestStep{
+		step := resource.TestStep{
 			Config: tc.TfConfig,
-			PreConfig: func() {
-				if createTest {
-					expectedDomain.ToDict().Iterate(func(k string, v domain.Network) bool {
-						if _, initial := initialDict.Get(k); !initial {
-							sui.Require().Nilf(sui.getNetwork(v.Name), "%s : there are network %s already", tcName, k)
-						}
-						return true
-					})
-				}
-			},
 			Check: func(_ *terraform.State) error {
 				expectedDomain.ToDict().Iterate(func(k string, v domain.Network) bool {
 					network := sui.getNetwork(v.Name)
-					sui.Require().NotNilf(network, "%s : network %s not found", tcName, k)
+					sui.Require().NotNilf(network, "%s : network %s not found", tc.TestName, k)
 					_, gotNet, _ := net.ParseCIDR(network.GetNetwork().GetCIDR())
-					sui.Require().Equalf(v.Net, *gotNet, "%s : network cidr differ", tcName)
+					sui.Require().Equalf(v.Net, *gotNet, "%s : network cidr differ", tc.TestName)
 					return true
 				})
 
 				notExpectedDomain.ToDict().Iterate(func(k string, v domain.Network) bool {
 					network := sui.getNetwork(v.Name)
-					sui.Require().Nilf(network, "%s : network %s should be deleted", tcName, k)
+					sui.Require().Nilf(network, "%s : network %s should be deleted", tc.TestName, k)
 					return true
 				})
 				return nil
 			},
-		})
+		}
+
+		if createTest {
+			step.PreConfig = func() {
+				expectedDomain.ToDict().Iterate(func(k string, v domain.Network) bool {
+					if _, initial := initialDict.Get(k); !initial {
+						sui.Require().Nilf(sui.getNetwork(v.Name), "%s : there are network %s already", tc.TestName, k)
+					}
+					return true
+				})
+			}
+		}
+
+		resourceTestCase.Steps = append(resourceTestCase.Steps, step)
 
 		createTest = false
 	}
@@ -95,10 +98,4 @@ func (sui *networksTests) getNetwork(netName string) *protos.Network {
 	}
 
 	return resp.GetNetworks()[0]
-}
-
-func (sui *networksTests) fixtureTfConfig(f fixtures.NetworksRC) string {
-	config := new(strings.Builder)
-	sui.Require().NoError(f.TfRcConf(config))
-	return config.String()
 }
