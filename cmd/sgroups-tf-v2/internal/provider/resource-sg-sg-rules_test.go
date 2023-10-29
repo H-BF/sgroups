@@ -1,11 +1,13 @@
 package provider
 
 import (
-	"fmt"
 	"strings"
 	"testing"
 
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
+	"github.com/H-BF/sgroups/cmd/sgroups-tf-v2/internal/provider/fixtures"
+	domain "github.com/H-BF/sgroups/internal/models/sgroups"
+
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stretchr/testify/suite"
@@ -20,95 +22,61 @@ func TestAccSgSgRules(t *testing.T) {
 }
 
 func (sui *sgSgRulesTests) TestSgsgRules() {
-	t := sui.T()
-	firstTestData := sgSgRuleTestData{
-		proto: "tcp",
-		from:  "sg1",
-		to:    "sg2",
-		logs:  true,
-		ports: []accPorts{
-			{
-				d: "80,443",
-				s: "1000-2000",
-			},
-		},
-	}
-	secondTestData := sgSgRuleTestData{
-		proto: "udp",
-		from:  "sg3",
-		to:    "sg4",
-		logs:  true,
-		ports: []accPorts{
-			{
-				d: "15000-16000",
-				s: "15000-16000",
-			},
-		},
-	}
-	changedFirstTestData := firstTestData
-	changedFirstTestData.to = "sg3"
-	changedFirstTestData.logs = false
-	changedFirstTestData.ports = []accPorts{
-		{
-			d: "22,80,443",
-			s: "3000-4000",
-		},
+	testData := fixtures.AccTests{
+		Ctx: sui.ctx,
 	}
 
-	if rule := sui.getSgSgRule(firstTestData.from, firstTestData.to); rule != nil {
-		t.Errorf("there are sg-sg rule %s already", firstTestData.FormatKey())
-	}
+	testData.LoadFixture(sui.T(), "sg-sg-rules.yaml")
 
-	if rule := sui.getSgSgRule(secondTestData.from, secondTestData.to); rule != nil {
-		t.Errorf("there are sg-sg rule %s already", secondTestData.FormatKey())
-	}
+	testData.InitBackend(sui.T(), sui.sgClient)
 
-	sui.createTestSecGroups()
-
-	resource.Test(t, resource.TestCase{
+	resourceTestCase := resource.TestCase{
 		ProtoV6ProviderFactories: sui.providerFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: sgSgRulesConfig(firstTestData, secondTestData),
-				Check: func(s *terraform.State) error {
-					rule := sui.getSgSgRule(firstTestData.from, firstTestData.to)
-					if rule == nil {
-						return fmt.Errorf("sg-sg rule %s not found", firstTestData.FormatKey())
-					}
-					if err := sui.sgSgRuleAssert(rule, firstTestData); err != nil {
-						return err
-					}
+	}
+	createTest := true
+	for _, tc := range testData.Cases {
+		tc := tc
+		var expectedDomain, notExpectedDomain fixtures.DomainRcList[domain.SGRule]
+		expectedProto := tc.Expected.SgSgRules.Decode()
+		fixtures.Backend2Domain(expectedProto, &expectedDomain)
+		notExpectedProto := tc.NotExpeced.SgSgRules.Decode()
+		fixtures.Backend2Domain(notExpectedProto, &notExpectedDomain)
 
-					rule = sui.getSgSgRule(secondTestData.from, secondTestData.to)
-					if rule == nil {
-						return fmt.Errorf("sg-sg rule %s not found", secondTestData.FormatKey())
-					}
-					if err := sui.sgSgRuleAssert(rule, secondTestData); err != nil {
-						return err
-					}
-					return nil
-				},
-			},
-			{
-				Config: sgSgRulesConfig(changedFirstTestData),
-				Check: func(s *terraform.State) error {
-					rule := sui.getSgSgRule(changedFirstTestData.from, changedFirstTestData.to)
-					if rule == nil {
-						return fmt.Errorf("sg-sg rule %s not found", changedFirstTestData.FormatKey())
-					}
-					if err := sui.sgSgRuleAssert(rule, changedFirstTestData); err != nil {
-						return err
-					}
+		step := resource.TestStep{
+			Config: tc.TfConfig,
+			Check: func(_ *terraform.State) error {
+				expectedDomain.ToDict().Iterate(func(k string, v domain.SGRule) bool {
+					rule := sui.getSgSgRule(v.ID.SgFrom, v.ID.SgTo)
+					sui.Require().NotNilf(rule, "%s : sg-sg rule %s not found", tc.TestName, k)
+					sui.sgSgRuleAssert(tc.TestName, rule, v)
+					return true
+				})
 
-					rule = sui.getSgSgRule(secondTestData.from, secondTestData.to)
-					if rule != nil {
-						return fmt.Errorf("sg-sg rule %s should be deleted", secondTestData.FormatKey())
-					}
-					return nil
-				},
+				notExpectedDomain.ToDict().Iterate(func(k string, v domain.SGRule) bool {
+					rule := sui.getSgSgRule(v.ID.SgFrom, v.ID.SgTo)
+					sui.Require().Nilf(rule, "%s : sg-sg rule %s should be deleted", tc.TestName, k)
+					return true
+				})
+				return nil
 			},
-		},
-	})
+		}
+
+		if createTest {
+			step.PreConfig = func() {
+				expectedDomain.ToDict().Iterate(func(k string, v domain.SGRule) bool {
+					sui.Require().Nilf(sui.getSgSgRule(v.ID.SgFrom, v.ID.SgTo),
+						"%s : there are sg-sg rule %s already", tc.TestName, k)
+					return true
+				})
+			}
+		}
+
+		resourceTestCase.Steps = append(resourceTestCase.Steps, step)
+
+		createTest = false
+	}
+
+	resource.Test(sui.T(), resourceTestCase)
 }
 
 func (sui *sgSgRulesTests) getSgSgRule(from, to string) *protos.Rule {
@@ -125,28 +93,19 @@ func (sui *sgSgRulesTests) getSgSgRule(from, to string) *protos.Rule {
 	return resp.GetRules()[0]
 }
 
-func (sui *sgSgRulesTests) sgSgRuleAssert(rule *protos.Rule, td sgSgRuleTestData) error {
-	if rule.GetTransport().String() != strings.ToUpper(td.proto) {
-		return fmt.Errorf("sg-sg rule Proto %s differs from configured %s", rule.GetTransport().String(), strings.ToUpper(td.proto))
-	}
-	if rule.GetSgFrom() != td.from {
-		return fmt.Errorf("sg-sg rule SgFrom %s differs from configured %s", rule.GetSgFrom(), td.from)
-	}
-	if rule.GetSgTo() != td.to {
-		return fmt.Errorf("sg-sg rule SgTo %s differs from configured %s", rule.GetSgTo(), td.to)
-	}
-	if rule.GetLogs() != td.logs {
-		return fmt.Errorf("sg-sg rule Logs %t differs from configured %t", rule.GetLogs(), td.logs)
-	}
+func (sui *sgSgRulesTests) sgSgRuleAssert(testName string, actual *protos.Rule, expected domain.SGRule) {
+	sui.Require().Equalf(expected.ID.Transport.String(), strings.ToLower(actual.GetTransport().String()),
+		"%s : sg-sg rule Proto expected to be %s", testName, expected.ID.Transport.String())
 
-	portsAreEq := sui.areRulePortsEq(rule.GetPorts(), td.ports)
-	if !portsAreEq {
-		return fmt.Errorf("sg-sg rule Ports %v differs from configured %+v", rule.GetPorts(), td.ports)
-	}
+	sui.Require().Equalf(expected.ID.SgFrom, actual.GetSgFrom(),
+		"%s : sg-sg rule SgFrom expected to be %s", testName, expected.ID.SgFrom)
+	sui.Require().Equalf(expected.ID.SgTo, actual.GetSgTo(),
+		"%s : sg-sg rule SgTo expected to be %s", testName, expected.ID.SgTo)
 
-	return nil
-}
+	sui.Require().Equalf(expected.Logs, actual.GetLogs(),
+		"%s : sg-sg rule Logs expected to be %t", testName, expected.Logs)
 
-func sgSgRulesConfig(fst testDataItem, others ...testDataItem) string {
-	return buildConfig(sgSgRulesTemplate, fst, others...)
+	actualPorts := sui.toDomainPorts(actual.GetPorts())
+	sui.Require().Truef(domain.AreRulePortsEq(expected.Ports, actualPorts),
+		"%s : sg-sg rule Ports expected to be %+v", testName, expected.Ports)
 }

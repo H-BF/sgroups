@@ -24,7 +24,7 @@ func TestAccNetworks(t *testing.T) {
 
 func (sui *networksTests) TestNetworks() {
 	testData := fixtures.AccTests{
-		Ctx: context.Background(),
+		Ctx: sui.ctx,
 	}
 
 	testData.LoadFixture(sui.T(), "networks.yaml")

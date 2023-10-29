@@ -1,150 +1,119 @@
 package provider
 
-// import (
-// 	"context"
-// 	"fmt"
-// 	"sort"
-// 	"strings"
-// 	"testing"
+import (
+	"sort"
+	"strings"
+	"testing"
 
-// 	"github.com/H-BF/corlib/pkg/slice"
-// 	protos "github.com/H-BF/protos/pkg/api/sgroups"
+	"github.com/H-BF/corlib/pkg/slice"
+	protos "github.com/H-BF/protos/pkg/api/sgroups"
+	"github.com/H-BF/sgroups/cmd/sgroups-tf-v2/internal/provider/fixtures"
+	domain "github.com/H-BF/sgroups/internal/models/sgroups"
+	"github.com/stretchr/testify/suite"
 
-// 	"github.com/hashicorp/terraform-plugin-testing/helper/acctest"
-// 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-// 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-// )
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+)
 
-// func TestAccSgs(t *testing.T) {
-// 	ctx := context.Background()
-// 	rName1 := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
-// 	rName2 := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
+type sgsTests struct {
+	baseResourceTests
+}
 
-// 	if sg := getSg(ctx, t, rName1); sg != nil {
-// 		t.Errorf("there are sg %s already", rName1)
-// 	}
+func TestAccSgs(t *testing.T) {
+	suite.Run(t, new(sgsTests))
+}
 
-// 	if sg := getSg(ctx, t, rName2); sg != nil {
-// 		t.Errorf("there are sg %s already", rName1)
-// 	}
+func (sui *sgsTests) TestSgs() {
+	testData := fixtures.AccTests{
+		Ctx: sui.ctx,
+	}
 
-// 	deleteTestNetworks, err := createTestNetworks(ctx, &testAccSgClient)
-// 	if err != nil {
-// 		t.Errorf("cant create test networks: %s", err.Error())
-// 	}
-// 	defer deleteTestNetworks()
+	testData.LoadFixture(sui.T(), "sgs.yaml")
 
-// 	firstTestData := sgTestData{
-// 		name:          rName1,
-// 		logs:          true,
-// 		trace:         true,
-// 		defaultAction: "DROP",
-// 		network_names: []string{"nw1", "nw2"}}
+	testData.InitBackend(sui.T(), sui.sgClient)
 
-// 	secondTestData := sgTestData{
-// 		name:          rName2,
-// 		defaultAction: "ACCEPT",
-// 		network_names: []string{"nw3", "nw4"}}
+	resourceTestCase := resource.TestCase{
+		ProtoV6ProviderFactories: sui.providerFactories,
+	}
+	createTest := true
+	for _, tc := range testData.Cases {
+		tc := tc
+		var expectedDomain, notExpectedDomain fixtures.DomainRcList[domain.SecurityGroup]
+		expectedProto := tc.Expected.SecGroups.Decode()
+		fixtures.Backend2Domain(expectedProto, &expectedDomain)
+		notExpectedProto := tc.NotExpeced.SecGroups.Decode()
+		fixtures.Backend2Domain(notExpectedProto, &notExpectedDomain)
 
-// 	changedFirstTestData := firstTestData
-// 	changedFirstTestData.logs = false
-// 	changedFirstTestData.trace = false
-// 	changedFirstTestData.network_names = []string{"nw1", "nw5"}
+		step := resource.TestStep{
+			Config: tc.TfConfig,
+			Check: func(_ *terraform.State) error {
+				expectedDomain.ToDict().Iterate(func(k string, v domain.SecurityGroup) bool {
+					sg := sui.getSg(v.Name)
+					sui.Require().NotNilf(sg, "%s : sg %s not found", tc.TestName, k)
+					sui.sgAssert(tc.TestName, sg, v)
+					return true
+				})
 
-// 	resource.Test(t, resource.TestCase{
-// 		ProtoV6ProviderFactories: testAccProviders,
-// 		Steps: []resource.TestStep{
-// 			{
-// 				Config: sgsConfig(firstTestData, secondTestData),
-// 				Check: func(tState *terraform.State) error {
-// 					sg := getSg(ctx, t, firstTestData.name)
-// 					if sg == nil {
-// 						return fmt.Errorf("sg %s not found", firstTestData.name)
-// 					}
-// 					if err := sgAssert(sg, firstTestData); err != nil {
-// 						return err
-// 					}
+				notExpectedDomain.ToDict().Iterate((func(k string, v domain.SecurityGroup) bool {
+					sg := sui.getSg(v.Name)
+					sui.Require().Nilf(sg, "%s : sg %s should be deleted", tc.TestName, k)
+					return true
+				}))
+				return nil
+			},
+		}
 
-// 					sg = getSg(ctx, t, secondTestData.name)
-// 					if sg == nil {
-// 						return fmt.Errorf("sg %s not found", secondTestData.name)
-// 					}
-// 					if err := sgAssert(sg, secondTestData); err != nil {
-// 						return err
-// 					}
+		if createTest {
+			step.PreConfig = func() {
+				expectedDomain.ToDict().Iterate(func(k string, v domain.SecurityGroup) bool {
+					sui.Require().Nilf(sui.getSg(v.Name), "%s : there are sg %s already", tc.TestName, k)
+					return true
+				})
+			}
+		}
 
-// 					return nil
-// 				},
-// 			},
-// 			{
-// 				Config: sgsConfig(changedFirstTestData),
-// 				Check: func(tState *terraform.State) error {
-// 					sg := getSg(ctx, t, changedFirstTestData.name)
-// 					if sg == nil {
-// 						return fmt.Errorf("sg %s not found", changedFirstTestData.name)
-// 					}
-// 					if err := sgAssert(sg, changedFirstTestData); err != nil {
-// 						return err
-// 					}
+		resourceTestCase.Steps = append(resourceTestCase.Steps, step)
 
-// 					sg = getSg(ctx, t, secondTestData.name)
-// 					if sg != nil {
-// 						return fmt.Errorf("sg %s should be deleted", secondTestData.name)
-// 					}
-// 					return nil
-// 				},
-// 			},
-// 		},
-// 	})
-// }
+		createTest = false
+	}
 
-// func getSg(ctx context.Context, t *testing.T, sgName string) *protos.SecGroup {
-// 	resp, err := testAccSgClient.ListSecurityGroups(ctx, &protos.ListSecurityGroupsReq{
-// 		SgNames: []string{sgName},
-// 	})
-// 	if err != nil {
-// 		t.Errorf("list sg: %v", err)
-// 	}
+	resource.Test(sui.T(), resourceTestCase)
+}
 
-// 	if len(resp.GetGroups()) == 0 {
-// 		return nil
-// 	}
+func (sui *sgsTests) getSg(sgName string) *protos.SecGroup {
+	resp, err := sui.sgClient.ListSecurityGroups(sui.ctx, &protos.ListSecurityGroupsReq{
+		SgNames: []string{sgName},
+	})
+	sui.Require().NoError(err)
 
-// 	return resp.GetGroups()[0]
-// }
+	if len(resp.GetGroups()) == 0 {
+		return nil
+	}
 
-// func sgAssert(sg *protos.SecGroup, td sgTestData) error {
-// 	if sg.GetLogs() != td.logs {
-// 		return fmt.Errorf("sg Logs %t differs from configured %t", sg.GetLogs(), td.logs)
-// 	}
-// 	if sg.GetTrace() != td.trace {
-// 		return fmt.Errorf("sg Trace %t differs from configured %t", sg.GetTrace(), td.trace)
-// 	}
-// 	if sg.GetDefaultAction().String() != td.defaultAction {
-// 		return fmt.Errorf("sg Default Action %s differs from configured %s",
-// 			sg.GetDefaultAction().String(), td.defaultAction)
-// 	}
+	return resp.GetGroups()[0]
+}
 
-// 	sgNets := sg.GetNetworks()
-// 	sort.Strings(sgNets)
-// 	_ = slice.DedupSlice(&sgNets, func(i, j int) bool {
-// 		return sgNets[i] == sgNets[j]
-// 	})
+func (sui *sgsTests) sgAssert(testName string, actual *protos.SecGroup, expected domain.SecurityGroup) {
+	sui.Require().Equalf(expected.Logs, actual.GetLogs(),
+		"%s : sg Logs expected to be %t", testName, expected.Logs)
+	sui.Require().Equalf(expected.Trace, actual.GetTrace(),
+		"%s : sg Trace expected to be %t", testName, expected.Trace)
 
-// 	tdNets := td.network_names[:]
-// 	sort.Strings(tdNets)
-// 	_ = slice.DedupSlice(&tdNets, func(i, j int) bool {
-// 		return tdNets[i] == tdNets[j]
-// 	})
+	sui.Require().Equalf(expected.DefaultAction.String(), strings.ToLower(actual.GetDefaultAction().String()),
+		"%s : sg Default Action expected to be %d", testName, expected.DefaultAction.String())
 
-// 	if strings.Join(sgNets, ",") != strings.Join(tdNets, ",") {
-// 		return fmt.Errorf("sg Networks %s differs from configured %s",
-// 			sgNets, td.network_names)
-// 	}
+	actualNets := actual.GetNetworks()
+	sort.Strings(actualNets)
+	_ = slice.DedupSlice(&actualNets, func(i, j int) bool {
+		return actualNets[i] == actualNets[j]
+	})
 
-// 	return nil
-// }
+	expectedNets := expected.Networks[:]
+	sort.Strings(expectedNets)
+	_ = slice.DedupSlice(&expectedNets, func(i, j int) bool {
+		return expectedNets[i] == expectedNets[j]
+	})
 
-// func sgsConfig(fst testDataItem, others ...testDataItem) string {
-// 	return buildConfig(sgsTemplate, fst, others...)
-// }
+	sui.Require().Equalf(strings.Join(expectedNets, ","), strings.Join(actualNets, ","),
+		"%s : sg Networks expected to be %v", testName, expected.Networks)
+}

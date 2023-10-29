@@ -8,7 +8,7 @@ import (
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
 	client "github.com/H-BF/sgroups/internal/grpc-client"
-	model "github.com/H-BF/sgroups/internal/models/sgroups"
+	domain "github.com/H-BF/sgroups/internal/models/sgroups"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -150,8 +150,8 @@ func (sui *baseResourceTests) createTestSecGroups() {
 	}
 }
 
-func (sui *baseResourceTests) areRulePortsEq(rulePorts []*protos.AccPorts, testDataPorts []accPorts) bool {
-	var rPorts, tdPorts []AccessPorts
+func (sui *baseResourceTests) toDomainPorts(rulePorts []*protos.AccPorts) []domain.SGRulePorts {
+	var rPorts []AccessPorts
 	for _, p := range rulePorts {
 		rPorts = append(rPorts, AccessPorts{
 			Source:      types.StringValue(p.S),
@@ -159,18 +159,8 @@ func (sui *baseResourceTests) areRulePortsEq(rulePorts []*protos.AccPorts, testD
 		})
 	}
 
-	for _, p := range testDataPorts {
-		tdPorts = append(tdPorts, AccessPorts{
-			Source:      types.StringValue(p.s),
-			Destination: types.StringValue(p.d),
-		})
-	}
-
 	rModelPorts, err := toModelPorts(rPorts)
 	sui.Require().NoError(err)
 
-	tdModelPorts, err := toModelPorts(tdPorts)
-	sui.Require().NoError(err)
-
-	return model.AreRulePortsEq(rModelPorts, tdModelPorts)
+	return rModelPorts
 }

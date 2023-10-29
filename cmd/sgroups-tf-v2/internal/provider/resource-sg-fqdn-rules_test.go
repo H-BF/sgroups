@@ -1,155 +1,114 @@
 package provider
 
-// import (
-// 	"context"
-// 	"fmt"
-// 	"strings"
-// 	"testing"
+import (
+	"strings"
+	"testing"
 
-// 	protos "github.com/H-BF/protos/pkg/api/sgroups"
-// 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
-// 	"github.com/hashicorp/terraform-plugin-testing/terraform"
-// )
+	protos "github.com/H-BF/protos/pkg/api/sgroups"
+	"github.com/H-BF/sgroups/cmd/sgroups-tf-v2/internal/provider/fixtures"
+	domain "github.com/H-BF/sgroups/internal/models/sgroups"
 
-// func TestAccSgFqdnRules(t *testing.T) {
-// 	ctx := context.Background()
-// 	firstTestData := sgFqdnRuleTestData{
-// 		proto: "tcp",
-// 		from:  "sg1",
-// 		to:    "front.example.org",
-// 		logs:  true,
-// 		ports: []accPorts{
-// 			{
-// 				d: "80,443",
-// 				s: "1000-2000",
-// 			},
-// 		},
-// 	}
-// 	secondTestData := sgFqdnRuleTestData{
-// 		proto: "udp",
-// 		from:  "sg3",
-// 		to:    "store.example.org",
-// 		logs:  true,
-// 		ports: []accPorts{
-// 			{
-// 				d: "15000-16000",
-// 				s: "15000-16000",
-// 			},
-// 		},
-// 	}
+	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/stretchr/testify/suite"
+)
 
-// 	changedFirstTestData := firstTestData
-// 	changedFirstTestData.from = "sg2"
-// 	changedFirstTestData.to = "ui.example.org"
-// 	changedFirstTestData.logs = false
-// 	changedFirstTestData.ports = []accPorts{
-// 		{
-// 			d: "22,80,443",
-// 			s: "3000-4000",
-// 		},
-// 	}
+type sgFqdnRulesTests struct {
+	baseResourceTests
+}
 
-// 	if rule := getSgFqdnRule(ctx, t, firstTestData.from, firstTestData.to); rule != nil {
-// 		t.Errorf("there are sg-fqdn rule %s already", firstTestData.FormatKey())
-// 	}
+func TestAccSgFqdnRules(t *testing.T) {
+	suite.Run(t, new(sgFqdnRulesTests))
+}
 
-// 	if rule := getSgFqdnRule(ctx, t, secondTestData.from, secondTestData.to); rule != nil {
-// 		t.Errorf("there are sg-fqdn rule %s already", secondTestData.FormatKey())
-// 	}
+func (sui *sgFqdnRulesTests) TestSgFqdnRules() {
+	testData := fixtures.AccTests{
+		Ctx: sui.ctx,
+	}
 
-// 	deleteTestSgs, err := createTestSecGroups(ctx, &testAccSgClient)
-// 	if err != nil {
-// 		t.Errorf("cant create test sgs: %s", err.Error())
-// 	}
-// 	defer deleteTestSgs()
+	testData.LoadFixture(sui.T(), "sg-fqdn-rules.yaml")
 
-// 	resource.Test(t, resource.TestCase{
-// 		ProtoV6ProviderFactories: testAccProviders,
-// 		Steps: []resource.TestStep{
-// 			{
-// 				Config: sgFqdnRulesConfig(firstTestData, secondTestData),
-// 				Check: func(s *terraform.State) error {
-// 					rule := getSgFqdnRule(ctx, t, firstTestData.from, firstTestData.to)
-// 					if rule == nil {
-// 						return fmt.Errorf("sg-fqdn rule %s not found", firstTestData.FormatKey())
-// 					}
-// 					if err := sgFqdnRuleAssert(rule, firstTestData); err != nil {
-// 						return err
-// 					}
+	testData.InitBackend(sui.T(), sui.sgClient)
 
-// 					rule = getSgFqdnRule(ctx, t, secondTestData.from, secondTestData.to)
-// 					if rule == nil {
-// 						return fmt.Errorf("sg-fqdn rule %s not found", secondTestData.FormatKey())
-// 					}
-// 					if err := sgFqdnRuleAssert(rule, secondTestData); err != nil {
-// 						return err
-// 					}
-// 					return nil
-// 				},
-// 			},
-// 			{
-// 				Config: sgFqdnRulesConfig(changedFirstTestData),
-// 				Check: func(s *terraform.State) error {
-// 					rule := getSgFqdnRule(ctx, t, changedFirstTestData.from, changedFirstTestData.to)
-// 					if rule == nil {
-// 						return fmt.Errorf("sg-fqdn rule %s not found", changedFirstTestData.FormatKey())
-// 					}
-// 					if err := sgFqdnRuleAssert(rule, changedFirstTestData); err != nil {
-// 						return err
-// 					}
+	resourceTestCase := resource.TestCase{
+		ProtoV6ProviderFactories: sui.providerFactories,
+	}
+	createTest := true
+	for _, tc := range testData.Cases {
+		tc := tc
+		var expectedDomain, notExpectedDomain fixtures.DomainRcList[domain.FQDNRule]
+		expectedProto := tc.Expected.SgFqdnRules.Decode()
+		fixtures.Backend2Domain(expectedProto, &expectedDomain)
+		notExpectedProto := tc.NotExpeced.SgFqdnRules.Decode()
+		fixtures.Backend2Domain(notExpectedProto, &notExpectedDomain)
 
-// 					rule = getSgFqdnRule(ctx, t, secondTestData.from, secondTestData.to)
-// 					if rule != nil {
-// 						return fmt.Errorf("sg-fqdn rule %s should be deleted", secondTestData.FormatKey())
-// 					}
-// 					return nil
-// 				},
-// 			},
-// 		},
-// 	})
-// }
+		step := resource.TestStep{
+			Config: tc.TfConfig,
+			Check: func(_ *terraform.State) error {
+				expectedDomain.ToDict().Iterate(func(k string, v domain.FQDNRule) bool {
+					rule := sui.getSgFqdnRule(v.ID.SgFrom, v.ID.FqdnTo.String())
+					sui.Require().NotNilf(rule, "%s : sg-fqdn rule %s not found", tc.TestName, k)
+					sui.sgFqdnRuleAssert(tc.TestName, rule, v)
+					return true
+				})
 
-// func getSgFqdnRule(ctx context.Context, t *testing.T, from, to string) *protos.FqdnRule {
-// 	resp, err := testAccSgClient.FindFqdnRules(ctx, &protos.FindFqdnRulesReq{
-// 		SgFrom: []string{from},
-// 	})
-// 	if err != nil {
-// 		t.Errorf("find sg-fqdn rule: %v", err)
-// 	}
+				notExpectedDomain.ToDict().Iterate(func(k string, v domain.FQDNRule) bool {
+					rule := sui.getSgFqdnRule(v.ID.SgFrom, v.ID.FqdnTo.String())
+					sui.Require().Nilf(rule, "%s : sg-fqdn rule %s should be deleted", tc.TestName, k)
+					return true
+				})
+				return nil
+			},
+		}
 
-// 	if len(resp.GetRules()) == 0 {
-// 		return nil
-// 	}
+		if createTest {
+			step.PreConfig = func() {
+				expectedDomain.ToDict().Iterate(func(k string, v domain.FQDNRule) bool {
+					sui.Require().Nilf(sui.getSgFqdnRule(v.ID.SgFrom, v.ID.FqdnTo.String()),
+						"%s : there are sg-fqdn rule %s already", tc.TestName, k)
+					return true
+				})
+			}
+		}
 
-// 	if resp.GetRules()[0].GetFQDN() != to {
-// 		return nil
-// 	}
+		resourceTestCase.Steps = append(resourceTestCase.Steps, step)
 
-// 	return resp.GetRules()[0]
-// }
+		createTest = false
+	}
 
-// func sgFqdnRuleAssert(rule *protos.FqdnRule, td sgFqdnRuleTestData) error {
-// 	if rule.GetTransport().String() != strings.ToUpper(td.proto) {
-// 		return fmt.Errorf("sg-fqdn rule Proto %s differs from configured %s", rule.GetTransport().String(), strings.ToUpper(td.proto))
-// 	}
-// 	if rule.GetSgFrom() != td.from {
-// 		return fmt.Errorf("sg-fqdn rule SgFrom %s differs from configured %s", rule.GetSgFrom(), td.from)
-// 	}
-// 	if rule.GetFQDN() != td.to {
-// 		return fmt.Errorf("sg-fqdn rule FQDN %s differs from configured %s", rule.GetFQDN(), td.to)
-// 	}
-// 	if rule.GetLogs() != td.logs {
-// 		return fmt.Errorf("sg-fqdn rule Logs %t differs from configured %t", rule.GetLogs(), td.logs)
-// 	}
+	resource.Test(sui.T(), resourceTestCase)
+}
 
-// 	portsAreEq, err := areRulePortsEq(rule.GetPorts(), td.ports)
-// 	if !portsAreEq {
-// 		return fmt.Errorf("sg-fqdn rule Ports %v differs from configured %+v", rule.GetPorts(), td.ports)
-// 	}
+func (sui *sgFqdnRulesTests) getSgFqdnRule(from, to string) *protos.FqdnRule {
+	resp, err := sui.sgClient.FindFqdnRules(sui.ctx, &protos.FindFqdnRulesReq{
+		SgFrom: []string{from},
+	})
+	sui.Require().NoError(err)
 
-// 	return err
-// }
+	if len(resp.GetRules()) == 0 {
+		return nil
+	}
 
-// func sgFqdnRulesConfig(fst testDataItem, others ...testDataItem) string {
-// 	return buildConfig(sgFqdnRulesTemplate, fst, others...)
-// }
+	if resp.GetRules()[0].GetFQDN() != to {
+		return nil
+	}
+
+	return resp.GetRules()[0]
+}
+
+func (sui *sgFqdnRulesTests) sgFqdnRuleAssert(testName string, actual *protos.FqdnRule, expected domain.FQDNRule) {
+	sui.Require().Equalf(expected.ID.Transport.String(), strings.ToLower(actual.GetTransport().String()),
+		"%s : sg-fqdn rule Proto expected to be %s", testName, expected.ID.Transport.String())
+
+	sui.Require().Equalf(expected.ID.SgFrom, actual.GetSgFrom(),
+		"%s : sg-fqdn rule SgFrom expected to be %s", testName, expected.ID.SgFrom)
+	sui.Require().Equalf(expected.ID.FqdnTo.String(), actual.GetFQDN(),
+		"%s : sg-fqdn rule FqdnTo expected to be %s", testName, expected.ID.FqdnTo.String())
+
+	sui.Require().Equalf(expected.Logs, actual.GetLogs(),
+		"%s : sg-fqdn rule Logs expected to be %t", testName, expected.Logs)
+
+	actualPorts := sui.toDomainPorts(actual.GetPorts())
+	sui.Require().Truef(domain.AreRulePortsEq(expected.Ports, actualPorts),
+		"%s : sg-fqdn rule Ports expected to be %+v", testName, expected.Ports)
+}

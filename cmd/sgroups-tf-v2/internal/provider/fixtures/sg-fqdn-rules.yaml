@@ -1,0 +1,139 @@
+initial-backend:
+  networks: 
+  - |
+    {
+      "name": "net1",
+      "network": {
+        "CIDR": "10.10.10.0/24"
+      }
+    }
+  - |
+    {
+      "name": "net2",
+      "network": {
+        "CIDR": "10.10.20.0/24"
+      }
+    }
+  sec-groups:
+  - |
+    {
+      "defaultAction": "ACCEPT",
+      "logs": false,
+      "name": "group1",
+      "networks": ["net1"],
+      "trace": false
+    }
+  - |
+    {
+      "defaultAction": "DROP",
+      "logs": true,
+      "name": "group2",
+      "networks": ["net2"],
+      "trace": true
+    }
+cases:
+  - name: "add-new-sg-fqdn-rules"
+    tf-config: |
+      resource "sgroups_fqdn_rules" "sg-fqdn-rules-set-1" {
+        items = {
+          "tcp:sg(group1)fqdn(front.example.org)" = {
+            proto = "tcp"
+            sg_from = "group1"
+            fqdn = "front.example.org"
+            ports = [
+              {
+                d = "80,443"
+                s = "1000-2000"
+              }
+            ]
+            logs = true
+          }
+          "udp:sg(group2)fqdn(store.example.org)" = {
+            proto = "udp"
+            sg_from = "group2"
+            fqdn = "store.example.org"
+            ports = [
+              {
+                d = "15000-16000"
+                s = "15000-16000"
+              }
+            ]
+            logs = true
+          }
+        }
+      }
+    expected-backend:
+      sg-fqdn-rules:
+      - |
+        {
+          "logs": true,
+          "ports": [
+            {
+              "d": "80,443",
+              "s": "1000-2000"
+            }
+          ],
+          "sgFrom": "group1",
+          "FQDN": "front.example.org",
+          "transport": "TCP"
+        }
+      - |
+        {
+          "logs": true,
+          "ports": [
+            {
+              "d": "15000-16000",
+              "s": "15000-16000"
+            }
+          ],
+          "sgFrom": "group2",
+          "FQDN": "store.example.org",
+          "transport": "UDP"
+        }
+  - name: "change-first-and-delete-second"
+    tf-config: |
+      resource "sgroups_fqdn_rules" "sg-fqdn-rules-set-1" {
+        items = {
+          "tcp:sg(group1)fqdn(front.example.org)" = {
+            proto = "tcp"
+            sg_from = "group1"
+            fqdn = "front.example.org"
+            ports = [
+              {
+                d = "22,80,443"
+                s = "3000-4000"
+              }
+            ]
+            logs = false
+          }
+        }
+      }
+    expected-backend:
+      sg-fqdn-rules:
+      - |
+        {
+          "logs": false,
+          "ports": [
+            {
+              "d": "22,80,443",
+              "s": "3000-4000"
+            }
+          ],
+          "sgFrom": "group1",
+          "FQDN": "front.example.org",
+          "transport": "TCP"
+        }
+      not-expected-backend:
+      - |
+        {
+          "logs": true,
+          "ports": [
+            {
+              "d": "15000-16000",
+              "s": "15000-16000"
+            }
+          ],
+          "sgFrom": "group2",
+          "FQDN": "store.example.org",
+          "transport": "UDP"
+        }
