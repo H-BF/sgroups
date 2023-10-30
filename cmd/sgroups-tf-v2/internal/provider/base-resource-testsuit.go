@@ -22,7 +22,6 @@ type baseResourceTests struct {
 	ctxCancel         func()
 	sgClient          sgAPI.ClosableClient
 	providerFactories map[string]func() (tfprotov6.ProviderServer, error)
-	cleanDB           func()
 }
 
 func (sui *baseResourceTests) SetupSuite() {
@@ -48,9 +47,6 @@ func (sui *baseResourceTests) SetupSuite() {
 }
 
 func (sui *baseResourceTests) TearDownSuite() {
-	if sui.cleanDB != nil {
-		sui.cleanDB()
-	}
 	err := sui.sgClient.CloseConn()
 	sui.Require().NoError(err)
 	if sui.ctxCancel != nil {
