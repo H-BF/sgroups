@@ -7,13 +7,10 @@ import (
 	"strings"
 	"time"
 
-	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
 	client "github.com/H-BF/sgroups/internal/grpc-client"
-	domain "github.com/H-BF/sgroups/internal/models/sgroups"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
-	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/stretchr/testify/suite"
 )
@@ -70,19 +67,4 @@ func slice2string[T fmt.Stringer](args ...T) string {
 		_, _ = fmt.Fprintf(data, "%s", o)
 	}
 	return strings.ReplaceAll(data.String(), `"`, "'")
-}
-
-func (sui *baseResourceTests) toDomainPorts(rulePorts []*protos.AccPorts) []domain.SGRulePorts {
-	var rPorts []AccessPorts
-	for _, p := range rulePorts {
-		rPorts = append(rPorts, AccessPorts{
-			Source:      types.StringValue(p.S),
-			Destination: types.StringValue(p.D),
-		})
-	}
-
-	rModelPorts, err := toModelPorts(rPorts)
-	sui.Require().NoError(err)
-
-	return rModelPorts
 }

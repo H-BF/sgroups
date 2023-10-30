@@ -22,6 +22,5 @@ func (exp ExpectationsChecker[B, D]) WeExpectFindAll(objs []*B) bool {
 func (exp ExpectationsChecker[B, D]) WeDontExpectFindAny(objs []*B) bool {
 	var dontExpect DomainRcList[D]
 	Backend2Domain(objs, &dontExpect)
-	return len(dontExpect) > 0 &&
-		!dontExpect.AnyIn(exp.weHaveDomains, false)
+	return !dontExpect.AnyIn(exp.weHaveDomains, false)
 }

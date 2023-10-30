@@ -2,7 +2,6 @@ package provider
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
@@ -19,7 +18,7 @@ type networksTests struct {
 }
 
 func TestAccNetworks(t *testing.T) {
-	os.Setenv("TF_ACC", "1")
+	// os.Setenv("TF_ACC", "1")
 	suite.Run(t, new(networksTests))
 }
 
@@ -47,7 +46,7 @@ func (sui *networksTests) TestNetworks() {
 							slice2string(allNws...))
 					}
 					if !expChecker.WeDontExpectFindAny(nonExpectedBackendNws) {
-						return fmt.Errorf("on check '%s' we dont expect to find any Network[%s] in [%s]",
+						return fmt.Errorf("on check '%s' we dont expect to find any Networks[%s] in [%s]",
 							tcName, slice2string(nonExpectedBackendNws...),
 							slice2string(allNws...))
 					}
