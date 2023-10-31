@@ -97,6 +97,19 @@ func NewServer() *embedServer {
 	return server
 }
 
+/*//TODO:
+Итак - Иван опять наговнокодил-наизобретал )))))
+- минус в карму
+Так
+    еще раз
+	- ноем сокрушаемся матюгаемся сыплем проклятья заламываем
+	  руки в мольбах к небу
+	- изучаем корлиб с кактусом в прикуску
+	- изучаем как сделано в cmd/sgrpups/main.go
+	- делаем похожим способом
+	- пишем восхитительный код
+*/
+
 func (server *embedServer) RunDetached(ctx context.Context) error {
 	lis, err := net.Listen("unix", server.socketPath)
 	if err != nil {
