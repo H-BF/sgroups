@@ -117,7 +117,9 @@ func (server *embedServer) RunDetached(ctx context.Context) error {
 
 	var opts []grpc.ServerOption
 	server.grpcServer = grpc.NewServer(opts...)
-	service.RegisterGRPC(ctx, server.grpcServer)
+	if err := service.RegisterGRPC(ctx, server.grpcServer); err != nil {
+		return err
+	}
 
 	go func() {
 		if err := server.grpcServer.Serve(lis); err != nil {
