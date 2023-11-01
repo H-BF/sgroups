@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/H-BF/corlib v0.0.5
-	github.com/H-BF/protos v0.6.0
+	github.com/H-BF/protos v0.6.0-dev.1
 	github.com/ahmetb/go-linq/v3 v3.2.0
 	github.com/c-robinson/iplib v1.0.6
 	github.com/cenkalti/backoff/v4 v4.1.3
@@ -37,7 +37,7 @@ require (
 )
 
 //replace github.com/H-BF/corlib v0.0.1 => ../corlib
-replace github.com/H-BF/protos v0.6.0 => ../protos
+//replace github.com/H-BF/protos v0.6.0 => ../protos
 
 require (
 	github.com/BurntSushi/toml v0.4.1 // indirect

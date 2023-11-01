@@ -57,10 +57,11 @@ type (
 		txProvider TxProvider
 		tableName  string
 
-		networks     cases.SGsNetworks
-		localRules   cases.SG2SGRules
-		baseRules    BaseRules
-		sg2fqdnRules cases.SG2FQDNRules
+		networks       cases.SGsNetworks
+		localRules     cases.SG2SGRules
+		baseRules      BaseRules
+		sg2fqdnRules   cases.SG2FQDNRules
+		sg2sgIcmpRules cases.SgSgIcmpRules
 
 		table       *nftLib.Table
 		ruleDetails di.HDict[string, *ruleDetails]
@@ -623,12 +624,53 @@ func (bt *batch) populateSG2SGOutRules(tm cases.RulesOutTemplate, outChainName s
 	}
 }
 
+func (bt *batch) aggAllInSGs() cases.SGs {
+	var ret cases.SGs
+	bt.localRules.Rules.Iterate(func(k model.SGRuleIdentity, _ *model.SGRule) bool {
+		if sg, _ := bt.localRules.SGs.Get(k.SgTo); sg != nil {
+			_ = ret.Insert(sg.Name, sg)
+		}
+		return true
+	})
+	bt.sg2sgIcmpRules.Rules.Iterate(func(k model.SgSgIcmpRuleID, _ *model.SgSgIcmpRule) bool {
+		if sg, _ := bt.sg2sgIcmpRules.SGs.Get(k.SgTo); sg != nil {
+			_ = ret.Insert(sg.Name, sg)
+		}
+		return true
+	})
+	return ret
+}
+
+func (bt *batch) aggAllOutSGs() cases.SGs {
+	var ret cases.SGs
+	bt.localRules.Rules.Iterate(func(k model.SGRuleIdentity, _ *model.SGRule) bool {
+		if sg, _ := bt.localRules.SGs.Get(k.SgFrom); sg != nil {
+			_ = ret.Insert(sg.Name, sg)
+		}
+		return true
+	})
+	bt.sg2fqdnRules.SGs.Iterate(func(_ string, sg *cases.SG) bool {
+		_ = ret.Insert(sg.Name, sg)
+		return true
+	})
+	bt.sg2sgIcmpRules.Rules.Iterate(func(k model.SgSgIcmpRuleID, _ *model.SgSgIcmpRule) bool {
+		if sg, _ := bt.sg2sgIcmpRules.SGs.Get(k.SgFrom); sg != nil {
+			_ = ret.Insert(sg.Name, sg)
+		}
+		return true
+	})
+	return ret
+}
+
 func (bt *batch) makeInChains() {
 	const api = "make-in-chains"
 
+	allSgs := bt.aggAllInSGs()
+	_ = allSgs
+
 	inTmpls := bt.localRules.TemplatesInRules()
-	for i := range inTmpls {
-		tmpl := inTmpls[i]
+	for _, it := range inTmpls.Items() {
+		tmpl := it.V
 		inSGchName := chnFWIN + "-" + tmpl.SgIn.Name
 		bt.addJob(api, func(tx *Tx) error {
 			chn := tx.AddChain(&nftLib.Chain{

@@ -32,32 +32,32 @@ type (
 			Proto model.NetworkTransport
 		}
 	}
+	// RulesInTemplates = dict: SgNameIn -> RulesInTemplate
+	RulesInTemplates = dict.HDict[string, RulesInTemplate]
 
 	// SG2SGRules -
 	SG2SGRules struct {
-		SGs SGs
-		In  []model.SGRule
-		Out []model.SGRule
+		SGs   SGs
+		Rules dict.HDict[model.SGRuleIdentity, *model.SGRule]
 	}
 )
 
 // Load ...
 func (rules *SG2SGRules) Load(ctx context.Context, client SGClient, locals SGs) (err error) {
-	const api = "LocalRules/Load"
+	const api = "SG-SG-Rules/Load"
 
 	defer func() {
 		err = errors.WithMessage(err, api)
 	}()
 
+	rules.Rules.Clear()
+	rules.SGs.Clear()
 	localSgNames := locals.Names()
 	if len(localSgNames) == 0 {
 		return nil
 	}
 	reqs := []sgAPI.FindRulesReq{
 		{SgFrom: localSgNames}, {SgTo: localSgNames},
-	}
-	dest := []*[]model.SGRule{
-		&rules.Out, &rules.In,
 	}
 	var nonLocalSgs []string
 	for i := range reqs {
@@ -70,7 +70,7 @@ func (rules *SG2SGRules) Load(ctx context.Context, client SGClient, locals SGs) 
 			if rule, err = conv.Proto2ModelSGRule(protoRule); err != nil {
 				return err
 			}
-			*dest[i] = append(*dest[i], rule)
+			_ = rules.Rules.Insert(rule.ID, &rule)
 			for _, sgN := range []string{rule.ID.SgFrom, rule.ID.SgTo} {
 				if sg := locals.At(sgN); sg != nil {
 					_ = rules.SGs.Insert(sgN, sg)
@@ -85,20 +85,33 @@ func (rules *SG2SGRules) Load(ctx context.Context, client SGClient, locals SGs) 
 
 // AllRules -
 func (rules SG2SGRules) AllRules() []model.SGRule {
-	src := append(rules.In, rules.Out...)
-	ret := src[:0]
-	linq.From(src).DistinctBy(func(i any) any {
-		type ri = struct {
-			SgFrom, SgTo string
-			Proto        model.NetworkTransport
+	var ret []model.SGRule
+	rules.Rules.Iterate(func(_ model.SGRuleIdentity, v *model.SGRule) bool {
+		ret = append(ret, *v)
+		return true
+	})
+	return ret
+}
+
+// In -
+func (rules SG2SGRules) In(sgTo string) (ret []model.SGRule) { //nolint:dupl
+	rules.Rules.Iterate(func(k model.SGRuleIdentity, v *model.SGRule) bool {
+		if k.SgTo == sgTo {
+			ret = append(ret, *v)
 		}
-		v := i.(model.SGRule)
-		return ri{
-			SgFrom: v.ID.SgFrom,
-			SgTo:   v.ID.SgTo,
-			Proto:  v.ID.Transport,
+		return true
+	})
+	return ret
+}
+
+// Out -
+func (rules SG2SGRules) Out(sgFrom string) (ret []model.SGRule) { //nolint:dupl
+	rules.Rules.Iterate(func(k model.SGRuleIdentity, v *model.SGRule) bool {
+		if k.SgFrom == sgFrom {
+			ret = append(ret, *v)
 		}
-	}).ToSlice(&ret)
+		return true
+	})
 	return ret
 }
 
@@ -110,20 +123,17 @@ func (rules SG2SGRules) TemplatesOutRules() RulesOutTemplates { //nolint:dupl
 	}
 	var res RulesOutTemplates
 	//nolint:dupl
-	linq.From(rules.Out).
+	linq.From(rules.Rules.Items()).
 		GroupBy(
 			func(i any) any {
-				return i.(model.SGRule).ID.SgFrom
+				r := i.(dict.KV[model.SGRuleIdentity, *model.SGRule]).V
+				return r.ID.SgFrom
 			},
 			func(i any) any {
-				r := i.(model.SGRule)
+				r := i.(dict.KV[model.SGRuleIdentity, *model.SGRule]).V
 				return groupped{Sg: r.ID.SgTo, Proto: r.ID.Transport}
 			},
 		).
-		Where(func(i any) bool {
-			v := i.(linq.Group)
-			return rules.SGs.At(v.Key.(string)) != nil
-		}).
 		ForEach(func(i any) {
 			v := i.(linq.Group)
 			item := RulesOutTemplate{
@@ -138,28 +148,25 @@ func (rules SG2SGRules) TemplatesOutRules() RulesOutTemplates { //nolint:dupl
 }
 
 // TemplatesInRules -
-func (rules SG2SGRules) TemplatesInRules() []RulesInTemplate { //nolint:dupl
+func (rules SG2SGRules) TemplatesInRules() RulesInTemplates { //nolint:dupl
 	type groupped = struct {
 		Sg    string
 		Proto model.NetworkTransport
 	}
-	var res []RulesInTemplate
+	var res RulesInTemplates
 	//nolint:dupl
-	linq.From(rules.In).
+	linq.From(rules.Rules.Items()).
 		GroupBy(
 			func(i any) any {
-				return i.(model.SGRule).ID.SgTo
+				r := i.(dict.KV[model.SGRuleIdentity, *model.SGRule]).V
+				return r.ID.SgTo
 			},
 			func(i any) any {
-				r := i.(model.SGRule)
+				r := i.(dict.KV[model.SGRuleIdentity, *model.SGRule]).V
 				return groupped{Sg: r.ID.SgFrom, Proto: r.ID.Transport}
 			},
 		).
-		Where(func(i any) bool {
-			v := i.(linq.Group)
-			return rules.SGs.At(v.Key.(string)) != nil
-		}).
-		Select(func(i any) any {
+		ForEach(func(i any) {
 			v := i.(linq.Group)
 			item := RulesInTemplate{
 				SgIn: rules.SGs.At(v.Key.(string)).SecurityGroup,
@@ -167,7 +174,7 @@ func (rules SG2SGRules) TemplatesInRules() []RulesInTemplate { //nolint:dupl
 			for _, g := range v.Group {
 				item.Out = append(item.Out, g.(groupped))
 			}
-			return item
-		}).ToSlice(&res)
+			res.Put(item.SgIn.Name, item)
+		})
 	return res
 }

@@ -80,3 +80,10 @@ func WithSg2FqdnRules(r cases.SG2FQDNRules) funcBatchOpt {
 		b.sg2fqdnRules = r
 	}
 }
+
+// WithSgSgIcmpRules -
+func WithSgSgIcmpRules(r cases.SgSgIcmpRules) funcBatchOpt {
+	return func(b *batch) {
+		b.sg2sgIcmpRules = r
+	}
+}
