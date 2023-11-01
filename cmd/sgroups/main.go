@@ -33,7 +33,8 @@ func main() {
 	if err = setupLogger(); err != nil {
 		logger.Fatal(ctx, errors.WithMessage(err, "when setup logger"))
 	}
-	if err = setupMetrics(); err != nil {
+
+	if err = app.SetupMetrics(MetricsEnable.MustValue(ctx)); err != nil {
 		logger.Fatal(ctx, errors.WithMessage(err, "when setup metrics"))
 	}
 

@@ -37,7 +37,7 @@ func setupSgServer(ctx context.Context) (*server.APIServer, error) {
 	}
 
 	//если есть регистр Прометеуса то - подклчим метрики
-	WhenHaveMetricsRegistry(func(reg *prometheus.Registry) {
+	app.WhenHaveMetricsRegistry(func(reg *prometheus.Registry) {
 		pm := serverPrometheusMetrics.NewMetrics(
 			serverPrometheusMetrics.WithSubsystem("grpc"),
 			serverPrometheusMetrics.WithNamespace("server"),
