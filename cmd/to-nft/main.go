@@ -15,6 +15,8 @@ import (
 
 	"github.com/H-BF/corlib/logger"
 	"github.com/H-BF/corlib/pkg/parallel"
+
+	pkgNet "github.com/H-BF/corlib/pkg/net"
 	gs "github.com/H-BF/corlib/pkg/patterns/graceful-shutdown"
 	"github.com/H-BF/corlib/pkg/patterns/observer"
 	"github.com/pkg/errors"
@@ -57,12 +59,19 @@ func main() {
 		config.WithDefValue{Key: DnsDialDuration, Val: "3s"},
 		config.WithDefValue{Key: DnsWriteDuration, Val: "5s"},
 		config.WithDefValue{Key: DnsReadDuration, Val: "5s"},
+		//telemetry group
+		config.WithDefValue{Key: TelemetryEndpoint, Val: "127.0.0.1:5000"},
+		config.WithDefValue{Key: MetricsEnable, Val: true},
+		config.WithDefValue{Key: HealthcheckEnable, Val: true},
 	)
 	if err != nil {
 		logger.Fatal(ctx, err)
 	}
 	if err = SetupLogger(); err != nil {
 		logger.Fatal(ctx, errors.WithMessage(err, "setup logger"))
+	}
+	if err = app.SetupMetrics(MetricsEnable.MustValue(ctx)); err != nil {
+		logger.Fatal(ctx, errors.WithMessage(err, "setup metrics"))
 	}
 
 	var dnsResolver DomainAddressQuerier
@@ -78,6 +87,26 @@ func main() {
 		)
 		AgentSubject().ObserversAttach(o)
 	}
+
+	var ep *pkgNet.Endpoint
+	_, err = TelemetryEndpoint.Value(ctx, TelemetryEndpoint.OptSink(func(v string) error {
+		var e error
+		if ep, e = pkgNet.ParseEndpoint(v); e != nil {
+			logger.Fatalf(ctx, "parse telemetry endpoint (%s): %v", v, err)
+		}
+		return nil
+	}))
+	if err != nil && errors.Is(err, config.ErrNotFound) {
+		logger.Fatal(ctx, errors.WithMessage(err, "telemetry endpoint is absent"))
+	}
+
+	server, err := SetupServer(ctx)
+	if err != nil {
+		logger.Fatalf(ctx, "setup server: %s")
+	}
+	go func() {
+		logger.Fatal(ctx, server.Run(ctx, ep))
+	}()
 
 	go func() {
 		r := jobs.FqdnRefresher{

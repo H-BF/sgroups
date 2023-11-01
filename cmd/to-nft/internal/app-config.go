@@ -34,6 +34,13 @@ extapi:
 	  sync-status:
         interval: 20s #mandatory
         push: true
+
+telemetry:
+  endpoint: 127.0.0.1:5000
+  metrics:
+    enable: true
+  healthcheck:
+    enable: true
 */
 
 const (
@@ -82,4 +89,11 @@ const (
 	SGroupsSyncStatusInterval config.ValueT[time.Duration] = "extapi/svc/sgroups/sync-status/interval"
 	//SGroupsSyncStatusPush use push model of 'sync-status'
 	SGroupsSyncStatusPush config.ValueT[bool] = "extapi/svc/sgroups/sync-status/push"
+
+	// TelemetryEndpoint server endpoint
+	TelemetryEndpoint config.ValueT[string] = "telemetry/endpoint"
+	// MetricsEnable enable api metrics
+	MetricsEnable config.ValueT[bool] = "telemetry/metrics/enable"
+	// HealthcheckEnable enables|disables health check handler
+	HealthcheckEnable config.ValueT[bool] = "telemetry/healthcheck/enable"
 )
