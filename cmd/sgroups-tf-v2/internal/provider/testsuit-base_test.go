@@ -32,8 +32,7 @@ type (
 
 		ctx               context.Context
 		ctxCancel         func()
-		server            *backendServerAPI
-		closeClient       func() error
+		servAddr          string
 		sgClient          sgAPI.Client
 		providerConfig    string
 		providerFactories map[string]func() (tfprotov6.ProviderServer, error)
@@ -41,8 +40,7 @@ type (
 
 	backendServerAPI struct {
 		corlib.APIService
-		Addr     string
-		eventsCh chan interface{}
+		started chan struct{}
 	}
 )
 
@@ -52,36 +50,44 @@ func (sui *baseResourceTests) SetupSuite() {
 		sui.ctx, sui.ctxCancel = context.WithDeadline(sui.ctx, dl)
 	}
 
-	sui.server = NewServer()
-	err := sui.server.runBackendServer(sui.ctx)
-	sui.Require().NoErrorf(err, "run embed server failed: %s", err)
+	sui.runBackendServer()
+	os.Setenv(serverAddrEnv, sui.servAddr)
 
 	sui.providerConfig = `
 		provider "sgroups" {
-			address = ` + sui.server.Addr + `
+			address = ` + sui.servAddr + `
 		}
 		`
 
-	con, err := grpc.DialContext(sui.ctx, sui.server.Addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	con, err := grpc.DialContext(sui.ctx,
+		sui.servAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithBlock())
 
-	sui.closeClient = func() error {
-		return con.Close()
-	}
 	sui.sgClient = sgAPI.NewClient(con)
 	sui.Require().NoError(err)
 
+	os.Setenv("TF_ACC", "1")
 	sui.providerFactories = map[string]func() (tfprotov6.ProviderServer, error){
 		"sgroups": providerserver.NewProtocol6WithError(Factory("test")()),
 	}
 }
 
 func (sui *baseResourceTests) TearDownSuite() {
-	sui.NoError(sui.closeClient())
-
 	if sui.ctxCancel != nil {
 		sui.ctxCancel()
 	}
+}
+
+func (sui *baseResourceTests) runBackendServer() {
+	socketPath := path.Join("/tmp", fmt.Sprintf("tf-provider-test-%v-%v.socket", os.Getpid(), time.Now().Nanosecond()))
+	sui.servAddr = fmt.Sprintf("unix://%s", socketPath)
+
+	server := backendServerAPI{
+		started: make(chan struct{}),
+	}
+	e := server.run(sui.ctx, sui.servAddr)
+	sui.Require().NoError(e)
 }
 
 func slice2string[T fmt.Stringer](args ...T) string {
@@ -95,24 +101,13 @@ func slice2string[T fmt.Stringer](args ...T) string {
 	return strings.ReplaceAll(data.String(), `"`, "'")
 }
 
-func NewServer() *backendServerAPI {
-	server := new(backendServerAPI)
-	socketPath := path.Join("/tmp", fmt.Sprintf("tf-provider-test-%v-%v.socket", os.Getpid(), time.Now().Nanosecond()))
-	server.Addr = fmt.Sprintf("unix://%s", socketPath)
-	server.eventsCh = make(chan interface{})
-	return server
-}
-
 // OnStart implements APIServiceOnStartEvent
 func (server *backendServerAPI) OnStart() {
-	if server.eventsCh == nil {
-		panic("eventsCh is nil")
-	}
-	server.eventsCh <- "started"
+	close(server.started)
 }
 
-func (server *backendServerAPI) runBackendServer(ctx context.Context) error {
-	endpoint, err := pkgNet.ParseEndpoint(server.Addr)
+func (server *backendServerAPI) run(ctx context.Context, addr string) error {
+	endpoint, err := pkgNet.ParseEndpoint(addr)
 	if err != nil {
 		return err
 	}
@@ -138,18 +133,20 @@ func (server *backendServerAPI) runBackendServer(ctx context.Context) error {
 		return err
 	}
 
+	chRunFailure := make(chan error, 1)
 	go func() {
+		defer close(chRunFailure)
 		if err := apiServer.Run(ctx, endpoint); err != nil {
-			server.eventsCh <- err
+			chRunFailure <- err
 		}
 	}()
-
-	ev := <-server.eventsCh
-	if err, ok := ev.(error); ok {
-		return err
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case e := <-chRunFailure:
+		return e
+	case <-server.started:
 	}
-
-	os.Setenv(serverAddrEnv, server.Addr)
 	return nil
 }
 

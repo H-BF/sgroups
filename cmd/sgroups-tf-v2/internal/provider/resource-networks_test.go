@@ -18,7 +18,6 @@ type networksTests struct {
 }
 
 func TestAccNetworks(t *testing.T) {
-	// os.Setenv("TF_ACC", "1")
 	suite.Run(t, new(networksTests))
 }
 

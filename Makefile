@@ -66,7 +66,7 @@ go-deps: ##install golang dependencies
 test-tf-provider: ##run tests for tf provider only
 	@echo running tf provider tests... && \
 	$(GO) clean -testcache && \
-	TF_ACC=1 $(GO) test -v ./cmd/sgroups-tf-v2/internal/provider && \
+	$(GO) test -v ./cmd/sgroups-tf-v2/internal/provider && \
 	echo -=OK=-
 
 .PHONY: test
