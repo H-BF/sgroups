@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"testing"
 	"time"
 
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
@@ -27,14 +28,14 @@ type (
 
 		ctx               context.Context
 		ctxCancel         func()
-		server            *embedServer
+		server            *backendServerAPI
 		closeClient       func() error
 		sgClient          sgAPI.Client
 		providerConfig    string
 		providerFactories map[string]func() (tfprotov6.ProviderServer, error)
 	}
 
-	embedServer struct {
+	backendServerAPI struct {
 		Addr string
 	}
 )
@@ -46,7 +47,7 @@ func (sui *baseResourceTests) SetupSuite() {
 	}
 
 	sui.server = NewServer()
-	err := sui.server.RunDetached(sui.ctx)
+	err := sui.server.runBackendServer(sui.ctx)
 	sui.Require().NoErrorf(err, "run embed server failed: %s", err)
 
 	sui.providerConfig = `
@@ -89,14 +90,14 @@ func slice2string[T fmt.Stringer](args ...T) string {
 	return strings.ReplaceAll(data.String(), `"`, "'")
 }
 
-func NewServer() *embedServer {
-	server := new(embedServer)
-	socketPath := path.Join("/tmp", fmt.Sprintf("test-%v-%v.socket", os.Getpid(), time.Now().Nanosecond()))
+func NewServer() *backendServerAPI {
+	server := new(backendServerAPI)
+	socketPath := path.Join("/tmp", fmt.Sprintf("tf-provider-test-%v-%v.socket", os.Getpid(), time.Now().Nanosecond()))
 	server.Addr = fmt.Sprintf("unix://%s", socketPath)
 	return server
 }
 
-func (server *embedServer) RunDetached(ctx context.Context) error {
+func (server *backendServerAPI) runBackendServer(ctx context.Context) error {
 	endpoint, err := pkgNet.ParseEndpoint(server.Addr)
 	if err != nil {
 		return err
@@ -132,3 +133,17 @@ func (server *embedServer) RunDetached(ctx context.Context) error {
 	fmt.Printf("server started on %s\n", server.Addr)
 	return nil
 }
+
+func TestEmpty(_ *testing.T) {}
+
+/*//TODO:
+убираем говнокод
+	- убираем все вывзовы типа fmt.Printf(бла бла бла)
+	- строки типа SGROUPS_ADDRESS выносим в константы
+ещё раз более внимательно смотрим в корлиб
+	- выходим из runBackendServer либо по ошибке либо после гарантированного
+	  запуска сервера
+ну и по -классике - рыдаем страдаем лижем наждачку
+	- пишем отличный код
+	- получаем катарсис от просветления
+*/
