@@ -22,6 +22,10 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+const (
+	serverAddrEnv = "SGROUPS_ADDRESS"
+)
+
 type (
 	baseResourceTests struct {
 		suite.Suite
@@ -36,7 +40,9 @@ type (
 	}
 
 	backendServerAPI struct {
-		Addr string
+		corlib.APIService
+		Addr     string
+		eventsCh chan interface{}
 	}
 )
 
@@ -57,8 +63,7 @@ func (sui *baseResourceTests) SetupSuite() {
 		`
 
 	con, err := grpc.DialContext(sui.ctx, sui.server.Addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock())
+		grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 	sui.closeClient = func() error {
 		return con.Close()
@@ -94,7 +99,16 @@ func NewServer() *backendServerAPI {
 	server := new(backendServerAPI)
 	socketPath := path.Join("/tmp", fmt.Sprintf("tf-provider-test-%v-%v.socket", os.Getpid(), time.Now().Nanosecond()))
 	server.Addr = fmt.Sprintf("unix://%s", socketPath)
+	server.eventsCh = make(chan interface{})
 	return server
+}
+
+// OnStart implements APIServiceOnStartEvent
+func (server *backendServerAPI) OnStart() {
+	if server.eventsCh == nil {
+		panic("eventsCh is nil")
+	}
+	server.eventsCh <- "started"
 }
 
 func (server *backendServerAPI) runBackendServer(ctx context.Context) error {
@@ -113,10 +127,10 @@ func (server *backendServerAPI) runBackendServer(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	service := sgAPI.NewSGroupsService(ctx, registry.NewRegistryFromMemDB(m))
+	server.APIService = sgAPI.NewSGroupsService(ctx, registry.NewRegistryFromMemDB(m))
 
 	opts := []corlib.APIServerOption{
-		corlib.WithServices(service),
+		corlib.WithServices(server),
 	}
 
 	apiServer, err := corlib.NewAPIServer(opts...)
@@ -126,24 +140,17 @@ func (server *backendServerAPI) runBackendServer(ctx context.Context) error {
 
 	go func() {
 		if err := apiServer.Run(ctx, endpoint); err != nil {
-			fmt.Println("server stopped due" + err.Error())
+			server.eventsCh <- err
 		}
 	}()
-	os.Setenv("SGROUPS_ADDRESS", server.Addr)
-	fmt.Printf("server started on %s\n", server.Addr)
+
+	ev := <-server.eventsCh
+	if err, ok := ev.(error); ok {
+		return err
+	}
+
+	os.Setenv(serverAddrEnv, server.Addr)
 	return nil
 }
 
 func TestEmpty(_ *testing.T) {}
-
-/*//TODO:
-убираем говнокод
-	- убираем все вывзовы типа fmt.Printf(бла бла бла)
-	- строки типа SGROUPS_ADDRESS выносим в константы
-ещё раз более внимательно смотрим в корлиб
-	- выходим из runBackendServer либо по ошибке либо после гарантированного
-	  запуска сервера
-ну и по -классике - рыдаем страдаем лижем наждачку
-	- пишем отличный код
-	- получаем катарсис от просветления
-*/
