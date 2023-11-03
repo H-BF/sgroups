@@ -24,17 +24,6 @@ type (
 	// RulesOutTemplates = dict: SgNameFrom -> RulesOutTemplate
 	RulesOutTemplates = dict.HDict[string, RulesOutTemplate]
 
-	// RulesInTempalte -
-	RulesInTemplate struct {
-		SgIn model.SecurityGroup
-		Out  []struct {
-			Sg    string
-			Proto model.NetworkTransport
-		}
-	}
-	// RulesInTemplates = dict: SgNameIn -> RulesInTemplate
-	RulesInTemplates = dict.HDict[string, RulesInTemplate]
-
 	// SG2SGRules -
 	SG2SGRules struct {
 		SGs   SGs
@@ -143,38 +132,6 @@ func (rules SG2SGRules) TemplatesOutRules() RulesOutTemplates { //nolint:dupl
 				item.In = append(item.In, g.(groupped))
 			}
 			res.Put(item.SgOut.Name, item)
-		})
-	return res
-}
-
-// TemplatesInRules -
-func (rules SG2SGRules) TemplatesInRules() RulesInTemplates { //nolint:dupl
-	type groupped = struct {
-		Sg    string
-		Proto model.NetworkTransport
-	}
-	var res RulesInTemplates
-	//nolint:dupl
-	linq.From(rules.Rules.Items()).
-		GroupBy(
-			func(i any) any {
-				r := i.(dict.KV[model.SGRuleIdentity, *model.SGRule]).V
-				return r.ID.SgTo
-			},
-			func(i any) any {
-				r := i.(dict.KV[model.SGRuleIdentity, *model.SGRule]).V
-				return groupped{Sg: r.ID.SgFrom, Proto: r.ID.Transport}
-			},
-		).
-		ForEach(func(i any) {
-			v := i.(linq.Group)
-			item := RulesInTemplate{
-				SgIn: rules.SGs.At(v.Key.(string)).SecurityGroup,
-			}
-			for _, g := range v.Group {
-				item.Out = append(item.Out, g.(groupped))
-			}
-			res.Put(item.SgIn.Name, item)
 		})
 	return res
 }

@@ -7,9 +7,11 @@ import (
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
 	"github.com/c-robinson/iplib"
+	nftLib "github.com/google/nftables"
 	nftlib "github.com/google/nftables"
 	. "github.com/google/nftables/binaryutil"
 	. "github.com/google/nftables/expr"
+	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
 )
 
@@ -188,7 +190,7 @@ func (rb ruleBuilder) metaL4PROTO() ruleBuilder {
 	return rb
 }
 
-func (rb ruleBuilder) ipProto(tr model.NetworkTransport) ruleBuilder {
+func (rb ruleBuilder) protoIP(tr model.NetworkTransport) ruleBuilder {
 	var t byte
 	switch tr {
 	case model.TCP:
@@ -205,6 +207,55 @@ func (rb ruleBuilder) ipProto(tr model.NetworkTransport) ruleBuilder {
 			Data:     []byte{t},
 		},
 	)
+	return rb
+}
+
+func (rb ruleBuilder) protoICMP(d model.ICMP) ruleBuilder {
+	var proto byte
+	switch d.IPv {
+	case model.IPv4:
+		proto = unix.IPPROTO_ICMP
+	case model.IPv6:
+		proto = unix.IPPROTO_ICMPV6
+	default:
+		panic(
+			errors.Errorf("unsusable proto family(%v)", d.IPv),
+		)
+	}
+	rb.exprs = append(rb.metaL4PROTO().exprs,
+		&Cmp{
+			Op:       CmpOpEq,
+			Register: 1,
+			Data:     []byte{proto},
+		},
+	)
+	if n := d.Types.Len(); n > 0 {
+		set := &nftLib.Set{
+			ID:        nextSetID(),
+			Name:      "__set%d",
+			Anonymous: true,
+			Constant:  true,
+			KeyType: tern(d.IPv == model.IPv4,
+				nftLib.TypeICMPType, nftLib.TypeICMP6Type),
+		}
+		elements := make([]nftLib.SetElement, 0, n)
+		d.Types.Iterate(func(v uint8) bool {
+			elements = append(elements,
+				nftLib.SetElement{Key: []byte{v}},
+			)
+			return true
+		})
+		rb.exprs = append(rb.exprs,
+			&Payload{
+				DestRegister: 1,
+				Base:         PayloadBaseTransportHeader,
+				Offset:       0,
+				Len:          1,
+			},
+		)
+		rb = rb.inSet(set)
+		rb.sets.Put(set.ID, NfSet{Set: set, Elements: elements})
+	}
 	return rb
 }
 
