@@ -89,12 +89,17 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, netConf NetCon
 	}
 	applied.SG2SGRules = localRules
 
-	log.Debugw("loading SG-FQDN rules...", "local-SG(s)", stringerOfLocalSGs)
-	if err = applied.SgSgIcmpRules.Load(ctx, impl.sgClient, localSGs); err != nil {
+	log.Debugw("loading SG-ICMP rules...", "local-SG(s)", stringerOfLocalSGs)
+	if err = applied.SgIcmpRules.Load(ctx, impl.sgClient, localSGs); err != nil {
 		return applied, err
 	}
 
 	log.Debugw("loading SG-SG-ICMP rules...", "local-SG(s)", stringerOfLocalSGs)
+	if err = applied.SgSgIcmpRules.Load(ctx, impl.sgClient, localSGs); err != nil {
+		return applied, err
+	}
+
+	log.Debugw("loading SG-FQDN rules...", "local-SG(s)", stringerOfLocalSGs)
 	if fqdnRules, err = impl.loadFQDNRules(ctx, localSGs); err != nil {
 		return applied, err
 	}
@@ -103,8 +108,11 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, netConf NetCon
 	var sgNames []string
 	linq.From(
 		append(
-			append(localRules.SGs.Names(), fqdnRules.SGs.Names()...),
-			applied.SgSgIcmpRules.SGs.Names()...,
+			append(
+				append(localRules.SGs.Names(), fqdnRules.SGs.Names()...),
+				applied.SgSgIcmpRules.SGs.Names()...,
+			),
+			applied.SgIcmpRules.SGs.Names()...,
 		),
 	).Distinct().ToSlice(&sgNames)
 

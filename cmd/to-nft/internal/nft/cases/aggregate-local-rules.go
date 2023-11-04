@@ -8,32 +8,18 @@ import (
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
 	sgAPI "github.com/H-BF/protos/pkg/api/sgroups"
-	"github.com/ahmetb/go-linq/v3"
 	"github.com/pkg/errors"
 )
 
-type (
-	// RulesOutTempalte -
-	RulesOutTemplate struct {
-		SgOut model.SecurityGroup
-		In    []struct {
-			Sg    string
-			Proto model.NetworkTransport
-		}
-	}
-	// RulesOutTemplates = dict: SgNameFrom -> RulesOutTemplate
-	RulesOutTemplates = dict.HDict[string, RulesOutTemplate]
-
-	// SG2SGRules -
-	SG2SGRules struct {
-		SGs   SGs
-		Rules dict.HDict[model.SGRuleIdentity, *model.SGRule]
-	}
-)
+// SG2SGRules -
+type SG2SGRules struct {
+	SGs   SGs
+	Rules dict.HDict[model.SGRuleIdentity, *model.SGRule]
+}
 
 // Load ...
 func (rules *SG2SGRules) Load(ctx context.Context, client SGClient, locals SGs) (err error) {
-	const api = "SG-SG-Rules/Load"
+	const api = "sg-rules/Load"
 
 	defer func() {
 		err = errors.WithMessage(err, api)
@@ -102,36 +88,4 @@ func (rules SG2SGRules) Out(sgFrom string) (ret []model.SGRule) { //nolint:dupl
 		return true
 	})
 	return ret
-}
-
-// TemplatesOutRules -
-func (rules SG2SGRules) TemplatesOutRules() RulesOutTemplates { //nolint:dupl
-	type groupped = struct {
-		Sg    string
-		Proto model.NetworkTransport
-	}
-	var res RulesOutTemplates
-	//nolint:dupl
-	linq.From(rules.Rules.Items()).
-		GroupBy(
-			func(i any) any {
-				r := i.(dict.KV[model.SGRuleIdentity, *model.SGRule]).V
-				return r.ID.SgFrom
-			},
-			func(i any) any {
-				r := i.(dict.KV[model.SGRuleIdentity, *model.SGRule]).V
-				return groupped{Sg: r.ID.SgTo, Proto: r.ID.Transport}
-			},
-		).
-		ForEach(func(i any) {
-			v := i.(linq.Group)
-			item := RulesOutTemplate{
-				SgOut: rules.SGs.At(v.Key.(string)).SecurityGroup,
-			}
-			for _, g := range v.Group {
-				item.In = append(item.In, g.(groupped))
-			}
-			res.Put(item.SgOut.Name, item)
-		})
-	return res
 }

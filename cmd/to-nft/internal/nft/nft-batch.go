@@ -400,10 +400,8 @@ func (bt *batch) addSGNetSets() {
 }
 
 func (bt *batch) addFQDNNetSets() {
-	const api = "add-FQDN-net-sets"
-
 	f := func(IPv int, domain model.FQDN, a internal.DomainAddresses) {
-		bt.addJob(api, func(tx *Tx) error {
+		bt.addJob("add-fqdn-net-sets", func(tx *Tx) error {
 			nameOfSet := nameUtils{}.nameOfFqdnNetSet(IPv, domain)
 			nets := make([]net.IPNet, len(a.IPs))
 			isV6 := IPv == iplib.IP6Version
@@ -424,13 +422,13 @@ func (bt *batch) addFQDNNetSets() {
 				return err
 			}
 			bt.addrsets.Put(nameOfSet, netSet)
-			bt.log.Debugf("add network set '%s'/'%s' items:[%s]",
+			bt.log.Debugf("add network-set '%s'/'%s' items:[%s]",
 				bt.table.Name, nameOfSet, slice2stringer(nets...))
 			if len(nets) == 0 {
-				bt.log.Warnf("add IP set '%s'/'%s' no any IP%v address is resolved for domain '%s'",
+				bt.log.Warnf("add IP-set '%s'/'%s' no any IP%v address is resolved for domain '%s'",
 					bt.table.Name, nameOfSet, IPv, domain)
 			} else {
-				bt.log.Debugf("add IP set '%s'/'%s' with items:[%s]",
+				bt.log.Debugf("add IP-set '%s'/'%s' with items:[%s]",
 					bt.table.Name, nameOfSet, slice2stringer(nets...))
 			}
 			return nil
@@ -482,148 +480,36 @@ func (bt *batch) initSG2FQDNRulesDetails() {
 	}
 }
 
-func (bt *batch) makeOutChain(tmpl cases.RulesOutTemplate) {
-	const api = "make-out-chains"
-
-	outSGchName := chnFWOUT + "-" + tmpl.SgOut.Name
-	bt.addJob(api, func(tx *Tx) error {
-		chn := tx.AddChain(&nftLib.Chain{Name: outSGchName, Table: bt.table})
-		bt.chains.Put(outSGchName, chn)
-		bt.log.Debugf("chain '%s'/'%s' is in progress", bt.table.Name, outSGchName)
-		return nil
-	})
-	for _, ipV := range sli(iplib.IP4Version, iplib.IP6Version) {
+func (bt *batch) populateOutSgFqdnRules(sg *cases.SG) {
+	targetChName := nameUtils{}.nameOfInOutChain(dirOUT, sg.Name)
+	rules := bt.sg2fqdnRules.RulesForSG(sg.Name)
+	for _, ipV := range sli(model.IPv4, model.IPv6) {
 		ipV := ipV
-		bt.addJob(api, func(tx *Tx) error {
-			saddrSetName := nameUtils{}.nameOfNetSet(ipV, tmpl.SgOut.Name)
-			if saddrSet := bt.addrsets.At(saddrSetName); saddrSet != nil {
-				output := bt.chains.At(chnFWOUT)
-				beginRule().
-					saddr(ipV).inSet(saddrSet).counter().
-					go2(outSGchName).applyRule(output, tx.Conn)
-			}
-			return nil
-		})
-	}
-	bt.populateSG2SGOutRules(tmpl, outSGchName)
-	bt.populateSG2FQDNOutRules(tmpl, outSGchName)
-	bt.addJob(api, func(tx *Tx) error {
-		r := beginRule().metaNFTRACE(tmpl.SgOut.Trace).counter()
-		if tmpl.SgOut.Logs {
-			r = r.dlogs(nfte.LogFlagsIPOpt)
-		}
-		switch da := tmpl.SgOut.DefaultAction; da {
-		case model.ACCEPT:
-			r = r.accept()
-		case model.DROP, model.DEFAULT:
-			r = r.drop()
-		default:
-			panic(
-				errors.Errorf("for chain '%s'/'%s' provided unsupported default verdict '%v'",
-					bt.table.Name, outSGchName, da),
+		for _, rule := range rules {
+			detailsName := nameUtils{}.nameOfSG2FQDNRuleDetails(
+				rule.ID.Transport, rule.ID.SgFrom, rule.ID.FqdnTo,
 			)
-		}
-		chnApplyTo := bt.chains.At(outSGchName)
-		r.applyRule(chnApplyTo, tx.Conn)
-		bt.log.Debugf("chain '%s'/'%s' finished", bt.table.Name, outSGchName)
-		return nil
-	})
-}
-
-func (bt *batch) makeOutChains() {
-	outTmpls := bt.localRules.TemplatesOutRules()
-	bt.sg2fqdnRules.SGs.Iterate(func(sgName string, v *cases.SG) bool {
-		if _, found := outTmpls.Get(sgName); !found {
-			_ = outTmpls.Insert(sgName,
-				cases.RulesOutTemplate{SgOut: v.SecurityGroup})
-		}
-		return true
-	})
-	outTmpls.Iterate(func(_ string, tmpl cases.RulesOutTemplate) bool {
-		bt.makeOutChain(tmpl)
-		return true
-	})
-}
-
-func (bt *batch) populateSG2FQDNOutRules(tm cases.RulesOutTemplate, outChainName string) {
-	rules := bt.sg2fqdnRules.RulesForSG(tm.SgOut.Name)
-	IPvv := sli(iplib.IP4Version, iplib.IP6Version)
-	var names nameUtils
-	for i := range rules {
-		i, rule := i, rules[i] //nolint:govet
-		detailsName := names.nameOfSG2FQDNRuleDetails(
-			rule.ID.Transport, rule.ID.SgFrom, rule.ID.FqdnTo,
-		)
-		rd := bt.ruleDetails.At(detailsName)
-		for j := range IPvv {
-			j, IPv := j, IPvv[j] //nolint:govet
-			daddrSetName := names.nameOfFqdnNetSet(IPv, rule.ID.FqdnTo)
-			for n := range rd.accports {
-				ports := rd.accports[n]
-				bt.addJob("poplulate-SG-FQDN-rules", func(tx *Tx) error {
-					if i == 0 && j == 0 {
-						bt.log.Debugf("chain '%s'/'%s' SG-FQDN rules are in progress",
-							bt.table.Name, outChainName)
-					} else if i == len(tm.In)-1 && j == len(IPvv)-1 {
-						defer bt.log.Debugf("chain '%s'/'%s' SG-FQDN rules are finished",
-							bt.table.Name, outChainName)
-					}
+			daddrSetName := nameUtils{}.nameOfFqdnNetSet(ipV, rule.ID.FqdnTo)
+			rd := bt.ruleDetails.At(detailsName)
+			rule := rule
+			for i := range rd.accports {
+				ports := rd.accports[i]
+				bt.addJob("populate-fqdn-rule", func(tx *Tx) error {
 					daddr := bt.addrsets.At(daddrSetName)
 					if daddr == nil {
 						return nil
 					}
+					bt.log.Debugf("add fqdn rule '%s' into '%s'/'%s' for addr-set '%s'",
+						rule.ID.FqdnTo, bt.tableName, targetChName, daddrSetName)
 					r := ports.D(
 						ports.S(
-							beginRule().daddr(IPv).inSet(daddr).protoIP(rule.ID.Transport),
+							beginRule().daddr(ipV).inSet(daddr).protoIP(rule.ID.Transport),
 						),
 					).counter()
 					if rd.logs {
 						r = r.dlogs(nfte.LogFlagsIPOpt)
 					}
-					chnApplyTo := bt.chains.At(outChainName)
-					r.accept().applyRule(chnApplyTo, tx.Conn)
-					return nil
-				})
-			}
-		}
-	}
-}
-
-func (bt *batch) populateSG2SGOutRules(tm cases.RulesOutTemplate, outChainName string) {
-	IPvv := sli(iplib.IP4Version, iplib.IP6Version)
-	var names nameUtils
-	for i := range tm.In {
-		i := i
-		in := tm.In[i]
-		detailsName := names.nameOfSG2SGRuleDetails(in.Proto, tm.SgOut.Name, in.Sg)
-		rd := bt.ruleDetails.At(detailsName)
-		for j := range IPvv {
-			j := j
-			IPv := IPvv[j]
-			daddrSetName := names.nameOfNetSet(IPv, in.Sg)
-			for n := range rd.accports {
-				ports := rd.accports[n]
-				bt.addJob("poplulate-SG-SG-rules", func(tx *Tx) error {
-					if i == 0 && j == 0 {
-						bt.log.Debugf("chain '%s'/'%s' SG-SG rules are in progress",
-							bt.table.Name, outChainName)
-					} else if i == len(tm.In)-1 && j == len(IPvv)-1 {
-						defer bt.log.Debugf("chain '%s'/'%s' SG-SG rules are finished",
-							bt.table.Name, outChainName)
-					}
-					daddr := bt.addrsets.At(daddrSetName)
-					if daddr == nil {
-						return nil
-					}
-					r := ports.D(
-						ports.S(
-							beginRule().daddr(IPv).inSet(daddr).protoIP(in.Proto),
-						),
-					).counter()
-					if rd.logs {
-						r = r.dlogs(nfte.LogFlagsIPOpt)
-					}
-					chnApplyTo := bt.chains.At(outChainName)
+					chnApplyTo := bt.chains.At(targetChName)
 					r.accept().applyRule(chnApplyTo, tx.Conn)
 					return nil
 				})
@@ -670,21 +556,23 @@ func (bt *batch) aggAllOutSGs() cases.SGs {
 	return ret
 }
 
-func (bt *batch) populateSgIcmpRules(dir direction, targetChName string, sg *cases.SG) {
-	const api = "populate-sg-sg-icmp-rules"
-
-	rules := tern(dir == dirIN,
+func (bt *batch) populateInOutSgIcmpRules(dir direction, sg *cases.SG) {
+	targetChName := nameUtils{}.nameOfInOutChain(dir, sg.Name)
+	isIN := dir == dirIN
+	rules := tern(isIN,
 		bt.sg2sgIcmpRules.In, bt.sg2sgIcmpRules.Out,
 	)(sg.Name)
-
+	api := fmt.Sprintf("populate-%s-sg-icmp-rule", tern(isIN, "in", "out"))
 	for i := range rules {
 		rule := rules[i]
 		bt.addJob(api, func(tx *Tx) error {
 			addrSetName := nameUtils{}.nameOfNetSet(int(rule.Icmp.IPv), sg.Name)
 			if addrSet := bt.addrsets.At(addrSetName); addrSet != nil {
+				bt.log.Debugf("add %s-sg-icmp-rule into '%s'/'%s' for addr-set '%s'",
+					tern(isIN, "in", "out"), bt.tableName, targetChName, addrSetName)
 				chnApplyTo := bt.chains.At(targetChName)
 				rb := beginRule().metaNFTRACE(rule.Trace)
-				rb = tern(dir == dirIN, rb.saddr, rb.daddr)(int(rule.Icmp.IPv)).
+				rb = tern(isIN, rb.saddr, rb.daddr)(int(rule.Icmp.IPv)).
 					inSet(addrSet).
 					protoICMP(rule.Icmp).
 					counter()
@@ -698,11 +586,11 @@ func (bt *batch) populateSgIcmpRules(dir direction, targetChName string, sg *cas
 	}
 }
 
-func (bt *batch) populateSgRules(dir direction, targetSGchName string, sg *cases.SG) {
-	const api = "populate-sg-sg-rules"
-
+func (bt *batch) populateInOutSgRules(dir direction, sg *cases.SG) {
+	targetSGchName := nameUtils{}.nameOfInOutChain(dir, sg.Name)
 	isIN := dir == dirIN
 	rules := tern(isIN, bt.localRules.In, bt.localRules.Out)(sg.Name)
+	api := fmt.Sprintf("populate-%s-sg-rule", tern(isIN, "in", "out"))
 	for _, ipV := range sli(model.IPv4, model.IPv6) {
 		ipV := int(ipV)
 		for _, rule := range rules {
@@ -719,6 +607,8 @@ func (bt *batch) populateSgRules(dir direction, targetSGchName string, sg *cases
 				ports := details.accports[i]
 				bt.addJob(api, func(tx *Tx) error {
 					if addrSet := bt.addrsets.At(addrSetName); addrSet != nil {
+						bt.log.Debugf("add %s-sg-rule for addr-set '%s' into '%s'/'%s'",
+							tern(isIN, "in", "out"), addrSetName, bt.tableName, targetSGchName)
 						chnApplyTo := bt.chains.At(targetSGchName)
 						r := beginRule()
 						if isIN {
@@ -749,83 +639,40 @@ func (bt *batch) populateSgRules(dir direction, targetSGchName string, sg *cases
 	}
 }
 
-func (bt *batch) populateSgFqdnRules(targetSGchName string, sg *cases.SG) {
-
-}
-
 func (bt *batch) makeInChains() {
-	const api = "make-in-chains"
-
 	inSgs := bt.aggAllInSGs()
+	if inSgs.Len() > 0 {
+		bt.log.Debug("init in-chains")
+	}
 	for _, it := range inSgs.Items() {
 		sgIn := it.V
-		inSGchName := chnFWIN + "-" + sgIn.Name
-		bt.addJob(api, func(tx *Tx) error {
-			chn := tx.AddChain(&nftLib.Chain{
-				Name:  inSGchName,
-				Table: bt.table,
-			})
-			bt.chains.Put(inSGchName, chn)
-			bt.log.Debugf("chain '%s'/'%s' is in progress", bt.table.Name, inSGchName)
-			return nil
-		})
-		for _, ipV := range sli(model.IPv4, model.IPv6) {
-			bt.addJob(api, func(tx *Tx) error {
-				daddrSetName := nameUtils{}.nameOfNetSet(ipV, sgIn.Name)
-				if daddrSet := bt.addrsets.At(daddrSetName); daddrSet != nil {
-					input := bt.chains.At(chnFWIN)
-					beginRule().
-						daddr(ipV).inSet(daddrSet).
-						counter().
-						go2(inSGchName).applyRule(input, tx.Conn)
-				}
-				return nil
-			})
-		}
-		bt.populateSgIcmpRules(dirIN, inSGchName, sgIn)
-		bt.populateSgRules(dirIN, inSGchName, sgIn)
-		bt.addJob(api, func(tx *Tx) error { // -- fin --
-			chnApplyTo := bt.chains.At(inSGchName)
-			r := beginRule().metaNFTRACE(sgIn.Trace).counter()
-			if sgIn.Logs {
-				r = r.dlogs(nfte.LogFlagsIPOpt)
-			}
-			switch da := sgIn.DefaultAction; da {
-			case model.ACCEPT:
-				r = r.accept()
-			case model.DROP, model.DEFAULT:
-				r = r.drop()
-			default:
-				panic(
-					errors.Errorf("for chain '%s'/'%s' provided unsupported default verdict '%v'",
-						bt.table.Name, inSGchName, da),
-				)
-			}
-			r.applyRule(chnApplyTo, tx.Conn)
-			bt.log.Debugf("chain '%s'/'%s' finished",
-				bt.table.Name, inSGchName)
-			return nil
-		})
+		bt.chainInOutProlog(dirIN, sgIn)
+		bt.populateInOutSgIcmpRules(dirIN, sgIn)
+		bt.populateInOutSgRules(dirIN, sgIn)
+		bt.chainInOutEpilog(dirIN, sgIn)
 	}
 }
 
-func (bt *batch) makeOutChains2() {
-	const api = "make-out-chains"
-
+func (bt *batch) makeOutChains() {
 	outSgs := bt.aggAllOutSGs()
+	if outSgs.Len() > 0 {
+		bt.log.Debug("init out-chains")
+	}
 	for _, it := range outSgs.Items() {
 		sgOut := it.V
-		bt.sgChainProlog(dirOUT, sgOut)
-		bt.populateSgIcmpRules(dirOUT, outSGchName, sgOut)
-		bt.populateSgRules(dirOUT, outSGchName, sgOut)
-		bt.populateSgFqdnRules(outSGchName, sgOut)
-		bt.sgChainEpilog(dirOUT, sgOut)
+		bt.chainInOutProlog(dirOUT, sgOut)
+		bt.populateInOutSgIcmpRules(dirOUT, sgOut)
+		bt.populateInOutSgRules(dirOUT, sgOut)
+		bt.populateOutSgFqdnRules(sgOut)
+		bt.chainInOutEpilog(dirOUT, sgOut)
 	}
 }
 
-func (bt *batch) sgChainProlog(dir direction, sg *cases.SG) {
+func (bt *batch) chainInOutProlog(dir direction, sg *cases.SG) {
 	sgChName := nameUtils{}.nameOfInOutChain(dir, sg.Name)
-	bt.addJob(fmt.Sprintf("create-chain: '%s'", sgChName), func(tx *Tx) error {
+	isIN := dir == dirIN
+	api := fmt.Sprintf("%s-chain-prolog", tern(isIN, "in", "out"))
+	bt.addJob(api, func(tx *Tx) error {
 		chn := tx.AddChain(&nftLib.Chain{
 			Name:  sgChName,
 			Table: bt.table,
@@ -836,14 +683,15 @@ func (bt *batch) sgChainProlog(dir direction, sg *cases.SG) {
 	})
 	for _, ipV := range sli(model.IPv4, model.IPv6) {
 		destChainName := tern(dir == dirIN, chnFWIN, chnFWOUT)
-		api := fmt.Sprintf("add-goto-rule: '%s' -> '%s'", destChainName, sgChName)
 		ipV := ipV
 		bt.addJob(api, func(tx *Tx) error {
 			addrSetName := nameUtils{}.nameOfNetSet(ipV, sg.Name)
 			if addrSet := bt.addrsets.At(addrSetName); addrSet != nil {
+				bt.log.Debugf("add goto-rule '%s'/('%s' -> '%s')",
+					bt.tableName, destChainName, sgChName)
 				destChain := bt.chains.At(destChainName)
 				rb := beginRule()
-				tern(dir == dirIN, rb.daddr, rb.saddr)(ipV).
+				tern(isIN, rb.daddr, rb.saddr)(ipV).
 					inSet(addrSet).
 					counter().
 					go2(sgChName).
@@ -854,31 +702,31 @@ func (bt *batch) sgChainProlog(dir direction, sg *cases.SG) {
 	}
 }
 
-func (bt *batch) sgChainEpilog(dir direction, sg *cases.SG) {
+func (bt *batch) chainInOutEpilog(dir direction, sg *cases.SG) {
 	sgChainName := nameUtils{}.nameOfInOutChain(dir, sg.Name)
-	bt.addJob(sgChainName+"/epilog", func(tx *Tx) error { // -- fin --
-		chnApplyTo := bt.chains.At(sgChainName)
-		r := beginRule().metaNFTRACE(sg.Trace).counter()
-		if sg.Logs {
-			r = r.dlogs(nfte.LogFlagsIPOpt)
-		}
-		switch da := sg.DefaultAction; da {
-		case model.ACCEPT:
-			r = r.accept()
-		case model.DROP, model.DEFAULT:
-			r = r.drop()
-		default:
-			panic(
-				errors.Errorf("for chain '%s'/'%s' provided unsupported default verdict '%v'",
-					bt.table.Name, sgChainName, da),
-			)
-		}
-		r.applyRule(chnApplyTo, tx.Conn)
-		bt.log.Debugf("chain '%s'/'%s' finished",
-			bt.table.Name, sgChainName)
-		return nil
-	})
-
+	bt.addJob(tern(dir == dirIN, "in", "out")+"-chain-epilog",
+		func(tx *Tx) error {
+			chnApplyTo := bt.chains.At(sgChainName)
+			r := beginRule().metaNFTRACE(sg.Trace).counter()
+			if sg.Logs {
+				r = r.dlogs(nfte.LogFlagsIPOpt)
+			}
+			switch da := sg.DefaultAction; da {
+			case model.ACCEPT:
+				r = r.accept()
+			case model.DROP, model.DEFAULT:
+				r = r.drop()
+			default:
+				panic(
+					errors.Errorf("for chain '%s'/'%s' provided unsupported default verdict '%v'",
+						bt.table.Name, sgChainName, da),
+				)
+			}
+			r.applyRule(chnApplyTo, tx.Conn)
+			bt.log.Debugf("chain '%s'/'%s' finished",
+				bt.table.Name, sgChainName)
+			return nil
+		})
 }
 
 func (bt *batch) addFinalRules() {

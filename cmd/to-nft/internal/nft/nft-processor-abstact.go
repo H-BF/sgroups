@@ -22,6 +22,7 @@ type (
 		BaseRules     BaseRules
 		SG2SGRules    cases.SG2SGRules
 		SG2FQDNRules  cases.SG2FQDNRules
+		SgIcmpRules   cases.SgIcmpRules
 		SgSgIcmpRules cases.SgSgIcmpRules
 	}
 

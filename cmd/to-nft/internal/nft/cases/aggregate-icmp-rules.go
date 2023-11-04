@@ -17,13 +17,18 @@ type (
 		SGs   SGs
 		Rules dict.HDict[model.SgSgIcmpRuleID, *model.SgSgIcmpRule]
 	}
+
+	// SgIcmpRules -
+	SgIcmpRules struct {
+		SGs   SGs
+		Rules dict.HDict[model.SgIcmpRuleID, *model.SgIcmpRule]
+	}
 )
 
 // Load get sg-sg-icmp rules from local SG(s)
 func (rules *SgSgIcmpRules) Load(ctx context.Context, client SGClient, locals SGs) (err error) {
 	const api = "SgSgIcmpRules/Load"
 
-	//model.SgSgIcmpRuleID
 	defer func() {
 		err = errors.WithMessage(err, api)
 	}()
@@ -61,6 +66,36 @@ func (rules *SgSgIcmpRules) Load(ctx context.Context, client SGClient, locals SG
 	return rules.SGs.LoadFromNames(ctx, client, nonLocalSgs)
 }
 
+// Load get sg-icmp rules from local SG(s)
+func (rules *SgIcmpRules) Load(ctx context.Context, client SGClient, locals SGs) (err error) {
+	const api = "SgIcmpRules/Load"
+
+	defer func() {
+		err = errors.WithMessage(err, api)
+	}()
+
+	rules.SGs.Clear()
+	rules.Rules.Clear()
+	var req sgAPI.FindSgIcmpRulesReq
+	var resp *sgAPI.SgIcmpRulesResp
+	if req.Sg = locals.Names(); len(req.Sg) == 0 {
+		return nil
+	}
+	if resp, err = client.FindSgIcmpRules(ctx, &req); err != nil {
+		return err
+	}
+	for _, protoRule := range resp.GetRules() {
+		var rule model.SgIcmpRule
+		if rule, err = conv.Proto2MOdelSgIcmpRule(protoRule); err != nil {
+			return err
+		}
+		rules.Rules.Insert(rule.ID(), &rule)
+		sg := locals.At(rule.Sg)
+		rules.SGs.Insert(sg.Name, sg)
+	}
+	return nil
+}
+
 // In -
 func (rules SgSgIcmpRules) In(sgTo string) (ret []model.SgSgIcmpRule) { //nolint:dupl
 	rules.Rules.Iterate(func(k model.SgSgIcmpRuleID, v *model.SgSgIcmpRule) bool {
@@ -76,6 +111,17 @@ func (rules SgSgIcmpRules) In(sgTo string) (ret []model.SgSgIcmpRule) { //nolint
 func (rules SgSgIcmpRules) Out(sgFrom string) (ret []model.SgSgIcmpRule) { //nolint:dupl
 	rules.Rules.Iterate(func(k model.SgSgIcmpRuleID, v *model.SgSgIcmpRule) bool {
 		if k.SgFrom == sgFrom {
+			ret = append(ret, *v)
+		}
+		return true
+	})
+	return ret
+}
+
+// Rules4Sg -
+func (rules SgIcmpRules) Rules4Sg(sgName string) (ret []model.SgIcmpRule) {
+	rules.Rules.Iterate(func(k model.SgIcmpRuleID, v *model.SgIcmpRule) bool {
+		if k.Sg == sgName {
 			ret = append(ret, *v)
 		}
 		return true
