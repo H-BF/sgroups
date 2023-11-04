@@ -88,7 +88,7 @@ func (item sgFqdnRule) Key() *sgFqdnRuleKey {
 	}
 }
 
-func (item sgFqdnRule) ResourceAttributes() map[string]schema.Attribute {
+func (item sgFqdnRule) ResourceAttributes() map[string]schema.Attribute { //nolint:dupl
 	return map[string]schema.Attribute{
 		"proto": schema.StringAttribute{
 			Description: "IP-L4 proto <tcp|udp>",
@@ -148,7 +148,7 @@ func portsToProto(data []AccessPorts) []*protos.AccPorts {
 	return ret
 }
 
-func sgFqdnRules2SyncSubj(ctx context.Context, items map[string]sgFqdnRule) (*protos.SyncFqdnRules, diag.Diagnostics) {
+func sgFqdnRules2SyncSubj(ctx context.Context, items map[string]sgFqdnRule) (*protos.SyncFqdnRules, diag.Diagnostics) { //nolint:dupl
 	syncFqdnRules := new(protos.SyncFqdnRules)
 	var diags diag.Diagnostics
 	for _, features := range items {

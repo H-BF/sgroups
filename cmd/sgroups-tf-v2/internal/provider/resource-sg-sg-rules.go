@@ -82,7 +82,7 @@ func (item sgSgRule) IsDiffer(other sgSgRule) bool {
 		model.AreRulePortsEq(itemModelPorts, otherModelPorts))
 }
 
-func (item sgSgRule) ResourceAttributes() map[string]schema.Attribute {
+func (item sgSgRule) ResourceAttributes() map[string]schema.Attribute { //nolint:dupl
 	return map[string]schema.Attribute{
 		"proto": schema.StringAttribute{
 			Description: "IP-L4 proto <tcp|udp>",
@@ -119,7 +119,7 @@ func (item sgSgRule) ResourceAttributes() map[string]schema.Attribute {
 	}
 }
 
-func sgSgRules2SyncSubj(ctx context.Context, items map[string]sgSgRule) (*protos.SyncSGRules, diag.Diagnostics) {
+func sgSgRules2SyncSubj(ctx context.Context, items map[string]sgSgRule) (*protos.SyncSGRules, diag.Diagnostics) { //nolint:dupl
 	syncObj := new(protos.SyncSGRules)
 	var diags diag.Diagnostics
 	for _, features := range items {
