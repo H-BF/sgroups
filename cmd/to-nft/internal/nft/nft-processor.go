@@ -134,7 +134,8 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, netConf NetCon
 		WithBaseRules(impl.baseRules),
 		WithSg2FqdnRules(fqdnRules),
 		WithSg2SgRules(localRules),
-		WithSg2FqdnRules(applied.SG2FQDNRules),
+		WithSgSgIcmpRules(applied.SgSgIcmpRules),
+		WithSgIcmpRules(applied.SgIcmpRules),
 	)
 	if err == nil {
 		applied.BaseRules = impl.baseRules

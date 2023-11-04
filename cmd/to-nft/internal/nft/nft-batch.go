@@ -70,6 +70,7 @@ type (
 		baseRules      BaseRules
 		sg2fqdnRules   cases.SG2FQDNRules
 		sg2sgIcmpRules cases.SgSgIcmpRules
+		sgIcmpRules    cases.SgIcmpRules
 
 		table       *nftLib.Table
 		ruleDetails di.HDict[string, *ruleDetails]

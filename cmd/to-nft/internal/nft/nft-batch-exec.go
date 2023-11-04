@@ -87,3 +87,10 @@ func WithSgSgIcmpRules(r cases.SgSgIcmpRules) funcBatchOpt {
 		b.sg2sgIcmpRules = r
 	}
 }
+
+// WithSgSgIcmpRules -
+func WithSgIcmpRules(r cases.SgIcmpRules) funcBatchOpt {
+	return func(b *batch) {
+		b.sgIcmpRules = r
+	}
+}
