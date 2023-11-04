@@ -533,6 +533,12 @@ func (bt *batch) aggAllInSGs() cases.SGs {
 		}
 		return true
 	})
+	bt.sgIcmpRules.Rules.Iterate(func(k model.SgIcmpRuleID, _ *model.SgIcmpRule) bool {
+		if sg, _ := bt.sg2sgIcmpRules.SGs.Get(k.Sg); sg != nil {
+			_ = ret.Insert(sg.Name, sg)
+		}
+		return true
+	})
 	return ret
 }
 
@@ -554,7 +560,36 @@ func (bt *batch) aggAllOutSGs() cases.SGs {
 		}
 		return true
 	})
+	bt.sgIcmpRules.Rules.Iterate(func(k model.SgIcmpRuleID, _ *model.SgIcmpRule) bool {
+		if sg, _ := bt.sg2sgIcmpRules.SGs.Get(k.Sg); sg != nil {
+			_ = ret.Insert(sg.Name, sg)
+		}
+		return true
+	})
 	return ret
+}
+
+func (bt *batch) populateDefaultIcmpRules(dir direction, sg *cases.SG) {
+	targetChName := nameUtils{}.nameOfInOutChain(dir, sg.Name)
+	rules := bt.sgIcmpRules.Rules4Sg(sg.Name)
+	for i := range rules {
+		rule := rules[i]
+		bt.addJob("populate-def-icmp-rule", func(tx *Tx) error {
+			tern(rule.Icmp.IPv == model.IPv6, "6", "")
+			bt.log.Debugf("add default-icmp%v-rule into '%s'/'%s'",
+				tern(rule.Icmp.IPv == model.IPv6, "6", ""),
+				bt.tableName, targetChName)
+			chnApplyTo := bt.chains.At(targetChName)
+			rb := beginRule().metaNFTRACE(rule.Trace).
+				protoICMP(rule.Icmp).
+				counter()
+			if rule.Logs {
+				rb = rb.dlogs(nfte.LogFlagsIPOpt)
+			}
+			rb.accept().applyRule(chnApplyTo, tx.Conn)
+			return nil
+		})
+	}
 }
 
 func (bt *batch) populateInOutSgIcmpRules(dir direction, sg *cases.SG) {
@@ -569,8 +604,10 @@ func (bt *batch) populateInOutSgIcmpRules(dir direction, sg *cases.SG) {
 		bt.addJob(api, func(tx *Tx) error {
 			addrSetName := nameUtils{}.nameOfNetSet(int(rule.Icmp.IPv), sg.Name)
 			if addrSet := bt.addrsets.At(addrSetName); addrSet != nil {
-				bt.log.Debugf("add %s-sg-icmp-rule into '%s'/'%s' for addr-set '%s'",
-					tern(isIN, "in", "out"), bt.tableName, targetChName, addrSetName)
+				bt.log.Debugf("add %s-sg-icmp%v-rule into '%s'/'%s' for addr-set '%s'",
+					tern(isIN, "in", "out"), bt.tableName,
+					tern(rule.Icmp.IPv == model.IPv6, "6", ""),
+					targetChName, addrSetName)
 				chnApplyTo := bt.chains.At(targetChName)
 				rb := beginRule().metaNFTRACE(rule.Trace)
 				rb = tern(isIN, rb.saddr, rb.daddr)(int(rule.Icmp.IPv)).
@@ -604,6 +641,9 @@ func (bt *batch) populateInOutSgRules(dir direction, sg *cases.SG) {
 				tern(isIN, sg.Name, rule.ID.SgTo))
 
 			details := bt.ruleDetails.At(detailsName)
+			if details == nil {
+				continue
+			}
 			for i := range details.accports { //nolint:dupl
 				ports := details.accports[i]
 				bt.addJob(api, func(tx *Tx) error {
@@ -648,6 +688,7 @@ func (bt *batch) makeInChains() {
 	for _, it := range inSgs.Items() {
 		sgIn := it.V
 		bt.chainInOutProlog(dirIN, sgIn)
+		bt.populateDefaultIcmpRules(dirIN, sgIn)
 		bt.populateInOutSgIcmpRules(dirIN, sgIn)
 		bt.populateInOutSgRules(dirIN, sgIn)
 		bt.chainInOutEpilog(dirIN, sgIn)
@@ -662,6 +703,7 @@ func (bt *batch) makeOutChains() {
 	for _, it := range outSgs.Items() {
 		sgOut := it.V
 		bt.chainInOutProlog(dirOUT, sgOut)
+		bt.populateDefaultIcmpRules(dirOUT, sgOut)
 		bt.populateInOutSgIcmpRules(dirOUT, sgOut)
 		bt.populateInOutSgRules(dirOUT, sgOut)
 		bt.populateOutSgFqdnRules(sgOut)
