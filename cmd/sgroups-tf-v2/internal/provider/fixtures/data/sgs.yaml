@@ -1,0 +1,107 @@
+initial-backend:
+  networks: 
+  - |
+    {
+      "name": "net1",
+      "network": {
+        "CIDR": "10.10.10.0/24"
+      }
+    }
+  - |
+    {
+      "name": "net2",
+      "network": {
+        "CIDR": "10.10.20.0/24"
+      }
+    }
+  - |
+    {
+      "name": "net3",
+      "network": {
+        "CIDR": "10.10.30.0/24"
+      }
+    }
+  - |
+    {
+      "name": "net4",
+      "network": {
+        "CIDR": "10.10.40.0/24"
+      }
+    }
+  - |
+    {
+      "name": "net5",
+      "network": {
+        "CIDR": "10.10.50.0/24"
+      }
+    }
+cases:
+- name: "add-new-sgs"
+  tf-config: |
+    resource "sgroups_groups" "sgs-set-1" {
+      items = {
+        sg1 = {
+          name = "sg1"
+          logs = true
+          trace = true
+          default_action = "DROP"
+          networks = ["net1", "net2"]
+        }
+        sg2 = {
+          name = "sg2"
+          default_action = "ACCEPT"
+          networks = ["net3", "net4"]
+        }
+      }
+    }
+  expected-backend:
+    sec-groups:
+    - |
+      {
+        "defaultAction": "DROP",
+        "logs": true,
+        "name": "sg1",
+        "networks": ["net1", "net2"],
+        "trace": true
+      }
+    - |
+      {
+        "defaultAction": "ACCEPT",
+        "logs": false,
+        "name": "sg2",
+        "networks": ["net3", "net4"],
+        "trace": false
+      }
+- name: "change-first-and-delete-second"
+  tf-config: |
+    resource "sgroups_groups" "sgs-set-1" {
+      items = {
+        sg1 = {
+          name = "sg1"
+          logs = false
+          trace = false
+          default_action = "DROP"
+          networks = ["net1", "net5"]
+        }
+      }
+    }
+  expected-backend:
+    sec-groups:
+    - |
+      {
+        "defaultAction": "DROP",
+        "logs": false,
+        "name": "sg1",
+        "networks": ["net1", "net5"],
+        "trace": false
+      }
+  not-expected-backend:
+    sec-groups:
+    - |
+      {
+        "defaultAction": "ACCEPT",
+        "logs": false,
+        "name": "sg2",
+        "networks": ["net3", "net4"],
+        "trace": false
+      }

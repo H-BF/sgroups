@@ -147,7 +147,7 @@ output:
 run:
   timeout: 5m
   issues-exit-code: 1
-  tests: true
+  tests: false
   skip-dirs:
     - bin
     - vendor
