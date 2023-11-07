@@ -13,16 +13,16 @@ type (
 		construct() Dict[Tk, Tv]
 	}
 
-	rbDictFactory[Tk any, Tv any] struct{}
+	rbDictFactory[Tk any, Tv any] struct{} //nolint:unused
 
-	hDictFactory[Tk comparable, Tv any] struct{}
+	hDictFactory[Tk comparable, Tv any] struct{} //nolint:unused
 )
 
-func (rbDictFactory[Tk, Tv]) construct() Dict[Tk, Tv] {
+func (rbDictFactory[Tk, Tv]) construct() Dict[Tk, Tv] { //nolint:unused
 	return new(RBDict[Tk, Tv])
 }
 
-func (hDictFactory[Tk, Tv]) construct() Dict[Tk, Tv] {
+func (hDictFactory[Tk, Tv]) construct() Dict[Tk, Tv] { //nolint:unused
 	return new(HDict[Tk, Tv])
 }
 

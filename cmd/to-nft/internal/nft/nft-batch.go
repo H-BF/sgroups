@@ -630,7 +630,7 @@ func (bt *batch) populateInOutSgRules(dir direction, sg *cases.SG) {
 	rules := tern(isIN, bt.localRules.In, bt.localRules.Out)(sg.Name)
 	api := fmt.Sprintf("populate-%s-sg-rule", tern(isIN, "in", "out"))
 	for _, ipV := range sli(model.IPv4, model.IPv6) {
-		ipV := int(ipV)
+		ipV := ipV
 		for _, rule := range rules {
 			rule := rule
 			addrSetName := nameUtils{}.nameOfNetSet(ipV,
