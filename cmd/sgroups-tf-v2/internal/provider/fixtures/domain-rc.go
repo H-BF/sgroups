@@ -1,10 +1,7 @@
 package fixtures
 
 import (
-	"bytes"
-	"fmt"
 	"reflect"
-	"strings"
 	"sync"
 
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
@@ -113,9 +110,7 @@ func regHelpers() {
 		return m.Name
 	})
 	regIsEQ(func(l, r domain.Network) bool {
-		return l.Name == r.Name &&
-			l.Net.IP.Equal(r.Net.IP) &&
-			bytes.Equal(l.Net.Mask, r.Net.Mask)
+		return l.IsEq(r)
 	})
 	regProto2domain(func(p *protos.Network, r *domain.Network) {
 		var e error
@@ -129,20 +124,7 @@ func regHelpers() {
 		return m.Name
 	})
 	regIsEQ(func(l, r domain.SecurityGroup) bool {
-		eq := l.DefaultAction == r.DefaultAction &&
-			l.Logs == r.Logs &&
-			l.Trace == r.Trace &&
-			len(l.Networks) == len(r.Networks)
-		if eq {
-			var a dict.HDict[string, struct{}]
-			for _, sel := range [][]string{l.Networks, r.Networks} {
-				for _, n := range sel {
-					a.Put(n, struct{}{})
-				}
-			}
-			eq = a.Len() == len(l.Networks)
-		}
-		return eq
+		return l.IsEq(r)
 	})
 	regProto2domain(func(p *protos.SecGroup, r *domain.SecurityGroup) {
 		var e error
@@ -153,7 +135,7 @@ func regHelpers() {
 
 	// ---------------------- RC SGRule ---------------------
 	regKeyExtractor(func(m domain.SGRule) string {
-		return fmt.Sprintf("%s:sg(%s)sg(%s)", m.ID.Transport, m.ID.SgFrom, m.ID.SgTo)
+		return m.ID.String()
 	})
 	regIsEQ(func(l, r domain.SGRule) bool {
 		return l.IsEq(r)
@@ -167,8 +149,7 @@ func regHelpers() {
 
 	// ---------------------- RC FQDNRule ---------------------
 	regKeyExtractor(func(m domain.FQDNRule) string {
-		return fmt.Sprintf("%s:sg(%s)fqdn(%s)", m.ID.Transport,
-			m.ID.SgFrom, strings.ToLower(m.ID.FqdnTo.String()))
+		return m.ID.String()
 	})
 	regIsEQ(func(l, r domain.FQDNRule) bool {
 		return l.IsEq(r)
