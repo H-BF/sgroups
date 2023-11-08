@@ -30,7 +30,8 @@ type (
 		protos.SyncNetworks |
 			protos.SyncSecurityGroups |
 			protos.SyncSGRules |
-			protos.SyncFqdnRules
+			protos.SyncFqdnRules |
+			protos.SyncSgSgIcmpRules
 	}
 
 	Description struct {

@@ -32,6 +32,8 @@ func (model *CollectionResourceModel[T, S]) toSyncReq(
 		req.Subject = &protos.SyncReq_SgRules{SgRules: subject}
 	case *protos.SyncFqdnRules:
 		req.Subject = &protos.SyncReq_FqdnRules{FqdnRules: subject}
+	case *protos.SyncSgSgIcmpRules:
+		req.Subject = &protos.SyncReq_SgSgIcmpRules{SgSgIcmpRules: subject}
 	default:
 		panic("unexpected subject")
 	}
