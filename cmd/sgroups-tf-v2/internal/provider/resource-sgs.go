@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 
+	"github.com/H-BF/protos/pkg/api/common"
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
 
@@ -12,9 +13,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/objectdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
 
 func NewSgsResource() resource.Resource {
@@ -47,6 +50,7 @@ type (
 )
 
 func (item sgItem) ResourceAttributes() map[string]schema.Attribute {
+	icmpParams := IcmpParameters{}
 	return map[string]schema.Attribute{
 		"name": schema.StringAttribute{
 			Description: "security group name",
@@ -84,12 +88,16 @@ func (item sgItem) ResourceAttributes() map[string]schema.Attribute {
 		"icmp": schema.SingleNestedAttribute{
 			Description: "ICMP parameters for security group",
 			Optional:    true,
-			Attributes:  IcmpParameters{}.ResourceAttributes(),
+			Computed:    true,
+			Attributes:  icmpParams.ResourceAttributes(),
+			Default:     objectdefault.StaticValue(types.ObjectNull(icmpParams.AttrTypes())),
 		},
 		"icmp6": schema.SingleNestedAttribute{
 			Description: "ICMP6 parameters for security group",
 			Optional:    true,
-			Attributes:  IcmpParameters{}.ResourceAttributes(),
+			Computed:    true,
+			Attributes:  icmpParams.ResourceAttributes(),
+			Default:     objectdefault.StaticValue(types.ObjectNull(icmpParams.AttrTypes())),
 		},
 	}
 }
@@ -108,6 +116,7 @@ func sgs2SyncSubj(
 	ctx context.Context, items map[string]sgItem,
 ) (*protos.SyncSecurityGroups, diag.Diagnostics) {
 	var syncGroups protos.SyncSecurityGroups
+	var syncIcmpParams protos.SyncSgIcmpRules
 	var diags diag.Diagnostics
 	for _, sgFeatures := range items {
 		da := sgFeatures.DefaultAction.ValueString()
@@ -123,7 +132,46 @@ func sgs2SyncSubj(
 			Trace:         sgFeatures.Trace.ValueBool(),
 			Logs:          sgFeatures.Logs.ValueBool(),
 		})
+
+		if !sgFeatures.Icmp.IsNull() {
+			var icmpParams IcmpParameters
+			diags.Append(sgFeatures.Icmp.As(ctx, &icmpParams, basetypes.ObjectAsOptions{UnhandledUnknownAsEmpty: true})...)
+			if diags.HasError() {
+				return nil, diags
+			}
+			protoRule := &protos.SgIcmpRule{
+				Sg:    sgFeatures.Name.ValueString(),
+				ICMP:  &common.ICMP{IPv: common.IpAddrFamily_IPv4},
+				Logs:  icmpParams.Logs.ValueBool(),
+				Trace: icmpParams.Trace.ValueBool(),
+			}
+			diags.Append(icmpParams.Type.ElementsAs(ctx, &protoRule.ICMP.Types, true)...)
+			if diags.HasError() {
+				return nil, diags
+			}
+			syncIcmpParams.Rules = append(syncIcmpParams.Rules, protoRule)
+		}
+
+		if !sgFeatures.Icmp6.IsNull() {
+			var icmpParams IcmpParameters
+			diags.Append(sgFeatures.Icmp6.As(ctx, &icmpParams, basetypes.ObjectAsOptions{UnhandledUnknownAsEmpty: true})...)
+			if diags.HasError() {
+				return nil, diags
+			}
+			protoRule := &protos.SgIcmpRule{
+				Sg:    sgFeatures.Name.ValueString(),
+				ICMP:  &common.ICMP{IPv: common.IpAddrFamily_IPv6},
+				Logs:  icmpParams.Logs.ValueBool(),
+				Trace: icmpParams.Trace.ValueBool(),
+			}
+			diags.Append(icmpParams.Type.ElementsAs(ctx, &protoRule.ICMP.Types, true)...)
+			if diags.HasError() {
+				return nil, diags
+			}
+			syncIcmpParams.Rules = append(syncIcmpParams.Rules, protoRule)
+		}
 	}
+
 	return &syncGroups, diags
 }
 

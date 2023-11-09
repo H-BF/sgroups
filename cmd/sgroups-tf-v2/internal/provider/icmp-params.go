@@ -5,6 +5,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -38,6 +39,16 @@ func (params IcmpParameters) ResourceAttributes() map[string]schema.Attribute {
 			Validators: []validator.Set{
 				setvalidator.ValueInt64sAre(int64validator.Between(0, math.MaxUint8)),
 			},
+		},
+	}
+}
+
+func (params IcmpParameters) AttrTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"logs":  types.BoolType,
+		"trace": types.BoolType,
+		"type": types.SetType{
+			ElemType: types.Int64Type,
 		},
 	}
 }
