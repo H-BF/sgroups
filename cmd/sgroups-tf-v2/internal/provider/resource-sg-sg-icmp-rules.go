@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"math"
 
 	"github.com/H-BF/protos/pkg/api/common"
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
@@ -96,7 +97,7 @@ func (item sgSgIcmpRule) ResourceAttributes() map[string]schema.Attribute {
 			Required:    true,
 			ElementType: types.Int64Type,
 			Validators: []validator.Set{
-				setvalidator.ValueInt64sAre(int64validator.Between(0, 255)),
+				setvalidator.ValueInt64sAre(int64validator.Between(0, math.MaxUint8)),
 			},
 		},
 		"ip_v": schema.StringAttribute{
@@ -159,7 +160,9 @@ func sgSgIcmpRules2SyncSubj(ctx context.Context, items map[string]sgSgIcmpRule) 
 	return syncObj, diags
 }
 
-func readSgSgIcmpRules(ctx context.Context, state sgSgIcmpRulesResourceModel, client *sgAPI.Client) (sgSgIcmpRulesResourceModel, diag.Diagnostics) {
+func readSgSgIcmpRules(
+	ctx context.Context, state sgSgIcmpRulesResourceModel, client *sgAPI.Client,
+) (sgSgIcmpRulesResourceModel, diag.Diagnostics) {
 	var diags diag.Diagnostics
 	newState := sgSgIcmpRulesResourceModel{Items: make(map[string]sgSgIcmpRule)}
 	var resp *protos.SgSgIcmpRulesResp

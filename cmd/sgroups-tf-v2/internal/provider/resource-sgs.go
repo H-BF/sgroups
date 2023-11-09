@@ -41,6 +41,8 @@ type (
 		Trace         types.Bool   `tfsdk:"trace"`
 		DefaultAction types.String `tfsdk:"default_action"`
 		Networks      types.Set    `tfsdk:"networks"`
+		Icmp          types.Object `tfsdk:"icmp"`
+		Icmp6         types.Object `tfsdk:"icmp6"`
 	}
 )
 
@@ -79,6 +81,16 @@ func (item sgItem) ResourceAttributes() map[string]schema.Attribute {
 			Optional:    true,
 			ElementType: types.StringType,
 		},
+		"icmp": schema.SingleNestedAttribute{
+			Description: "ICMP parameters for security group",
+			Optional:    true,
+			Attributes:  IcmpParameters{}.ResourceAttributes(),
+		},
+		"icmp6": schema.SingleNestedAttribute{
+			Description: "ICMP6 parameters for security group",
+			Optional:    true,
+			Attributes:  IcmpParameters{}.ResourceAttributes(),
+		},
 	}
 }
 
@@ -87,7 +99,9 @@ func (item sgItem) IsDiffer(other sgItem) bool {
 		item.Logs.Equal(other.Logs) &&
 		item.Trace.Equal(other.Trace) &&
 		item.DefaultAction.Equal(other.DefaultAction) &&
-		item.Networks.Equal(other.Networks))
+		item.Networks.Equal(other.Networks) &&
+		item.Icmp.Equal(other.Icmp) &&
+		item.Icmp6.Equal(other.Icmp6))
 }
 
 func sgs2SyncSubj(
