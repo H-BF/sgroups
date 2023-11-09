@@ -78,13 +78,13 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, netConf NetCon
 	log.Infof("start loading data according host net config")
 
 	log.Debugw("loading SG...", "host-local-IP(s)", slice2stringer(allLoaclIPs...))
-	if localSGs, err = impl.loadLocalSG(ctx, allLoaclIPs); err != nil {
+	if localSGs, err = impl.loadLocalSGs(ctx, allLoaclIPs); err != nil {
 		return applied, err
 	}
 
 	stringerOfLocalSGs := slice2stringer(localSGs.Names()...)
 	log.Debugw("loading SG-SG rules...", "local-SG(s)", stringerOfLocalSGs)
-	if localRules, err = impl.loadLocalRules(ctx, localSGs); err != nil {
+	if localRules, err = impl.loadSgSgRules(ctx, localSGs); err != nil {
 		return applied, err
 	}
 	applied.SG2SGRules = localRules
@@ -150,13 +150,13 @@ func (impl *nfTablesProcessorImpl) Close() error {
 	return nil
 }
 
-func (impl *nfTablesProcessorImpl) loadLocalRules(ctx context.Context, localSGs cases.SGs) (cases.SG2SGRules, error) {
+func (impl *nfTablesProcessorImpl) loadSgSgRules(ctx context.Context, localSGs cases.SGs) (cases.SG2SGRules, error) {
 	var ret cases.SG2SGRules
 	err := ret.Load(ctx, impl.sgClient, localSGs)
 	return ret, err
 }
 
-func (impl *nfTablesProcessorImpl) loadLocalSG(ctx context.Context, localIPs []net.IP) (cases.SGs, error) {
+func (impl *nfTablesProcessorImpl) loadLocalSGs(ctx context.Context, localIPs []net.IP) (cases.SGs, error) {
 	var ret cases.SGs
 	err := ret.LoadFromIPs(ctx, impl.sgClient, localIPs)
 	return ret, err
