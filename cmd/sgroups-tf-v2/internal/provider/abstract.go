@@ -27,8 +27,8 @@ type (
 	}
 
 	subjectOfSync interface {
-		protos.SyncNetworks |
-			protos.SyncSecurityGroups |
+		securityGroupSubject |
+			protos.SyncNetworks |
 			protos.SyncSGRules |
 			protos.SyncFqdnRules |
 			protos.SyncSgSgIcmpRules
@@ -78,18 +78,20 @@ func (c *CollectionResource[T, S]) Create(ctx context.Context, req resource.Crea
 	}
 
 	// Convert from Terraform data model into GRPC data model
-	syncReq, diags := plan.toSyncReq(ctx, protos.SyncReq_Upsert, c.toSubjOfSync)
+	syncReqs, diags := plan.toSyncReq(ctx, protos.SyncReq_Upsert, c.toSubjOfSync)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return
 	}
 
-	// Send GRPC request
-	if _, err := c.client.Sync(ctx, syncReq); err != nil {
-		resp.Diagnostics.AddError(
-			"create "+c.description.ItemsDescription,
-			err.Error())
-		return
+	// Send GRPC requests
+	for _, syncReq := range syncReqs {
+		if _, err := c.client.Sync(ctx, syncReq); err != nil {
+			resp.Diagnostics.AddError(
+				"create "+c.description.ItemsDescription,
+				err.Error())
+			return
+		}
 	}
 
 	// Save data into Terraform state
@@ -140,17 +142,18 @@ func (c *CollectionResource[T, S]) Update(ctx context.Context, req resource.Upda
 		tempModel := CollectionResourceModel[T, S]{
 			Items: itemsToDelete,
 		}
-		delReq, diags := tempModel.toSyncReq(ctx, protos.SyncReq_Delete, c.toSubjOfSync)
+		delReqs, diags := tempModel.toSyncReq(ctx, protos.SyncReq_Delete, c.toSubjOfSync)
 		if diags.HasError() {
 			resp.Diagnostics.Append(diags...)
 			return
 		}
-		if _, err := c.client.Sync(ctx, delReq); err != nil {
-			//c.description.ResourceDescription
-			resp.Diagnostics.AddError(
-				"delete "+c.description.ItemsDescription,
-				err.Error())
-			return
+		for _, delReq := range delReqs {
+			if _, err := c.client.Sync(ctx, delReq); err != nil {
+				resp.Diagnostics.AddError(
+					"delete "+c.description.ItemsDescription,
+					err.Error())
+				return
+			}
 		}
 	}
 
@@ -167,16 +170,18 @@ func (c *CollectionResource[T, S]) Update(ctx context.Context, req resource.Upda
 		tempModel := CollectionResourceModel[T, S]{
 			Items: itemsToUpdate,
 		}
-		updateReq, diags := tempModel.toSyncReq(ctx, protos.SyncReq_Upsert, c.toSubjOfSync)
+		updateReqs, diags := tempModel.toSyncReq(ctx, protos.SyncReq_Upsert, c.toSubjOfSync)
 		if diags.HasError() {
 			resp.Diagnostics.Append(diags...)
 			return
 		}
-		if _, err := c.client.Sync(ctx, updateReq); err != nil {
-			resp.Diagnostics.AddError(
-				"update "+c.description.ItemsDescription,
-				err.Error())
-			return
+		for _, updateReq := range updateReqs {
+			if _, err := c.client.Sync(ctx, updateReq); err != nil {
+				resp.Diagnostics.AddError(
+					"update "+c.description.ItemsDescription,
+					err.Error())
+				return
+			}
 		}
 	}
 
@@ -191,17 +196,19 @@ func (c *CollectionResource[T, S]) Delete(ctx context.Context, req resource.Dele
 		return
 	}
 
-	delReq, diags := state.toSyncReq(ctx, protos.SyncReq_Delete, c.toSubjOfSync)
+	delReqs, diags := state.toSyncReq(ctx, protos.SyncReq_Delete, c.toSubjOfSync)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return
 	}
 
-	if _, err := c.client.Sync(ctx, delReq); err != nil {
-		resp.Diagnostics.AddError(
-			"delete "+c.description.ItemsDescription,
-			err.Error())
-		return
+	for _, delReq := range delReqs {
+		if _, err := c.client.Sync(ctx, delReq); err != nil {
+			resp.Diagnostics.AddError(
+				"delete "+c.description.ItemsDescription,
+				err.Error())
+			return
+		}
 	}
 }
 

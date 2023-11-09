@@ -1,11 +1,15 @@
 package provider
 
 import (
+	"context"
 	"math"
+
+	protos "github.com/H-BF/protos/pkg/api/sgroups"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -51,4 +55,21 @@ func (params IcmpParameters) AttrTypes() map[string]attr.Type {
 			ElemType: types.Int64Type,
 		},
 	}
+}
+
+func (params IcmpParameters) Null() types.Object {
+	return types.ObjectNull(params.AttrTypes())
+}
+
+func (params IcmpParameters) FromProto(ctx context.Context, proto *protos.SgIcmpRule) (types.Object, diag.Diagnostics) {
+	typeSet, d := types.SetValueFrom(ctx, types.Int64Type, proto.ICMP.GetTypes())
+	if d.HasError() {
+		return params.Null(), d
+	}
+	value := types.ObjectValueMust(params.AttrTypes(), map[string]attr.Value{
+		"logs":  types.BoolValue(proto.GetLogs()),
+		"trace": types.BoolValue(proto.GetTrace()),
+		"type":  typeSet,
+	})
+	return value, nil
 }

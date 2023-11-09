@@ -6,6 +6,8 @@ import (
 	"github.com/H-BF/protos/pkg/api/common"
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
+	"github.com/H-BF/sgroups/internal/dict"
+	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -34,9 +36,14 @@ func NewSgsResource() resource.Resource {
 }
 
 type (
-	sgsResource = CollectionResource[sgItem, protos.SyncSecurityGroups]
+	securityGroupSubject struct {
+		syncGroups     *protos.SyncSecurityGroups
+		syncIcmpParams *protos.SyncSgIcmpRules
+	}
 
-	sgsResourceModel = CollectionResourceModel[sgItem, protos.SyncSecurityGroups]
+	sgsResource = CollectionResource[sgItem, securityGroupSubject]
+
+	sgsResourceModel = CollectionResourceModel[sgItem, securityGroupSubject]
 
 	sgItem struct {
 		Name          types.String `tfsdk:"name"`
@@ -90,14 +97,14 @@ func (item sgItem) ResourceAttributes() map[string]schema.Attribute {
 			Optional:    true,
 			Computed:    true,
 			Attributes:  icmpParams.ResourceAttributes(),
-			Default:     objectdefault.StaticValue(types.ObjectNull(icmpParams.AttrTypes())),
+			Default:     objectdefault.StaticValue(icmpParams.Null()),
 		},
 		"icmp6": schema.SingleNestedAttribute{
 			Description: "ICMP6 parameters for security group",
 			Optional:    true,
 			Computed:    true,
 			Attributes:  icmpParams.ResourceAttributes(),
-			Default:     objectdefault.StaticValue(types.ObjectNull(icmpParams.AttrTypes())),
+			Default:     objectdefault.StaticValue(icmpParams.Null()),
 		},
 	}
 }
@@ -114,9 +121,11 @@ func (item sgItem) IsDiffer(other sgItem) bool {
 
 func sgs2SyncSubj(
 	ctx context.Context, items map[string]sgItem,
-) (*protos.SyncSecurityGroups, diag.Diagnostics) {
-	var syncGroups protos.SyncSecurityGroups
-	var syncIcmpParams protos.SyncSgIcmpRules
+) (*securityGroupSubject, diag.Diagnostics) {
+	syncSubject := securityGroupSubject{
+		syncGroups:     &protos.SyncSecurityGroups{},
+		syncIcmpParams: &protos.SyncSgIcmpRules{},
+	}
 	var diags diag.Diagnostics
 	for _, sgFeatures := range items {
 		da := sgFeatures.DefaultAction.ValueString()
@@ -125,7 +134,7 @@ func sgs2SyncSubj(
 		if diags.HasError() {
 			return nil, diags
 		}
-		syncGroups.Groups = append(syncGroups.Groups, &protos.SecGroup{
+		syncSubject.syncGroups.Groups = append(syncSubject.syncGroups.Groups, &protos.SecGroup{
 			Name:          sgFeatures.Name.ValueString(),
 			Networks:      networks,
 			DefaultAction: protos.SecGroup_DefaultAction(protos.SecGroup_DefaultAction_value[da]),
@@ -149,7 +158,7 @@ func sgs2SyncSubj(
 			if diags.HasError() {
 				return nil, diags
 			}
-			syncIcmpParams.Rules = append(syncIcmpParams.Rules, protoRule)
+			syncSubject.syncIcmpParams.Rules = append(syncSubject.syncIcmpParams.Rules, protoRule)
 		}
 
 		if !sgFeatures.Icmp6.IsNull() {
@@ -168,47 +177,95 @@ func sgs2SyncSubj(
 			if diags.HasError() {
 				return nil, diags
 			}
-			syncIcmpParams.Rules = append(syncIcmpParams.Rules, protoRule)
+			syncSubject.syncIcmpParams.Rules = append(syncSubject.syncIcmpParams.Rules, protoRule)
 		}
 	}
 
-	return &syncGroups, diags
+	return &syncSubject, diags
 }
 
 func readSgs(ctx context.Context, state sgsResourceModel, client *sgAPI.Client) (sgsResourceModel, diag.Diagnostics) {
 	var (
-		diags    diag.Diagnostics
-		err      error
-		listResp *protos.ListSecurityGroupsResp
+		diags          diag.Diagnostics
+		err            error
+		listGroupsResp *protos.ListSecurityGroupsResp
+		sgIcmpResp     *protos.SgIcmpRulesResp
+		id2Icmp        dict.HDict[model.SgIcmpRuleID, *protos.SgIcmpRule]
+		icmpParams     IcmpParameters
 	)
 	newState := sgsResourceModel{Items: make(map[string]sgItem)}
 	if len(state.Items) > 0 {
-		var listReq protos.ListSecurityGroupsReq
-		linq.From(state.Items).
+		var listGroupsReq protos.ListSecurityGroupsReq
+		destinctSgNames := linq.From(state.Items).
 			Select(func(i interface{}) interface{} {
 				return i.(linq.KeyValue).Value.(sgItem).Name.ValueString()
-			}).Distinct().ToSlice(&listReq.SgNames)
-		listResp, err = client.ListSecurityGroups(ctx, &listReq)
+			}).Distinct()
+
+		destinctSgNames.ToSlice(&listGroupsReq.SgNames)
+		listGroupsResp, err = client.ListSecurityGroups(ctx, &listGroupsReq)
+		if err != nil {
+			diags.AddError("read security groups", err.Error())
+			return newState, diags
+		}
+
+		var sgIcmpReq protos.FindSgIcmpRulesReq
+		destinctSgNames.ToSlice(&sgIcmpReq.Sg)
+		sgIcmpResp, err = client.FindSgIcmpRules(ctx, &sgIcmpReq)
 		if err != nil {
 			diags.AddError("read security groups", err.Error())
 			return newState, diags
 		}
 	}
 
-	for _, sg := range listResp.GetGroups() {
+	for _, icmpRule := range sgIcmpResp.GetRules() {
+		var rule model.SgIcmpRule
+		if rule, err = sgAPI.Proto2MOdelSgIcmpRule(icmpRule); err != nil {
+			diags.AddError("read security groups", err.Error())
+			return newState, diags
+		}
+		id2Icmp.Insert(rule.ID(), icmpRule)
+	}
+
+	for _, sg := range listGroupsResp.GetGroups() {
 		networks, d := types.SetValueFrom(ctx, types.StringType, sg.GetNetworks())
 		diags.Append(d...)
 		if d.HasError() {
 			return sgsResourceModel{}, diags
 		}
 		if _, ok := state.Items[sg.GetName()]; ok {
-			newState.Items[sg.GetName()] = sgItem{
+			newItem := sgItem{
 				Name:          types.StringValue(sg.GetName()),
 				Logs:          types.BoolValue(sg.GetLogs()),
 				Trace:         types.BoolValue(sg.GetTrace()),
 				DefaultAction: types.StringValue(sg.GetDefaultAction().String()),
 				Networks:      networks,
+				Icmp:          icmpParams.Null(),
+				Icmp6:         icmpParams.Null(),
 			}
+
+			// check for icmp4 rule
+			id := model.SgIcmpRuleID{IPv: 4, Sg: sg.GetName()}
+			if icmp, ok := id2Icmp.Get(id); ok {
+				icmpValue, d := icmpParams.FromProto(ctx, icmp)
+				diags.Append(d...)
+				if diags.HasError() {
+					return sgsResourceModel{}, diags
+				}
+				newItem.Icmp = icmpValue
+			}
+
+			//check for icmp6 rule
+			id.IPv = 6
+			if icmp, ok := id2Icmp.Get(id); ok {
+				icmpValue, d := icmpParams.FromProto(ctx, icmp)
+				diags.Append(d...)
+				if diags.HasError() {
+					return sgsResourceModel{}, diags
+				}
+				newItem.Icmp6 = icmpValue
+			}
+
+			newState.Items[sg.GetName()] = newItem
 		}
 	}
 	return newState, diags
