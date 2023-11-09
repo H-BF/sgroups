@@ -14,7 +14,7 @@ type (
 	BackendRC interface {
 		protos.Network | protos.SecGroup |
 			protos.Rule | protos.FqdnRule |
-			protos.SgSgIcmpRule
+			protos.SgIcmpRule | protos.SgSgIcmpRule
 	}
 
 	// BackendRcList -
@@ -26,6 +26,7 @@ type (
 		SecGroups     BackendRcList[protos.SecGroup]     `yaml:"sec-groups"`
 		SgSgRules     BackendRcList[protos.Rule]         `yaml:"sg-sg-rules"`
 		SgFqdnRules   BackendRcList[protos.FqdnRule]     `yaml:"sg-fqdn-rules"`
+		SgIcmpRules   BackendRcList[protos.SgIcmpRule]   `yaml:"sg-icmp-rules"`
 		SgSgIcmpRules BackendRcList[protos.SgSgIcmpRule] `yaml:"sg-sg-icmp-rules"`
 	}
 )
