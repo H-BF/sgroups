@@ -119,6 +119,35 @@ func (item sgItem) IsDiffer(other sgItem) bool {
 		item.Icmp6.Equal(other.Icmp6))
 }
 
+func (item sgItem) icmpObj2Proto(ctx context.Context, version common.IpAddrFamily) (*protos.SgIcmpRule, diag.Diagnostics) {
+	var (
+		icmpParams IcmpParameters
+		diags      diag.Diagnostics
+	)
+	switch version {
+	case common.IpAddrFamily_IPv4:
+		diags.Append(item.Icmp.As(ctx, &icmpParams, basetypes.ObjectAsOptions{UnhandledUnknownAsEmpty: true})...)
+	case common.IpAddrFamily_IPv6:
+		diags.Append(item.Icmp6.As(ctx, &icmpParams, basetypes.ObjectAsOptions{UnhandledUnknownAsEmpty: true})...)
+	default:
+		panic("unexpected `version` value")
+	}
+	if diags.HasError() {
+		return nil, diags
+	}
+	protoRule := &protos.SgIcmpRule{
+		Sg:    item.Name.ValueString(),
+		ICMP:  &common.ICMP{IPv: version},
+		Logs:  icmpParams.Logs.ValueBool(),
+		Trace: icmpParams.Trace.ValueBool(),
+	}
+	diags.Append(icmpParams.Type.ElementsAs(ctx, &protoRule.ICMP.Types, true)...)
+	if diags.HasError() {
+		return nil, diags
+	}
+	return protoRule, nil
+}
+
 func sgs2SyncSubj(
 	ctx context.Context, items map[string]sgItem,
 ) (*securityGroupSubject, diag.Diagnostics) {
@@ -143,18 +172,8 @@ func sgs2SyncSubj(
 		})
 
 		if !sgFeatures.Icmp.IsNull() {
-			var icmpParams IcmpParameters
-			diags.Append(sgFeatures.Icmp.As(ctx, &icmpParams, basetypes.ObjectAsOptions{UnhandledUnknownAsEmpty: true})...)
-			if diags.HasError() {
-				return nil, diags
-			}
-			protoRule := &protos.SgIcmpRule{
-				Sg:    sgFeatures.Name.ValueString(),
-				ICMP:  &common.ICMP{IPv: common.IpAddrFamily_IPv4},
-				Logs:  icmpParams.Logs.ValueBool(),
-				Trace: icmpParams.Trace.ValueBool(),
-			}
-			diags.Append(icmpParams.Type.ElementsAs(ctx, &protoRule.ICMP.Types, true)...)
+			protoRule, d := sgFeatures.icmpObj2Proto(ctx, common.IpAddrFamily_IPv4)
+			diags.Append(d...)
 			if diags.HasError() {
 				return nil, diags
 			}
@@ -162,18 +181,8 @@ func sgs2SyncSubj(
 		}
 
 		if !sgFeatures.Icmp6.IsNull() {
-			var icmpParams IcmpParameters
-			diags.Append(sgFeatures.Icmp6.As(ctx, &icmpParams, basetypes.ObjectAsOptions{UnhandledUnknownAsEmpty: true})...)
-			if diags.HasError() {
-				return nil, diags
-			}
-			protoRule := &protos.SgIcmpRule{
-				Sg:    sgFeatures.Name.ValueString(),
-				ICMP:  &common.ICMP{IPv: common.IpAddrFamily_IPv6},
-				Logs:  icmpParams.Logs.ValueBool(),
-				Trace: icmpParams.Trace.ValueBool(),
-			}
-			diags.Append(icmpParams.Type.ElementsAs(ctx, &protoRule.ICMP.Types, true)...)
+			protoRule, d := sgFeatures.icmpObj2Proto(ctx, common.IpAddrFamily_IPv6)
+			diags.Append(d...)
 			if diags.HasError() {
 				return nil, diags
 			}
