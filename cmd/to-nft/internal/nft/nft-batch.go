@@ -695,11 +695,11 @@ func (bt *batch) populateInOutSgRules(dir direction, sg *cases.SG) {
 
 func (bt *batch) makeInChains() {
 	inSgs := bt.aggAllInSGs()
-	if inSgs.Len() > 0 {
-		bt.log.Debug("init in-chains")
-	}
 	for _, it := range inSgs.Items() {
 		sgIn := it.V
+		if !sgIn.IsLocal() {
+			continue
+		}
 		bt.chainInOutProlog(dirIN, sgIn)
 		bt.populateDefaultIcmpRules(dirIN, sgIn)
 		bt.populateInOutSgIcmpRules(dirIN, sgIn)
@@ -710,11 +710,11 @@ func (bt *batch) makeInChains() {
 
 func (bt *batch) makeOutChains() {
 	outSgs := bt.aggAllOutSGs()
-	if outSgs.Len() > 0 {
-		bt.log.Debug("init out-chains")
-	}
 	for _, it := range outSgs.Items() {
 		sgOut := it.V
+		if !sgOut.IsLocal() {
+			continue
+		}
 		bt.chainInOutProlog(dirOUT, sgOut)
 		bt.populateDefaultIcmpRules(dirOUT, sgOut)
 		bt.populateInOutSgIcmpRules(dirOUT, sgOut)
