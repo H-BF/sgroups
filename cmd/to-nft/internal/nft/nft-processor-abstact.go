@@ -20,6 +20,7 @@ type (
 		NetNS         string
 		TargetTable   string
 		BaseRules     BaseRules
+		LocalSGs      cases.SGs
 		SG2SGRules    cases.SG2SGRules
 		SG2FQDNRules  cases.SG2FQDNRules
 		SgIcmpRules   cases.SgIcmpRules

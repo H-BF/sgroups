@@ -65,6 +65,7 @@ type (
 		txProvider TxProvider
 		tableName  string
 
+		localSGs       cases.SGs
 		networks       cases.SGsNetworks
 		localRules     cases.SG2SGRules
 		baseRules      BaseRules
@@ -140,8 +141,8 @@ func (bt *batch) prepare() {
 	bt.initSG2FQDNRulesDetails()
 	bt.initRootChains()
 	bt.initBaseRules()
-	bt.makeInChains()
-	bt.makeOutChains()
+	bt.makeInOutChains(dirIN)
+	bt.makeInOutChains(dirOUT)
 	bt.addFinalRules()
 }
 
@@ -364,7 +365,7 @@ func (bt *batch) initBaseRules() {
 
 func (bt *batch) addSGNetSets() {
 	filter := sli(bt.localRules.SGs, bt.sg2fqdnRules.SGs,
-		bt.sgIcmpRules.SGs, bt.sg2sgIcmpRules.SGs)
+		bt.sgIcmpRules.SGs, bt.sg2sgIcmpRules.SGs, bt.localSGs)
 
 	bt.networks.Iterate(func(sgName string, nws []model.Network) bool {
 		var allow bool
@@ -524,6 +525,7 @@ func (bt *batch) populateOutSgFqdnRules(sg *cases.SG) {
 	}
 }
 
+/*//TODO: Remove before close issue
 func (bt *batch) aggAllInSGs() cases.SGs {
 	var ret cases.SGs
 	bt.localRules.Rules.Iterate(func(k model.SGRuleIdentity, _ *model.SGRule) bool {
@@ -573,6 +575,7 @@ func (bt *batch) aggAllOutSGs() cases.SGs {
 	})
 	return ret
 }
+*/
 
 func (bt *batch) populateDefaultIcmpRules(dir direction, sg *cases.SG) {
 	targetChName := nameUtils{}.nameOfInOutChain(dir, sg.Name)
@@ -693,35 +696,18 @@ func (bt *batch) populateInOutSgRules(dir direction, sg *cases.SG) {
 	}
 }
 
-func (bt *batch) makeInChains() {
-	inSgs := bt.aggAllInSGs()
-	for _, it := range inSgs.Items() {
-		sgIn := it.V
-		if !sgIn.IsLocal() {
-			continue
+func (bt *batch) makeInOutChains(dir direction) {
+	bt.localSGs.Iterate(func(_ string, sg *cases.SG) bool {
+		bt.chainInOutProlog(dir, sg)
+		bt.populateDefaultIcmpRules(dir, sg)
+		bt.populateInOutSgIcmpRules(dir, sg)
+		bt.populateInOutSgRules(dir, sg)
+		if dir == dirOUT {
+			bt.populateOutSgFqdnRules(sg)
 		}
-		bt.chainInOutProlog(dirIN, sgIn)
-		bt.populateDefaultIcmpRules(dirIN, sgIn)
-		bt.populateInOutSgIcmpRules(dirIN, sgIn)
-		bt.populateInOutSgRules(dirIN, sgIn)
-		bt.chainInOutEpilog(dirIN, sgIn)
-	}
-}
-
-func (bt *batch) makeOutChains() {
-	outSgs := bt.aggAllOutSGs()
-	for _, it := range outSgs.Items() {
-		sgOut := it.V
-		if !sgOut.IsLocal() {
-			continue
-		}
-		bt.chainInOutProlog(dirOUT, sgOut)
-		bt.populateDefaultIcmpRules(dirOUT, sgOut)
-		bt.populateInOutSgIcmpRules(dirOUT, sgOut)
-		bt.populateInOutSgRules(dirOUT, sgOut)
-		bt.populateOutSgFqdnRules(sgOut)
-		bt.chainInOutEpilog(dirOUT, sgOut)
-	}
+		bt.chainInOutEpilog(dir, sg)
+		return true
+	})
 }
 
 func (bt *batch) chainInOutProlog(dir direction, sg *cases.SG) {

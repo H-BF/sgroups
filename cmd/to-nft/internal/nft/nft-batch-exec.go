@@ -94,3 +94,12 @@ func WithSgIcmpRules(r cases.SgIcmpRules) funcBatchOpt {
 		b.sgIcmpRules = r
 	}
 }
+
+// WithLocalSGs -
+func WithLocalSGs(sgs cases.SGs) funcBatchOpt {
+	return func(b *batch) {
+		b.localSGs = sgs
+	}
+}
+
+//localSGs
