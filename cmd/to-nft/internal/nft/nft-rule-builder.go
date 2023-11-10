@@ -130,8 +130,8 @@ func (rb ruleBuilder) saddr6() ruleBuilder {
 		&Payload{
 			DestRegister: 1,
 			Base:         PayloadBaseNetworkHeader,
-			Offset:       uint32(8),
-			Len:          uint32(16),
+			Offset:       uint32(8),  //nolint:gomnd
+			Len:          uint32(16), //nolint:gomnd
 		},
 	)
 	return rb
@@ -142,8 +142,8 @@ func (rb ruleBuilder) daddr6() ruleBuilder {
 		&Payload{
 			DestRegister: 1,
 			Base:         PayloadBaseNetworkHeader,
-			Offset:       uint32(24),
-			Len:          uint32(16),
+			Offset:       uint32(24), //nolint:gomnd
+			Len:          uint32(16), //nolint:gomnd
 		},
 	)
 	return rb
