@@ -92,7 +92,7 @@ func main() {
 	_, err = TelemetryEndpoint.Value(ctx, TelemetryEndpoint.OptSink(func(v string) error {
 		var e error
 		if ep, e = pkgNet.ParseEndpoint(v); e != nil {
-			logger.Fatalf(ctx, "parse telemetry endpoint (%s): %v", v, err)
+			logger.Fatalf(ctx, "parse telemetry endpoint (%s): %v", v, e)
 		}
 		return nil
 	}))
@@ -102,7 +102,7 @@ func main() {
 
 	server, err := SetupServer(ctx)
 	if err != nil {
-		logger.Fatalf(ctx, "setup server: %s")
+		logger.Fatalf(ctx, "setup server: %v", err)
 	}
 	go func() {
 		logger.Fatal(ctx, server.Run(ctx, ep))
