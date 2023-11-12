@@ -57,14 +57,14 @@ func (params IcmpParameters) AttrTypes() map[string]attr.Type {
 	}
 }
 
-func (params IcmpParameters) Null() types.Object {
+func (params IcmpParameters) nullObj() types.Object {
 	return types.ObjectNull(params.AttrTypes())
 }
 
-func (params IcmpParameters) FromProto(ctx context.Context, proto *protos.SgIcmpRule) (types.Object, diag.Diagnostics) {
+func (params IcmpParameters) fromProto(ctx context.Context, proto *protos.SgIcmpRule) (types.Object, diag.Diagnostics) {
 	typeSet, d := types.SetValueFrom(ctx, types.Int64Type, proto.ICMP.GetTypes())
 	if d.HasError() {
-		return params.Null(), d
+		return params.nullObj(), d
 	}
 	value := types.ObjectValueMust(params.AttrTypes(), map[string]attr.Value{
 		"logs":  types.BoolValue(proto.GetLogs()),

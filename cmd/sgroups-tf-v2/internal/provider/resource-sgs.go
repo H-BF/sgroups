@@ -3,12 +3,12 @@ package provider
 import (
 	"context"
 
-	"github.com/H-BF/protos/pkg/api/common"
-	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
 	"github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
+	"github.com/H-BF/protos/pkg/api/common"
+	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -97,14 +97,14 @@ func (item sgItem) ResourceAttributes() map[string]schema.Attribute {
 			Optional:    true,
 			Computed:    true,
 			Attributes:  icmpParams.ResourceAttributes(),
-			Default:     objectdefault.StaticValue(icmpParams.Null()),
+			Default:     objectdefault.StaticValue(icmpParams.nullObj()),
 		},
 		"icmp6": schema.SingleNestedAttribute{
 			Description: "ICMP6 parameters for security group",
 			Optional:    true,
 			Computed:    true,
 			Attributes:  icmpParams.ResourceAttributes(),
-			Default:     objectdefault.StaticValue(icmpParams.Null()),
+			Default:     objectdefault.StaticValue(icmpParams.nullObj()),
 		},
 	}
 }
@@ -205,22 +205,21 @@ func readSgs(ctx context.Context, state sgsResourceModel, client *sgAPI.Client) 
 	newState := sgsResourceModel{Items: make(map[string]sgItem)}
 	if len(state.Items) > 0 {
 		var listGroupsReq protos.ListSecurityGroupsReq
-		destinctSgNames := linq.From(state.Items).
+		linq.From(state.Items).
 			Select(func(i interface{}) interface{} {
 				return i.(linq.KeyValue).Value.(sgItem).Name.ValueString()
-			}).Distinct()
+			}).Distinct().ToSlice(&listGroupsReq.SgNames)
 
-		destinctSgNames.ToSlice(&listGroupsReq.SgNames)
 		listGroupsResp, err = client.ListSecurityGroups(ctx, &listGroupsReq)
 		if err != nil {
 			diags.AddError("read security groups", err.Error())
 			return newState, diags
 		}
 
-		var sgIcmpReq protos.FindSgIcmpRulesReq
-		destinctSgNames.ToSlice(&sgIcmpReq.Sg)
-		sgIcmpResp, err = client.FindSgIcmpRules(ctx, &sgIcmpReq)
-		if err != nil {
+		sgIcmpReq := protos.FindSgIcmpRulesReq{
+			Sg: listGroupsReq.SgNames,
+		}
+		if sgIcmpResp, err = client.FindSgIcmpRules(ctx, &sgIcmpReq); err != nil {
 			diags.AddError("read security groups", err.Error())
 			return newState, diags
 		}
@@ -248,14 +247,14 @@ func readSgs(ctx context.Context, state sgsResourceModel, client *sgAPI.Client) 
 				Trace:         types.BoolValue(sg.GetTrace()),
 				DefaultAction: types.StringValue(sg.GetDefaultAction().String()),
 				Networks:      networks,
-				Icmp:          icmpParams.Null(),
-				Icmp6:         icmpParams.Null(),
+				Icmp:          icmpParams.nullObj(),
+				Icmp6:         icmpParams.nullObj(),
 			}
 
 			// check for icmp4 rule
 			id := model.SgIcmpRuleID{IPv: 4, Sg: sg.GetName()}
 			if icmp, ok := id2Icmp.Get(id); ok {
-				icmpValue, d := icmpParams.FromProto(ctx, icmp)
+				icmpValue, d := icmpParams.fromProto(ctx, icmp)
 				diags.Append(d...)
 				if diags.HasError() {
 					return sgsResourceModel{}, diags
@@ -266,7 +265,7 @@ func readSgs(ctx context.Context, state sgsResourceModel, client *sgAPI.Client) 
 			//check for icmp6 rule
 			id.IPv = 6
 			if icmp, ok := id2Icmp.Get(id); ok {
-				icmpValue, d := icmpParams.FromProto(ctx, icmp)
+				icmpValue, d := icmpParams.fromProto(ctx, icmp)
 				diags.Append(d...)
 				if diags.HasError() {
 					return sgsResourceModel{}, diags

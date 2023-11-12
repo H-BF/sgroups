@@ -24,7 +24,7 @@ import (
 
 func NewSgToSgIcmpRulesResource() resource.Resource {
 	d := Description{
-		ResourceDescription: "mapped 'sg(sg-from)sg(sg-to)icmp4/6' -> 'SG-SG' ICMP rule resource",
+		ResourceDescription: "mapped 'sg(sg-from)sg(sg-to)icmp<4|6>' -> 'SG-SG' ICMP rule resource",
 		ItemsDescription:    "SG to SG ICMP rules",
 	}
 	return &sgSgIcmpRulesResource{
@@ -124,7 +124,7 @@ func (item sgSgIcmpRule) ResourceAttributes() map[string]schema.Attribute {
 	}
 }
 
-func (item sgSgIcmpRule) Icmp2Proto(ctx context.Context, diags diag.Diagnostics) *common.ICMP {
+func (item sgSgIcmpRule) icmp2Proto(ctx context.Context, diags diag.Diagnostics) *common.ICMP {
 	ret := new(common.ICMP)
 
 	switch item.IpVersion.ValueString() {
@@ -144,7 +144,7 @@ func sgSgIcmpRules2SyncSubj(ctx context.Context, items map[string]sgSgIcmpRule) 
 	syncObj := new(protos.SyncSgSgIcmpRules)
 	var diags diag.Diagnostics
 	for _, features := range items {
-		icmp := features.Icmp2Proto(ctx, diags)
+		icmp := features.icmp2Proto(ctx, diags)
 		if diags.HasError() {
 			return nil, diags
 		}
