@@ -16,7 +16,8 @@ type (
 	// DomainRC -
 	DomainRC interface {
 		domain.Network | domain.SecurityGroup |
-			domain.SGRule | domain.FQDNRule
+			domain.SGRule | domain.FQDNRule |
+			domain.SgIcmpRule | domain.SgSgIcmpRule
 	}
 
 	// DomainRcList -
@@ -157,6 +158,34 @@ func regHelpers() {
 	regProto2domain(func(p *protos.FqdnRule, r *domain.FQDNRule) {
 		var e error
 		if *r, e = sgAPI.Proto2ModelFQDNRule(p); e != nil {
+			panic(e)
+		}
+	})
+
+	// ---------------------- RC SGSGICMPRule -----------------
+	regKeyExtractor(func(m domain.SgIcmpRule) string {
+		return m.ID().String()
+	})
+	regIsEQ(func(l, r domain.SgIcmpRule) bool {
+		return l.IsEq(r)
+	})
+	regProto2domain(func(p *protos.SgIcmpRule, r *domain.SgIcmpRule) {
+		var e error
+		if *r, e = sgAPI.Proto2MOdelSgIcmpRule(p); e != nil {
+			panic(e)
+		}
+	})
+
+	// ---------------------- RC SGSGICMPRule -----------------
+	regKeyExtractor(func(m domain.SgSgIcmpRule) string {
+		return m.ID().String()
+	})
+	regIsEQ(func(l, r domain.SgSgIcmpRule) bool {
+		return l.IsEq(r)
+	})
+	regProto2domain(func(p *protos.SgSgIcmpRule, r *domain.SgSgIcmpRule) {
+		var e error
+		if *r, e = sgAPI.Proto2MOdelSgSgIcmpRule(p); e != nil {
 			panic(e)
 		}
 	})

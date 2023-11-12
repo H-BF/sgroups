@@ -30,26 +30,41 @@ func (sui *sgsTests) TestSgs() {
 	}
 	for _, tc := range testData.Cases {
 		tcName := tc.TestName
-		expectedBackend := tc.Expected.SecGroups.Decode()
-		nonExpectedBackend := tc.NonExpected.SecGroups.Decode()
+		expectedBackendGroups := tc.Expected.SecGroups.Decode()
+		nonExpectedBackendGroups := tc.NonExpected.SecGroups.Decode()
+		expectedBackendIcmps := tc.Expected.SgIcmpRules.Decode()
+		nonExpectedBackendIcmps := tc.NonExpected.SgIcmpRules.Decode()
 
 		resourceTestCase.Steps = append(resourceTestCase.Steps, resource.TestStep{
 			Config: tc.TfConfig,
 			Check: func(_ *terraform.State) error {
-				if len(expectedBackend)+len(nonExpectedBackend) > 0 {
+				if len(expectedBackendGroups)+len(nonExpectedBackendGroups) > 0 {
 					allSgs := sui.listAllSgs()
-					var checker fixtures.ExpectationsChecker[protos.SecGroup, domain.SecurityGroup]
-					checker.Init(allSgs)
+					var groupsChecker fixtures.ExpectationsChecker[protos.SecGroup, domain.SecurityGroup]
+					groupsChecker.Init(allSgs)
 
-					if !checker.WeExpectFindAll(expectedBackend) {
+					if !groupsChecker.WeExpectFindAll(expectedBackendGroups) {
 						return fmt.Errorf("on check '%s' we expect to find all these SecurityGroups[%s] in [%s]",
-							tcName, slice2string(expectedBackend...), slice2string(allSgs...))
+							tcName, slice2string(expectedBackendGroups...), slice2string(allSgs...))
+					}
+					if !groupsChecker.WeDontExpectFindAny(nonExpectedBackendGroups) {
+						return fmt.Errorf("on check '%s' we dont expect to find any of SecurityGroups[%s] in [%s]",
+							tcName, slice2string(nonExpectedBackendGroups...), slice2string(allSgs...))
 					}
 
-					if !checker.WeDontExpectFindAny(nonExpectedBackend) {
-						return fmt.Errorf("on check '%s' we dont expect to find any of SecurityGroups[%s] in [%s]",
-							tcName, slice2string(nonExpectedBackend...), slice2string(allSgs...))
+					// check for sub resource: SgIcmpRules
+					allIcmps := sui.listAllSgIcmpRules()
+					var icmpsChecker fixtures.ExpectationsChecker[protos.SgIcmpRule, domain.SgIcmpRule]
+					icmpsChecker.Init(allIcmps)
+					if !icmpsChecker.WeExpectFindAll(expectedBackendIcmps) {
+						return fmt.Errorf("on check '%s' we expect to find all these SgIcmpRules[%s] in [%s]",
+							tcName, slice2string(expectedBackendIcmps...), slice2string(allIcmps...))
 					}
+					if !icmpsChecker.WeDontExpectFindAny(nonExpectedBackendIcmps) {
+						return fmt.Errorf("on check '%s' we dont expect to find any of SgIcmpRules[%s] in [%s]",
+							tcName, slice2string(nonExpectedBackendIcmps...), slice2string(allIcmps...))
+					}
+
 				}
 				return nil
 			},
@@ -63,4 +78,10 @@ func (sui *sgsTests) listAllSgs() []*protos.SecGroup {
 	resp, err := sui.sgClient.ListSecurityGroups(sui.ctx, &protos.ListSecurityGroupsReq{SgNames: []string{}})
 	sui.Require().NoError(err)
 	return resp.GetGroups()
+}
+
+func (sui *sgsTests) listAllSgIcmpRules() []*protos.SgIcmpRule {
+	resp, err := sui.sgClient.FindSgIcmpRules(sui.ctx, &protos.FindSgIcmpRulesReq{})
+	sui.Require().NoError(err)
+	return resp.GetRules()
 }

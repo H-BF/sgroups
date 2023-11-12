@@ -46,11 +46,19 @@ cases:
           trace = true
           default_action = "DROP"
           networks = ["net1", "net2"]
+          icmp = {
+            logs = true
+            trace = true
+            type = [1,2,3]
+          }
         }
         sg2 = {
           name = "sg2"
           default_action = "ACCEPT"
           networks = ["net3", "net4"]
+          icmp6 = {
+            type = [0, 255]
+          }
         }
       }
     }
@@ -72,6 +80,31 @@ cases:
         "networks": ["net3", "net4"],
         "trace": false
       }
+    sg-icmp-rules:
+    - |
+      {
+        "ICMP": {
+          "IPv": "IPv4",
+          "Types": [
+            1,2,3
+          ]
+        },
+        "Sg": "sg1",
+        "logs": true,
+        "trace": true
+      }
+    - |
+      {
+        "ICMP": {
+          "IPv": "IPv6",
+          "Types": [
+            0,255
+          ]
+        },
+        "Sg": "sg2",
+        "logs": false,
+        "trace": false
+      }
 - name: "change-first-and-delete-second"
   tf-config: |
     resource "sgroups_groups" "sgs-set-1" {
@@ -82,6 +115,16 @@ cases:
           trace = false
           default_action = "DROP"
           networks = ["net1", "net5"]
+          icmp = {
+            logs = false
+            trace = false
+            type = [10,20,30,40]
+          }
+          icmp6 = {
+            logs = true
+            trace = false
+            type = [10,20,30]
+          }
         }
       }
     }
@@ -95,6 +138,31 @@ cases:
         "networks": ["net1", "net5"],
         "trace": false
       }
+    sg-icmp-rules:
+    - |
+      {
+        "ICMP": {
+          "IPv": "IPv4",
+          "Types": [
+            10,20,30,40
+          ]
+        },
+        "Sg": "sg1",
+        "logs": false,
+        "trace": false
+      }
+    - |
+      {
+        "ICMP": {
+          "IPv": "IPv6",
+          "Types": [
+            10,20,30
+          ]
+        },
+        "Sg": "sg1",
+        "logs": true,
+        "trace": false
+      }
   not-expected-backend:
     sec-groups:
     - |
@@ -103,5 +171,18 @@ cases:
         "logs": false,
         "name": "sg2",
         "networks": ["net3", "net4"],
+        "trace": false
+      }
+    sg-icmp-rules:
+    - |
+      {
+        "ICMP": {
+          "IPv": "IPv6",
+          "Types": [
+            0,255
+          ]
+        },
+        "Sg": "sg2",
+        "logs": false,
         "trace": false
       }

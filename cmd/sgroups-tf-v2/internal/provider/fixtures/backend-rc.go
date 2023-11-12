@@ -13,7 +13,8 @@ type (
 	// BackendRC -
 	BackendRC interface {
 		protos.Network | protos.SecGroup |
-			protos.Rule | protos.FqdnRule
+			protos.Rule | protos.FqdnRule |
+			protos.SgIcmpRule | protos.SgSgIcmpRule
 	}
 
 	// BackendRcList -
@@ -21,10 +22,12 @@ type (
 
 	// BackendState -
 	BackendState struct {
-		Networks    BackendRcList[protos.Network]  `yaml:"networks"`
-		SecGroups   BackendRcList[protos.SecGroup] `yaml:"sec-groups"`
-		SgSgRules   BackendRcList[protos.Rule]     `yaml:"sg-sg-rules"`
-		SgFqdnRules BackendRcList[protos.FqdnRule] `yaml:"sg-fqdn-rules"`
+		Networks      BackendRcList[protos.Network]      `yaml:"networks"`
+		SecGroups     BackendRcList[protos.SecGroup]     `yaml:"sec-groups"`
+		SgSgRules     BackendRcList[protos.Rule]         `yaml:"sg-sg-rules"`
+		SgFqdnRules   BackendRcList[protos.FqdnRule]     `yaml:"sg-fqdn-rules"`
+		SgIcmpRules   BackendRcList[protos.SgIcmpRule]   `yaml:"sg-icmp-rules"`
+		SgSgIcmpRules BackendRcList[protos.SgSgIcmpRule] `yaml:"sg-sg-icmp-rules"`
 	}
 )
 

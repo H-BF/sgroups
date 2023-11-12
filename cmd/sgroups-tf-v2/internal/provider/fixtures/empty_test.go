@@ -31,10 +31,11 @@ func Test_Load_AccTests(t *testing.T) {
 
 func Test_ExtractKey(t *testing.T) {
 	var (
-		net      domain.Network
-		sg       domain.SecurityGroup
-		fqdnRule domain.FQDNRule
-		sgRule   domain.SGRule
+		net        domain.Network
+		sg         domain.SecurityGroup
+		fqdnRule   domain.FQDNRule
+		sgRule     domain.SGRule
+		sgIcmpRule domain.SgSgIcmpRule
 	)
 	net.Name = "123"
 	require.Equal(t, net.Name, extractKey(net))
@@ -55,4 +56,10 @@ func Test_ExtractKey(t *testing.T) {
 		SgTo:      "b",
 	}
 	require.Equal(t, "tcp:sg(a)sg(b)", extractKey(sgRule))
+
+	sgIcmpRule.Icmp.IPv = 4
+	sgIcmpRule.SgFrom = "a"
+	sgIcmpRule.SgTo = "b"
+
+	require.Equal(t, "sg(a)sg(b)icmp4", extractKey(sgIcmpRule))
 }

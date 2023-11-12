@@ -321,7 +321,7 @@ func (o SgIcmpRuleID) IdentityHash() string {
 
 // String -
 func (o SgIcmpRuleID) String() string {
-	return fmt.Sprintf("sg(%s):icmp%v", o.Sg, o.IPv)
+	return fmt.Sprintf("sg(%s)icmp%v", o.Sg, o.IPv)
 }
 
 // IsEq -
