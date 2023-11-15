@@ -24,6 +24,7 @@ import (
 	util "github.com/google/nftables/binaryutil"
 	nfte "github.com/google/nftables/expr"
 	"github.com/pkg/errors"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -143,7 +144,7 @@ func (bt *batch) prepare() {
 	bt.initBaseRules()
 	bt.makeInOutChains(dirIN)
 	bt.makeInOutChains(dirOUT)
-	bt.addFinalRules()
+	bt.fwInOutAddDefaultRules()
 }
 
 func (bt *batch) addJob(n string, job jobf) {
@@ -239,17 +240,19 @@ func addTables(tx *Tx, tbs ...*nftLib.Table) error {
 }
 
 func (bt *batch) initTable() {
-	bt.table = &nftLib.Table{
-		Name:   bt.tableName,
-		Family: nftLib.TableFamilyINet,
-	}
-	bt.addJob("del-table", func(tx *Tx) error {
+	bt.addJob("init-table", func(tx *Tx) error {
+		bt.table = &nftLib.Table{
+			Name:   bt.tableName,
+			Family: nftLib.TableFamilyINet,
+			Flags:  unix.NFT_TABLE_F_DORMANT,
+		}
 		bt.log.Debugf("check and delete table '%s'", bt.table.Name)
-		return delTables(tx, bt.table)
-	})
-	bt.addJob("add-table", func(tx *Tx) error {
-		bt.log.Debugf("add table '%s'", bt.table.Name)
-		return addTables(tx, bt.table)
+		err := delTables(tx, bt.table)
+		if err == nil {
+			bt.log.Debugf("add table '%s'", bt.table.Name)
+			err = addTables(tx, bt.table)
+		}
+		return err
 	})
 }
 
@@ -508,7 +511,7 @@ func (bt *batch) populateOutSgFqdnRules(sg *cases.SG) {
 						return nil
 					}
 					bt.log.Debugf("add fqdn rule '%s' into '%s'/'%s' for addr-set '%s'",
-						rule.ID.FqdnTo, bt.tableName, targetChName, daddrSetName)
+						rule.ID.FqdnTo, bt.table.Name, targetChName, daddrSetName)
 					r := ports.D(
 						ports.S(
 							beginRule().daddr(ipV).inSet(daddr).protoIP(rule.ID.Transport),
@@ -588,7 +591,7 @@ func (bt *batch) populateDefaultIcmpRules(dir direction, sg *cases.SG) {
 				tern(rule.Icmp.IPv == model.IPv6, "6", "")
 				bt.log.Debugf("add default-icmp%v-rule into '%s'/'%s'",
 					tern(rule.Icmp.IPv == model.IPv6, "6", ""),
-					bt.tableName, targetChName)
+					bt.table.Name, targetChName)
 				rb := beginRule().metaNFTRACE(rule.Trace).
 					protoICMP(rule.Icmp).
 					counter()
@@ -622,7 +625,7 @@ func (bt *batch) populateInOutSgIcmpRules(dir direction, sg *cases.SG) {
 				bt.log.Debugf("add %s-sg-icmp%v-rule for addr-set '%s' into '%s'/'%s'",
 					tern(isIN, "in", "out"),
 					tern(rule.Icmp.IPv == model.IPv6, "6", ""),
-					addrSetName, targetChName, bt.tableName)
+					addrSetName, targetChName, bt.table.Name)
 				rb := beginRule().metaNFTRACE(rule.Trace)
 				rb = tern(isIN, rb.saddr, rb.daddr)(int(rule.Icmp.IPv)).
 					inSet(addrSet).
@@ -666,7 +669,7 @@ func (bt *batch) populateInOutSgRules(dir direction, sg *cases.SG) {
 					if chnApplyTo != nil && addrSet != nil {
 						bt.log.Debugf("add %s-sg-rule for addr-set '%s' into '%s'/'%s'",
 							tern(isIN, "in", "out"),
-							addrSetName, bt.tableName, targetSGchName)
+							addrSetName, bt.table.Name, targetSGchName)
 						r := beginRule()
 						if isIN {
 							r = ports.S(
@@ -730,7 +733,7 @@ func (bt *batch) chainInOutProlog(dir direction, sg *cases.SG) {
 						bt.table.Name, sgChName)
 				}
 				bt.log.Debugf("add goto-rule '%s'/('%s' -> '%s')",
-					bt.tableName, destChainName, sgChName)
+					bt.table.Name, destChainName, sgChName)
 				destChain := bt.chains.At(destChainName)
 				rb := beginRule()
 				tern(isIN, rb.daddr, rb.saddr)(ipV).
@@ -774,11 +777,13 @@ func (bt *batch) chainInOutEpilog(dir direction, sg *cases.SG) {
 		})
 }
 
-func (bt *batch) addFinalRules() {
-	bt.addJob("final", func(tx *Tx) error {
-		for _, ch := range sli(chnFWIN, chnFWOUT) {
-			beginRule().drop().applyRule(bt.chains.At(ch), tx.Conn)
-		}
-		return nil
-	})
+func (bt *batch) fwInOutAddDefaultRules() {
+	for _, chName := range sli(chnFWIN, chnFWOUT) {
+		chName := chName
+		bt.addJob("add-defualt-rules", func(tx *Tx) error {
+			bt.log.Debugf("add defult rules into chain '%s'/'%s'", chName, bt.table.Name)
+			beginRule().drop().applyRule(bt.chains.At(chName), tx.Conn)
+			return nil
+		})
+	}
 }

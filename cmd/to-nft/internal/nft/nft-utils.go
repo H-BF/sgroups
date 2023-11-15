@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"regexp"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -21,6 +23,45 @@ type (
 	nameUtils struct{}
 	setsUtils struct{}
 )
+
+const (
+	// MainTablePrefix -
+	MainTablePrefix = "main"
+)
+
+var (
+	reMainTable = regexp.MustCompile(`^` + MainTablePrefix + `-\d+$`)
+
+	nextUnixEpochInSeconds func() int64
+)
+
+func init() {
+	var (
+		prev int64
+		m    sync.Mutex
+	)
+	nextUnixEpochInSeconds = func() int64 {
+		m.Lock()
+		defer m.Unlock()
+		for {
+			d := time.Now().Unix()
+			if d > prev {
+				prev = d
+				break
+			}
+			time.Sleep(time.Second)
+		}
+		return prev
+	}
+}
+
+func (nameUtils) genMainTableName() string {
+	return fmt.Sprintf("%s-%v", MainTablePrefix, nextUnixEpochInSeconds())
+}
+
+func (nameUtils) isLikeMainTableName(s string) bool {
+	return reMainTable.MatchString(s)
+}
 
 func (nameUtils) nameOfInOutChain(dir direction, sgName string) string {
 	return tern(dir == dirIN, chnFWIN, chnFWOUT) + "-" + sgName

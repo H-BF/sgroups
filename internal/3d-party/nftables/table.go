@@ -18,6 +18,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/google/nftables/binaryutil"
 	"github.com/mdlayher/netlink"
 	"golang.org/x/sys/unix"
 )
@@ -47,7 +48,7 @@ type Table struct {
 	Family TableFamily
 }
 
-func (t *Table) flags2netlinkAttr() netlink.Attribute {
+func (t *Table) flags2netlinkAttr() netlink.Attribute { //это адов костыль
 	flags := []byte{0, 0, 0, 0}
 	if t.Flags != 0 {
 		binary.BigEndian.PutUint32(flags, t.Flags)
@@ -186,7 +187,12 @@ func tableFromMsg(msg netlink.Message) (*Table, error) {
 		case unix.NFTA_TABLE_USE:
 			t.Use = ad.Uint32()
 		case unix.NFTA_TABLE_FLAGS:
-			t.Flags = ad.Uint32()
+			if t.Flags = ad.Uint32(); t.Flags != 0 { //это адов костыль
+				f0 := binaryutil.NativeEndian.Uint32(binaryutil.BigEndian.PutUint32(unix.NFT_TABLE_F_DORMANT))
+				if t.Flags&f0 != 0 {
+					t.Flags = unix.NFT_TABLE_F_DORMANT
+				}
+			}
 		}
 	}
 
