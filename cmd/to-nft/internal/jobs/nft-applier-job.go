@@ -100,6 +100,7 @@ func (jb *NftApplierJob) Run(ctx context.Context) error {
 					break
 				}
 				if err != nil {
+					jb.agentSubject.Notify(metrics.NftApplierErrInc)
 					return err
 				}
 			}
@@ -154,6 +155,7 @@ func (jb *NftApplierJob) doApply(ctx context.Context) error {
 	}
 	appliedRules, err := jb.nftProcessor.ApplyConf(ctx, *jb.netConf)
 	if err != nil {
+		jb.agentSubject.Notify(metrics.NftApplierErrInc)
 		return err
 	}
 	jb.agentSubject.Notify(metrics.AppliedConfigsInc)

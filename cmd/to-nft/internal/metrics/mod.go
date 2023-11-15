@@ -20,16 +20,30 @@ type (
 
 	AppMetrics struct {
 		patterns.Observer
-		appliedConfigs prometheus.Counter
+		appliedConfigs   prometheus.Counter
+		netlinkErr       prometheus.Counter
+		syncStatusErr    prometheus.Counter
+		fqdnRefresherErr prometheus.Counter
+		nftApplierErr    prometheus.Counter
 	}
 )
 
 const (
 	MeasureType_Applied_Configs = iota
+
+	// Errors
+	MeasureType_Netlink_Err
+	MeasureType_SyncStatus_Err
+	MeasureType_FqdnRefresher_Err
+	MeasureType_NftApplier_Err
 )
 
 var (
-	AppliedConfigsInc = MeasureEvent{mType: MeasureType_Applied_Configs}
+	AppliedConfigsInc   = MeasureEvent{mType: MeasureType_Applied_Configs}
+	NetlinkErrInc       = MeasureEvent{mType: MeasureType_Netlink_Err}
+	SyncStatusErrInc    = MeasureEvent{mType: MeasureType_SyncStatus_Err}
+	FqdnRefresherErrInc = MeasureEvent{mType: MeasureType_FqdnRefresher_Err}
+	NftApplierErrInc    = MeasureEvent{mType: MeasureType_NftApplier_Err}
 )
 
 func NewAppMetrics(reg *prometheus.Registry, sgEp *pkgNet.Endpoint) (AppMetrics, error) {
@@ -44,8 +58,8 @@ func NewAppMetrics(reg *prometheus.Registry, sgEp *pkgNet.Endpoint) (AppMetrics,
 
 	appMetrics := AppMetrics{
 		appliedConfigs: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: "agent",
-			Subsystem: "applier",
+			Namespace: ns,
+			Subsystem: nftApplierSubsystem,
 			Name:      "applied_configs",
 			Help:      "Count of successfuly applied configurations",
 			ConstLabels: map[string]string{
@@ -53,12 +67,64 @@ func NewAppMetrics(reg *prometheus.Registry, sgEp *pkgNet.Endpoint) (AppMetrics,
 				"remote_host_name": hostname,
 			},
 		}),
+
+		netlinkErr: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: ns,
+			Subsystem: "netlink",
+			Name:      "errors",
+			Help:      "Count of errors received from NetlinkWatcher",
+			ConstLabels: map[string]string{
+				"remote_address":   outIP.String(),
+				"remote_host_name": hostname,
+			},
+		}),
+
+		syncStatusErr: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: ns,
+			Subsystem: "syncstatus",
+			Name:      "errors",
+			Help:      "Count of errors received from grpc call while updating SyncStatus",
+			ConstLabels: map[string]string{
+				"remote_address":   outIP.String(),
+				"remote_host_name": hostname,
+			},
+		}),
+
+		fqdnRefresherErr: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: ns,
+			Subsystem: "fqdnrefresher",
+			Name:      "errors",
+			Help:      "Count of failed attempts to refresh fqdn",
+			ConstLabels: map[string]string{
+				"remote_address":   outIP.String(),
+				"remote_host_name": hostname,
+			},
+		}),
+
+		nftApplierErr: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace: ns,
+			Subsystem: nftApplierSubsystem,
+			Name:      "errors",
+			Help:      "Count of failed nft config modifications",
+			ConstLabels: map[string]string{
+				"remote_address":   outIP.String(),
+				"remote_host_name": hostname,
+			},
+		}),
 	}
 
-	reg.Register(appMetrics.appliedConfigs)
+	appMetrics.register(reg)
 
 	appMetrics.Observer = patterns.NewObserver(appMetrics.ApplyMeasure, false, MeasureEvent{})
 	return appMetrics, nil
+}
+
+func (m AppMetrics) register(reg *prometheus.Registry) {
+	reg.Register(m.appliedConfigs)
+	reg.Register(m.netlinkErr)
+	reg.Register(m.syncStatusErr)
+	reg.Register(m.fqdnRefresherErr)
+	reg.Register(m.nftApplierErr)
 }
 
 func (m AppMetrics) ApplyMeasure(event patterns.EventType) {
@@ -66,6 +132,14 @@ func (m AppMetrics) ApplyMeasure(event patterns.EventType) {
 	switch measureEvent.mType {
 	case MeasureType_Applied_Configs:
 		m.appliedConfigs.Inc()
+	case MeasureType_Netlink_Err:
+		m.netlinkErr.Inc()
+	case MeasureType_SyncStatus_Err:
+		m.syncStatusErr.Inc()
+	case MeasureType_FqdnRefresher_Err:
+		m.fqdnRefresherErr.Inc()
+	case MeasureType_NftApplier_Err:
+		m.nftApplierErr.Inc()
 	}
 }
 
@@ -85,3 +159,8 @@ func GetOutboundIP(ep *pkgNet.Endpoint) (net.IP, error) {
 
 	return localAddr.IP, nil
 }
+
+const (
+	ns                  = "agent"
+	nftApplierSubsystem = "applier"
+)
