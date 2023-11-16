@@ -768,6 +768,7 @@ func (bt *batch) switch2NewConfig() {
 	bt.addJob("enable-new-config", func(tx *Tx) error {
 		if bt.table.Flags&uint32(unix.NFT_TABLE_F_DORMANT) != 0 {
 			bt.table.Flags &= ^uint32(unix.NFT_TABLE_F_DORMANT)
+			bt.log.Debugf("activate table '%s'", bt.table.Name)
 			_ = tx.AddTable(bt.table)
 		}
 		return nil
@@ -780,6 +781,7 @@ func (bt *batch) switch2NewConfig() {
 		var names nameUtils
 		for _, t := range tables {
 			if names.isLikeMainTableName(t.Name) && t.Name != bt.table.Name {
+				bt.log.Debugf("delete table '%s'", t.Name)
 				tx.DelTable(t)
 			}
 		}
