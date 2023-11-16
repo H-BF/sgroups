@@ -64,7 +64,6 @@ type (
 	batch struct {
 		log        logger.TypeOfLogger
 		txProvider TxProvider
-		tableName  string
 
 		localSGs       cases.SGs
 		networks       cases.SGsNetworks
@@ -145,6 +144,7 @@ func (bt *batch) prepare() {
 	bt.makeInOutChains(dirIN)
 	bt.makeInOutChains(dirOUT)
 	bt.fwInOutAddDefaultRules()
+	bt.switch2NewConfig()
 }
 
 func (bt *batch) addJob(n string, job jobf) {
@@ -205,54 +205,30 @@ loop:
 	return err
 }
 
-func delTables(tx *Tx, tbls ...*nftLib.Table) error {
-	const api = "del-table(s)"
-
-	var toDel di.HDict[NfTableKey, bool]
-	for _, tbl := range tbls {
-		toDel.Put(NfTableKey{tbl.Family, tbl.Name}, true)
-	}
-	if toDel.Len() == 0 {
-		return nil
-	}
-	tableList, err := tx.ListTables()
-	if err != nil {
-		return errors.WithMessagef(err, "%s: get list of tables", api)
-	}
-	for _, tbl := range tableList {
-		if toDel.At(NfTableKey{tbl.Family, tbl.Name}) {
-			tx.DelTable(tbl)
-		}
-	}
-	err = tx.Flush()
-	return errors.WithMessage(err, api)
-}
-
-func addTables(tx *Tx, tbs ...*nftLib.Table) error {
-	const api = "add-table(s)"
-	if len(tbs) == 0 {
-		return nil
-	}
-	for _, tbl := range tbs {
-		tx.AddTable(tbl)
-	}
-	return errors.WithMessage(tx.Flush(), api)
-}
-
 func (bt *batch) initTable() {
 	bt.addJob("init-table", func(tx *Tx) error {
-		bt.table = &nftLib.Table{
-			Name:   bt.tableName,
+		tlist, e := tx.ListTablesOfFamily(nftLib.TableFamilyINet)
+		if e != nil {
+			return e
+		}
+		newTableName := nameUtils{}.genMainTableName()
+		for _, o := range tlist {
+			if o.Name == newTableName {
+				bt.log.Debugf("delete table '%s'", newTableName)
+				tx.DelTable(o)
+				if e := tx.Flush(); e != nil {
+					return e
+				}
+				break
+			}
+		}
+		bt.log.Debugf("add table '%s'", newTableName)
+		bt.table = tx.AddTable(&nftLib.Table{
+			Name:   newTableName,
 			Family: nftLib.TableFamilyINet,
 			Flags:  unix.NFT_TABLE_F_DORMANT,
-		}
-		bt.log.Debugf("check and delete table '%s'", bt.table.Name)
-		err := delTables(tx, bt.table)
-		if err == nil {
-			bt.log.Debugf("add table '%s'", bt.table.Name)
-			err = addTables(tx, bt.table)
-		}
-		return err
+		})
+		return nil
 	})
 }
 
@@ -786,4 +762,27 @@ func (bt *batch) fwInOutAddDefaultRules() {
 			return nil
 		})
 	}
+}
+
+func (bt *batch) switch2NewConfig() {
+	bt.addJob("enable-new-config", func(tx *Tx) error {
+		if bt.table.Flags&uint32(unix.NFT_TABLE_F_DORMANT) != 0 {
+			bt.table.Flags &= ^uint32(unix.NFT_TABLE_F_DORMANT)
+			_ = tx.AddTable(bt.table)
+		}
+		return nil
+	})
+	bt.addJob("del-nonactual-configs", func(tx *Tx) error {
+		tables, err := tx.ListTables()
+		if err != nil {
+			return err
+		}
+		var names nameUtils
+		for _, t := range tables {
+			if names.isLikeMainTableName(t.Name) && t.Name != bt.table.Name {
+				tx.DelTable(t)
+			}
+		}
+		return nil
+	})
 }

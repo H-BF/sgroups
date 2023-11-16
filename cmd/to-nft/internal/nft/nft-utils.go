@@ -30,7 +30,7 @@ const (
 )
 
 var (
-	reMainTable = regexp.MustCompile(`^` + MainTablePrefix + `-\d+$`)
+	reMainTable = regexp.MustCompile(`^` + MainTablePrefix + `(-\d+)?$`)
 
 	nextUnixEpochInSeconds func() int64
 )
@@ -41,17 +41,19 @@ func init() {
 		m    sync.Mutex
 	)
 	nextUnixEpochInSeconds = func() int64 {
+		const milli = 1000
 		m.Lock()
 		defer m.Unlock()
 		for {
-			d := time.Now().Unix()
-			if d > prev {
+			d := time.Now().UnixMilli()
+			delta := d - prev
+			if delta > milli {
 				prev = d
 				break
 			}
-			time.Sleep(time.Second)
+			time.Sleep(time.Duration((milli - delta) * int64(time.Millisecond)))
 		}
-		return prev
+		return prev / milli
 	}
 }
 

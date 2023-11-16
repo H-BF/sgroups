@@ -30,16 +30,19 @@ type (
 )
 
 // Exec -
-func (exc BatchPerformer) Exec(ctx context.Context, opts ...BatchOpt) error {
-	b := batch{
+func (exc *BatchPerformer) Exec(ctx context.Context, opts ...BatchOpt) error {
+	b := &batch{
 		log:        logger.FromContext(ctx),
-		tableName:  exc.TableName,
 		txProvider: exc.Tx,
 	}
 	for _, o := range opts {
-		o.apply(&b)
+		o.apply(b)
 	}
-	return b.execute(ctx)
+	e := b.execute(ctx)
+	if e == nil {
+		exc.TableName = b.table.Name
+	}
+	return e
 }
 
 func (f funcBatchOpt) apply(b *batch) {
@@ -101,5 +104,3 @@ func WithLocalSGs(sgs cases.SGs) funcBatchOpt {
 		b.localSGs = sgs
 	}
 }
-
-//localSGs
