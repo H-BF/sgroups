@@ -3,10 +3,12 @@ package internal
 import (
 	"context"
 	"net/http"
+	"runtime"
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/metrics"
 	"github.com/H-BF/sgroups/internal/app"
 
+	app_identity "github.com/H-BF/corlib/app/identity"
 	pkgNet "github.com/H-BF/corlib/pkg/net"
 	"github.com/H-BF/corlib/server"
 	"github.com/prometheus/client_golang/prometheus"
@@ -23,13 +25,13 @@ func SetupServer(ctx context.Context) (*server.APIServer, error) {
 			app.NewHealthcheckMetric(prometheus.GaugeOpts{
 				Name: "healthcheck",
 				ConstLabels: map[string]string{
-					"name":       "agent",
-					"version":    "версия продукта",
-					"go_version": "(go версия)",
-					"build_ts":   "время сборки",
-					"branch":     "git ветка",
-					"hash":       "git hash",
-					"tag":        "some tag",
+					"name":       app_identity.Name,
+					"version":    app_identity.Version,
+					"go_version": runtime.Version(),
+					"build_ts":   app_identity.BuildTS,
+					"branch":     app_identity.BuildBranch,
+					"hash":       app_identity.BuildHash,
+					"tag":        app_identity.BuildTag,
 				},
 			}),
 		}
