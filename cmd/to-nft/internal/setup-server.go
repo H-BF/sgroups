@@ -2,13 +2,10 @@ package internal
 
 import (
 	"context"
-	"net/http"
-	"runtime"
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/metrics"
 	"github.com/H-BF/sgroups/internal/app"
 
-	app_identity "github.com/H-BF/corlib/app/identity"
 	pkgNet "github.com/H-BF/corlib/pkg/net"
 	"github.com/H-BF/corlib/server"
 	"github.com/prometheus/client_golang/prometheus"
@@ -22,18 +19,7 @@ func SetupServer(ctx context.Context) (*server.APIServer, error) {
 	)
 	app.WhenHaveMetricsRegistry(func(reg *prometheus.Registry) {
 		constMetrics := []prometheus.Collector{
-			app.NewHealthcheckMetric(prometheus.GaugeOpts{
-				Name: "healthcheck",
-				ConstLabels: map[string]string{
-					"name":       app_identity.Name,
-					"version":    app_identity.Version,
-					"go_version": runtime.Version(),
-					"build_ts":   app_identity.BuildTS,
-					"branch":     app_identity.BuildBranch,
-					"hash":       app_identity.BuildHash,
-					"tag":        app_identity.BuildTag,
-				},
-			}),
+			app.NewHealthcheckMetric(),
 		}
 		for _, m := range constMetrics {
 			if err = reg.Register(m); err != nil {
@@ -68,11 +54,7 @@ func SetupServer(ctx context.Context) (*server.APIServer, error) {
 	}
 
 	if hc, _ := HealthcheckEnable.Value(ctx); hc {
-		healthcheck := func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Add("Content-Type", "application/json")
-			_, _ = w.Write([]byte("{}"))
-		}
-		opts = append(opts, server.WithHttpHandler("/healthcheck", http.HandlerFunc(healthcheck)))
+		opts = append(opts, server.WithHttpHandler("/healthcheck", app.GetHCHandler()))
 	}
 	if err != nil {
 		return nil, err

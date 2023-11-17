@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/H-BF/sgroups/internal/patterns"
+	"go.uber.org/multierr"
 
 	pkgNet "github.com/H-BF/corlib/pkg/net"
 	"github.com/prometheus/client_golang/prometheus"
@@ -113,18 +114,22 @@ func NewAppMetrics(reg *prometheus.Registry, sgEp *pkgNet.Endpoint) (AppMetrics,
 		}),
 	}
 
-	appMetrics.register(reg)
+	if err := appMetrics.register(reg); err != nil {
+		return AppMetrics{}, err
+	}
 
 	appMetrics.Observer = patterns.NewObserver(appMetrics.ApplyMeasure, false, MeasureEvent{})
 	return appMetrics, nil
 }
 
-func (m AppMetrics) register(reg *prometheus.Registry) {
-	reg.Register(m.appliedConfigs)
-	reg.Register(m.netlinkErr)
-	reg.Register(m.syncStatusErr)
-	reg.Register(m.fqdnRefresherErr)
-	reg.Register(m.nftApplierErr)
+func (m AppMetrics) register(reg *prometheus.Registry) error {
+	return multierr.Combine(
+		reg.Register(m.appliedConfigs),
+		reg.Register(m.netlinkErr),
+		reg.Register(m.syncStatusErr),
+		reg.Register(m.fqdnRefresherErr),
+		reg.Register(m.nftApplierErr),
+	)
 }
 
 func (m AppMetrics) ApplyMeasure(event patterns.EventType) {
