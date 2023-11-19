@@ -3,7 +3,6 @@ package internal
 import (
 	"context"
 
-	"github.com/H-BF/sgroups/cmd/to-nft/internal/metrics"
 	"github.com/H-BF/sgroups/pkg/nl"
 
 	"github.com/H-BF/corlib/logger"
@@ -54,7 +53,6 @@ func (w *NetlinkEventSource) Run(ctx context.Context) error {
 					ev.Updates = append(ev.Updates, t)
 				case nl.ErrMsg:
 					log.Error(t)
-					w.AgentSubj.Notify(metrics.NetlinkErrInc)
 					w.AgentSubj.Notify(NetlinkError{ErrMsg: t})
 					return t
 				}

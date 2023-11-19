@@ -5,7 +5,6 @@ import (
 	"time"
 
 	sgAPI "github.com/H-BF/protos/pkg/api/sgroups"
-	"github.com/H-BF/sgroups/cmd/to-nft/internal/metrics"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	"github.com/H-BF/sgroups/pkg/atomic"
 
@@ -89,7 +88,6 @@ loop:
 			if e := errors.Cause(err); status.Code(e) != codes.Canceled {
 				log.Error(err, "; it will reconnect after ", reconnectTimeut)
 				ss.AgentSubj.Notify(SyncStatusError{error: err})
-				ss.AgentSubj.Notify(metrics.SyncStatusErrInc)
 			}
 			select {
 			case <-ctx.Done():
@@ -129,7 +127,6 @@ func (ss *SyncStatusEventSource) pull(ctx context.Context, tc *time.Ticker, log 
 			if e = errors.Cause(e); e != nil && status.Code(e) != codes.Canceled {
 				log.Error(e)
 				ss.AgentSubj.Notify(SyncStatusError{error: e})
-				ss.AgentSubj.Notify(metrics.SyncStatusErrInc)
 			}
 		}
 	}

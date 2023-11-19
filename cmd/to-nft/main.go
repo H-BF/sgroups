@@ -15,6 +15,7 @@ import (
 
 	"github.com/H-BF/corlib/logger"
 	"github.com/H-BF/corlib/pkg/parallel"
+	"github.com/H-BF/corlib/server"
 
 	pkgNet "github.com/H-BF/corlib/pkg/net"
 	gs "github.com/H-BF/corlib/pkg/patterns/graceful-shutdown"
@@ -70,8 +71,25 @@ func main() {
 	if err = SetupLogger(); err != nil {
 		logger.Fatal(ctx, errors.WithMessage(err, "setup logger"))
 	}
-	if err = app.SetupMetrics(MetricsEnable.MustValue(ctx)); err != nil {
+	if err = SetupMetrics(ctx); err != nil {
 		logger.Fatal(ctx, errors.WithMessage(err, "setup metrics"))
+	}
+
+	err = WhenSetupTelemtryServer(ctx, func(srv *server.APIServer) error {
+		addr := TelemetryEndpoint.MustValue(ctx)
+		ep, e := pkgNet.ParseEndpoint(addr)
+		if e != nil {
+			return errors.WithMessagef(e, "parse telemetry endpoint (%s): %v", addr, e)
+		}
+		go func() { //start telemetry endpoint
+			if e1 := srv.Run(ctx, ep); e1 != nil {
+				logger.Fatalf(ctx, "telemetry server is failed: %v", e1)
+			}
+		}()
+		return nil
+	})
+	if err != nil {
+		logger.Fatal(ctx, errors.WithMessage(err, "setup telemetry server"))
 	}
 
 	var dnsResolver DomainAddressQuerier
@@ -87,26 +105,6 @@ func main() {
 		)
 		AgentSubject().ObserversAttach(o)
 	}
-
-	var ep *pkgNet.Endpoint
-	_, err = TelemetryEndpoint.Value(ctx, TelemetryEndpoint.OptSink(func(v string) error {
-		var e error
-		if ep, e = pkgNet.ParseEndpoint(v); e != nil {
-			logger.Fatalf(ctx, "parse telemetry endpoint (%s): %v", v, e)
-		}
-		return nil
-	}))
-	if err != nil && errors.Is(err, config.ErrNotFound) {
-		logger.Fatal(ctx, errors.WithMessage(err, "telemetry endpoint is absent"))
-	}
-
-	server, err := SetupServer(ctx)
-	if err != nil {
-		logger.Fatalf(ctx, "setup server: %v", err)
-	}
-	go func() {
-		logger.Fatal(ctx, server.Run(ctx, ep))
-	}()
 
 	go func() {
 		r := jobs.FqdnRefresher{

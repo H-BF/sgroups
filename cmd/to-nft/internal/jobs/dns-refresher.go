@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal"
-	"github.com/H-BF/sgroups/cmd/to-nft/internal/metrics"
 	"github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	"github.com/H-BF/sgroups/internal/queue"
@@ -78,7 +77,6 @@ func (rf *FqdnRefresher) Run(ctx context.Context) {
 			case DomainAddresses:
 				log1 := log.WithField("domain", ev.FQDN).WithField("ip-v", ev.IpVersion)
 				if e := ev.DnsAnswer.Err; e != nil {
-					rf.AgentSubj.Notify(metrics.FqdnRefresherErrInc)
 					log1.Error(e)
 				} else {
 					log1.Debug("resolved")

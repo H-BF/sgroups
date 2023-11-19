@@ -34,8 +34,11 @@ func main() {
 		logger.Fatal(ctx, errors.WithMessage(err, "when setup logger"))
 	}
 
-	if err = app.SetupMetrics(MetricsEnable.MustValue(ctx)); err != nil {
-		logger.Fatal(ctx, errors.WithMessage(err, "when setup metrics"))
+	if MetricsEnable.MustValue(ctx) {
+		err = app.SetupMetrics()
+		if err != nil {
+			logger.Fatal(ctx, errors.WithMessage(err, "when setup metrics"))
+		}
 	}
 
 	var ep *pkgNet.Endpoint

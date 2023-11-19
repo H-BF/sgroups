@@ -5,7 +5,6 @@ import (
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/host"
-	"github.com/H-BF/sgroups/cmd/to-nft/internal/metrics"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	"github.com/H-BF/sgroups/internal/queue"
@@ -100,7 +99,6 @@ func (jb *NftApplierJob) Run(ctx context.Context) error {
 					break
 				}
 				if err != nil {
-					jb.agentSubject.Notify(metrics.NftApplierErrInc)
 					return err
 				}
 			}
@@ -155,10 +153,8 @@ func (jb *NftApplierJob) doApply(ctx context.Context) error {
 	}
 	appliedRules, err := jb.nftProcessor.ApplyConf(ctx, *jb.netConf)
 	if err != nil {
-		jb.agentSubject.Notify(metrics.NftApplierErrInc)
 		return err
 	}
-	jb.agentSubject.Notify(metrics.AppliedConfigsInc)
 	jb.appliedRules = &appliedRules
 	ev := AppliedConfEvent{
 		UID:          uuid.NewV4(),

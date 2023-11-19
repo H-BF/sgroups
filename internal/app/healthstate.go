@@ -11,43 +11,56 @@ import (
 )
 
 type (
-	BuildInfo struct {
-		Name      string
-		Version   string
-		GoVersion string
-		BuildTs   string
-		Branch    string
-		Hash      string
-		Tag       string
-	}
+	// BuildInfoHandler -
+	BuildInfoHandler struct{}
 )
 
 var (
 	healthState atomic.Bool
-	buildInfo   = BuildInfo{
-		Name:      app_identity.Name,
-		Version:   app_identity.Version,
-		GoVersion: runtime.Version(),
-		BuildTs:   app_identity.BuildTS,
-		Branch:    app_identity.BuildBranch,
-		Hash:      app_identity.BuildHash,
-		Tag:       app_identity.BuildTag,
-	}
+	bldInfo     = make(map[string]string)
 )
 
 func init() {
 	healthState.Store(true)
+	bldItem := []struct {
+		name string
+		val  string
+	}{
+		{"name", app_identity.Name},
+		{"version", app_identity.Version},
+		{"go_version", runtime.Version()},
+		{"build_ts", app_identity.BuildTS},
+		{"branch", app_identity.BuildBranch},
+		{"hash", app_identity.BuildHash},
+		{"tag", app_identity.BuildTag},
+	}
+	for _, n := range bldItem {
+		if len(n.val) > 0 {
+			bldInfo[n.name] = n.val
+		}
+	}
 }
 
+// SetHealthState -
 func SetHealthState(state bool) {
 	healthState.Store(state)
 }
 
-func NewHealthcheckMetric() prometheus.Collector {
+// NewHealthcheckMetric -
+func NewHealthcheckMetric(withAdditionalLabels prometheus.Labels) prometheus.Collector {
+	labs := make(map[string]string)
+	for k, v := range bldInfo {
+		labs[k] = v
+	}
+	for k, v := range withAdditionalLabels {
+		if _, has := labs[k]; !has {
+			labs[k] = v
+		}
+	}
 	opts := prometheus.GaugeOpts{
 		Name:        "healthcheck",
 		Help:        "Healthcheck. Possible values: 0 or 1.",
-		ConstLabels: buildInfo.toMap(),
+		ConstLabels: labs,
 	}
 	return prometheus.NewGaugeFunc(opts, func() float64 {
 		if healthState.Load() {
@@ -57,23 +70,12 @@ func NewHealthcheckMetric() prometheus.Collector {
 	})
 }
 
-func GetHCHandler() http.Handler {
-	return &buildInfo
-}
-
-func (bi *BuildInfo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+// ServeHTTP -
+func (BuildInfoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	nfo := struct {
+		App     any
+		Healthy bool
+	}{bldInfo, healthState.Load()}
 	w.Header().Add("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(bi)
-}
-
-func (bi *BuildInfo) toMap() map[string]string {
-	return map[string]string{
-		"name":       bi.Name,
-		"version":    bi.Version,
-		"go_version": bi.GoVersion,
-		"build_ts":   bi.BuildTs,
-		"branch":     bi.Branch,
-		"hash":       bi.Hash,
-		"tag":        bi.Tag,
-	}
+	json.NewEncoder(w).Encode(nfo)
 }
