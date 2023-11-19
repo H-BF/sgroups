@@ -71,7 +71,7 @@ func (am *AgentMetrics) init(labels prometheus.Labels) {
 	am.appliedConfigCount = prometheus.NewCounter(prometheus.CounterOpts{
 		Namespace:   nsAgent,
 		Name:        "applied_configs",
-		Help:        "Count of successfuly applied configurations",
+		Help:        "count of successfully applied configurations",
 		ConstLabels: labels,
 	})
 	am.errorCount = prometheus.NewCounterVec(prometheus.CounterOpts{

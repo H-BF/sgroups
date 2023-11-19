@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"runtime"
@@ -77,5 +78,10 @@ func (BuildInfoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Healthy bool
 	}{bldInfo, healthState.Load()}
 	w.Header().Add("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(nfo)
+	bt := bytes.NewBuffer(nil)
+	if e := json.NewEncoder(bt).Encode(nfo); e != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+	} else {
+		_, _ = w.Write(bt.Bytes())
+	}
 }
