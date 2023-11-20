@@ -1,0 +1,103 @@
+initial-backend:
+  networks: 
+  - |
+    {
+      "name": "net1",
+      "network": {
+        "CIDR": "10.10.8.0/24"
+      }
+    }
+  - |
+    {
+      "name": "net2",
+      "network": {
+        "CIDR": "10.10.9.0/24"
+      }
+    } 
+cases:
+- name: "add-new-networks"
+  tf-config: |
+    resource "sgroups_networks" "nws-set-1" {
+      items = {
+        nw1 = {
+          name = "nw1"
+          cidr = "10.10.10.0/24"
+        }
+        nw2 = {
+          name = "nw2"
+          cidr = "10.10.11.0/24"
+        }
+      }
+    }
+  expected-backend:
+    networks:
+    - |
+      {
+        "name": "net1",
+        "network": {
+          "CIDR": "10.10.8.0/24"
+        }
+      }
+    - |
+      {
+        "name": "net2",
+        "network": {
+          "CIDR": "10.10.9.0/24"
+        }
+      } 
+    - |
+      {
+        "name": "nw1",
+        "network": {
+          "CIDR": "10.10.10.0/24"
+        }
+      }
+    - |
+      {
+        "name": "nw2",
+        "network": {
+          "CIDR": "10.10.11.0/24"
+        }
+      }
+- name: "change-first-and-delete-second"
+  tf-config: |
+    resource "sgroups_networks" "nws-set-1" {
+      items = {
+        nw1 = {
+          name = "nw1"
+          cidr = "20.20.20.0/24"
+        }
+      }
+    }
+  expected-backend:
+    networks:
+    - |
+      {
+        "name": "net1",
+        "network": {
+          "CIDR": "10.10.8.0/24"
+        }
+      }
+    - |
+      {
+        "name": "net2",
+        "network": {
+          "CIDR": "10.10.9.0/24"
+        }
+      } 
+    - |
+      {
+        "name": "nw1",
+        "network": {
+          "CIDR": "20.20.20.0/24"
+        }
+      }
+  not-expected-backend:
+    networks:
+    - |
+      {
+        "name": "nw2",
+        "network": {
+          "CIDR": "10.10.11.0/24"
+        }
+      }

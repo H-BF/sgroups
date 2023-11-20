@@ -16,6 +16,9 @@ func IntegrityChecker4SGRules() IntegrityChecker {
 
 	return func(reader MemDbReader) error {
 		it, err := reader.Get(TblSecRules, indexID)
+		if isInvalidTableErr(err) {
+			return nil
+		}
 		if err != nil {
 			return errors.WithMessage(err, api)
 		}
@@ -35,7 +38,6 @@ func IntegrityChecker4SGRules() IntegrityChecker {
 				}
 			}
 		}
-
 		return nil
 	}
 }
@@ -46,6 +48,9 @@ func IntegrityChecker4FqdnRules() IntegrityChecker {
 
 	return func(reader MemDbReader) error {
 		it, err := reader.Get(TblFqdnRules, indexID)
+		if isInvalidTableErr(err) {
+			return nil
+		}
 		if err != nil {
 			return errors.WithMessage(err, api)
 		}
@@ -72,6 +77,9 @@ func IntegrityChecker4SG() IntegrityChecker {
 
 	return func(reader MemDbReader) error {
 		it, e := reader.Get(TblSecGroups, indexID)
+		if isInvalidTableErr(e) {
+			return nil
+		}
 		if e != nil {
 			return errors.WithMessage(e, api)
 		}
@@ -111,7 +119,7 @@ func IntegrityChecker4SG() IntegrityChecker {
 }
 
 // IntegrityChecker4Networks checks if every network does overlap another one
-func IntegrityChecker4Networks() IntegrityChecker {
+func IntegrityChecker4Networks() IntegrityChecker { //nolint:gocyclo
 	const api = "Integrity-of-Networks"
 
 	type bound struct {
@@ -121,6 +129,9 @@ func IntegrityChecker4Networks() IntegrityChecker {
 	}
 	return func(reader MemDbReader) error {
 		it, e := reader.Get(TblNetworks, indexID)
+		if isInvalidTableErr(e) {
+			return nil
+		}
 		if e != nil {
 			return errors.WithMessage(e, api)
 		}
@@ -175,6 +186,60 @@ func IntegrityChecker4Networks() IntegrityChecker {
 				if (i > 0) && (c > 1 || c < 0) {
 					return errors.Errorf("%s: networks %s and %s seem have overlapped region",
 						api, b.n, bds[i-1].n)
+				}
+			}
+		}
+		return nil
+	}
+}
+
+// IntegrityChecker4SgIcmpRules -
+func IntegrityChecker4SgIcmpRules() IntegrityChecker {
+	const api = "Integrity-of-SgIcmpRules"
+
+	return func(reader MemDbReader) error {
+		it, e := reader.Get(TblSgIcmpRules, indexID)
+		if isInvalidTableErr(e) {
+			return nil
+		}
+		if e != nil {
+			return errors.WithMessage(e, api)
+		}
+		for x := it.Next(); x != nil; x = it.Next() {
+			r := x.(*model.SgIcmpRule)
+			i, e := reader.First(TblSecGroups, indexID, r.Sg)
+			if e != nil {
+				return errors.WithMessagef(e, "%s: find ref to SG '%s'", api, r.Sg)
+			}
+			if i == nil {
+				return errors.Errorf("%s: not found ref to SG '%s'", api, r.Sg)
+			}
+		}
+		return nil
+	}
+}
+
+// IntegrityChecker4SgIcmpRules -
+func IntegrityChecker4SgSgIcmpRules() IntegrityChecker {
+	const api = "Integrity-of-SgSgIcmpRules"
+
+	return func(reader MemDbReader) error {
+		it, e := reader.Get(TblSgSgIcmpRules, indexID)
+		if isInvalidTableErr(e) {
+			return nil
+		}
+		if e != nil {
+			return errors.WithMessage(e, api)
+		}
+		for x := it.Next(); x != nil; x = it.Next() {
+			r := x.(*model.SgSgIcmpRule)
+			for _, sg := range [...]string{r.SgFrom, r.SgTo} {
+				i, e := reader.First(TblSecGroups, indexID, sg)
+				if e != nil {
+					return errors.WithMessagef(e, "%s: find ref to SG '%s'", api, sg)
+				}
+				if i == nil {
+					return errors.Errorf("%s: not found ref to SG '%s'", api, sg)
 				}
 			}
 		}

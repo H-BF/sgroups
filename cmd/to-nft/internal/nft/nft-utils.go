@@ -22,6 +22,10 @@ type (
 	setsUtils struct{}
 )
 
+func (nameUtils) nameOfInOutChain(dir direction, sgName string) string {
+	return tern(dir == dirIN, chnFWIN, chnFWOUT) + "-" + sgName
+}
+
 func (nameUtils) nameOfFqdnNetSet(ipV ipVersion, domain model.FQDN) string {
 	return fmt.Sprintf("NetIPv%v-fqdn-%s", ipV, strings.ToLower(domain.String()))
 }

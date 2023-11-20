@@ -3,6 +3,8 @@ package sgroups
 import (
 	"sync"
 
+	"github.com/H-BF/sgroups/internal/dict"
+
 	"github.com/hashicorp/go-memdb"
 	"github.com/pkg/errors"
 )
@@ -13,49 +15,53 @@ type IndexID = string
 const ( //indexes
 	indexID    IndexID = "id"
 	indexIPNet IndexID = "ip-net"
+	indexSG    IndexID = "sg"
 )
 
 type (
-	//MemDbIterator alias to memdb.ResultIterator
+	// MemDbIterator alias to memdb.ResultIterator
 	MemDbIterator = memdb.ResultIterator
 
-	//MemDbSchema alias to memdb.DBSchema
+	// MemDbSchema alias to memdb.DBSchema
 	MemDbSchema = memdb.DBSchema
 
-	//MemDbTableSchema alias to memdb.TableSchema
+	// MemDbTableSchema alias to memdb.TableSchema
 	MemDbTableSchema = memdb.TableSchema
 
-	//MemDbIndexSchema alias to memdb.IndexSchema
+	// MemDbIndexSchema alias to memdb.IndexSchema
 	MemDbIndexSchema = memdb.IndexSchema
 
-	//MemDbStringFieldIndex alias to MemDbStringFieldIndex
+	// MemDbStringFieldIndex alias to MemDbStringFieldIndex
 	MemDbStringFieldIndex = memdb.StringFieldIndex
 
-	//MemDB memory db impl
+	// MemDB memory db impl
 	MemDB interface {
 		Reader() MemDbReader
 		Writer() MemDbWriter
 		Schema() *MemDbSchema
 	}
 
-	//MemDbOption update option
+	// MemDbOption update option
 	MemDbOption interface {
 		privateMemDbOption()
 	}
 
-	//MemDbSchemaInit init mem db schema Option
+	// MemDbSchemaInit init mem db schema Option
 	MemDbSchemaInit func(*MemDbSchema)
 
-	//IntegrityChecker mem db data integrity checker
+	// IntegrityChecker mem db data integrity checker
 	IntegrityChecker func(MemDbReader) error
 
-	//MemDbReader reader interface
+	// MemDBTables is a MemDbOption
+	MemDBTables []TableID
+
+	// MemDbReader reader interface
 	MemDbReader interface {
 		First(tabName TableID, index IndexID, args ...interface{}) (interface{}, error)
 		Get(tabName TableID, index IndexID, args ...interface{}) (MemDbIterator, error)
 	}
 
-	//MemDbWriter writer interface
+	// MemDbWriter writer interface
 	MemDbWriter interface {
 		MemDbReader
 		Commit() error
@@ -66,26 +72,39 @@ type (
 	}
 )
 
+// AllTables -
+func AllTables() MemDbOption {
+	return MemDBTables([]TableID{
+		TblNetworks, TblSecGroups, TblSecRules,
+		TblSyncStatus, TblFqdnRules, TblSgIcmpRules,
+		TblSgSgIcmpRules,
+	})
+}
+
 // NewMemDB creates memory db instance
 func NewMemDB(opts ...MemDbOption) (MemDB, error) {
+	var seenTables dict.HSet[TableID]
 	sch := &memdb.DBSchema{Tables: make(map[string]*memdb.TableSchema)}
+	var checks []IntegrityChecker
 	for i := range opts {
 		switch o := opts[i].(type) {
-		case TableID:
-			o.memDbSchema()(sch)
+		case MemDBTables:
+			for _, t := range o {
+				if seenTables.Insert(t) {
+					t.memDbSchema()(sch)
+					checks = append(checks, t.IntegrityChecks()...)
+				}
+			}
 		case MemDbSchemaInit:
 			o(sch)
+		case IntegrityChecker:
+			checks = append(checks, o)
 		}
 	}
 	var err error
 	var ret memDb
 	if ret.db, err = memdb.NewMemDB(sch); err == nil {
-		for i := range opts {
-			switch o := opts[i].(type) {
-			case IntegrityChecker:
-				ret.integrityChecker = append(ret.integrityChecker, o)
-			}
-		}
+		ret.integrityChecker = checks
 	}
 	return ret, err
 }
@@ -206,3 +225,4 @@ func (tx *memDbWriter) checkIndexesViolation() error {
 
 func (MemDbSchemaInit) privateMemDbOption()  {}
 func (IntegrityChecker) privateMemDbOption() {}
+func (MemDBTables) privateMemDbOption()      {}

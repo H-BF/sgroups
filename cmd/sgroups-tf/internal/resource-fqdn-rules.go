@@ -104,7 +104,10 @@ func fqdnRulesR(ctx context.Context, rd *schema.ResourceData, i interface{}) dia
 	)
 }
 
-type crudFqdnRules = listedRcCRUD[sgroupsAPI.FqdnRule]
+type crudFqdnRules = listedRcCRUD[
+	sgroupsAPI.FqdnRule,
+	anyConstructor[sgroupsAPI.FqdnRule],
+]
 
 func fqdnRulesU(ctx context.Context, rd *schema.ResourceData, i interface{}) diag.Diagnostics {
 	crud := crudFqdnRules{tf2proto: tf2protoFqdnRule, labelItems: RcLabelItems, client: i.(SGClient)}

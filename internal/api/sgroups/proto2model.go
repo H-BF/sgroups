@@ -55,6 +55,22 @@ func Proto2ModelFQDNRule(src *sg.FqdnRule) (model.FQDNRule, error) {
 	return ret, errors.WithMessage(err, api)
 }
 
+// Proto2MOdelSgIcmpRule conv SgIcmpRule (proto --> model)
+func Proto2MOdelSgIcmpRule(src *sg.SgIcmpRule) (model.SgIcmpRule, error) {
+	const api = "proto2model-SgIcmpRule-conv"
+	var ret model.SgIcmpRule
+	err := prtoto2SgIcmpRule{SgIcmpRule: &ret}.from(src)
+	return ret, errors.WithMessage(err, api)
+}
+
+// Proto2MOdelSgSgIcmpRule conv SgSgIcmpRule (proto --> model)
+func Proto2MOdelSgSgIcmpRule(src *sg.SgSgIcmpRule) (model.SgSgIcmpRule, error) {
+	const api = "proto2model-SgSgIcmpRule-conv"
+	var ret model.SgSgIcmpRule
+	err := prtoto2SgSgIcmpRule{SgSgIcmpRule: &ret}.from(src)
+	return ret, errors.WithMessage(err, api)
+}
+
 /*//
 // Proto2ModelPortRanges -
 func Proto2ModelPortRanges(src []*sg.AccPorts) ([]model.SGRulePorts, error) {

@@ -161,8 +161,37 @@ func (o FQDN) Validate() error {
 	return nil
 }
 
+// Validate impl Validator
+func (o ICMP) Validate() error {
+	return oz.ValidateStruct(&o,
+		oz.Field(&o.IPv, oz.Required, oz.In(uint8(IPv4), uint8(IPv6)).
+			Error("IPv should be in [4,6]")),
+	)
+}
+
+// Validate impl Validator
+func (o SgIcmpRule) Validate() error {
+	return oz.ValidateStruct(&o,
+		oz.Field(&o.Sg, oz.Required.Error("security grpoup name is rquired"),
+			oz.Match(reCName)),
+		oz.Field(&o.Icmp),
+	)
+}
+
+// Validate impl Validator
+func (o SgSgIcmpRule) Validate() error {
+	const msg = "security grpoup name is rquired"
+	return oz.ValidateStruct(&o,
+		oz.Field(&o.SgFrom, oz.Required.Error(msg),
+			oz.Match(reCName)),
+		oz.Field(&o.SgTo, oz.Required.Error(msg),
+			oz.Match(reCName)),
+		oz.Field(&o.Icmp),
+	)
+}
+
 var (
-	reCName = regexp.MustCompile(`^\w(?:.*\w)?$`)
+	reCName = regexp.MustCompile(`^\S(.*\S)?$`)
 
 	reFQDN = regexp.MustCompile(`(?ims)^([a-z0-9\*][a-z0-9_-]{1,62}){1}(\.[a-z0-9_][a-z0-9_-]{0,62})*$`)
 )

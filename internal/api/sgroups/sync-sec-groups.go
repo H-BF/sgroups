@@ -1,51 +1,12 @@
 package sgroups
 
 import (
-	"context"
-
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 
 	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/pkg/errors"
 )
-
-type syncGroups struct {
-	wr     registry.Writer
-	groups []*sg.SecGroup
-	ops    sg.SyncReq_SyncOp
-}
-
-func (snc syncGroups) process(ctx context.Context) error {
-	var names []string
-	var groups []model.SecurityGroup
-	for _, g := range snc.groups {
-		if snc.ops == sg.SyncReq_Delete {
-			if names == nil {
-				names = make([]string, 0, len(snc.groups))
-			}
-			names = append(names, g.GetName())
-		} else {
-			if groups == nil {
-				groups = make([]model.SecurityGroup, 0, len(snc.groups))
-			}
-			var x securityGroup
-			if e := x.from(g); e != nil {
-				return e
-			}
-			groups = append(groups, x.SecurityGroup)
-		}
-	}
-	var sc registry.Scope = registry.NoScope
-	if snc.ops == sg.SyncReq_Delete {
-		sc = registry.SG(names...)
-	}
-	var opts []registry.Option
-	if err := syncOptionsFromProto(snc.ops, &opts); err != nil {
-		return err
-	}
-	return snc.wr.SyncSecurityGroups(ctx, groups, sc, opts...)
-}
 
 type securityGroup struct {
 	model.SecurityGroup
@@ -68,3 +29,18 @@ func (n *securityGroup) from(g *sg.SecGroup) error {
 	}
 	return nil
 }
+
+var syncSecurityGroups = syncAlg[model.SecurityGroup, *sg.SecGroup]{
+	makePrimaryKeyScope: func(sgs []model.SecurityGroup) registry.Scope {
+		names := make([]string, 0, len(sgs))
+		for _, sg := range sgs {
+			names = append(names, sg.Name)
+		}
+		return registry.SG(names...)
+	},
+	proto2model: func(sg *sg.SecGroup) (model.SecurityGroup, error) {
+		var x securityGroup
+		err := x.from(sg)
+		return x.SecurityGroup, err
+	},
+}.process

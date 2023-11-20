@@ -17,11 +17,14 @@ import (
 type (
 	// AppliedRules -
 	AppliedRules struct {
-		NetNS        string
-		TargetTable  string
-		BaseRules    BaseRules
-		SG2SGRules   cases.SG2SGRules
-		SG2FQDNRules cases.SG2FQDNRules
+		NetNS         string
+		TargetTable   string
+		BaseRules     BaseRules
+		LocalSGs      cases.SGs
+		SG2SGRules    cases.SG2SGRules
+		SG2FQDNRules  cases.SG2FQDNRules
+		SgIcmpRules   cases.SgIcmpRules
+		SgSgIcmpRules cases.SgSgIcmpRules
 	}
 
 	// Patch -

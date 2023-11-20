@@ -83,6 +83,34 @@ type (
 		Updtated          time.Time `db:"updated_at"`
 		TotalAffectedRows int64     `db:"total_affected_rows"`
 	}
+
+	// IpFamily -
+	IpFamily string
+
+	// IcmpTypes -
+	IcmpTypes []int16
+
+	ICMP struct {
+		IPv   IpFamily  `db:"ip_v"`
+		Tytes IcmpTypes `db:"types"`
+	}
+
+	// SgIcmpRule -
+	SgIcmpRule struct {
+		ICMP
+		Sg    string `db:"sg"`
+		Logs  bool   `db:"logs"`
+		Trace bool   `db:"trace"`
+	}
+
+	// SgSgImpRule -
+	SgSgIcmpRule struct {
+		ICMP
+		SgFrom string `db:"sg_from"`
+		SgTo   string `db:"sg_to"`
+		Logs   bool   `db:"logs"`
+		Trace  bool   `db:"trace"`
+	}
 )
 
 // Load -
@@ -187,6 +215,26 @@ func RegisterSGroupsTypesOntoPGX(ctx context.Context, c *pgx.Conn) (err error) {
 	pgTypeMap.RegisterType(pgType)
 	{
 		var x FQDN
+		pgTypeMap.RegisterDefaultPgType(x, pgType.Name)
+		pgTypeMap.RegisterDefaultPgType(&x, pgType.Name)
+	}
+
+	if pgType, err = c.LoadType(ctx, "sgroups.ip_family"); err != nil {
+		return err
+	}
+	pgTypeMap.RegisterType(pgType)
+	{
+		var x IpFamily
+		pgTypeMap.RegisterDefaultPgType(x, pgType.Name)
+		pgTypeMap.RegisterDefaultPgType(&x, pgType.Name)
+	}
+
+	if pgType, err = c.LoadType(ctx, "sgroups.icmp_types"); err != nil {
+		return err
+	}
+	pgTypeMap.RegisterType(pgType)
+	{
+		var x IcmpTypes
 		pgTypeMap.RegisterDefaultPgType(x, pgType.Name)
 		pgTypeMap.RegisterDefaultPgType(&x, pgType.Name)
 	}

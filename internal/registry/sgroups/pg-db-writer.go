@@ -148,6 +148,7 @@ func (wr *pgDbWriter) SyncSGRules(ctx context.Context, rules []model.SGRule, sco
 // SyncFqdnRules impl Writer interface
 func (wr *pgDbWriter) SyncFqdnRules(ctx context.Context, rules []model.FQDNRule, scope Scope, opts ...Option) error { //nolint:dupl
 	const api = "PG/SyncSG2FQDNRules"
+
 	var err error
 	var affected int64
 	defer func() {
@@ -165,6 +166,82 @@ func (wr *pgDbWriter) SyncFqdnRules(ctx context.Context, rules []model.FQDNRule,
 	switch v := scope.(type) {
 	case scopedFqdnRuleIdentity:
 		ids := make([]model.FQDNRuleIdentity, 0, len(v))
+		for _, id := range v {
+			ids = append(ids, id)
+		}
+		if err = snc.AddToFilter(ctx, ids...); err != nil {
+			return err
+		}
+	case noScope:
+	default:
+		return ErrUnexpectedScope
+	}
+	affected, err = snc.Sync(ctx)
+	if err == nil && affected > 0 {
+		atomic.AddInt64(wr.affectedRows, affected)
+	}
+	return err
+}
+
+// SyncSgIcmpRules impl Writer interface
+func (wr *pgDbWriter) SyncSgIcmpRules(ctx context.Context, rules []model.SgIcmpRule, scope Scope, opts ...Option) error { //nolint:dupl
+	const api = "PG/SyncSgIcmpRules"
+
+	var err error
+	var affected int64
+	defer func() {
+		err = errors.WithMessage(err, api)
+	}()
+	var tx pgx.Tx
+	if tx, err = wr.tx(); err != nil {
+		return err
+	}
+	snc := pg.SyncerOfSgIcmpRules{C: tx.Conn()}
+	snc.Upd, snc.Ins, snc.Del = wr.opts2flags(opts)
+	if err = snc.AddData(ctx, rules...); err != nil {
+		return err
+	}
+	switch v := scope.(type) {
+	case scopedSgIcmpIdentity:
+		ids := make([]model.SgIcmpRuleID, 0, len(v))
+		for _, id := range v {
+			ids = append(ids, id)
+		}
+		if err = snc.AddToFilter(ctx, ids...); err != nil {
+			return err
+		}
+	case noScope:
+	default:
+		return ErrUnexpectedScope
+	}
+	affected, err = snc.Sync(ctx)
+	if err == nil && affected > 0 {
+		atomic.AddInt64(wr.affectedRows, affected)
+	}
+	return err
+}
+
+// SyncSgIcmpRules impl Writer interface
+func (wr *pgDbWriter) SyncSgSgIcmpRules(ctx context.Context, rules []model.SgSgIcmpRule, scope Scope, opts ...Option) error { //nolint:dupl
+	const api = "PG/SyncSgSgIcmpRules"
+
+	var err error
+	var affected int64
+	defer func() {
+		err = errors.WithMessage(err, api)
+	}()
+	var tx pgx.Tx
+	if tx, err = wr.tx(); err != nil {
+		return err
+	}
+	snc := pg.SyncerOfSgSgIcmpRules{C: tx.Conn()}
+	snc.Upd, snc.Ins, snc.Del = wr.opts2flags(opts)
+	if err = snc.AddData(ctx, rules...); err != nil {
+		return err
+	}
+	switch v := scope.(type) {
+	case scopedSgSgIcmpIdentity:
+		ids := make([]model.SgSgIcmpRuleID, 0, len(v))
 		for _, id := range v {
 			ids = append(ids, id)
 		}
@@ -248,7 +325,7 @@ func validateSecGroupsDataIn(sgs []model.SecurityGroup) error {
 	case linq.Group:
 		var sg []string
 		linq.From(v.Group).ToSlice(&sg)
-		return errors.Errorf("the Network '%s' belongs to multiple SG [%s]",
+		return errors.Errorf("the network '%s' belongs to multiple SG [%s]",
 			v.Key.(string), strings.Join(sg, ","))
 	default:
 		panic("UB")

@@ -22,13 +22,7 @@ func Test_SGroupsService_MemDB(t *testing.T) {
 	sui := &sGroupServiceTests{
 		ctx: context.TODO(),
 		regMaker: func() registry.Registry {
-			m, e := registry.NewMemDB(registry.TblSecGroups,
-				registry.TblSecRules, registry.TblNetworks,
-				registry.TblSyncStatus, registry.TblFqdnRules,
-				registry.IntegrityChecker4SG(),
-				registry.IntegrityChecker4SGRules(),
-				registry.IntegrityChecker4FqdnRules(),
-				registry.IntegrityChecker4Networks())
+			m, e := registry.NewMemDB(registry.AllTables())
 			require.NoError(t, e)
 			return registry.NewRegistryFromMemDB(m)
 		},

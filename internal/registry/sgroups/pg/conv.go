@@ -1,6 +1,7 @@
 package pg
 
 import (
+	"math"
 	"strings"
 
 	sgm "github.com/H-BF/sgroups/internal/models/sgroups"
@@ -11,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// ToModel -
 func (o SG) ToModel() (sgm.SecurityGroup, error) {
 	ret := sgm.SecurityGroup{
 		Name:     o.Name,
@@ -258,6 +260,92 @@ func (o *SG2FQDNRule) FromModel(m sgm.FQDNRule) error {
 	o.Logs = m.Logs
 	return nil
 }
+
+// ToModel -
+func (o ICMP) ToModel() (ret sgm.ICMP, err error) {
+	switch o.IPv {
+	case pgIPv4:
+		ret.IPv = 4
+	case pgIPv6:
+		ret.IPv = 6
+	default:
+		return ret, errors.Errorf("got unknown IP family (%v) from PG", o.IPv)
+	}
+	for _, n := range o.Tytes {
+		if n < 0 || n > math.MaxUint8 {
+			return ret, errors.Errorf("got ICMP out of range [0-255] message type (%v) from PG", n)
+		}
+		ret.Types.Put(uint8(n))
+	}
+	return ret, err
+}
+
+func ipFamilyFromModel(ipv uint8) (ret IpFamily, err error) {
+	switch ipv {
+	case sgm.IPv4:
+		ret = pgIPv4
+	case sgm.IPv6:
+		ret = pgIPv6
+	default:
+		err = errors.Errorf("cannot convert (%v) IP family", ipv)
+	}
+	return ret, err
+}
+
+// FromModel -
+func (o *ICMP) FromModel(m sgm.ICMP) error {
+	var e error
+	if o.IPv, e = ipFamilyFromModel(m.IPv); e != nil {
+		return e
+	}
+	o.Tytes = IcmpTypes{}
+	m.Types.Iterate(func(v uint8) bool {
+		o.Tytes = append(o.Tytes, int16(v))
+		return true
+	})
+	return nil
+}
+
+// ToModel -
+func (o SgIcmpRule) ToModel() (ret sgm.SgIcmpRule, err error) {
+	ret.Sg = o.Sg
+	ret.Logs = o.Logs
+	ret.Trace = o.Trace
+	ret.Icmp, err = o.ICMP.ToModel()
+	return ret, err
+}
+
+// FromModel -
+func (o *SgIcmpRule) FromModel(m sgm.SgIcmpRule) error {
+	o.Sg = m.Sg
+	o.Logs = m.Logs
+	o.Trace = m.Trace
+	return o.ICMP.FromModel(m.Icmp)
+}
+
+// ToModel -
+func (o SgSgIcmpRule) ToModel() (ret sgm.SgSgIcmpRule, err error) {
+	ret.SgFrom = o.SgFrom
+	ret.SgTo = o.SgTo
+	ret.Logs = o.Logs
+	ret.Trace = o.Trace
+	ret.Icmp, err = o.ICMP.ToModel()
+	return ret, err
+}
+
+// FromModel -
+func (o *SgSgIcmpRule) FromModel(m sgm.SgSgIcmpRule) error {
+	o.SgFrom = m.SgFrom
+	o.SgTo = m.SgTo
+	o.Logs = m.Logs
+	o.Trace = m.Trace
+	return o.ICMP.FromModel(m.Icmp)
+}
+
+const (
+	pgIPv4 = "IPv4"
+	pgIPv6 = "IPv6"
+)
 
 var (
 	modelProto2proto = map[sgm.NetworkTransport]string{

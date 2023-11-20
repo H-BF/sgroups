@@ -74,3 +74,64 @@ func (srv *sgService) FindFqdnRules(ctx context.Context, req *sg.FindFqdnRulesRe
 	}
 	return resp, nil
 }
+
+// FindSgIcmpRules impl SecGroupServiceServer
+func (srv *sgService) FindSgIcmpRules(ctx context.Context, req *sg.FindSgIcmpRulesReq) (resp *sg.SgIcmpRulesResp, err error) {
+	defer func() {
+		err = correctError(err)
+	}()
+	var reader registry.Reader
+	if reader, err = srv.registryReader(ctx); err != nil {
+		return nil, err
+	}
+	defer reader.Close() //lint:nolint
+	var sc registry.Scope = registry.NoScope
+	if sgs := req.GetSg(); len(sgs) > 0 {
+		sc = registry.SG(sgs...)
+	}
+	resp = new(sg.SgIcmpRulesResp)
+	err = reader.ListSgIcmpRules(ctx, func(rule model.SgIcmpRule) error {
+		r, e := sgIcmpRule2proto(rule)
+		if e == nil {
+			resp.Rules = append(resp.Rules, r)
+		}
+		return errors.WithMessagef(e, "convert SgIcmpRule '%s' to proto", rule.ID())
+	}, sc)
+	if err != nil {
+		return nil,
+			status.Errorf(codes.Internal, "reason: %v", err)
+	}
+	return resp, nil
+}
+
+// FindSgSgIcmpRules impl SecGroupServiceServer
+func (srv *sgService) FindSgSgIcmpRules(ctx context.Context, req *sg.FindSgSgIcmpRulesReq) (resp *sg.SgSgIcmpRulesResp, err error) {
+	defer func() {
+		err = correctError(err)
+	}()
+	var reader registry.Reader
+	if reader, err = srv.registryReader(ctx); err != nil {
+		return nil, err
+	}
+	defer reader.Close() //lint:nolint
+	var sc1, sc2 registry.Scope = registry.NoScope, registry.NoScope
+	if sgs := req.GetSgFrom(); len(sgs) > 0 {
+		sc1 = registry.SGFrom(sgs[0], sgs[1:]...)
+	}
+	if sgs := req.GetSgTo(); len(sgs) > 0 {
+		sc2 = registry.SGTo(sgs[0], sgs[1:]...)
+	}
+	resp = new(sg.SgSgIcmpRulesResp)
+	err = reader.ListSgSgIcmpRules(ctx, func(rule model.SgSgIcmpRule) error {
+		r, e := sgSgIcmpRule2proto(rule)
+		if e == nil {
+			resp.Rules = append(resp.Rules, r)
+		}
+		return errors.WithMessagef(e, "convert SgSgIcmpRule '%s' to proto", rule.ID())
+	}, registry.And(sc1, sc2))
+	if err != nil {
+		return nil,
+			status.Errorf(codes.Internal, "reason: %v", err)
+	}
+	return resp, nil
+}
