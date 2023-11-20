@@ -504,58 +504,6 @@ func (bt *batch) populateOutSgFqdnRules(sg *cases.SG) {
 	}
 }
 
-/*//TODO: Remove before close issue
-func (bt *batch) aggAllInSGs() cases.SGs {
-	var ret cases.SGs
-	bt.localRules.Rules.Iterate(func(k model.SGRuleIdentity, _ *model.SGRule) bool {
-		if sg, _ := bt.localRules.SGs.Get(k.SgTo); sg != nil {
-			_ = ret.Insert(sg.Name, sg)
-		}
-		return true
-	})
-	bt.sg2sgIcmpRules.Rules.Iterate(func(k model.SgSgIcmpRuleID, _ *model.SgSgIcmpRule) bool {
-		if sg, _ := bt.sg2sgIcmpRules.SGs.Get(k.SgTo); sg != nil {
-			_ = ret.Insert(sg.Name, sg)
-		}
-		return true
-	})
-	bt.sgIcmpRules.Rules.Iterate(func(k model.SgIcmpRuleID, _ *model.SgIcmpRule) bool {
-		if sg, _ := bt.sg2sgIcmpRules.SGs.Get(k.Sg); sg != nil {
-			_ = ret.Insert(sg.Name, sg)
-		}
-		return true
-	})
-	return ret
-}
-
-func (bt *batch) aggAllOutSGs() cases.SGs {
-	var ret cases.SGs
-	bt.localRules.Rules.Iterate(func(k model.SGRuleIdentity, _ *model.SGRule) bool {
-		if sg, _ := bt.localRules.SGs.Get(k.SgFrom); sg != nil {
-			_ = ret.Insert(sg.Name, sg)
-		}
-		return true
-	})
-	bt.sg2fqdnRules.SGs.Iterate(func(_ string, sg *cases.SG) bool {
-		_ = ret.Insert(sg.Name, sg)
-		return true
-	})
-	bt.sg2sgIcmpRules.Rules.Iterate(func(k model.SgSgIcmpRuleID, _ *model.SgSgIcmpRule) bool {
-		if sg, _ := bt.sg2sgIcmpRules.SGs.Get(k.SgFrom); sg != nil {
-			_ = ret.Insert(sg.Name, sg)
-		}
-		return true
-	})
-	bt.sgIcmpRules.Rules.Iterate(func(k model.SgIcmpRuleID, _ *model.SgIcmpRule) bool {
-		if sg, _ := bt.sg2sgIcmpRules.SGs.Get(k.Sg); sg != nil {
-			_ = ret.Insert(sg.Name, sg)
-		}
-		return true
-	})
-	return ret
-}
-*/
-
 func (bt *batch) populateDefaultIcmpRules(dir direction, sg *cases.SG) {
 	targetChName := nameUtils{}.nameOfInOutChain(dir, sg.Name)
 	rules := bt.sgIcmpRules.Rules4Sg(sg.Name)
