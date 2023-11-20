@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"os"
 
 	"github.com/H-BF/sgroups/internal/app"
 	"github.com/H-BF/sgroups/pkg/atomic"
@@ -33,7 +34,8 @@ const ( // error sources
 	// ESrcSgBakend -
 	ESrcSgBakend = "sgroups-svc"
 
-	//.... TODO: something else <- thinkitabout
+	// ESrcNftApplier -
+	ESrcNftApplier = "nft-applier"
 )
 
 // SetupMetrics -
@@ -41,9 +43,14 @@ func SetupMetrics(ctx context.Context) error {
 	if !MetricsEnable.MustValue(ctx) {
 		return nil
 	}
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		return err
+	}
 	labels := prometheus.Labels{
-		labelUserAgent: "", //TODO: <------- need user_agent
-		labelHostName:  "", //TODO: <------- need host_name
+		labelUserAgent: UserAgent.MustValue(ctx),
+		labelHostName:  hostname,
 	}
 	am := new(AgentMetrics)
 	am.init(labels)
@@ -54,7 +61,7 @@ func SetupMetrics(ctx context.Context) error {
 			am.errorCount,
 		},
 	}
-	err := app.SetupMetrics(metricsOpt)
+	err = app.SetupMetrics(metricsOpt)
 	if err == nil {
 		agentMetricsHolder.Store(am, nil)
 	}
@@ -84,10 +91,10 @@ func (am *AgentMetrics) init(labels prometheus.Labels) {
 
 // ObserveError -
 func (am *AgentMetrics) ObserveError(errSource string) {
-	//TODO: Need impl
+	am.errorCount.WithLabelValues(errSource).Inc()
 }
 
 // ObserveApplyConfig -
 func (am *AgentMetrics) ObserveApplyConfig() {
-	//TODO: Need impl
+	am.appliedConfigCount.Inc()
 }

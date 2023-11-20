@@ -64,6 +64,7 @@ func main() {
 		config.WithDefValue{Key: TelemetryEndpoint, Val: "127.0.0.1:5000"},
 		config.WithDefValue{Key: MetricsEnable, Val: true},
 		config.WithDefValue{Key: HealthcheckEnable, Val: true},
+		config.WithDefValue{Key: UserAgent, Val: ""},
 	)
 	if err != nil {
 		logger.Fatal(ctx, err)

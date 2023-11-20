@@ -53,6 +53,7 @@ func (w *NetlinkEventSource) Run(ctx context.Context) error {
 					ev.Updates = append(ev.Updates, t)
 				case nl.ErrMsg:
 					log.Error(t)
+					GetAgentMetrics().ObserveError(ESrcNetWatcher)
 					w.AgentSubj.Notify(NetlinkError{ErrMsg: t})
 					return t
 				}

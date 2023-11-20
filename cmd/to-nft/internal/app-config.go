@@ -36,6 +36,7 @@ extapi:
         push: true
 
 telemetry:
+  useragent: "string"
   endpoint: 127.0.0.1:5000
   metrics:
     enable: true
@@ -96,4 +97,6 @@ const (
 	MetricsEnable config.ValueT[bool] = "telemetry/metrics/enable"
 	// HealthcheckEnable enables|disables health check handler
 	HealthcheckEnable config.ValueT[bool] = "telemetry/healthcheck/enable"
+	// UserAgent
+	UserAgent config.ValueT[string] = "telemetry/useragent"
 )

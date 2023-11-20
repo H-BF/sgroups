@@ -78,6 +78,7 @@ func (rf *FqdnRefresher) Run(ctx context.Context) {
 				log1 := log.WithField("domain", ev.FQDN).WithField("ip-v", ev.IpVersion)
 				if e := ev.DnsAnswer.Err; e != nil {
 					log1.Error(e)
+					internal.GetAgentMetrics().ObserveError(internal.ESrcDNS)
 				} else {
 					log1.Debug("resolved")
 				}
