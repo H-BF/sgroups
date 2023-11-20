@@ -704,7 +704,7 @@ func (bt *batch) chainInOutEpilog(dir direction, sg *cases.SG) {
 func (bt *batch) fwInOutAddDefaultRules() {
 	for _, chName := range sli(chnFWIN, chnFWOUT) {
 		chName := chName
-		bt.addJob("add-defualt-rules", func(tx *Tx) error {
+		bt.addJob("add-default-rules", func(tx *Tx) error {
 			bt.log.Debugf("add defult rules into chain '%s'/'%s'", chName, bt.table.Name)
 			beginRule().drop().applyRule(bt.chains.At(chName), tx.Conn)
 			return nil
