@@ -8,7 +8,6 @@ import (
 
 	"github.com/c-robinson/iplib"
 	nftLib "github.com/google/nftables"
-	nftlib "github.com/google/nftables"
 	. "github.com/google/nftables/binaryutil"
 	. "github.com/google/nftables/expr"
 	"github.com/pkg/errors"
@@ -24,7 +23,7 @@ type ruleBuilder struct {
 	exprs []Any
 }
 
-func (rb ruleBuilder) applyRule(chn *nftlib.Chain, c *nftlib.Conn) {
+func (rb ruleBuilder) applyRule(chn *nftLib.Chain, c *nftLib.Conn) {
 	if len(rb.exprs) > 0 {
 		rb.sets.Iterate(func(id uint32, s NfSet) bool {
 			s.Table = chn.Table
@@ -33,7 +32,7 @@ func (rb ruleBuilder) applyRule(chn *nftlib.Chain, c *nftlib.Conn) {
 			}
 			return true
 		})
-		_ = c.AddRule(&nftlib.Rule{
+		_ = c.AddRule(&nftLib.Rule{
 			Table: chn.Table,
 			Chain: chn,
 			Exprs: rb.exprs,
@@ -89,7 +88,7 @@ func (rb ruleBuilder) counter() ruleBuilder {
 	return rb
 }
 
-func (rb ruleBuilder) inSet(s *nftlib.Set) ruleBuilder {
+func (rb ruleBuilder) inSet(s *nftLib.Set) ruleBuilder {
 	if s != nil {
 		n := s.Name
 		if s.Anonymous {
