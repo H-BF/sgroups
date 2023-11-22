@@ -23,7 +23,7 @@ type (
 
 	SingleResource[T any] interface {
 		ResourceAttributes() map[string]schema.Attribute
-		IsDiffer(T) bool
+		IsDiffer(context.Context, T) bool
 	}
 
 	subjectOfSync interface {
@@ -161,7 +161,7 @@ func (c *CollectionResource[T, S]) Update(ctx context.Context, req resource.Upda
 	for name, itemFeatures := range plan.Items {
 		// in plan state can have unchanged items which should be ignored
 		// missing items before and changed items should be updated
-		if oldItemFeatures, ok := state.Items[name]; !ok || itemFeatures.IsDiffer(oldItemFeatures) {
+		if oldItemFeatures, ok := state.Items[name]; !ok || itemFeatures.IsDiffer(ctx, oldItemFeatures) {
 			itemsToUpdate[name] = itemFeatures
 		}
 	}

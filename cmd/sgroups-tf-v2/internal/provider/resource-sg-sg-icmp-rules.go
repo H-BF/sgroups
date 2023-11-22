@@ -73,7 +73,7 @@ func (item sgSgIcmpRule) Key() *sgSgIcmpRuleKey {
 	}
 }
 
-func (item sgSgIcmpRule) IsDiffer(other sgSgIcmpRule) bool {
+func (item sgSgIcmpRule) IsDiffer(ctx context.Context, other sgSgIcmpRule) bool {
 	return !(item.SgFrom.Equal(other.SgFrom) &&
 		item.SgTo.Equal(other.SgTo) &&
 		item.Type.Equal(other.Type) &&

@@ -109,7 +109,7 @@ func (item sgItem) ResourceAttributes() map[string]schema.Attribute {
 	}
 }
 
-func (item sgItem) IsDiffer(other sgItem) bool {
+func (item sgItem) IsDiffer(ctx context.Context, other sgItem) bool {
 	return !(item.Name.Equal(other.Name) &&
 		item.Logs.Equal(other.Logs) &&
 		item.Trace.Equal(other.Trace) &&

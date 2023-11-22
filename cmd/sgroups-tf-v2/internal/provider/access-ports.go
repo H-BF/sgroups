@@ -3,6 +3,7 @@ package provider
 import (
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -29,6 +30,13 @@ func (p AccessPorts) ResourceAttributes() map[string]schema.Attribute {
 			Computed:    true,
 			Default:     stringdefault.StaticString(""),
 		},
+	}
+}
+
+func (p AccessPorts) AttrTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"s": types.StringType,
+		"d": types.StringType,
 	}
 }
 

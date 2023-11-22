@@ -40,11 +40,11 @@ type (
 	sgToSgRulesResourceModel = CollectionResourceModel[sgSgRule, protos.SyncSGRules]
 
 	sgSgRule struct {
-		Proto  types.String  `tfsdk:"proto"`
-		SgFrom types.String  `tfsdk:"sg_from"`
-		SgTo   types.String  `tfsdk:"sg_to"`
-		Ports  []AccessPorts `tfsdk:"ports"`
-		Logs   types.Bool    `tfsdk:"logs"`
+		Proto  types.String `tfsdk:"proto"`
+		SgFrom types.String `tfsdk:"sg_from"`
+		SgTo   types.String `tfsdk:"sg_to"`
+		Ports  types.List   `tfsdk:"ports"`
+		Logs   types.Bool   `tfsdk:"logs"`
 	}
 
 	sgSgRuleKey struct {
@@ -69,12 +69,18 @@ func (item sgSgRule) Key() *sgSgRuleKey {
 	}
 }
 
-func (item sgSgRule) IsDiffer(other sgSgRule) bool {
-	var itemModelPorts, otherModelPorts []model.SGRulePorts
+func (item sgSgRule) IsDiffer(ctx context.Context, other sgSgRule) bool {
+	var (
+		itemModelPorts, otherModelPorts []model.SGRulePorts
+		itemAccPorts, otherAccPorts     []AccessPorts
+	)
+
+	_ = item.Ports.ElementsAs(ctx, &itemAccPorts, false)
+	_ = other.Ports.ElementsAs(ctx, &otherAccPorts, false)
 
 	// `toModelPorts` can not be failed because its validate then created
-	itemModelPorts, _ = toModelPorts(item.Ports)
-	otherModelPorts, _ = toModelPorts(other.Ports)
+	itemModelPorts, _ = toModelPorts(itemAccPorts)
+	otherModelPorts, _ = toModelPorts(otherAccPorts)
 	return !(strings.EqualFold(item.Proto.ValueString(), other.Proto.ValueString()) &&
 		item.SgFrom.Equal(other.SgFrom) &&
 		item.SgTo.Equal(other.SgTo) &&
@@ -123,8 +129,13 @@ func sgSgRules2SyncSubj(ctx context.Context, items map[string]sgSgRule) (*protos
 	syncObj := new(protos.SyncSGRules)
 	var diags diag.Diagnostics
 	for _, features := range items {
+		var accPorts []AccessPorts
+		diags.Append(features.Ports.ElementsAs(ctx, &accPorts, false)...)
+		if diags.HasError() {
+			return nil, diags
+		}
 		// this conversion necessary to validate string with ports
-		if _, err := toModelPorts(features.Ports); err != nil {
+		if _, err := toModelPorts(accPorts); err != nil {
 			diags.AddError("ports conv", err.Error())
 			return nil, diags
 		}
@@ -142,7 +153,7 @@ func sgSgRules2SyncSubj(ctx context.Context, items map[string]sgSgRule) (*protos
 			SgTo:      features.SgTo.ValueString(),
 			Transport: common.Networks_NetIP_Transport(protoValue),
 			Logs:      features.Logs.ValueBool(),
-			Ports:     portsToProto(features.Ports),
+			Ports:     portsToProto(accPorts),
 		})
 	}
 	return syncObj, diags
@@ -169,19 +180,21 @@ func readSgSgRules(ctx context.Context, state sgToSgRulesResourceModel, client *
 		}
 	}
 	for _, sgRule := range resp.GetRules() {
-		var ports []AccessPorts
-		for _, accPorts := range sgRule.GetPorts() {
-			ports = append(ports, AccessPorts{
-				Source:      types.StringValue(accPorts.S),
-				Destination: types.StringValue(accPorts.D),
+		accPorts := []AccessPorts{}
+		for _, p := range sgRule.GetPorts() {
+			accPorts = append(accPorts, AccessPorts{
+				Source:      types.StringValue(p.S),
+				Destination: types.StringValue(p.D),
 			})
 		}
+		portsList, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: AccessPorts{}.AttrTypes()}, accPorts)
+		diags.Append(d...)
 		it := sgSgRule{
 			Proto:  types.StringValue(strings.ToLower(sgRule.GetTransport().String())),
 			SgFrom: types.StringValue(sgRule.GetSgFrom()),
 			SgTo:   types.StringValue(sgRule.GetSgTo()),
 			Logs:   types.BoolValue(sgRule.GetLogs()),
-			Ports:  ports,
+			Ports:  portsList,
 		}
 		k := it.Key().String()
 		if _, ok := state.Items[k]; ok {
