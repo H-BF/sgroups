@@ -28,10 +28,11 @@ func NewSgsResource() resource.Resource {
 		ItemsDescription:    "Security Groups",
 	}
 	return &sgsResource{
-		suffix:       "_groups",
-		description:  d,
-		toSubjOfSync: sgs2SyncSubj,
-		read:         readSgs,
+		suffix:        "_groups",
+		description:   d,
+		toSubjOfSync:  sgs2SyncSubj,
+		hookUpdateReq: removeIcmpRules,
+		read:          readSgs,
 	}
 }
 
@@ -277,4 +278,42 @@ func readSgs(ctx context.Context, state sgsResourceModel, client *sgAPI.Client) 
 		}
 	}
 	return newState, diags
+}
+
+func removeIcmpRules(ctx context.Context, stateItems map[string]sgItem, planItems map[string]sgItem) (*protos.SyncReq, diag.Diagnostics) {
+	var (
+		rules = &protos.SyncSgIcmpRules{}
+		diags diag.Diagnostics
+	)
+
+	for key, planItem := range planItems {
+		if stateItem, ok := stateItems[key]; ok {
+			if isIcmpRemoved(stateItem.Icmp, planItem.Icmp) {
+				protoRule, d := stateItem.icmpObj2Proto(ctx, common.IpAddrFamily_IPv4)
+				diags.Append(d...)
+				if diags.HasError() {
+					return nil, diags
+				}
+				rules.Rules = append(rules.Rules, protoRule)
+			}
+
+			if isIcmpRemoved(stateItem.Icmp6, planItem.Icmp6) {
+				protoRule, d := stateItem.icmpObj2Proto(ctx, common.IpAddrFamily_IPv6)
+				diags.Append(d...)
+				if diags.HasError() {
+					return nil, diags
+				}
+				rules.Rules = append(rules.Rules, protoRule)
+			}
+		}
+	}
+
+	return &protos.SyncReq{
+		SyncOp:  protos.SyncReq_Delete,
+		Subject: &protos.SyncReq_SgIcmpRules{SgIcmpRules: rules},
+	}, diags
+}
+
+func isIcmpRemoved(stateIcmp types.Object, planIcmp types.Object) bool {
+	return !stateIcmp.IsNull() && planIcmp.IsNull()
 }

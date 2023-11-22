@@ -1,0 +1,124 @@
+initial-backend:
+  networks: 
+  - |
+    {
+      "name": "net1",
+      "network": {
+        "CIDR": "10.10.10.0/24"
+      }
+    }
+  - |
+    {
+      "name": "net2",
+      "network": {
+        "CIDR": "10.10.20.0/24"
+      }
+    }
+cases:
+- name: "create sg with icmp blocks"
+  tf-config: |
+    resource "sgroups_groups" "sgs-set-1" {
+      items = {
+        sg1 = {
+          name = "sg1"
+          logs = true
+          trace = true
+          default_action = "DROP"
+          networks = ["net1", "net2"]
+          icmp = {
+            logs = true
+            trace = true
+            type = [1,2,3]
+          }
+          icmp6 = {
+            logs = false
+            trace = false
+            type = [0,255]
+          }
+        }
+      }
+    }
+  expected-backend:
+    sec-groups:
+    - |
+      {
+        "defaultAction": "DROP",
+        "logs": true,
+        "name": "sg1",
+        "networks": ["net1", "net2"],
+        "trace": true
+      }
+    sg-icmp-rules:
+    - |
+      {
+        "ICMP": {
+          "IPv": "IPv4",
+          "Types": [
+            1,2,3
+          ]
+        },
+        "Sg": "sg1",
+        "logs": true,
+        "trace": true
+      }
+    - |
+      {
+        "ICMP": {
+          "IPv": "IPv6",
+          "Types": [
+            0,255
+          ]
+        },
+        "Sg": "sg1",
+        "logs": false,
+        "trace": false
+      }
+- name: "remove icmp"
+  tf-config: |
+    resource "sgroups_groups" "sgs-set-1" {
+      items = {
+        sg1 = {
+          name = "sg1"
+          logs = true
+          trace = true
+          default_action = "DROP"
+          networks = ["net1", "net2"]
+        }
+      }
+    }
+  expected-backend:
+    sec-groups:
+    - |
+      {
+        "defaultAction": "DROP",
+        "logs": true,
+        "name": "sg1",
+        "networks": ["net1", "net2"],
+        "trace": true
+      }
+  not-expected-backend:
+    sg-icmp-rules:
+    - |
+      {
+        "ICMP": {
+          "IPv": "IPv4",
+          "Types": [
+            1,2,3
+          ]
+        },
+        "Sg": "sg1",
+        "logs": true,
+        "trace": true
+      }
+    - |
+      {
+        "ICMP": {
+          "IPv": "IPv6",
+          "Types": [
+            0,255
+          ]
+        },
+        "Sg": "sg1",
+        "logs": false,
+        "trace": false
+      }

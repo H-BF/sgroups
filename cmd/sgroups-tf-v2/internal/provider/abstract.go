@@ -40,11 +40,12 @@ type (
 	}
 
 	CollectionResource[T SingleResource[T], S subjectOfSync] struct {
-		suffix       string
-		description  Description
-		client       *sgAPI.Client
-		toSubjOfSync func(context.Context, map[string]T) (*S, diag.Diagnostics)
-		read         func(context.Context, CollectionResourceModel[T, S], *sgAPI.Client) (CollectionResourceModel[T, S], diag.Diagnostics)
+		suffix        string
+		description   Description
+		client        *sgAPI.Client
+		toSubjOfSync  func(context.Context, map[string]T) (*S, diag.Diagnostics)
+		hookUpdateReq func(ctx context.Context, stateItems map[string]T, planItems map[string]T) (*protos.SyncReq, diag.Diagnostics)
+		read          func(context.Context, CollectionResourceModel[T, S], *sgAPI.Client) (CollectionResourceModel[T, S], diag.Diagnostics)
 	}
 )
 
@@ -121,7 +122,7 @@ func (c *CollectionResource[T, S]) Read(ctx context.Context, req resource.ReadRe
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func (c *CollectionResource[T, S]) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+func (c *CollectionResource[T, S]) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocyclo
 	var plan, state CollectionResourceModel[T, S]
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -174,6 +175,14 @@ func (c *CollectionResource[T, S]) Update(ctx context.Context, req resource.Upda
 		if diags.HasError() {
 			resp.Diagnostics.Append(diags...)
 			return
+		}
+		if c.hookUpdateReq != nil {
+			additionalReq, diags := c.hookUpdateReq(ctx, state.Items, itemsToUpdate)
+			if diags.HasError() {
+				resp.Diagnostics.Append(diags...)
+				return
+			}
+			updateReqs = append(updateReqs, additionalReq)
 		}
 		for _, updateReq := range updateReqs {
 			if _, err := c.client.Sync(ctx, updateReq); err != nil {
