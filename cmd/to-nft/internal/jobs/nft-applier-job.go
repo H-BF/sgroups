@@ -99,7 +99,6 @@ func (jb *NftApplierJob) Run(ctx context.Context) error {
 					break
 				}
 				if err != nil {
-					internal.GetAgentMetrics().ObserveError(internal.ESrcNftApplier)
 					return err
 				}
 			}
@@ -154,7 +153,6 @@ func (jb *NftApplierJob) doApply(ctx context.Context) error {
 	}
 	appliedRules, err := jb.nftProcessor.ApplyConf(ctx, *jb.netConf)
 	if err != nil {
-		internal.GetAgentMetrics().ObserveError(internal.ESrcNftApplier)
 		return err
 	}
 	jb.appliedRules = &appliedRules
@@ -164,7 +162,6 @@ func (jb *NftApplierJob) doApply(ctx context.Context) error {
 		AppliedRules: appliedRules,
 	}
 	jb.agentSubject.Notify(ev)
-	internal.GetAgentMetrics().ObserveApplyConfig()
 
 	reqs := make([]observer.EventType, 0,
 		appliedRules.SG2FQDNRules.A.Len()+

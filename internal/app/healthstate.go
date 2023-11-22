@@ -12,39 +12,43 @@ import (
 )
 
 type (
-	// BuildInfoHandler -
-	BuildInfoHandler struct{}
+	// HcHandler -
+	HcHandler struct{}
 )
 
 var (
-	healthState atomic.Bool
-	bldInfo     = make(map[string]string)
-)
+	flagHealthy int32
 
-func init() {
-	healthState.Store(true)
-	bldItem := []struct {
-		name string
-		val  string
-	}{
-		{"name", app_identity.Name},
-		{"version", app_identity.Version},
-		{"go_version", runtime.Version()},
-		{"build_ts", app_identity.BuildTS},
-		{"branch", app_identity.BuildBranch},
-		{"hash", app_identity.BuildHash},
-		{"tag", app_identity.BuildTag},
-	}
-	for _, n := range bldItem {
-		if len(n.val) > 0 {
-			bldInfo[n.name] = n.val
+	bldInfo = func() map[string]string {
+		ret := make(map[string]string)
+		bldItem := []struct {
+			name string
+			val  string
+		}{
+			{"name", app_identity.Name},
+			{"version", app_identity.Version},
+			{"go_version", runtime.Version()},
+			{"build_ts", app_identity.BuildTS},
+			{"branch", app_identity.BuildBranch},
+			{"hash", app_identity.BuildHash},
+			{"tag", app_identity.BuildTag},
 		}
-	}
-}
+		for _, n := range bldItem {
+			if len(n.val) > 0 {
+				ret[n.name] = n.val
+			}
+		}
+		return ret
+	}()
+)
 
 // SetHealthState -
 func SetHealthState(state bool) {
-	healthState.Store(state)
+	var st int32
+	if state {
+		st = 1
+	}
+	atomic.StoreInt32(&flagHealthy, st)
 }
 
 // NewHealthcheckMetric -
@@ -60,23 +64,20 @@ func NewHealthcheckMetric(withAdditionalLabels prometheus.Labels) prometheus.Col
 	}
 	opts := prometheus.GaugeOpts{
 		Name:        "healthcheck",
-		Help:        "Healthcheck. Possible values: 0 or 1.",
+		Help:        "Healthcheck indicator(0 or 1)",
 		ConstLabels: labs,
 	}
 	return prometheus.NewGaugeFunc(opts, func() float64 {
-		if healthState.Load() {
-			return 1
-		}
-		return 0
+		return float64(atomic.AddInt32(&flagHealthy, 0))
 	})
 }
 
 // ServeHTTP -
-func (BuildInfoHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (HcHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	nfo := struct {
 		App     any
 		Healthy bool
-	}{bldInfo, healthState.Load()}
+	}{bldInfo, atomic.AddInt32(&flagHealthy, 0) != 0}
 	w.Header().Add("Content-Type", "application/json")
 	bt := bytes.NewBuffer(nil)
 	if e := json.NewEncoder(bt).Encode(nfo); e != nil {

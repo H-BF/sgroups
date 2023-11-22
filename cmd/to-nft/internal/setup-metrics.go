@@ -33,9 +33,6 @@ const ( // error sources
 
 	// ESrcSgBakend -
 	ESrcSgBakend = "sgroups-svc"
-
-	// ESrcNftApplier -
-	ESrcNftApplier = "nft-applier"
 )
 
 // SetupMetrics -

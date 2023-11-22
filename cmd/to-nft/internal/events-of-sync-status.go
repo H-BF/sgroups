@@ -88,7 +88,6 @@ loop:
 			if e := errors.Cause(err); status.Code(e) != codes.Canceled {
 				log.Error(err, "; it will reconnect after ", reconnectTimeut)
 				ss.AgentSubj.Notify(SyncStatusError{error: err})
-				GetAgentMetrics().ObserveError(ESrcSgBakend)
 			}
 			select {
 			case <-ctx.Done():
@@ -128,7 +127,6 @@ func (ss *SyncStatusEventSource) pull(ctx context.Context, tc *time.Ticker, log 
 			if e = errors.Cause(e); e != nil && status.Code(e) != codes.Canceled {
 				log.Error(e)
 				ss.AgentSubj.Notify(SyncStatusError{error: e})
-				GetAgentMetrics().ObserveError(ESrcSgBakend)
 			}
 		}
 	}

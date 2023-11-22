@@ -106,6 +106,13 @@ func main() {
 		)
 		AgentSubject().ObserversAttach(o)
 	}
+	if GetAgentMetrics() != nil {
+		AgentSubject().ObserversAttach(
+			observer.NewObserver(agentMetricsObserver, true,
+				jobs.AppliedConfEvent{}, SyncStatusError{},
+				NetlinkError{}, jobs.DomainAddresses{}),
+		)
+	}
 
 	go func() {
 		r := jobs.FqdnRefresher{
@@ -150,6 +157,25 @@ func exitOnSuccessHanler(ev observer.EventType) {
 		os.Exit(1)
 	}
 	os.Exit(0)
+}
+
+func agentMetricsObserver(ev observer.EventType) {
+	metrics := GetAgentMetrics()
+	if metrics == nil {
+		return
+	}
+	switch o := ev.(type) {
+	case jobs.AppliedConfEvent:
+		metrics.ObserveApplyConfig()
+	case SyncStatusError:
+		metrics.ObserveError(ESrcSgBakend)
+	case NetlinkError:
+		metrics.ObserveError(ESrcNetWatcher)
+	case jobs.DomainAddresses:
+		if o.DnsAnswer.Err != nil {
+			metrics.ObserveError(ESrcDNS)
+		}
+	}
 }
 
 func runNftJob(ctx context.Context, resolver DomainAddressQuerier) (err error) {
