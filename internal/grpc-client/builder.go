@@ -3,8 +3,10 @@ package grpc_client
 import (
 	"context"
 	"net/url"
+	"os"
 	"time"
 
+	interceptors "github.com/H-BF/corlib/client/grpc"
 	"github.com/H-BF/corlib/pkg/backoff"
 	netPkg "github.com/H-BF/corlib/pkg/net"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
@@ -34,6 +36,7 @@ type (
 		retriesBackoff Backoff
 		maxRetries     uint
 		creds          TransportCredentials
+		userAgent      string
 	}
 )
 
@@ -58,15 +61,22 @@ func (bld clientConnBuilder) WithRetriesBackoff(b backoff.Backoff) clientConnBui
 	return bld
 }
 
+func (bld clientConnBuilder) WithUserAgent(userAgent string) clientConnBuilder {
+	bld.userAgent = userAgent
+	return bld
+}
+
 // NewConn makes new grpc client conn && ipml 'ClientConnProvider'
 func (bld clientConnBuilder) New(ctx context.Context) (*grpc.ClientConn, error) {
 	const api = "grpc/new-client-conn"
 
 	var (
-		err      error
-		endpoint string
-		dialOpts []grpc.DialOption
-		c        *grpc.ClientConn
+		err                error
+		endpoint           string
+		dialOpts           []grpc.DialOption
+		c                  *grpc.ClientConn
+		streamInterceptors []grpc.StreamClientInterceptor
+		unaryInterceptors  []grpc.UnaryClientInterceptor
 	)
 
 	if endpoint, err = bld.endpoint(); err != nil {
@@ -111,11 +121,23 @@ func (bld clientConnBuilder) New(ctx context.Context) (*grpc.ClientConn, error) 
 			)
 		}
 		retrOpts = append(retrOpts, grpc_retry.WithCodes(codes.Unavailable))
-		dialOpts = append(dialOpts,
-			grpc.WithStreamInterceptor(grpc_retry.StreamClientInterceptor(retrOpts...)),
-			grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor(retrOpts...)),
-		)
+		streamInterceptors = append(streamInterceptors, grpc_retry.StreamClientInterceptor(retrOpts...))
+		unaryInterceptors = append(unaryInterceptors, grpc_retry.UnaryClientInterceptor(retrOpts...))
 	}
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, errors.WithMessage(err, api)
+	}
+	fixedHeaders := []string{"hostname", hostname}
+	if userAgent := bld.userAgent; len(userAgent) > 0 {
+		fixedHeaders = append(fixedHeaders, "user-agent-no-ver", userAgent)
+	}
+	dialOpts = append(dialOpts,
+		grpc.WithChainStreamInterceptor(
+			append(streamInterceptors, interceptors.FixedHeadersStreamInterceptor(fixedHeaders...))...),
+		grpc.WithChainUnaryInterceptor(
+			append(unaryInterceptors, interceptors.FixedHeadersUnaryInterceptor(fixedHeaders...))...),
+	)
 	c, err = grpc.DialContext(ctx, endpoint, dialOpts...)
 	return c, errors.WithMessage(err, api)
 }
