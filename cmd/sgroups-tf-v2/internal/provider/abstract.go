@@ -40,12 +40,12 @@ type (
 	}
 
 	CollectionResource[T SingleResource[T], S subjectOfSync] struct {
-		suffix        string
-		description   Description
-		client        *sgAPI.Client
-		toSubjOfSync  func(context.Context, map[string]T) (*S, diag.Diagnostics)
-		hookUpdateReq func(ctx context.Context, stateItems map[string]T, planItems map[string]T) (*protos.SyncReq, diag.Diagnostics)
-		read          func(context.Context, CollectionResourceModel[T, S], *sgAPI.Client) (CollectionResourceModel[T, S], diag.Diagnostics)
+		suffix       string
+		description  Description
+		client       *sgAPI.Client
+		toSubjOfSync func(context.Context, map[string]T) (*S, diag.Diagnostics)
+		read         func(context.Context, CollectionResourceModel[T, S], *sgAPI.Client) (CollectionResourceModel[T, S], diag.Diagnostics)
+		deleteReqs   func(ctx context.Context, stateItems map[string]T, planItems map[string]T) ([]*protos.SyncReq, diag.Diagnostics)
 	}
 )
 
@@ -122,7 +122,7 @@ func (c *CollectionResource[T, S]) Read(ctx context.Context, req resource.ReadRe
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
-func (c *CollectionResource[T, S]) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) { //nolint:gocyclo
+func (c *CollectionResource[T, S]) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan, state CollectionResourceModel[T, S]
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
@@ -131,30 +131,17 @@ func (c *CollectionResource[T, S]) Update(ctx context.Context, req resource.Upda
 		return
 	}
 
-	itemsToDelete := map[string]T{}
-	for name, itemFeatures := range state.Items {
-		if _, ok := plan.Items[name]; !ok {
-			// if item is missing in plan state - delete it
-			itemsToDelete[name] = itemFeatures
-		}
+	delReqs, diags := c.DeleteRequests(ctx, state.Items, plan.Items)
+	if diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
 	}
-
-	if len(itemsToDelete) > 0 {
-		tempModel := CollectionResourceModel[T, S]{
-			Items: itemsToDelete,
-		}
-		delReqs, diags := tempModel.toSyncReq(ctx, protos.SyncReq_Delete, c.toSubjOfSync)
-		if diags.HasError() {
-			resp.Diagnostics.Append(diags...)
+	for _, delReq := range delReqs {
+		if _, err := c.client.Sync(ctx, delReq); err != nil {
+			resp.Diagnostics.AddError(
+				"delete "+c.description.ItemsDescription,
+				err.Error())
 			return
-		}
-		for _, delReq := range delReqs {
-			if _, err := c.client.Sync(ctx, delReq); err != nil {
-				resp.Diagnostics.AddError(
-					"delete "+c.description.ItemsDescription,
-					err.Error())
-				return
-			}
 		}
 	}
 
@@ -175,14 +162,6 @@ func (c *CollectionResource[T, S]) Update(ctx context.Context, req resource.Upda
 		if diags.HasError() {
 			resp.Diagnostics.Append(diags...)
 			return
-		}
-		if c.hookUpdateReq != nil {
-			additionalReq, diags := c.hookUpdateReq(ctx, state.Items, itemsToUpdate)
-			if diags.HasError() {
-				resp.Diagnostics.Append(diags...)
-				return
-			}
-			updateReqs = append(updateReqs, additionalReq)
 		}
 		for _, updateReq := range updateReqs {
 			if _, err := c.client.Sync(ctx, updateReq); err != nil {
@@ -235,6 +214,36 @@ func (c *CollectionResource[T, S]) Configure(_ context.Context, req resource.Con
 		return
 	}
 	c.client = &client
+}
+
+func (c *CollectionResource[T, S]) DeleteRequests(ctx context.Context, stateItems map[string]T, planItems map[string]T) ([]*protos.SyncReq, diag.Diagnostics) { //nolint:lll
+	if c.deleteReqs != nil {
+		return c.deleteReqs(ctx, stateItems, planItems)
+	}
+
+	var (
+		res   []*protos.SyncReq
+		diags diag.Diagnostics
+	)
+
+	itemsToDelete := map[string]T{}
+	for name, itemFeatures := range stateItems {
+		if _, ok := planItems[name]; !ok {
+			// if item is missing in plan state - delete it
+			itemsToDelete[name] = itemFeatures
+		}
+	}
+
+	if len(itemsToDelete) > 0 {
+		tempModel := CollectionResourceModel[T, S]{
+			Items: itemsToDelete,
+		}
+		res, diags = tempModel.toSyncReq(ctx, protos.SyncReq_Delete, c.toSubjOfSync)
+		if diags.HasError() {
+			return nil, diags
+		}
+	}
+	return res, nil
 }
 
 var (

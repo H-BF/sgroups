@@ -28,11 +28,11 @@ func NewSgsResource() resource.Resource {
 		ItemsDescription:    "Security Groups",
 	}
 	return &sgsResource{
-		suffix:        "_groups",
-		description:   d,
-		toSubjOfSync:  sgs2SyncSubj,
-		hookUpdateReq: removeIcmpRules,
-		read:          readSgs,
+		suffix:       "_groups",
+		description:  d,
+		toSubjOfSync: sgs2SyncSubj,
+		deleteReqs:   sgsDelete,
+		read:         readSgs,
 	}
 }
 
@@ -120,6 +120,46 @@ func (item sgItem) IsDiffer(ctx context.Context, other sgItem) bool {
 		item.Icmp6.Equal(other.Icmp6))
 }
 
+func (item sgItem) toProto(ctx context.Context) (*protos.SyncSecurityGroups, *protos.SyncSgIcmpRules, diag.Diagnostics) {
+	var (
+		syncGroups     = &protos.SyncSecurityGroups{}
+		syncIcmpParams = &protos.SyncSgIcmpRules{}
+		diags          diag.Diagnostics
+		networks       []string
+		da             = item.DefaultAction.ValueString()
+	)
+	diags.Append(item.Networks.ElementsAs(ctx, &networks, true)...)
+	if diags.HasError() {
+		return nil, nil, diags
+	}
+	syncGroups.Groups = append(syncGroups.Groups, &protos.SecGroup{
+		Name:          item.Name.ValueString(),
+		Networks:      networks,
+		DefaultAction: protos.SecGroup_DefaultAction(protos.SecGroup_DefaultAction_value[da]),
+		Trace:         item.Trace.ValueBool(),
+		Logs:          item.Logs.ValueBool(),
+	})
+
+	if !item.Icmp.IsNull() {
+		protoRule, d := item.icmpObj2Proto(ctx, common.IpAddrFamily_IPv4)
+		diags.Append(d...)
+		if diags.HasError() {
+			return nil, nil, diags
+		}
+		syncIcmpParams.Rules = append(syncIcmpParams.Rules, protoRule)
+	}
+
+	if !item.Icmp6.IsNull() {
+		protoRule, d := item.icmpObj2Proto(ctx, common.IpAddrFamily_IPv6)
+		diags.Append(d...)
+		if diags.HasError() {
+			return nil, nil, diags
+		}
+		syncIcmpParams.Rules = append(syncIcmpParams.Rules, protoRule)
+	}
+	return syncGroups, syncIcmpParams, diags
+}
+
 func (item sgItem) icmpObj2Proto(ctx context.Context, version common.IpAddrFamily) (*protos.SgIcmpRule, diag.Diagnostics) {
 	var (
 		icmpParams IcmpParameters
@@ -158,37 +198,13 @@ func sgs2SyncSubj(
 	}
 	var diags diag.Diagnostics
 	for _, sgFeatures := range items {
-		da := sgFeatures.DefaultAction.ValueString()
-		var networks []string
-		diags.Append(sgFeatures.Networks.ElementsAs(ctx, &networks, true)...)
-		if diags.HasError() {
+		syncGroups, syncIcmpParams, d := sgFeatures.toProto(ctx)
+		if d.HasError() {
+			diags.Append(d...)
 			return nil, diags
 		}
-		syncSubject.syncGroups.Groups = append(syncSubject.syncGroups.Groups, &protos.SecGroup{
-			Name:          sgFeatures.Name.ValueString(),
-			Networks:      networks,
-			DefaultAction: protos.SecGroup_DefaultAction(protos.SecGroup_DefaultAction_value[da]),
-			Trace:         sgFeatures.Trace.ValueBool(),
-			Logs:          sgFeatures.Logs.ValueBool(),
-		})
-
-		if !sgFeatures.Icmp.IsNull() {
-			protoRule, d := sgFeatures.icmpObj2Proto(ctx, common.IpAddrFamily_IPv4)
-			diags.Append(d...)
-			if diags.HasError() {
-				return nil, diags
-			}
-			syncSubject.syncIcmpParams.Rules = append(syncSubject.syncIcmpParams.Rules, protoRule)
-		}
-
-		if !sgFeatures.Icmp6.IsNull() {
-			protoRule, d := sgFeatures.icmpObj2Proto(ctx, common.IpAddrFamily_IPv6)
-			diags.Append(d...)
-			if diags.HasError() {
-				return nil, diags
-			}
-			syncSubject.syncIcmpParams.Rules = append(syncSubject.syncIcmpParams.Rules, protoRule)
-		}
+		syncSubject.syncGroups.Groups = append(syncSubject.syncGroups.Groups, syncGroups.Groups...)
+		syncSubject.syncIcmpParams.Rules = append(syncSubject.syncIcmpParams.Rules, syncIcmpParams.Rules...)
 	}
 
 	return &syncSubject, diags
@@ -280,21 +296,30 @@ func readSgs(ctx context.Context, state sgsResourceModel, client *sgAPI.Client) 
 	return newState, diags
 }
 
-func removeIcmpRules(ctx context.Context, stateItems map[string]sgItem, planItems map[string]sgItem) (*protos.SyncReq, diag.Diagnostics) {
+func sgsDelete(ctx context.Context, stateItems map[string]sgItem, planItems map[string]sgItem) ([]*protos.SyncReq, diag.Diagnostics) {
 	var (
-		rules = &protos.SyncSgIcmpRules{}
-		diags diag.Diagnostics
+		groupsToDelete = &protos.SyncSecurityGroups{}
+		rulesToDelete  = &protos.SyncSgIcmpRules{}
+		diags          diag.Diagnostics
 	)
 
-	for key, planItem := range planItems {
-		if stateItem, ok := stateItems[key]; ok {
+	for sgName, stateItem := range stateItems {
+		if planItem, planned := planItems[sgName]; !planned {
+			syncGroups, syncIcmpParams, d := stateItem.toProto(ctx)
+			diags.Append(d...)
+			if diags.HasError() {
+				return nil, diags
+			}
+			groupsToDelete.Groups = append(groupsToDelete.Groups, syncGroups.Groups...)
+			rulesToDelete.Rules = append(rulesToDelete.Rules, syncIcmpParams.Rules...)
+		} else {
 			if isIcmpRemoved(stateItem.Icmp, planItem.Icmp) {
 				protoRule, d := stateItem.icmpObj2Proto(ctx, common.IpAddrFamily_IPv4)
 				diags.Append(d...)
 				if diags.HasError() {
 					return nil, diags
 				}
-				rules.Rules = append(rules.Rules, protoRule)
+				rulesToDelete.Rules = append(rulesToDelete.Rules, protoRule)
 			}
 
 			if isIcmpRemoved(stateItem.Icmp6, planItem.Icmp6) {
@@ -303,14 +328,24 @@ func removeIcmpRules(ctx context.Context, stateItems map[string]sgItem, planItem
 				if diags.HasError() {
 					return nil, diags
 				}
-				rules.Rules = append(rules.Rules, protoRule)
+				rulesToDelete.Rules = append(rulesToDelete.Rules, protoRule)
 			}
 		}
 	}
 
-	return &protos.SyncReq{
-		SyncOp:  protos.SyncReq_Delete,
-		Subject: &protos.SyncReq_SgIcmpRules{SgIcmpRules: rules},
+	return []*protos.SyncReq{
+		{
+			SyncOp: protos.SyncReq_Delete,
+			Subject: &protos.SyncReq_SgIcmpRules{
+				SgIcmpRules: rulesToDelete,
+			},
+		},
+		{
+			SyncOp: protos.SyncReq_Delete,
+			Subject: &protos.SyncReq_Groups{
+				Groups: groupsToDelete,
+			},
+		},
 	}, diags
 }
 
