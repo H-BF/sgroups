@@ -52,7 +52,7 @@ func SetupMetrics(opts ...SetupMetricsOpt) error {
 // StandardMetrics добавим гошные + системные коллекторы
 func StandardMetrics() []prometheus.Collector {
 	return []prometheus.Collector{
-		collectors.NewBuildInfoCollector(),
+		//collectors.NewBuildInfoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 		collectors.NewGoCollector(),
 	}

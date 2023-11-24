@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"net/http"
 
 	"github.com/H-BF/sgroups/internal/api/sgroups"
 	"github.com/H-BF/sgroups/internal/app"
@@ -62,11 +61,7 @@ func setupSgServer(ctx context.Context) (*server.APIServer, error) {
 		return nil, err
 	}
 	if hc, _ := HealthcheckEnable.Value(ctx); hc { // add healthcheck handler
-		h := http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {
-			writer.Header().Add("Content-Type", "application/json")
-			_, _ = writer.Write([]byte("{}"))
-		})
-		opts = append(opts, server.WithHttpHandler("/"+HandleHealthcheck, h))
+		opts = append(opts, server.WithHttpHandler("/"+HandleHealthcheck, app.HcHandler{}))
 	}
 	opts = append(opts, server.WithHttpHandler("/"+HandleDebug, app.PProfHandler()))
 	return server.NewAPIServer(opts...)

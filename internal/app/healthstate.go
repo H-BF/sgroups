@@ -75,8 +75,8 @@ func NewHealthcheckMetric(withAdditionalLabels prometheus.Labels) prometheus.Col
 // ServeHTTP -
 func (HcHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	nfo := struct {
-		App     any
-		Healthy bool
+		App     any  `json:"app,omitempty"`
+		Healthy bool `json:"healthy"`
 	}{bldInfo, atomic.AddInt32(&flagHealthy, 0) != 0}
 	w.Header().Add("Content-Type", "application/json")
 	bt := bytes.NewBuffer(nil)

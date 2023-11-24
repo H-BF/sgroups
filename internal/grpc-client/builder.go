@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	interceptors "github.com/H-BF/corlib/client/grpc"
+	grpc_client "github.com/H-BF/corlib/client/grpc"
 	"github.com/H-BF/corlib/pkg/backoff"
 	netPkg "github.com/H-BF/corlib/pkg/net"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
@@ -61,6 +61,7 @@ func (bld clientConnBuilder) WithRetriesBackoff(b backoff.Backoff) clientConnBui
 	return bld
 }
 
+// WithUserAgent add user-agent into query metagata
 func (bld clientConnBuilder) WithUserAgent(userAgent string) clientConnBuilder {
 	bld.userAgent = userAgent
 	return bld
@@ -128,15 +129,13 @@ func (bld clientConnBuilder) New(ctx context.Context) (*grpc.ClientConn, error) 
 	if err != nil {
 		return nil, errors.WithMessage(err, api)
 	}
-	fixedHeaders := []string{"hostname", hostname}
-	if userAgent := bld.userAgent; len(userAgent) > 0 {
-		fixedHeaders = append(fixedHeaders, "user-agent-no-ver", userAgent)
-	}
+	hostNameInterceptors := grpc_client.HostNamePropagator(hostname)
 	dialOpts = append(dialOpts,
+		grpc.WithUserAgent(bld.userAgent),
 		grpc.WithChainStreamInterceptor(
-			append(streamInterceptors, interceptors.FixedHeadersStreamInterceptor(fixedHeaders...))...),
+			append(streamInterceptors, hostNameInterceptors.ClientStream())...),
 		grpc.WithChainUnaryInterceptor(
-			append(unaryInterceptors, interceptors.FixedHeadersUnaryInterceptor(fixedHeaders...))...),
+			append(unaryInterceptors, hostNameInterceptors.ClientUnary())...),
 	)
 	c, err = grpc.DialContext(ctx, endpoint, dialOpts...)
 	return c, errors.WithMessage(err, api)

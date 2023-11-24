@@ -3,6 +3,7 @@ package sgroups
 import (
 	"context"
 
+	"github.com/H-BF/sgroups/internal/app"
 	"github.com/H-BF/sgroups/internal/models/sgroups"
 
 	sg "github.com/H-BF/protos/pkg/api/sgroups"
@@ -39,5 +40,16 @@ func (srv *sgService) getSyncStatus(ctx context.Context) (*sgroups.SyncStatus, e
 	defer func() {
 		_ = reader.Close()
 	}()
+
 	return reader.GetSyncStatus(ctx)
+}
+
+// OnStart -
+func (srv *sgService) OnStart() {
+	app.SetHealthState(true)
+}
+
+// OnStop -
+func (srv *sgService) OnStop() {
+	app.SetHealthState(false)
 }
