@@ -106,13 +106,12 @@ func main() {
 		)
 		AgentSubject().ObserversAttach(o)
 	}
-	if GetAgentMetrics() != nil {
-		AgentSubject().ObserversAttach(
-			observer.NewObserver(agentMetricsObserver, true,
-				jobs.AppliedConfEvent{}, SyncStatusError{},
-				NetlinkError{}, jobs.DomainAddresses{}),
-		)
-	}
+
+	AgentSubject().ObserversAttach(
+		observer.NewObserver(agentMetricsObserver, true,
+			jobs.AppliedConfEvent{}, SyncStatusError{},
+			NetlinkError{}, jobs.DomainAddresses{}),
+	)
 
 	go func() {
 		r := jobs.FqdnRefresher{
@@ -160,20 +159,18 @@ func exitOnSuccessHanler(ev observer.EventType) {
 }
 
 func agentMetricsObserver(ev observer.EventType) {
-	metrics := GetAgentMetrics()
-	if metrics == nil {
-		return
-	}
-	switch o := ev.(type) {
-	case jobs.AppliedConfEvent:
-		metrics.ObserveApplyConfig()
-	case SyncStatusError:
-		metrics.ObserveError(ESrcSgBakend)
-	case NetlinkError:
-		metrics.ObserveError(ESrcNetWatcher)
-	case jobs.DomainAddresses:
-		if o.DnsAnswer.Err != nil {
-			metrics.ObserveError(ESrcDNS)
+	if metrics := GetAgentMetrics(); metrics != nil {
+		switch o := ev.(type) {
+		case jobs.AppliedConfEvent:
+			metrics.ObserveApplyConfig()
+		case SyncStatusError:
+			metrics.ObserveError(ESrcSgBakend)
+		case NetlinkError:
+			metrics.ObserveError(ESrcNetWatcher)
+		case jobs.DomainAddresses:
+			if o.DnsAnswer.Err != nil {
+				metrics.ObserveError(ESrcDNS)
+			}
 		}
 	}
 }
@@ -192,9 +189,12 @@ func runNftJob(ctx context.Context, resolver DomainAddressQuerier) (err error) {
 		if err = jb.init(ctx1, resolver); err != nil {
 			break
 		}
+
+		HcMainJob.Set(true)
 		if err = jb.run(ctx1); err == nil {
 			break
 		}
+		HcMainJob.Set(false)
 		if !jb.continueOnFailure {
 			break
 		}
