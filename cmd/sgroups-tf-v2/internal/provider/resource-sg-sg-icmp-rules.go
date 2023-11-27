@@ -28,10 +28,11 @@ func NewSgToSgIcmpRulesResource() resource.Resource {
 		ItemsDescription:    "SG to SG ICMP rules",
 	}
 	return &sgSgIcmpRulesResource{
-		suffix:       "_icmp_rules",
-		description:  d,
-		toSubjOfSync: sgSgIcmpRules2SyncSubj,
-		read:         readSgSgIcmpRules,
+		suffix:          "_icmp_rules",
+		description:     d,
+		toSubjOfSync:    sgSgIcmpRules2SyncSubj,
+		read:            readSgSgIcmpRules,
+		ResourceUpdater: baseUpdater[sgSgIcmpRule, protos.SyncSgSgIcmpRules]{toSubjOfSync: sgSgIcmpRules2SyncSubj},
 	}
 }
 

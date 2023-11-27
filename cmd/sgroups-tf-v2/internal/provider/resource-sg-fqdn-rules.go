@@ -29,10 +29,11 @@ func NewFqdnRulesResource() resource.Resource {
 		ItemsDescription:    "SG -> FQDN rules",
 	}
 	return &fqdnRulesResource{
-		suffix:       "_fqdn_rules",
-		description:  d,
-		toSubjOfSync: sgFqdnRules2SyncSubj,
-		read:         readFqdnRules,
+		suffix:          "_fqdn_rules",
+		description:     d,
+		toSubjOfSync:    sgFqdnRules2SyncSubj,
+		read:            readFqdnRules,
+		ResourceUpdater: baseUpdater[sgFqdnRule, protos.SyncFqdnRules]{toSubjOfSync: sgFqdnRules2SyncSubj},
 	}
 }
 

@@ -26,6 +26,9 @@ func NewNetworksResource() resource.Resource {
 		description:  d,
 		toSubjOfSync: networks2SyncSubj,
 		read:         readNetworks,
+		ResourceUpdater: baseUpdater[networkItem, protos.SyncNetworks]{
+			toSubjOfSync: networks2SyncSubj,
+		},
 	}
 }
 

@@ -45,7 +45,7 @@ type (
 		client       *sgAPI.Client
 		toSubjOfSync func(context.Context, map[string]T) (*S, diag.Diagnostics)
 		read         func(context.Context, CollectionResourceModel[T, S], *sgAPI.Client) (CollectionResourceModel[T, S], diag.Diagnostics)
-		deleteReqs   func(ctx context.Context, stateItems map[string]T, planItems map[string]T) ([]*protos.SyncReq, diag.Diagnostics)
+		ResourceUpdater[T, S]
 	}
 )
 
@@ -131,12 +131,18 @@ func (c *CollectionResource[T, S]) Update(ctx context.Context, req resource.Upda
 		return
 	}
 
-	delReqs, diags := c.DeleteRequests(ctx, state.Items, plan.Items)
+	delReqs, diags := c.deleteRequests(ctx, state.Items, plan.Items)
 	if diags.HasError() {
 		resp.Diagnostics.Append(diags...)
 		return
 	}
-	for _, delReq := range delReqs {
+
+	embedResourceReqs, diags := c.deleteEmbedReqs(ctx, state.Items, plan.Items)
+	if diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
+	}
+	for _, delReq := range append(delReqs, embedResourceReqs...) {
 		if _, err := c.client.Sync(ctx, delReq); err != nil {
 			resp.Diagnostics.AddError(
 				"delete "+c.description.ItemsDescription,
@@ -145,31 +151,18 @@ func (c *CollectionResource[T, S]) Update(ctx context.Context, req resource.Upda
 		}
 	}
 
-	itemsToUpdate := map[string]T{}
-	for name, itemFeatures := range plan.Items {
-		// in plan state can have unchanged items which should be ignored
-		// missing items before and changed items should be updated
-		if oldItemFeatures, ok := state.Items[name]; !ok || itemFeatures.IsDiffer(ctx, oldItemFeatures) {
-			itemsToUpdate[name] = itemFeatures
-		}
+	updateReqs, diags := c.updateRequests(ctx, state.Items, plan.Items)
+	if diags.HasError() {
+		resp.Diagnostics.Append(diags...)
+		return
 	}
 
-	if len(itemsToUpdate) > 0 {
-		tempModel := CollectionResourceModel[T, S]{
-			Items: itemsToUpdate,
-		}
-		updateReqs, diags := tempModel.toSyncReq(ctx, protos.SyncReq_Upsert, c.toSubjOfSync)
-		if diags.HasError() {
-			resp.Diagnostics.Append(diags...)
+	for _, updateReq := range updateReqs {
+		if _, err := c.client.Sync(ctx, updateReq); err != nil {
+			resp.Diagnostics.AddError(
+				"update "+c.description.ItemsDescription,
+				err.Error())
 			return
-		}
-		for _, updateReq := range updateReqs {
-			if _, err := c.client.Sync(ctx, updateReq); err != nil {
-				resp.Diagnostics.AddError(
-					"update "+c.description.ItemsDescription,
-					err.Error())
-				return
-			}
 		}
 	}
 
@@ -214,36 +207,6 @@ func (c *CollectionResource[T, S]) Configure(_ context.Context, req resource.Con
 		return
 	}
 	c.client = &client
-}
-
-func (c *CollectionResource[T, S]) DeleteRequests(ctx context.Context, stateItems map[string]T, planItems map[string]T) ([]*protos.SyncReq, diag.Diagnostics) { //nolint:lll
-	if c.deleteReqs != nil {
-		return c.deleteReqs(ctx, stateItems, planItems)
-	}
-
-	var (
-		res   []*protos.SyncReq
-		diags diag.Diagnostics
-	)
-
-	itemsToDelete := map[string]T{}
-	for name, itemFeatures := range stateItems {
-		if _, ok := planItems[name]; !ok {
-			// if item is missing in plan state - delete it
-			itemsToDelete[name] = itemFeatures
-		}
-	}
-
-	if len(itemsToDelete) > 0 {
-		tempModel := CollectionResourceModel[T, S]{
-			Items: itemsToDelete,
-		}
-		res, diags = tempModel.toSyncReq(ctx, protos.SyncReq_Delete, c.toSubjOfSync)
-		if diags.HasError() {
-			return nil, diags
-		}
-	}
-	return res, nil
 }
 
 var (

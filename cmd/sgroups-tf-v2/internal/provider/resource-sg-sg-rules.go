@@ -27,10 +27,11 @@ func NewSgToSgRulesResource() resource.Resource {
 		ItemsDescription:    "SG -> SG rules",
 	}
 	return &sgToSgRulesResource{
-		suffix:       "_rules",
-		description:  d,
-		toSubjOfSync: sgSgRules2SyncSubj,
-		read:         readSgSgRules,
+		suffix:          "_rules",
+		description:     d,
+		toSubjOfSync:    sgSgRules2SyncSubj,
+		read:            readSgSgRules,
+		ResourceUpdater: baseUpdater[sgSgRule, protos.SyncSGRules]{toSubjOfSync: sgSgRules2SyncSubj},
 	}
 }
 

@@ -28,11 +28,11 @@ func NewSgsResource() resource.Resource {
 		ItemsDescription:    "Security Groups",
 	}
 	return &sgsResource{
-		suffix:       "_groups",
-		description:  d,
-		toSubjOfSync: sgs2SyncSubj,
-		deleteReqs:   sgsDelete,
-		read:         readSgs,
+		suffix:          "_groups",
+		description:     d,
+		toSubjOfSync:    sgs2SyncSubj,
+		read:            readSgs,
+		ResourceUpdater: newSgsUpdater(),
 	}
 }
 
@@ -54,6 +54,10 @@ type (
 		Networks      types.Set    `tfsdk:"networks"`
 		Icmp          types.Object `tfsdk:"icmp"`
 		Icmp6         types.Object `tfsdk:"icmp6"`
+	}
+
+	sgsUpdater struct {
+		baseUpdater[sgItem, securityGroupSubject]
 	}
 )
 
@@ -296,23 +300,14 @@ func readSgs(ctx context.Context, state sgsResourceModel, client *sgAPI.Client) 
 	return newState, diags
 }
 
-func sgsDelete(ctx context.Context, stateItems map[string]sgItem, planItems map[string]sgItem) ([]*protos.SyncReq, diag.Diagnostics) {
+func (u sgsUpdater) deleteEmbedReqs(ctx context.Context, stateItems map[string]sgItem, planItems map[string]sgItem) ([]*protos.SyncReq, diag.Diagnostics) { //nolint:lll
 	var (
-		groupsToDelete = &protos.SyncSecurityGroups{}
-		rulesToDelete  = &protos.SyncSgIcmpRules{}
-		diags          diag.Diagnostics
+		rulesToDelete = &protos.SyncSgIcmpRules{}
+		diags         diag.Diagnostics
 	)
 
-	for sgName, stateItem := range stateItems {
-		if planItem, planned := planItems[sgName]; !planned {
-			syncGroups, syncIcmpParams, d := stateItem.toProto(ctx)
-			diags.Append(d...)
-			if diags.HasError() {
-				return nil, diags
-			}
-			groupsToDelete.Groups = append(groupsToDelete.Groups, syncGroups.Groups...)
-			rulesToDelete.Rules = append(rulesToDelete.Rules, syncIcmpParams.Rules...)
-		} else {
+	for sgName, planItem := range planItems {
+		if stateItem, keep := stateItems[sgName]; keep {
 			if isIcmpRemoved(stateItem.Icmp, planItem.Icmp) {
 				protoRule, d := stateItem.icmpObj2Proto(ctx, common.IpAddrFamily_IPv4)
 				diags.Append(d...)
@@ -340,15 +335,17 @@ func sgsDelete(ctx context.Context, stateItems map[string]sgItem, planItems map[
 				SgIcmpRules: rulesToDelete,
 			},
 		},
-		{
-			SyncOp: protos.SyncReq_Delete,
-			Subject: &protos.SyncReq_Groups{
-				Groups: groupsToDelete,
-			},
-		},
 	}, diags
 }
 
 func isIcmpRemoved(stateIcmp types.Object, planIcmp types.Object) bool {
 	return !stateIcmp.IsNull() && planIcmp.IsNull()
 }
+
+func newSgsUpdater() sgsUpdater {
+	return sgsUpdater{baseUpdater: baseUpdater[sgItem, securityGroupSubject]{sgs2SyncSubj}}
+}
+
+var (
+	_ = newSgsUpdater().deleteEmbedReqs
+)
