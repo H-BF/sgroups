@@ -211,7 +211,13 @@ func (nt NetworkTransport) String() string {
 
 // String -
 func (tfc Traffic) String() string {
-	return [...]string{"ingress", "egress"}[tfc]
+	switch tfc {
+	case INGRESS:
+		return "ingress"
+	case EGRESS:
+		return "egress"
+	}
+	return fmt.Sprintf("Undef(%v)", int(tfc))
 }
 
 // String impl Stringer
