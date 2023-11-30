@@ -23,6 +23,16 @@ func netTranport2proto(src model.NetworkTransport) (common.Networks_NetIP_Transp
 	return 0, errors.Errorf("bad net transport (%v)", src)
 }
 
+func traffic2proto(src model.Traffic) (common.Traffic, error) {
+	switch src {
+	case model.EGRESS:
+		return common.Traffic_Egress, nil
+	case model.INGRESS:
+		return common.Traffic_Ingress, nil
+	}
+	return 0, errors.Errorf("bad traffic value (%v)", src)
+}
+
 func sgAccPorts2proto(src []model.SGRulePorts) ([]*sg.AccPorts, error) {
 	ret := make([]*sg.AccPorts, 0, len(src))
 	for _, p := range src {
@@ -111,6 +121,26 @@ func sgSgIcmpRule2proto(src model.SgSgIcmpRule) (*sg.SgSgIcmpRule, error) {
 		return true
 	})
 	return &ret, nil
+}
+
+func cidrSgRule2proto(src model.CidrSgRule) (*sg.CidrSgRule, error) {
+	ret := &sg.CidrSgRule{
+		Logs:  src.Logs,
+		Trace: src.Trace,
+		SG:    src.ID.SG,
+		CIDR:  src.ID.CIDR.String(),
+	}
+	var e error
+	if ret.Traffic, e = traffic2proto(src.ID.Traffic); e != nil {
+		return nil, e
+	}
+	if ret.Transport, e = netTranport2proto(src.ID.Transport); e != nil {
+		return nil, e
+	}
+	if ret.Ports, e = sgAccPorts2proto(src.Ports); e != nil {
+		return nil, e
+	}
+	return ret, nil
 }
 
 func (srv *sgService) GetRules(ctx context.Context, req *sg.GetRulesReq) (resp *sg.RulesResp, err error) {

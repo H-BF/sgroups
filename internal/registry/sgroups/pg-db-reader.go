@@ -339,6 +339,12 @@ func (rd *pgDbReader) ListSgSgIcmpRules(ctx context.Context, consume func(model.
 	})
 }
 
+// ListCidrSgRules impl Reader
+func (rd *pgDbReader) ListCidrSgRules(ctx context.Context, consume func(model.CidrSgRule) error, scope Scope) error {
+	_, _, _ = ctx, consume, scope
+	return errors.New("not impl")
+}
+
 // GetSyncStatus impl Reader interface
 func (rd *pgDbReader) GetSyncStatus(ctx context.Context) (*model.SyncStatus, error) {
 	const api = "PG/GetSyncStatus"

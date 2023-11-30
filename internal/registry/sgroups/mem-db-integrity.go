@@ -1,12 +1,9 @@
 package sgroups
 
 import (
-	"math/big"
-	"sort"
-
+	"github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
-	"github.com/c-robinson/iplib"
 	"github.com/pkg/errors"
 )
 
@@ -118,12 +115,12 @@ func IntegrityChecker4SG() IntegrityChecker {
 	}
 }
 
-// IntegrityChecker4Networks checks if every network does overlap another one
-func IntegrityChecker4Networks() IntegrityChecker { //nolint:gocyclo
+/*//TODO: remove this
+func IntegrityChecker4Networks2() IntegrityChecker { //nolint:gocyclo
 	const api = "Integrity-of-Networks"
 
 	type bound struct {
-		val    *big.Int
+		val    bigInt
 		isLeft bool
 		n      *model.Network
 	}
@@ -135,61 +132,105 @@ func IntegrityChecker4Networks() IntegrityChecker { //nolint:gocyclo
 		if e != nil {
 			return errors.WithMessage(e, api)
 		}
-		var v6, v4 []bound
+		var bounds []bound
 		for x := it.Next(); x != nil; x = it.Next() {
 			n := x.(*model.Network)
-			ones, _ := n.Net.Mask.Size()
-			nt := iplib.NewNet(n.Net.IP, ones)
-			ipF := nt.IP()
-			ipL := nt.LastAddress()
-			var dest *[]bound
-			switch nt.Version() {
-			case iplib.IP4Version:
-				if ones < 31 { //nolint:gomnd
-					ipL = iplib.NextIP(ipL)
-				}
-				dest = &v4
-			case iplib.IP6Version: //TODO: Check it manually
-				if ones < 128 { //nolint:gomnd
-					ipL = iplib.NextIP(ipL)
-				}
-				dest = &v6
-			default:
-				return errors.Errorf("%s: unable detect IP version for network %s", api, n)
-			}
-			*dest = append(*dest, bound{
-				val:    iplib.IPToBigint(ipF),
-				isLeft: true,
-				n:      n,
-			}, bound{
-				val: iplib.IPToBigint(ipL),
-				n:   n,
-			})
+			var h cidr2bigInt
+			h.init(n.Net)
+			bounds = append(bounds,
+				bound{
+					isLeft: true,
+					n:      n,
+					val:    h.lowerBound(),
+				})
+			bounds = append(bounds,
+				bound{
+					n:   n,
+					val: h.upperBound(),
+				})
 		}
-		for _, bds := range [][]bound{v4, v6} {
-			sort.Slice(bds, func(i, j int) bool {
-				l, r := bds[i], bds[j]
-				d := l.val.Cmp(r.val)
-				if d != 0 {
-					return d < 0
-				}
-				return l.isLeft && !r.isLeft
-			})
-			c := 0
-			for i := range bds {
-				b := bds[i]
-				if b.isLeft {
-					c++
-				} else {
-					c--
-				}
-				if (i > 0) && (c > 1 || c < 0) {
-					return errors.Errorf("%s: networks %s and %s seem have overlapped region",
-						api, b.n, bds[i-1].n)
-				}
+		sort.Slice(bounds, func(i, j int) bool {
+			l, r := bounds[i], bounds[j]
+			d := l.val.Cmp(r.val)
+			if d != 0 {
+				return d < 0
+			}
+			return l.isLeft && !r.isLeft
+		})
+		c := 0
+		for i := range bounds {
+			b := bounds[i]
+			if b.isLeft {
+				c++
+			} else {
+				c--
+			}
+			if (i > 0) && (c > 1 || c < 0) {
+				return errors.Errorf("%s: networks %s, %s have overlapped region",
+					api, b.n, bounds[i-1].n)
 			}
 		}
 		return nil
+	}
+}
+*/
+
+func IntegrityChecker4Networks() IntegrityChecker { //nolint:gocyclo
+	const api = "Integrity-of-Networks"
+
+	errf := func(n1, n2 *model.Network) error {
+		return errors.Errorf("networks %s, %s have intersection", n1, n2)
+	}
+
+	return func(reader MemDbReader) error {
+		it, e := reader.Get(TblNetworks, indexID)
+		if isInvalidTableErr(e) {
+			return nil
+		}
+		if e != nil {
+			return errors.WithMessage(e, api)
+		}
+		type nw struct {
+			interval bool
+			*model.Network
+		}
+		var nets dict.RBDict[bigInt, nw]
+		var h cidr2bigInt
+		for x := it.Next(); x != nil; x = it.Next() {
+			n := x.(*model.Network)
+			h.init(n.Net)
+			lb := h.lowerBound()
+			rb := h.upperBound()
+			nw := nw{interval: lb.Cmp(rb) != 0, Network: n}
+			if !nets.Insert(lb, nw) {
+				n0 := nets.At(lb)
+				e = errf(n, n0.Network)
+				break
+			}
+			if nw.interval && !nets.Insert(rb, nw) {
+				n0 := nets.At(rb)
+				e = errf(n, n0.Network)
+				break
+			}
+		}
+		if e != nil {
+			return errors.WithMessage(e, api)
+		}
+		var prev *model.Network
+		nets.Iterate(func(_ bigInt, n nw) bool {
+			if prev != nil {
+				if prev != n.Network {
+					e = errf(prev, n.Network)
+				}
+				prev = nil
+				return e == nil
+			}
+			if n.interval {
+				prev = n.Network
+			}
+			return true
+		})
+		return errors.WithMessage(e, api)
 	}
 }
 
@@ -244,5 +285,113 @@ func IntegrityChecker4SgSgIcmpRules() IntegrityChecker {
 			}
 		}
 		return nil
+	}
+}
+
+// IntegrityChecker4CidrSgRules -
+func IntegrityChecker4CidrSgRules() IntegrityChecker {
+	const api = "Integrity-of-CidrSgRules"
+
+	errf := func(objs ...model.CidrSgRuleIdenity) error {
+		if len(objs) <= 1 {
+			return nil
+		}
+		return errors.Errorf("some rules %s have CIDRS with intersected segments", objs)
+	}
+	detectCidrsIntersections := func(objs []model.CidrSgRuleIdenity) error {
+		type ref struct {
+			i        int
+			interval bool
+		}
+		if len(objs) < 2 {
+			return nil
+		}
+		var refs dict.RBDict[bigInt, ref]
+		var h cidr2bigInt
+		for i := range objs {
+			r := &objs[i]
+			h.init(r.CIDR)
+			lb, rb := h.lowerBound(), h.upperBound()
+			rf := ref{i: i, interval: lb.Cmp(rb) != 0}
+			if !refs.Insert(lb, rf) {
+				x := refs.At(lb)
+				return errf(*r, objs[x.i])
+			}
+			if rf.interval && !refs.Insert(rb, rf) {
+				x := refs.At(rb)
+				return errf(*r, objs[x.i])
+			}
+		}
+		var e error
+		prevRef := -1
+		refs.Iterate(func(_ bigInt, rf ref) bool {
+			if prevRef >= 0 {
+				if prevRef != rf.i {
+					e = errf(objs[prevRef], objs[rf.i])
+				}
+				prevRef = -1
+				return e == nil
+			}
+			if rf.interval {
+				prevRef = rf.i
+			}
+			return true
+		})
+		return e
+	}
+
+	return func(reader MemDbReader) error {
+		it, e := reader.Get(TblCidrSgRules, indexSG)
+		if isInvalidTableErr(e) {
+			return nil
+		}
+		if e != nil {
+			return errors.WithMessage(e, api)
+		}
+		for x := it.Next(); x != nil; x = it.Next() { //SG ref validate
+			r := x.(*model.CidrSgRule)
+			i, e := reader.First(TblSecGroups, indexID, r.ID.SG)
+			if e != nil {
+				return errors.WithMessagef(e, "%s: find ref to SG '%s'", api, r.ID.SG)
+			}
+			if i == nil {
+				return errors.Errorf("%s: not found ref to SG '%s'", api, r.ID.SG)
+			}
+		}
+
+		type groupKey struct {
+			Transport model.NetworkTransport
+			SG        string
+			Traffic   model.Traffic
+		}
+		it, e = reader.Get(TblCidrSgRules, indexProtoSgTraffic) //detects CIDRS intersections
+		if e != nil {
+			return errors.WithMessage(e, api)
+		}
+		var objs []model.CidrSgRuleIdenity
+		var prevKey groupKey
+		for x := it.Next(); x != nil; x = it.Next() {
+			r := x.(*model.CidrSgRule)
+			k := groupKey{
+				Transport: r.ID.Transport,
+				SG:        r.ID.SG,
+				Traffic:   r.ID.Traffic,
+			}
+		loop:
+			if len(objs) == 0 {
+				prevKey = k
+				objs = append(objs, r.ID)
+			} else if prevKey == k {
+				objs = append(objs, r.ID)
+			} else {
+				if err := detectCidrsIntersections(objs); err != nil {
+					return errors.WithMessage(err, api)
+				}
+				objs = objs[:0]
+				goto loop
+			}
+		}
+		err := detectCidrsIntersections(objs)
+		return errors.WithMessage(err, api)
 	}
 }

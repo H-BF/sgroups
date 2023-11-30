@@ -1,6 +1,7 @@
 package sgroups
 
 import (
+	"net"
 	"regexp"
 	"unsafe"
 
@@ -69,6 +70,12 @@ func (a ChainDefaultAction) Validate() error {
 func (nt NetworkTransport) Validate() error {
 	vals, x := [...]any{int(TCP), int(UDP)}, int(nt)
 	return oz.Validate(x, oz.In(vals[:]...).Error("must be in ['TCP', 'UDP']"))
+}
+
+// Validate net transport validator
+func (tfc Traffic) Validate() error {
+	vals, x := [...]any{int(INGRESS), int(EGRESS)}, int(tfc)
+	return oz.Validate(x, oz.In(vals[:]...).Error("must be in ['INGRESS', 'EGRESS']"))
 }
 
 // Validate validate of SGRuleIdentity
@@ -187,6 +194,26 @@ func (o SgSgIcmpRule) Validate() error {
 		oz.Field(&o.SgTo, oz.Required.Error(msg),
 			oz.Match(reCName)),
 		oz.Field(&o.Icmp),
+	)
+}
+
+// Validate validate of CidrSgRuleIdenity
+func (o CidrSgRuleIdenity) Validate() error {
+	return oz.ValidateStruct(&o,
+		oz.Field(&o.Transport),
+		oz.Field(&o.Traffic),
+		oz.Field(&o.SG, oz.Required),
+		oz.Field(&o.CIDR, oz.By(func(_ interface{}) error {
+			switch len(o.CIDR.IP) {
+			case net.IPv4len, net.IPv6len:
+			default:
+				return errors.New("IP of net is invalid")
+			}
+			if len(o.CIDR.Mask) != len(o.CIDR.IP) {
+				return errors.New("net mask is invalid")
+			}
+			return nil
+		})),
 	)
 }
 
