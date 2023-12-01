@@ -146,14 +146,6 @@ func (item sgFqdnRule) IsDiffer(ctx context.Context, other sgFqdnRule) bool {
 		model.AreRulePortsEq(itemModelPorts, otherModelPorts))
 }
 
-func portsToProto(data []AccessPorts) []*protos.AccPorts {
-	var ret []*protos.AccPorts
-	for _, port := range data {
-		ret = append(ret, port.toProto())
-	}
-	return ret
-}
-
 func sgFqdnRules2SyncSubj(ctx context.Context, items map[string]sgFqdnRule) (*protos.SyncFqdnRules, diag.Diagnostics) { //nolint:dupl
 	syncFqdnRules := new(protos.SyncFqdnRules)
 	var diags diag.Diagnostics

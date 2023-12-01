@@ -30,6 +30,7 @@ type (
 		securityGroupSubject |
 			protos.SyncNetworks |
 			protos.SyncSGRules |
+			protos.SyncCidrSgRules |
 			protos.SyncFqdnRules |
 			protos.SyncSgSgIcmpRules
 	}

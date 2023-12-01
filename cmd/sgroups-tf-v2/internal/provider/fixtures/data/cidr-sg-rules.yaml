@@ -1,0 +1,152 @@
+initial-backend:
+  networks:
+  - |
+    {
+      "name": "net1",
+      "network": {
+        "CIDR": "10.10.10.0/24"
+      }
+    }
+  - |
+    {
+      "name": "net2",
+      "network": {
+        "CIDR": "10.10.20.0/24"
+      }
+    }
+  sec-groups:
+  - |
+    {
+      "defaultAction": "ACCEPT",
+      "logs": false,
+      "name": "group1",
+      "networks": ["net1"],
+      "trace": false
+    }
+  - |
+    {
+      "defaultAction": "DROP",
+      "logs": true,
+      "name": "group2",
+      "networks": ["net2"],
+      "trace": true
+    }
+cases:
+- name: "create two cidr-sg rules"
+  tf-config: |
+    resource "sgroups_cidr_rules" "cidr-rules" {
+      items = {
+        "tcp:cidr(10.0.0.0/24)sg(group1)ingress" = {
+          traffic = "ingress"
+          proto   = "tcp"
+          sg_name = "group1"
+          cidr    = "10.0.0.0/24"
+          ports = [
+            {
+              d = "80"
+            }
+          ]
+          logs  = true
+          trace = true
+        }
+
+        "udp:cidr(20.0.0.0/24)sg(group2)egress" = {
+          traffic = "egress"
+          proto   = "udp"
+          sg_name = "group2"
+          cidr    = "20.0.0.0/24"
+          ports = [
+            {
+              d = "80"
+            }
+          ]
+        }
+      }
+    }
+  expected-backend:
+    cidr-sg-rules:
+    - |
+      {
+        "CIDR": "10.0.0.0/24",
+        "SG": "group1",
+        "logs": true,
+        "ports": [
+          {
+            "d": "80",
+            "s": ""
+          }
+        ],
+        "trace": true,
+        "traffic": "Ingress",
+        "transport": "TCP"
+      }
+    - |
+      {
+        "CIDR": "20.0.0.0/24",
+        "SG": "group2",
+        "logs": false,
+        "ports": [
+          {
+            "d": "80",
+            "s": ""
+          }
+        ],
+        "trace": false,
+        "traffic": "Egress",
+        "transport": "UDP"
+      }
+- name: "change first and delete second"
+  tf-config: |
+    resource "sgroups_cidr_rules" "cidr-rules" {
+      items = {
+        "tcp:cidr(10.0.0.0/24)sg(group1)ingress" = {
+          traffic = "ingress"
+          proto   = "tcp"
+          sg_name = "group1"
+          cidr    = "10.0.0.0/24"
+          ports = [
+            {
+              d = "80,22,3025"
+              s = "8000-9000"
+            }
+          ]
+          logs  = false
+          trace = false
+        }
+      }
+    }
+  expected-backend:
+    cidr-sg-rules:
+    - |
+      {
+        "CIDR": "10.0.0.0/24",
+        "SG": "group1",
+        "logs": false,
+        "ports": [
+          {
+            "d": "80,22,3025",
+            "s": "8000-9000"
+          }
+        ],
+        "trace": false,
+        "traffic": "Ingress",
+        "transport": "TCP"
+      }
+  not-expected-backend:
+    cidr-sg-rules:
+    - |
+      {
+        "CIDR": "20.0.0.0/24",
+        "SG": "group2",
+        "logs": false,
+        "ports": [
+          {
+            "d": "80",
+            "s": ""
+          }
+        ],
+        "trace": false,
+        "traffic": "Egress",
+        "transport": "UDP"
+      }
+

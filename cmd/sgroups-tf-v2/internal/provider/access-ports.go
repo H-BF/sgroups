@@ -46,3 +46,11 @@ func (p AccessPorts) toProto() *protos.AccPorts {
 		D: p.Destination.ValueString(),
 	}
 }
+
+func portsToProto(data []AccessPorts) []*protos.AccPorts {
+	var ret []*protos.AccPorts
+	for _, port := range data {
+		ret = append(ret, port.toProto())
+	}
+	return ret
+}
