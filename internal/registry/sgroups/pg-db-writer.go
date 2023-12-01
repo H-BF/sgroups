@@ -259,6 +259,14 @@ func (wr *pgDbWriter) SyncSgSgIcmpRules(ctx context.Context, rules []model.SgSgI
 	return err
 }
 
+// SyncCidrSgRules impl Writer interface
+func (wr *pgDbWriter) SyncCidrSgRules(ctx context.Context, rules []model.CidrSgRule, scope Scope, opts ...Option) error {
+	_ = ctx
+	_ = rules
+	_ = scope
+	return errors.New("not impl")
+}
+
 // Commit impl Writer interface
 func (wr *pgDbWriter) Commit() error {
 	return wr.commit()

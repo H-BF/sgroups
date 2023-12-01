@@ -28,6 +28,26 @@ func TestValidate_NetworkTransport(t *testing.T) {
 	}
 }
 
+func TestValidate_Traffic(t *testing.T) {
+	cases := []struct {
+		x    Traffic
+		fail bool
+	}{
+		{INGRESS, false},
+		{EGRESS, false},
+		{Traffic(100), true},
+	}
+	for i := range cases {
+		c := cases[i]
+		e := c.x.Validate()
+		if !c.fail {
+			require.NoErrorf(t, e, "test case #%v", i)
+		} else {
+			require.Errorf(t, e, "test case #%v", i)
+		}
+	}
+}
+
 func TestValidate_Network(t *testing.T) {
 	nnw := func(s string) net.IPNet {
 		_, ret, e := net.ParseCIDR(s)

@@ -48,8 +48,13 @@ func (srv *sgService) Sync(ctx context.Context, req *sg.SyncReq) (ret *emptypb.E
 	case *sg.SyncReq_SgSgIcmpRules:
 		rules := sbj.SgSgIcmpRules.GetRules()
 		err = syncSgSgIcmpRule(ctx, wr.SyncSgSgIcmpRules, rules, ops)
+	case *sg.SyncReq_CidrSgRules:
+		rules := sbj.CidrSgRules.GetRules()
+		err = syncCidrSgRules(ctx, wr.SyncCidrSgRules, rules, ops)
 	default:
-		err = status.Error(codes.InvalidArgument, "sync unsupported subject type")
+		err = status.Errorf(
+			codes.InvalidArgument, "sync unsupported subject type %T", sbj,
+		)
 	}
 	if errors.Is(err, registry.ErrValidate) {
 		err = status.Errorf(codes.InvalidArgument, "%s", err.Error())
@@ -93,7 +98,7 @@ func syncOptionsFromProto(o sg.SyncReq_SyncOp) (ret []registry.Option, err error
 		ret = append(ret, registry.SyncOmitInsert{}, registry.SyncOmitUpdate{})
 	case sg.SyncReq_FullSync:
 	default:
-		err = status.Error(codes.InvalidArgument, "unsupported sync option")
+		err = status.Errorf(codes.InvalidArgument, "unsupported sync-op (%v)", o)
 	}
 	return ret, err
 }

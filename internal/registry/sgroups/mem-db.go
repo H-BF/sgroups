@@ -13,9 +13,10 @@ import (
 type IndexID = string
 
 const ( //indexes
-	indexID    IndexID = "id"
-	indexIPNet IndexID = "ip-net"
-	indexSG    IndexID = "sg"
+	indexID             IndexID = "id"
+	indexIPNet          IndexID = "ip-net"
+	indexSG             IndexID = "sg"
+	indexProtoSgTraffic IndexID = "proto-sg-traffic"
 )
 
 type (
@@ -77,7 +78,7 @@ func AllTables() MemDbOption {
 	return MemDBTables([]TableID{
 		TblNetworks, TblSecGroups, TblSecRules,
 		TblSyncStatus, TblFqdnRules, TblSgIcmpRules,
-		TblSgSgIcmpRules,
+		TblSgSgIcmpRules, TblCidrSgRules,
 	})
 }
 
