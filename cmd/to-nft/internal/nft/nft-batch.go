@@ -58,6 +58,7 @@ type (
 
 	ruleDetails struct {
 		logs     bool
+		trace    bool
 		accports []accports
 	}
 
@@ -72,6 +73,7 @@ type (
 		sg2fqdnRules   cases.SG2FQDNRules
 		sg2sgIcmpRules cases.SgSgIcmpRules
 		sgIcmpRules    cases.SgIcmpRules
+		cidrSgRules    cases.CidrSgRules
 
 		table       *nftLib.Table
 		ruleDetails di.HDict[string, *ruleDetails]
@@ -139,6 +141,7 @@ func (bt *batch) prepare() {
 	bt.addFQDNNetSets()
 	bt.initSG2SGRulesDetails()
 	bt.initSG2FQDNRulesDetails()
+	bt.initCidrSgRulesDetails()
 	bt.initRootChains()
 	bt.initBaseRules()
 	bt.makeInOutChains(dirIN)
@@ -466,6 +469,24 @@ func (bt *batch) initSG2FQDNRulesDetails() {
 	}
 }
 
+func (bt *batch) initCidrSgRulesDetails() {
+	bt.cidrSgRules.Rules.Iterate(func(_ model.CidrSgRuleIdenity, r *model.CidrSgRule) bool {
+		item := ruleDetails{
+			accports: setsUtils{}.makeAccPorts(r.Ports),
+			logs:     r.Logs,
+			trace:    r.Trace,
+		}
+		if len(item.accports) == 0 {
+			item.accports = append(item.accports, accports{})
+		}
+		bt.ruleDetails.Put(
+			nameUtils{}.nameCidrSgRuleDetails(r),
+			&item,
+		)
+		return true
+	})
+}
+
 func (bt *batch) populateOutSgFqdnRules(sg *cases.SG) {
 	targetChName := nameUtils{}.nameOfInOutChain(dirOUT, sg.Name)
 	rules := bt.sg2fqdnRules.RulesForSG(sg.Name)
@@ -623,6 +644,46 @@ func (bt *batch) populateInOutSgRules(dir direction, sg *cases.SG) {
 	}
 }
 
+func (bt *batch) populateInOutCidrSgRules(dir direction, sg *cases.SG) {
+	isIN := dir == dirIN
+	rules := bt.cidrSgRules.GetRulesForTrafficAndSG(
+		tern(isIN, model.INGRESS, model.EGRESS),
+		sg.Name,
+	)
+	api := fmt.Sprintf("populate-cidr-sg-%sgress-rule", tern(isIN, "in", "e"))
+	targetSGchName := nameUtils{}.nameOfInOutChain(dir, sg.Name)
+	for _, rule := range rules {
+		rule := rule
+		detailsName := nameUtils{}.nameCidrSgRuleDetails(rule)
+		details := bt.ruleDetails.At(detailsName)
+		if details == nil {
+			continue
+		}
+		for i := range details.accports {
+			ports := details.accports[i]
+			bt.addJob(api, func(tx *Tx) error {
+				bt.log.Debugf("add '%s' rule into '%s'/'%s'",
+					rule.ID, bt.table.Name, targetSGchName)
+				chnApplyTo := bt.chains.At(targetSGchName)
+				if chnApplyTo == nil {
+					return nil
+				}
+				rb := beginRule().
+					srcOrDstSingleIpNet(rule.ID.CIDR, isIN).
+					protoIP(rule.ID.Transport)
+				rb = ports.D(ports.S(rb)).counter()
+				if details.logs {
+					rb = rb.dlogs(nfte.LogFlagsIPOpt)
+				}
+				rb.metaNFTRACE(details.trace).
+					accept().
+					applyRule(chnApplyTo, tx.Conn)
+				return nil
+			})
+		}
+	}
+}
+
 func (bt *batch) makeInOutChains(dir direction) {
 	bt.localSGs.Iterate(func(_ string, sg *cases.SG) bool {
 		bt.chainInOutProlog(dir, sg)
@@ -632,6 +693,7 @@ func (bt *batch) makeInOutChains(dir direction) {
 		if dir == dirOUT {
 			bt.populateOutSgFqdnRules(sg)
 		}
+		bt.populateInOutCidrSgRules(dir, sg)
 		bt.chainInOutEpilog(dir, sg)
 		return true
 	})

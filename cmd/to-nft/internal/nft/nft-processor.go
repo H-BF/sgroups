@@ -9,7 +9,6 @@ import (
 
 	"github.com/H-BF/corlib/logger"
 	sgAPI "github.com/H-BF/protos/pkg/api/sgroups"
-	"github.com/ahmetb/go-linq/v3"
 	"github.com/pkg/errors"
 	"go.uber.org/multierr"
 )
@@ -104,20 +103,12 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, netConf NetCon
 	}
 	applied.SG2FQDNRules = fqdnRules
 
-	var sgNames []string
-	linq.From(
-		append(
-			append(
-				append(
-					append(localRules.SGs.Names(), fqdnRules.SGs.Names()...),
-					applied.SgSgIcmpRules.SGs.Names()...,
-				),
-				applied.SgIcmpRules.SGs.Names()...,
-			),
-			applied.LocalSGs.Names()...,
-		),
-	).Distinct().ToSlice(&sgNames)
+	log.Debugw("loading CIDR-SG-INGRESS/EGRESS rules...", "local-SG(s)", stringerOfLocalSGs)
+	if err = applied.CidrSgRules.Load(ctx, impl.sgClient, applied.LocalSGs); err != nil {
+		return applied, err
+	}
 
+	sgNames := applied.GetAllUsedSgNames()
 	log.Debugw("loading networks...", "SG(s)", slice2stringer(sgNames...))
 	if err = networks.LoadFromSGNames(ctx, impl.sgClient, sgNames); err != nil {
 		return applied, err
@@ -139,6 +130,7 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, netConf NetCon
 		WithSgSgIcmpRules(applied.SgSgIcmpRules),
 		WithSgIcmpRules(applied.SgIcmpRules),
 		WithLocalSGs(applied.LocalSGs),
+		WithCidrSgRules(applied.CidrSgRules),
 	)
 	if err == nil {
 		applied.BaseRules = impl.baseRules

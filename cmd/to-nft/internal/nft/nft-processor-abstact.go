@@ -9,6 +9,7 @@ import (
 	"github.com/H-BF/sgroups/cmd/to-nft/internal"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
 	"github.com/H-BF/sgroups/internal/config"
+	"github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
 	"github.com/c-robinson/iplib"
@@ -25,6 +26,7 @@ type (
 		SG2FQDNRules  cases.SG2FQDNRules
 		SgIcmpRules   cases.SgIcmpRules
 		SgSgIcmpRules cases.SgSgIcmpRules
+		CidrSgRules   cases.CidrSgRules
 	}
 
 	// Patch -
@@ -120,4 +122,16 @@ func (rules *AppliedRules) Patch(p Patch, apply func() error) error {
 		return nil
 	}
 	return ErrPatchNotApplicable
+}
+
+// GetAllUsedSgNames -
+func (rules *AppliedRules) GetAllUsedSgNames() []string {
+	var ret dict.HSet[string]
+	ret.PutMany(rules.LocalSGs.Keys()...)
+	ret.PutMany(rules.SG2SGRules.SGs.Keys()...)
+	ret.PutMany(rules.SG2FQDNRules.SGs.Keys()...)
+	ret.PutMany(rules.SgIcmpRules.SGs.Keys()...)
+	ret.PutMany(rules.SgSgIcmpRules.SGs.Keys()...)
+	ret.PutMany(rules.CidrSgRules.SGs.Keys()...)
+	return ret.Values()
 }
