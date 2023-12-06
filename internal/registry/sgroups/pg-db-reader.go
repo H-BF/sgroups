@@ -346,6 +346,7 @@ func (rd *pgDbReader) argsForListCidrSgRules(scope Scope) ([]any, error) {
 		for sg := range sc {
 			sgs = append(sgs, sg)
 		}
+	case noScope:
 	default:
 		return nil, errors.WithMessagef(ErrUnexpectedScope, "%#v", scope)
 	}

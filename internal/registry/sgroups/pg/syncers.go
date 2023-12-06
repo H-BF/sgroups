@@ -256,6 +256,12 @@ func (o *syncObj[T, tFlt]) AddData(ctx context.Context, data ...T) error {
 				return err
 			}
 			raw = append(raw, []any{x.IPv, x.SgFrom, x.SgTo, x.Tytes, x.Logs, x.Trace})
+		case sgm.CidrSgRule:
+			var x CidrSgRule
+			if err := x.FromModel(v); err != nil {
+				return err
+			}
+			raw = append(raw, []any{x.Proto, x.CIDR, x.SG, x.Traffic, x.Ports, x.Logs, x.Trace})
 		default:
 			panic("UB")
 		}
