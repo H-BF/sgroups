@@ -13,25 +13,20 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type sgFqdnRulesTests struct {
+type cidrRulesTests struct {
 	baseResourceTests
 }
 
-func TestAccSgFqdnRules(t *testing.T) {
-	suite.Run(t, new(sgFqdnRulesTests))
+func TestAccCidrRules(t *testing.T) {
+	suite.Run(t, new(cidrRulesTests))
 }
 
-func (sui *sgFqdnRulesTests) TestSgFqdnRules_Straight() {
-	resourceTestCase := sui.testSgFqdnRulesFromFixtureFilename("data/sg-fqdn-rules.yaml")
+func (sui *cidrRulesTests) TestCidrRules_Straight() {
+	resourceTestCase := sui.testCidrRulesFromFixtureFilename("data/cidr-sg-rules.yaml")
 	resource.Test(sui.T(), resourceTestCase)
 }
 
-func (sui *sgFqdnRulesTests) TestSgFqdnRules__PortsAreEmptyList() {
-	resourceTestCase := sui.testSgFqdnRulesFromFixtureFilename("data/sg-fqdn-rules_ports-are-empty-list.yaml")
-	resource.Test(sui.T(), resourceTestCase)
-}
-
-func (sui *sgFqdnRulesTests) testSgFqdnRulesFromFixtureFilename(name string) resource.TestCase {
+func (sui *cidrRulesTests) testCidrRulesFromFixtureFilename(name string) resource.TestCase {
 	testData := fixtures.AccTests{Ctx: sui.ctx}
 	testData.LoadFixture(sui.T(), name)
 	testData.InitBackend(sui.T(), sui.sgClient)
@@ -40,24 +35,24 @@ func (sui *sgFqdnRulesTests) testSgFqdnRulesFromFixtureFilename(name string) res
 	}
 	for _, tc := range testData.Cases {
 		tcName := tc.TestName
-		expectedBackend := tc.Expected.SgFqdnRules.Decode()
-		nonExpectedBackend := tc.NonExpected.SgFqdnRules.Decode()
+		expectedBackend := tc.Expected.CidrSgRules.Decode()
+		nonExpectedBackend := tc.NonExpected.CidrSgRules.Decode()
 
 		resourceTestCase.Steps = append(resourceTestCase.Steps, resource.TestStep{
 			Config: tc.TfConfig,
 			Check: func(_ *terraform.State) error {
 				if len(expectedBackend)+len(nonExpectedBackend) > 0 {
-					allRules := sui.listAllFqdnRules()
-					var checker fixtures.ExpectationsChecker[protos.FqdnRule, domain.FQDNRule]
+					allRules := sui.listAllCidrRules()
+					var checker fixtures.ExpectationsChecker[protos.CidrSgRule, domain.CidrSgRule]
 					checker.Init(allRules)
 
 					if !checker.WeExpectFindAll(expectedBackend) {
-						return fmt.Errorf("on check '%s' we expect to find all these FqdnRules[%s] in [%s]",
+						return fmt.Errorf("on check '%s' we expect to find all these CidrSgRules[%s] in [%s]",
 							tcName, slice2string(expectedBackend...), slice2string(allRules...))
 					}
 
 					if !checker.WeDontExpectFindAny(nonExpectedBackend) {
-						return fmt.Errorf("on check '%s' we dont expect to find any of FqdnRules[%s] in [%s]",
+						return fmt.Errorf("on check '%s' we dont expect to find any of CidrSgRules[%s] in [%s]",
 							tcName, slice2string(nonExpectedBackend...), slice2string(allRules...))
 					}
 				}
@@ -69,8 +64,8 @@ func (sui *sgFqdnRulesTests) testSgFqdnRulesFromFixtureFilename(name string) res
 	return resourceTestCase
 }
 
-func (sui *sgFqdnRulesTests) listAllFqdnRules() []*protos.FqdnRule {
-	resp, err := sui.sgClient.FindFqdnRules(sui.ctx, &protos.FindFqdnRulesReq{SgFrom: []string{}})
+func (sui *cidrRulesTests) listAllCidrRules() []*protos.CidrSgRule {
+	resp, err := sui.sgClient.FindCidrSgRules(sui.ctx, &protos.FindCidrSgRulesReq{Sg: []string{}})
 	sui.Require().NoError(err)
 	return resp.GetRules()
 }

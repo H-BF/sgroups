@@ -21,9 +21,20 @@ func TestAccSgSgRules(t *testing.T) {
 	suite.Run(t, new(sgSgRulesTests))
 }
 
-func (sui *sgSgRulesTests) TestSgsgRules() {
+func (sui *sgSgRulesTests) TestSgSgRules_Straight() {
+	resourceTestCase := sui.testSgSgRulesFromFixtureFilename("data/sg-sg-rules.yaml")
+	resource.Test(sui.T(), resourceTestCase)
+}
+
+// when to rules map inserted new rule with `ports = []` field
+func (sui *sgSgRulesTests) TestSgSgRules_PortsAreEmptyList() {
+	resourceTestCase := sui.testSgSgRulesFromFixtureFilename("data/sg-sg-rules_ports-are-empty-list.yaml")
+	resource.Test(sui.T(), resourceTestCase)
+}
+
+func (sui *sgSgRulesTests) testSgSgRulesFromFixtureFilename(name string) resource.TestCase {
 	testData := fixtures.AccTests{Ctx: sui.ctx}
-	testData.LoadFixture(sui.T(), "data/sg-sg-rules.yaml")
+	testData.LoadFixture(sui.T(), name)
 	testData.InitBackend(sui.T(), sui.sgClient)
 	resourceTestCase := resource.TestCase{
 		ProtoV6ProviderFactories: sui.providerFactories,
@@ -56,7 +67,7 @@ func (sui *sgSgRulesTests) TestSgsgRules() {
 		})
 	}
 
-	resource.Test(sui.T(), resourceTestCase)
+	return resourceTestCase
 }
 
 func (sui *sgSgRulesTests) listAllSgRules() []*protos.Rule {

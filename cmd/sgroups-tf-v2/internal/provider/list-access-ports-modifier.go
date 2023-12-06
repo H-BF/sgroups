@@ -5,7 +5,9 @@ import (
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 func ListAccessPortsModifier() planmodifier.List {
@@ -65,8 +67,21 @@ func (*listAccessPortsModifier) PlanModifyList(ctx context.Context, req planmodi
 	}
 
 	if model.AreRulePortsEq(stateModelPorts, planModelPorts) {
+		// since our resource is map struct and when new item inserted to it then prior state will be null
+		// in that case null slice from prior state will be equal to empty slice from plan
+		// but changing plan value from empty list to null will lead to that error:
+		// `planned for absence but config wants existence`
+		if isEmptyList(ctx, req.PlanValue) && req.StateValue.IsNull() {
+			return
+		}
+
 		resp.PlanValue = req.StateValue
 	}
+}
+
+func isEmptyList(ctx context.Context, l types.List) bool {
+	emptyList, _ := types.ListValue(l.ElementType(ctx), []attr.Value{})
+	return l.Equal(emptyList)
 }
 
 func toModelPorts(ports []AccessPorts) ([]model.SGRulePorts, error) {

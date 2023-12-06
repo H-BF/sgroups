@@ -54,7 +54,7 @@ func (item networkItem) ResourceAttributes() map[string]schema.Attribute {
 	}
 }
 
-func (item networkItem) IsDiffer(other networkItem) bool {
+func (item networkItem) IsDiffer(ctx context.Context, other networkItem) bool {
 	return !(item.Name.Equal(other.Name) &&
 		item.Cidr.Equal(other.Cidr))
 }
