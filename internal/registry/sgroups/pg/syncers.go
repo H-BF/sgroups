@@ -30,6 +30,8 @@ type SyncerOfSgIcmpRules = syncObj[sgm.SgIcmpRule, sgm.SgIcmpRuleID]
 // SyncerOfSgIcmpRules -
 type SyncerOfSgSgIcmpRules = syncObj[sgm.SgSgIcmpRule, sgm.SgSgIcmpRuleID]
 
+type SyncerOfCidrSgRules = syncObj[sgm.CidrSgRule, sgm.CidrSgRuleIdenity]
+
 type syncObj[T any, tFlt any] struct {
 	C   *pgx.Conn
 	Ins bool
@@ -116,6 +118,19 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
 			syncField{Name: "trace", PgTy: "bool", Notnull: true},
 		)
+	case *sgm.CidrSgRule:
+		o.mutatorFn = "sgroups.sync_cidr_sg_rule"
+		o.tableDst = syncTable{
+			Name: "sgroups.vu_cidr_sg_rule",
+		}.WithFields(
+			syncField{Name: "proto", PgTy: "sgroups.proto", Notnull: true, Pk: true},
+			syncField{Name: "cidr", PgTy: "cidr", Notnull: true, Pk: true},
+			syncField{Name: "sg", PgTy: "sgroups.cname", Notnull: true, Pk: true},
+			syncField{Name: "traffic", PgTy: "sgroups.traffic", Notnull: true, Pk: true},
+			syncField{Name: "ports", PgTy: "sgroups.sg_rule_ports[]"},
+			syncField{Name: "logs", PgTy: "bool", Notnull: true},
+			syncField{Name: "trace", PgTy: "bool", Notnull: true},
+		)
 	default:
 		panic("UB")
 	}
@@ -185,6 +200,16 @@ func (o *syncObj[T, tFlt]) AddToFilter(ctx context.Context, data ...tFlt) error 
 				return e
 			}
 			raw = append(raw, []any{ipv, v.SgFrom, v.SgTo})
+		case sgm.CidrSgRuleIdenity:
+			var p Proto
+			var t Traffic
+			if err := p.FromModel(v.Transport); err != nil {
+				return err
+			}
+			if err := t.FromModel(v.Traffic); err != nil {
+				return err
+			}
+			raw = append(raw, []any{p, v.CIDR, v.SG, t})
 		default:
 			panic("UB")
 		}
@@ -231,6 +256,12 @@ func (o *syncObj[T, tFlt]) AddData(ctx context.Context, data ...T) error {
 				return err
 			}
 			raw = append(raw, []any{x.IPv, x.SgFrom, x.SgTo, x.Tytes, x.Logs, x.Trace})
+		case sgm.CidrSgRule:
+			var x CidrSgRule
+			if err := x.FromModel(v); err != nil {
+				return err
+			}
+			raw = append(raw, []any{x.Proto, x.CIDR, x.SG, x.Traffic, x.Ports, x.Logs, x.Trace})
 		default:
 			panic("UB")
 		}

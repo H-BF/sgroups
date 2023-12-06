@@ -440,7 +440,6 @@ func (o CidrSgRuleIdenity) Cmp(other CidrSgRuleIdenity) int {
 		return -1
 	}
 	return 1
-
 }
 
 // IsEq -
