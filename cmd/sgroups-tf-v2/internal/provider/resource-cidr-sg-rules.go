@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/H-BF/protos/pkg/api/common"
-	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/H-BF/sgroups/cmd/sgroups-tf-v2/internal/validators"
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
-	"github.com/ahmetb/go-linq/v3"
 
+	"github.com/H-BF/protos/pkg/api/common"
+	protos "github.com/H-BF/protos/pkg/api/sgroups"
+	"github.com/ahmetb/go-linq/v3"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -20,6 +20,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 func NewCidrRulesResource() resource.Resource {
@@ -83,7 +85,7 @@ func (item cidrRule) ResourceAttributes() map[string]schema.Attribute {
 			},
 		},
 		"cidr": schema.StringAttribute{
-			Description: "network addres with CIDR prefix",
+			Description: "IP subnet",
 			Required:    true,
 			Validators: []validator.String{
 				validators.IsCIDR(),
@@ -168,7 +170,8 @@ func cidrRules2SyncSubj(ctx context.Context, items map[string]cidrRule) (*protos
 				fmt.Sprintf("no proto conv for value(%s)", features.Proto.ValueString()))
 			return nil, diags
 		}
-		trafficValue, ok := common.Traffic_value[strings.Title(
+		caser := cases.Title(language.AmericanEnglish).String
+		trafficValue, ok := common.Traffic_value[caser(
 			features.Traffic.ValueString(),
 		)]
 		if !ok {
