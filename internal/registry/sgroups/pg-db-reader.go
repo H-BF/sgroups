@@ -358,7 +358,7 @@ func (rd *pgDbReader) argsForListCidrSgRules(scope Scope) ([]any, error) {
 }
 
 // ListCidrSgRules impl Reader
-func (rd *pgDbReader) ListCidrSgRules(ctx context.Context, consume func(model.CidrSgRule) error, scope Scope) error {
+func (rd *pgDbReader) ListCidrSgRules(ctx context.Context, consume func(model.CidrSgRule) error, scope Scope) error { //nolint:dupl
 	const (
 		qry = "select proto, cidr, sg, traffic, ports, logs, trace from sgroups.list_cidr_sg_rule($1)"
 	)

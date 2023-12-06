@@ -201,13 +201,13 @@ func IntegrityChecker4Networks() IntegrityChecker { //nolint:gocyclo
 			h.init(n.Net)
 			lb := h.lowerBound()
 			rb := h.upperBound()
-			nw := nw{interval: lb.Cmp(rb) != 0, Network: n}
-			if !nets.Insert(lb, nw) {
+			nwk := nw{interval: lb.Cmp(rb) != 0, Network: n}
+			if !nets.Insert(lb, nwk) {
 				n0 := nets.At(lb)
 				e = errf(n, n0.Network)
 				break
 			}
-			if nw.interval && !nets.Insert(rb, nw) {
+			if nwk.interval && !nets.Insert(rb, nwk) {
 				n0 := nets.At(rb)
 				e = errf(n, n0.Network)
 				break
@@ -289,7 +289,7 @@ func IntegrityChecker4SgSgIcmpRules() IntegrityChecker {
 }
 
 // IntegrityChecker4CidrSgRules -
-func IntegrityChecker4CidrSgRules() IntegrityChecker {
+func IntegrityChecker4CidrSgRules() IntegrityChecker { //nolint:gocyclo
 	const api = "Integrity-of-CidrSgRules"
 
 	errf := func(objs ...model.CidrSgRuleIdenity) error {
@@ -350,9 +350,9 @@ func IntegrityChecker4CidrSgRules() IntegrityChecker {
 		}
 		for x := it.Next(); x != nil; x = it.Next() { //SG ref validate
 			r := x.(*model.CidrSgRule)
-			i, e := reader.First(TblSecGroups, indexID, r.ID.SG)
-			if e != nil {
-				return errors.WithMessagef(e, "%s: find ref to SG '%s'", api, r.ID.SG)
+			i, e1 := reader.First(TblSecGroups, indexID, r.ID.SG)
+			if e1 != nil {
+				return errors.WithMessagef(e1, "%s: find ref to SG '%s'", api, r.ID.SG)
 			}
 			if i == nil {
 				return errors.Errorf("%s: not found ref to SG '%s'", api, r.ID.SG)
