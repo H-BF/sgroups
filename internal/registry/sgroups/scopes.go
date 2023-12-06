@@ -49,7 +49,7 @@ type (
 
 	scopedSgSgIcmpIdentity map[string]model.SgSgIcmpRuleID
 
-	scopedCidrSgRuleIdentity map[string]struct{}
+	scopedCidrSgRuleIdentity map[string]model.CidrSgRuleIdenity
 
 	scopedSG     map[string]struct{}
 	scopedSGFrom map[string]struct{}
@@ -169,7 +169,7 @@ func PKScopeOfSgSgIcmpRules(rules ...model.SgSgIcmpRule) Scope {
 func PKScopedCidrSgRules(rules ...model.CidrSgRule) Scope {
 	ret := scopedCidrSgRuleIdentity{}
 	for _, r := range rules {
-		ret[r.ID.IdentityHash()] = struct{}{}
+		ret[r.ID.IdentityHash()] = r.ID
 	}
 	return ret
 }
