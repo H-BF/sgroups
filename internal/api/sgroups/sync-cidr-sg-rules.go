@@ -36,9 +36,13 @@ func (t traffic) from(src common.Traffic) error {
 }
 
 func (id cidrSgRuleIdentity) from(src *sg.CidrSgRule) error {
-	_, ipnet, e := net.ParseCIDR(src.GetCIDR())
+	ip, ipnet, e := net.ParseCIDR(src.GetCIDR())
 	if e != nil {
 		return errors.WithMessagef(e, "bad CIDR '%s'", src.GetCIDR())
+	}
+	if !ipnet.IP.Equal(ip) {
+		return errors.Errorf("the '%s' seems just an IP address but not subnet; maybe you will try '%s'",
+			src.GetCIDR(), ipnet)
 	}
 	id.CIDR = *ipnet
 	id.SG = src.GetSG()

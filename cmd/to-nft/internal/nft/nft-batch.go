@@ -669,15 +669,14 @@ func (bt *batch) populateInOutCidrSgRules(dir direction, sg *cases.SG) {
 					return nil
 				}
 				rb := beginRule().
+					metaNFTRACE(details.trace).
 					srcOrDstSingleIpNet(rule.ID.CIDR, isIN).
 					protoIP(rule.ID.Transport)
 				rb = ports.D(ports.S(rb)).counter()
 				if details.logs {
 					rb = rb.dlogs(nfte.LogFlagsIPOpt)
 				}
-				rb.metaNFTRACE(details.trace).
-					accept().
-					applyRule(chnApplyTo, tx.Conn)
+				rb.accept().applyRule(chnApplyTo, tx.Conn)
 				return nil
 			})
 		}
