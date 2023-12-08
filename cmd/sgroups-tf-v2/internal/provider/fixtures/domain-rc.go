@@ -17,7 +17,8 @@ type (
 	DomainRC interface {
 		domain.Network | domain.SecurityGroup |
 			domain.SGRule | domain.FQDNRule |
-			domain.SgIcmpRule | domain.SgSgIcmpRule
+			domain.SgIcmpRule | domain.SgSgIcmpRule |
+			domain.CidrSgRule
 	}
 
 	// DomainRcList -
@@ -186,6 +187,20 @@ func regHelpers() {
 	regProto2domain(func(p *protos.SgSgIcmpRule, r *domain.SgSgIcmpRule) {
 		var e error
 		if *r, e = sgAPI.Proto2MOdelSgSgIcmpRule(p); e != nil {
+			panic(e)
+		}
+	})
+
+	// ---------------------- RC CidrSGRule -------------------
+	regKeyExtractor(func(m domain.CidrSgRule) string {
+		return m.ID.String()
+	})
+	regIsEQ(func(l, r domain.CidrSgRule) bool {
+		return l.IsEq(r)
+	})
+	regProto2domain(func(p *protos.CidrSgRule, r *domain.CidrSgRule) {
+		var e error
+		if *r, e = sgAPI.Proto2ModelCidrSgRule(p); e != nil {
 			panic(e)
 		}
 	})

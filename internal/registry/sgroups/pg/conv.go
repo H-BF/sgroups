@@ -342,9 +342,75 @@ func (o *SgSgIcmpRule) FromModel(m sgm.SgSgIcmpRule) error {
 	return o.ICMP.FromModel(m.Icmp)
 }
 
+// FromModel -
+func (o *Traffic) FromModel(m sgm.Traffic) error {
+	var e error
+	switch m {
+	case sgm.INGRESS:
+		*o = pgIngress
+	case sgm.EGRESS:
+		*o = pgEgress
+	default:
+		e = errors.Errorf("PG cannot adopt unknown 'traffic' '%s'(%v)", m, m)
+	}
+	return e
+}
+
+// ToModel -
+func (o Traffic) ToModel() (ret sgm.Traffic, err error) {
+	switch string(o) {
+	case pgIngress:
+		return sgm.INGRESS, nil
+	case pgEgress:
+		return sgm.EGRESS, nil
+	}
+	return 0, errors.Errorf("unsupported 'traffic' value (%s) come from PG", o)
+}
+
+// FromModel -
+func (o *CidrSgRule) FromModel(m sgm.CidrSgRule) error {
+	if err := o.Proto.FromModel(m.ID.Transport); err != nil {
+		return err
+	}
+	o.CIDR = m.ID.CIDR
+	o.SG = m.ID.SG
+	if err := o.Traffic.FromModel(m.ID.Traffic); err != nil {
+		return err
+	}
+	if err := o.Ports.FromModel(m.Ports); err != nil {
+		return err
+	}
+	o.Logs = m.Logs
+	o.Trace = m.Trace
+	return nil
+}
+
+// ToModel -
+func (o CidrSgRule) ToModel() (ret sgm.CidrSgRule, err error) {
+	if ret.ID.Transport, err = o.Proto.ToModel(); err != nil {
+		return ret, err
+	}
+	ret.ID.SG = o.SG
+	ret.ID.CIDR = o.CIDR
+	if ret.ID.Traffic, err = o.Traffic.ToModel(); err != nil {
+		return ret, err
+	}
+	if ret.Ports, err = o.Ports.ToModel(); err != nil {
+		return ret, err
+	}
+	ret.Logs = o.Logs
+	ret.Trace = o.Trace
+	return ret, nil
+}
+
 const (
 	pgIPv4 = "IPv4"
 	pgIPv6 = "IPv6"
+)
+
+const (
+	pgIngress = "ingress"
+	pgEgress  = "egress"
 )
 
 var (

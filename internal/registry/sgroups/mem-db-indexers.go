@@ -3,10 +3,12 @@ package sgroups
 import (
 	"bytes"
 	"fmt"
+	"math/big"
 	"net"
 	"reflect"
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
+	"github.com/c-robinson/iplib"
 
 	"github.com/pkg/errors"
 )
@@ -15,6 +17,12 @@ type (
 	// IPNetIndexer indexer
 	IPNetIndexer struct {
 		DataAccessor func(obj interface{}) interface{}
+	}
+
+	// SingleObjectIndexer -
+	SingleObjectIndexer[T any] struct {
+		accessor           func(any) T
+		fromObjectDelegate func(T) (bool, []byte, error)
 	}
 
 	// SGRuleIdIndexer indexer
@@ -28,6 +36,9 @@ type (
 
 	// SgSgIcmpIdIndexer -
 	SgSgIcmpIdIndexer struct{}
+
+	// ProtoSgTrafficIndexer -
+	ProtoSgTrafficIndexer struct{}
 )
 
 // FromObject impl Indexer
@@ -152,4 +163,101 @@ func (idx SgSgIcmpIdIndexer) FromArgs(args ...interface{}) ([]byte, error) { //n
 		return nil, errors.New("SgSgIcmpIdIndexer: unsupported data type")
 	}
 	return b.Bytes(), nil
+}
+
+// FromObject impl Indexer
+func (idx ProtoSgTrafficIndexer) FromObject(obj any) (bool, []byte, error) {
+	b := bytes.NewBuffer(nil)
+	switch a := obj.(type) {
+	case model.CidrSgRuleIdenity:
+		_, _ = fmt.Fprintf(b, "%s:sg(%s)%s\x00", a.Transport, a.SG, a.Transport)
+	case *model.CidrSgRule:
+		id := a.ID
+		_, _ = fmt.Fprintf(b, "%s:sg(%s)%s\x00", id.Transport, id.SG, id.Transport)
+	default:
+		return false, nil,
+			errors.Errorf("ProtoSgTrafficIndexer: unsupported data type %T", a)
+	}
+	return b.Len() > 0, b.Bytes(), nil
+}
+
+// FromArgs impl Indexer
+func (idx ProtoSgTrafficIndexer) FromArgs(args ...any) ([]byte, error) { //nolint:dupl
+	if len(args) != 1 {
+		return nil, errors.New("must provide only a single argument")
+	}
+	_, b, e := idx.FromObject(args[0])
+	return b, e
+}
+
+// FromObject -
+func (idx SingleObjectIndexer[T]) FromObject(obj any) (bool, []byte, error) {
+	if idx.accessor == nil {
+		panic(
+			errors.New("must provide 'accessor'"),
+		)
+	}
+	if idx.fromObjectDelegate == nil {
+		panic(
+			errors.New("must provide 'fromObjectDelegate'"),
+		)
+	}
+	o := idx.accessor(obj)
+	return idx.fromObjectDelegate(o)
+}
+
+// FromArgs -
+func (idx SingleObjectIndexer[T]) FromArgs(args ...any) ([]byte, error) { //nolint:dupl
+	if len(args) != 1 {
+		panic(
+			errors.New("must provide only a single argument"),
+		)
+	}
+	_, b, e := idx.FromObject(args[0])
+	return b, e
+}
+
+type bigInt struct {
+	big.Int
+}
+
+type cidr2bigInt struct {
+	ones   int
+	netObj iplib.Net
+}
+
+// Cmp -
+func (b bigInt) Cmp(other bigInt) int {
+	return b.Int.Cmp(&other.Int)
+}
+
+func (c *cidr2bigInt) init(CIDR net.IPNet) {
+	c.ones, _ = CIDR.Mask.Size()
+	c.netObj = iplib.NewNet(CIDR.IP, c.ones)
+}
+
+func (c cidr2bigInt) lowerBound() bigInt {
+	var ret bigInt
+	ip := c.netObj.IP()
+	ret.SetBytes(
+		ip.To16(),
+	)
+	return ret
+}
+
+func (c cidr2bigInt) upperBound() bigInt {
+	var ret bigInt
+	ip := c.netObj.LastAddress()
+	switch c.netObj.Version() {
+	case iplib.IP4Version:
+		if c.ones < 31 { //nolint:gomnd
+			ip = iplib.NextIP(ip)
+		}
+	case iplib.IP6Version:
+		if c.ones < 128 { //nolint:gomnd
+			ip = iplib.NextIP(ip)
+		}
+	}
+	ret.SetBytes(ip.To16())
+	return ret
 }

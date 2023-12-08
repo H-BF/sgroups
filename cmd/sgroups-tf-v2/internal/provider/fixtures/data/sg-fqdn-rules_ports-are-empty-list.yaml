@@ -32,7 +32,7 @@ initial-backend:
       "trace": true
     }
 cases:
-- name: "add-new-sg-fqdn-rules"
+- name: "create new any rule set"
   tf-config: |
     resource "sgroups_fqdn_rules" "sg-fqdn-rules-set-1" {
       items = {
@@ -44,18 +44,6 @@ cases:
             {
               d = "80,443"
               s = "1000-2000"
-            }
-          ]
-          logs = true
-        }
-        "udp:sg(group2)fqdn(store.example.org)" = {
-          proto = "udp"
-          sg_from = "group2"
-          fqdn = "store.example.org"
-          ports = [
-            {
-              d = "15000-16000"
-              s = "15000-16000"
             }
           ]
           logs = true
@@ -77,20 +65,7 @@ cases:
         "FQDN": "front.example.org",
         "transport": "TCP"
       }
-    - |
-      {
-        "logs": true,
-        "ports": [
-          {
-            "d": "15000-16000",
-            "s": "15000-16000"
-          }
-        ],
-        "sgFrom": "group2",
-        "FQDN": "store.example.org",
-        "transport": "UDP"
-      }
-- name: "change-first-and-delete-second"
+- name: "add another rule with empty list for ports"
   tf-config: |
     resource "sgroups_fqdn_rules" "sg-fqdn-rules-set-1" {
       items = {
@@ -105,6 +80,14 @@ cases:
             }
           ]
           logs = false
+        }
+
+        "udp:sg(group2)fqdn(store.example.org)" = {
+          proto = "udp"
+          sg_from = "group2"
+          fqdn = "store.example.org"
+          ports = []
+          logs = true
         }
       }
     }
@@ -123,17 +106,10 @@ cases:
         "FQDN": "front.example.org",
         "transport": "TCP"
       }
-  not-expected-backend:
-    sg-fqdn-rules:
     - |
       {
         "logs": true,
-        "ports": [
-          {
-            "d": "15000-16000",
-            "s": "15000-16000"
-          }
-        ],
+        "ports": [],
         "sgFrom": "group2",
         "FQDN": "store.example.org",
         "transport": "UDP"

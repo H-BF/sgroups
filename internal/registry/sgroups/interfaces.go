@@ -17,6 +17,7 @@ type (
 		ListFqdnRules(ctx context.Context, consume func(model.FQDNRule) error, scope Scope) error
 		ListSgIcmpRules(ctx context.Context, consume func(model.SgIcmpRule) error, scope Scope) error
 		ListSgSgIcmpRules(ctx context.Context, consume func(model.SgSgIcmpRule) error, scope Scope) error
+		ListCidrSgRules(ctx context.Context, consume func(model.CidrSgRule) error, scope Scope) error
 		GetSyncStatus(ctx context.Context) (*model.SyncStatus, error)
 	}
 
@@ -34,6 +35,7 @@ type (
 		SyncFqdnRules(ctx context.Context, rules []model.FQDNRule, scope Scope, opts ...Option) error
 		SyncSgIcmpRules(ctx context.Context, rules []model.SgIcmpRule, scope Scope, opts ...Option) error
 		SyncSgSgIcmpRules(ctx context.Context, rules []model.SgSgIcmpRule, scope Scope, opts ...Option) error
+		SyncCidrSgRules(ctx context.Context, rules []model.CidrSgRule, scope Scope, opts ...Option) error
 		Commit() error
 		Abort()
 	}
