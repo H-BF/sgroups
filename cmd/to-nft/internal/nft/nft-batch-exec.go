@@ -104,3 +104,10 @@ func WithLocalSGs(sgs cases.SGs) funcBatchOpt {
 		b.localSGs = sgs
 	}
 }
+
+// WithCidrSgRules -
+func WithCidrSgRules(rules cases.CidrSgRules) funcBatchOpt {
+	return func(b *batch) {
+		b.cidrSgRules = rules
+	}
+}

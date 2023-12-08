@@ -53,6 +53,11 @@ func (model *CollectionResourceModel[T, S]) toSyncReq(
 			SyncOp:  operation,
 			Subject: &protos.SyncReq_SgSgIcmpRules{SgSgIcmpRules: subject},
 		})
+	case *protos.SyncCidrSgRules:
+		reqs = append(reqs, &protos.SyncReq{
+			SyncOp:  operation,
+			Subject: &protos.SyncReq_CidrSgRules{CidrSgRules: subject},
+		})
 	default:
 		panic("unexpected subject")
 	}
