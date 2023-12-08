@@ -22,7 +22,7 @@ type (
 
 	//LinkRefs link refs
 	LinkRefs struct {
-		dict.HDict[LinkID, struct{}]
+		dict.HSet[LinkID]
 	}
 
 	//IpAddr ip address
@@ -69,7 +69,7 @@ const (
 func (r *LinkRefs) Upd(ref LinkID, howUpd UpdStrategy) {
 	switch howUpd {
 	case Update:
-		r.Put(ref, struct{}{})
+		r.Put(ref)
 	case Delete:
 		r.Del(ref)
 	default:
@@ -86,9 +86,7 @@ func (r LinkRefs) Clone() LinkRefs {
 
 // Eq -
 func (r LinkRefs) Eq(other LinkRefs) bool {
-	return r.HDict.Eq(other.HDict, func(_, _ struct{}) bool {
-		return true
-	})
+	return r.HSet.Eq(&other.HSet)
 }
 
 // Eq -
@@ -150,7 +148,7 @@ func (a IPAdresses) Clone() IPAdresses {
 
 // Eq -
 func (a IPAdresses) Eq(b IPAdresses) bool {
-	return a.HDict.Eq(b.HDict, func(vL, vR *IpAddr) bool {
+	return a.HDict.Eq(&b.HDict, func(vL, vR *IpAddr) bool {
 		return vL.Eq(*vR)
 	})
 }
@@ -176,7 +174,7 @@ func (devs IpDevs) Clone() IpDevs {
 
 // Eq -
 func (devs IpDevs) Eq(other IpDevs) bool {
-	return devs.HDict.Eq(other.HDict, func(vL, vR IpDev) bool {
+	return devs.HDict.Eq(&other.HDict, func(vL, vR IpDev) bool {
 		return vL == vR
 	})
 }
@@ -198,7 +196,7 @@ func (conf NetConf) Clone() NetConf {
 // LocalIPs get effective local unique IP lists
 func (conf NetConf) LocalIPs() (IPv4 []net.IP, IPv6 []net.IP) {
 	conf.IPAdresses.Iterate(func(_ IPAdressesMapKey, a *IpAddr) bool {
-		a.Links.Iterate(func(lid LinkID, _ struct{}) bool {
+		a.Links.Iterate(func(lid LinkID) bool {
 			if _, ok := conf.IpDevs.Get(lid); ok {
 				switch len(a.IP) {
 				case net.IPv4len:

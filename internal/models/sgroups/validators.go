@@ -1,6 +1,7 @@
 package sgroups
 
 import (
+	"net"
 	"regexp"
 	"unsafe"
 
@@ -69,6 +70,12 @@ func (a ChainDefaultAction) Validate() error {
 func (nt NetworkTransport) Validate() error {
 	vals, x := [...]any{int(TCP), int(UDP)}, int(nt)
 	return oz.Validate(x, oz.In(vals[:]...).Error("must be in ['TCP', 'UDP']"))
+}
+
+// Validate net transport validator
+func (tfc Traffic) Validate() error {
+	vals, x := [...]any{int(INGRESS), int(EGRESS)}, int(tfc)
+	return oz.Validate(x, oz.In(vals[:]...).Error("must be in ['INGRESS', 'EGRESS']"))
 }
 
 // Validate validate of SGRuleIdentity
@@ -161,8 +168,57 @@ func (o FQDN) Validate() error {
 	return nil
 }
 
+// Validate impl Validator
+func (o ICMP) Validate() error {
+	return oz.ValidateStruct(&o,
+		oz.Field(&o.IPv, oz.Required, oz.In(uint8(IPv4), uint8(IPv6)).
+			Error("IPv should be in [4,6]")),
+	)
+}
+
+// Validate impl Validator
+func (o SgIcmpRule) Validate() error {
+	return oz.ValidateStruct(&o,
+		oz.Field(&o.Sg, oz.Required.Error("security grpoup name is rquired"),
+			oz.Match(reCName)),
+		oz.Field(&o.Icmp),
+	)
+}
+
+// Validate impl Validator
+func (o SgSgIcmpRule) Validate() error {
+	const msg = "security grpoup name is rquired"
+	return oz.ValidateStruct(&o,
+		oz.Field(&o.SgFrom, oz.Required.Error(msg),
+			oz.Match(reCName)),
+		oz.Field(&o.SgTo, oz.Required.Error(msg),
+			oz.Match(reCName)),
+		oz.Field(&o.Icmp),
+	)
+}
+
+// Validate validate of CidrSgRuleIdenity
+func (o CidrSgRuleIdenity) Validate() error {
+	return oz.ValidateStruct(&o,
+		oz.Field(&o.Transport),
+		oz.Field(&o.Traffic),
+		oz.Field(&o.SG, oz.Required),
+		oz.Field(&o.CIDR, oz.By(func(_ interface{}) error {
+			switch len(o.CIDR.IP) {
+			case net.IPv4len, net.IPv6len:
+			default:
+				return errors.New("IP of net is invalid")
+			}
+			if len(o.CIDR.Mask) != len(o.CIDR.IP) {
+				return errors.New("net mask is invalid")
+			}
+			return nil
+		})),
+	)
+}
+
 var (
-	reCName = regexp.MustCompile(`^\w(?:.*\w)?$`)
+	reCName = regexp.MustCompile(`^\S(.*\S)?$`)
 
 	reFQDN = regexp.MustCompile(`(?ims)^([a-z0-9\*][a-z0-9_-]{1,62}){1}(\.[a-z0-9_][a-z0-9_-]{0,62})*$`)
 )

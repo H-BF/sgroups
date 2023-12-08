@@ -129,25 +129,19 @@ func (rd *pgDbReader) ListSecurityGroups(ctx context.Context, consume func(model
 }
 
 func (rd *pgDbReader) argsForListSGRules(scope Scope) ([]any, error) {
+	var badScope bool
 	var fromSg []string
 	var toSg []string
-	var badScope bool
 	args := []any{pgx.QueryExecModeDescribeExec, nil, nil}
 	switch sc := scope.(type) {
 	case scopedAnd:
 		for _, x := range []any{sc.L, sc.R} {
 			switch a := x.(type) {
 			case scopedSGFrom:
-				if fromSg == nil {
-					fromSg = make([]string, 0, len(a))
-				}
 				for s := range a {
 					fromSg = append(fromSg, s)
 				}
 			case scopedSGTo:
-				if toSg == nil {
-					toSg = make([]string, 0, len(a))
-				}
 				for s := range a {
 					toSg = append(toSg, s)
 				}
@@ -156,17 +150,17 @@ func (rd *pgDbReader) argsForListSGRules(scope Scope) ([]any, error) {
 				badScope = true
 			}
 		}
-		if fromSg != nil {
-			args[1] = fromSg
-		}
-		if toSg != nil {
-			args[2] = toSg
-		}
 	default:
 		badScope = true
 	}
 	if badScope {
 		return nil, errors.WithMessagef(ErrUnexpectedScope, "%#v", scope)
+	}
+	if fromSg != nil {
+		args[1] = fromSg
+	}
+	if toSg != nil {
+		args[2] = toSg
 	}
 	return args, nil
 }
@@ -189,7 +183,7 @@ func (rd *pgDbReader) ListSGRules(ctx context.Context, consume func(model.SGRule
 		return pgxIterateRowsAndClose(rows, scanner, func(rule pg.SGRule) error {
 			m, e1 := rule.ToModel()
 			if e1 != nil {
-				return e
+				return e1
 			}
 			return consume(m)
 		})
@@ -201,9 +195,7 @@ func (rd *pgDbReader) argsForListFQDNRules(scope Scope) ([]any, error) {
 	args := []any{pgx.QueryExecModeDescribeExec, nil}
 	switch sc := scope.(type) {
 	case scopedSGFrom:
-		if fromSg == nil {
-			fromSg = make([]string, 0, len(sc))
-		}
+		fromSg = make([]string, 0, len(sc))
 		for s := range sc {
 			fromSg = append(fromSg, s)
 		}
@@ -235,7 +227,155 @@ func (rd *pgDbReader) ListFqdnRules(ctx context.Context, consume func(model.FQDN
 		return pgxIterateRowsAndClose(rows, scanner, func(rule pg.SG2FQDNRule) error {
 			m, e1 := rule.ToModel()
 			if e1 != nil {
-				return e
+				return e1
+			}
+			return consume(m)
+		})
+	})
+}
+
+func (rd *pgDbReader) argsForListSgIcmpRules(scope Scope) ([]any, error) {
+	var sgs []string
+	switch sc := scope.(type) {
+	case scopedSG:
+		for s := range sc {
+			sgs = append(sgs, s)
+		}
+	case noScope:
+	default:
+		return nil, errors.WithMessagef(ErrUnexpectedScope, "%#v", scope)
+	}
+	args := []any{pgx.QueryExecModeDescribeExec, nil}
+	if sgs != nil {
+		args[1] = sgs
+	}
+	return args, nil
+}
+
+// ListSgIcmpRule impl Reader
+func (rd *pgDbReader) ListSgIcmpRules(ctx context.Context, consume func(model.SgIcmpRule) error, scope Scope) error { //nolint:dupl
+	const (
+		qry = "select ip_v, types, sg, logs, trace from sgroups.list_sg_icmp_rule($1)"
+	)
+	args, err := rd.argsForListSgIcmpRules(scope)
+	if err != nil {
+		return err
+	}
+	return rd.doIt(ctx, func(c *pgx.Conn) error {
+		rows, e := c.Query(ctx, qry, args...)
+		if e != nil {
+			return e
+		}
+		scanner := pgx.RowToStructByName[pg.SgIcmpRule]
+		return pgxIterateRowsAndClose(rows, scanner, func(rule pg.SgIcmpRule) error {
+			m, e1 := rule.ToModel()
+			if e1 != nil {
+				return e1
+			}
+			return consume(m)
+		})
+	})
+}
+
+func (rd *pgDbReader) argsForListSgSgIcmpRules(scope Scope) ([]any, error) {
+	var sgFrom []string
+	var sgTo []string
+	var badScope bool
+	switch sc := scope.(type) {
+	case scopedAnd:
+		for _, x := range []any{sc.L, sc.R} {
+			switch a := x.(type) {
+			case scopedSGFrom:
+				for s := range a {
+					sgFrom = append(sgFrom, s)
+				}
+			case scopedSGTo:
+				for s := range a {
+					sgTo = append(sgTo, s)
+				}
+			case noScope:
+			default:
+				badScope = true
+			}
+		}
+	default:
+		badScope = true
+	}
+	if badScope {
+		return nil, errors.WithMessagef(ErrUnexpectedScope, "%#v", scope)
+	}
+	args := []any{pgx.QueryExecModeDescribeExec, nil, nil}
+	if sgFrom != nil {
+		args[1] = sgFrom
+	}
+	if sgTo != nil {
+		args[2] = sgTo
+	}
+	return args, nil
+}
+
+// ListSgSgIcmpRules impl Reader
+func (rd *pgDbReader) ListSgSgIcmpRules(ctx context.Context, consume func(model.SgSgIcmpRule) error, scope Scope) error { //nolint:dupl
+	const (
+		qry = "select ip_v, types, sg_from, sg_to, logs, trace from sgroups.list_sg_sg_icmp_rule($1, $2)"
+	)
+	args, err := rd.argsForListSgSgIcmpRules(scope)
+	if err != nil {
+		return err
+	}
+	return rd.doIt(ctx, func(c *pgx.Conn) error {
+		rows, e := c.Query(ctx, qry, args...)
+		if e != nil {
+			return e
+		}
+		scanner := pgx.RowToStructByName[pg.SgSgIcmpRule]
+		return pgxIterateRowsAndClose(rows, scanner, func(rule pg.SgSgIcmpRule) error {
+			m, e1 := rule.ToModel()
+			if e1 != nil {
+				return e1
+			}
+			return consume(m)
+		})
+	})
+}
+
+func (rd *pgDbReader) argsForListCidrSgRules(scope Scope) ([]any, error) {
+	var sgs []string
+	switch sc := scope.(type) {
+	case scopedSG:
+		for sg := range sc {
+			sgs = append(sgs, sg)
+		}
+	case noScope:
+	default:
+		return nil, errors.WithMessagef(ErrUnexpectedScope, "%#v", scope)
+	}
+	args := []any{pgx.QueryExecModeDescribeExec, nil}
+	if sgs != nil {
+		args[1] = sgs
+	}
+	return args, nil
+}
+
+// ListCidrSgRules impl Reader
+func (rd *pgDbReader) ListCidrSgRules(ctx context.Context, consume func(model.CidrSgRule) error, scope Scope) error { //nolint:dupl
+	const (
+		qry = "select proto, cidr, sg, traffic, ports, logs, trace from sgroups.list_cidr_sg_rule($1)"
+	)
+	args, err := rd.argsForListCidrSgRules(scope)
+	if err != nil {
+		return err
+	}
+	return rd.doIt(ctx, func(c *pgx.Conn) error {
+		rows, e := c.Query(ctx, qry, args...)
+		if e != nil {
+			return e
+		}
+		scanner := pgx.RowToStructByName[pg.CidrSgRule]
+		return pgxIterateRowsAndClose(rows, scanner, func(rule pg.CidrSgRule) error {
+			m, e1 := rule.ToModel()
+			if e1 != nil {
+				return e1
 			}
 			return consume(m)
 		})

@@ -29,22 +29,28 @@ type (
 	//SGClient is a type alias
 	SGClient = sgAPI.SecGroupServiceClient
 
-	// SG ...
+	// SG Secutity Group
 	SG struct {
 		model.SecurityGroup
-		IPsV4, IPsV6 iplib.ByIP
+		LocalIPsV4 iplib.ByIP
+		LocalIPsV6 iplib.ByIP
 	}
 
-	// SGs local SG(s) related to IP(s)
+	// SGs Security Groups dictionary indexed by its names
 	SGs struct {
 		dict.HDict[SgName, *SG]
 	}
 
-	// SGsNetworks -
+	// SGsNetworks Secuurity Group Networks dictionary indexed by Name from SG
 	SGsNetworks struct {
 		dict.HDict[string, []model.Network]
 	}
 )
+
+// IsLocal gives true if GS contains any IP from local host
+func (loc *SG) IsLocal() bool {
+	return loc.LocalIPsV4.Len()+loc.LocalIPsV6.Len() > 0
+}
 
 // LoadFromNames load SG from its names
 func (loc *SGs) LoadFromNames(ctx context.Context, client SGClient, names []string) (err error) {
@@ -73,7 +79,7 @@ func (loc *SGs) LoadFromNames(ctx context.Context, client SGClient, names []stri
 
 // LoadFromIPs it loads Local SGs by IPs
 func (loc *SGs) LoadFromIPs(ctx context.Context, client SGClient, localIPs []net.IP) error {
-	const api = "SG(s)/LoadFromIPs"
+	const api = "SG(s)/load-from-IP(s)"
 
 	if len(localIPs) == 0 {
 		return nil
@@ -104,9 +110,9 @@ func (loc *SGs) LoadFromIPs(ctx context.Context, client SGClient, localIPs []net
 		}
 		switch len(srcIP) {
 		case net.IPv4len:
-			it.IPsV4 = append(it.IPsV4, srcIP)
+			it.LocalIPsV4 = append(it.LocalIPsV4, srcIP)
 		case net.IPv6len:
-			it.IPsV6 = append(it.IPsV6, srcIP)
+			it.LocalIPsV6 = append(it.LocalIPsV6, srcIP)
 		}
 		return nil
 	}
@@ -114,7 +120,7 @@ func (loc *SGs) LoadFromIPs(ctx context.Context, client SGClient, localIPs []net
 		return errors.WithMessage(err, api)
 	}
 	loc.Iterate(func(_ string, it *SG) bool {
-		for _, ips := range []*iplib.ByIP{&it.IPsV4, &it.IPsV6} {
+		for _, ips := range []*iplib.ByIP{&it.LocalIPsV4, &it.LocalIPsV6} {
 			sort.Sort(*ips)
 			_ = slice.DedupSlice(ips, func(i, j int) bool {
 				l, r := (*ips)[i], (*ips)[j]

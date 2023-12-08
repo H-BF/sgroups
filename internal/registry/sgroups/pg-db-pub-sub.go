@@ -3,6 +3,7 @@ package sgroups
 import (
 	"context"
 	"errors"
+	"os"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -29,7 +30,8 @@ func (dbimp *pgDbRegistry) listenMessages(ctx context.Context) {
 				if e != nil {
 					return e
 				}
-				if nt.Channel == NotifyCommit {
+				pid := os.Getpid()
+				if nt.Channel == NotifyCommit && nt.PID != uint32(pid) {
 					dbimp.subject.Notify(DBUpdated{})
 				}
 			}

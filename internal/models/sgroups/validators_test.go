@@ -28,6 +28,26 @@ func TestValidate_NetworkTransport(t *testing.T) {
 	}
 }
 
+func TestValidate_Traffic(t *testing.T) {
+	cases := []struct {
+		x    Traffic
+		fail bool
+	}{
+		{INGRESS, false},
+		{EGRESS, false},
+		{Traffic(100), true},
+	}
+	for i := range cases {
+		c := cases[i]
+		e := c.x.Validate()
+		if !c.fail {
+			require.NoErrorf(t, e, "test case #%v", i)
+		} else {
+			require.Errorf(t, e, "test case #%v", i)
+		}
+	}
+}
+
 func TestValidate_Network(t *testing.T) {
 	nnw := func(s string) net.IPNet {
 		_, ret, e := net.ParseCIDR(s)
@@ -218,4 +238,25 @@ func TestValidate_FQDN(t *testing.T) {
 			require.Errorf(t, e, "test case #%v  '%v'", i, c.val)
 		}
 	}
+}
+
+func Test_Validate_ICMP(t *testing.T) {
+	var x ICMP
+	require.Error(t, x.Validate())
+	x.IPv = 1
+	require.Error(t, x.Validate())
+	x.IPv = 4
+	x.Types.Put(1)
+	require.NoError(t, x.Validate())
+}
+
+func Test_Validate_SgIcmpRule(t *testing.T) {
+	var r SgIcmpRule
+	e := r.Validate()
+	require.Error(t, e)
+	r.Sg = "/123/"
+	r.Icmp.IPv = 6
+	r.Icmp.Types.Put(1)
+	e = r.Validate()
+	require.NoError(t, e)
 }

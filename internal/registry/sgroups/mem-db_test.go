@@ -3,9 +3,11 @@ package sgroups
 import (
 	"context"
 	"net"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	"github.com/stretchr/testify/suite"
 )
@@ -22,10 +24,7 @@ type memDbSuite struct {
 
 func (sui *memDbSuite) SetupTest() {
 	sui.Require().Nil(sui.reg)
-	db, err := NewMemDB(TblNetworks, TblSecGroups,
-		TblSecRules, TblSyncStatus, TblFqdnRules,
-		IntegrityChecker4SG(), IntegrityChecker4SGRules(),
-		IntegrityChecker4Networks(), IntegrityChecker4FqdnRules())
+	db, err := NewMemDB(AllTables())
 	sui.Require().NoError(err)
 	sui.reg = NewRegistryFromMemDB(db)
 	sui.db = db
@@ -54,14 +53,17 @@ func (sui *memDbSuite) regReader() Reader {
 	return r
 }
 
-func (sui *memDbSuite) newNetwork(name string, cidr string) model.Network {
-	sui.Require().NotEmpty(name)
-	var n *net.IPNet
+func (sui *memDbSuite) newIPNet(cidr string) net.IPNet {
 	_, n, err := net.ParseCIDR(cidr)
 	sui.Require().NoError(err)
+	return *n
+}
+
+func (sui *memDbSuite) newNetwork(name string, cidr string) model.Network {
+	sui.Require().NotEmpty(name)
 	return model.Network{
 		Name: name,
-		Net:  *n,
+		Net:  sui.newIPNet(cidr),
 	}
 }
 
@@ -158,14 +160,27 @@ func (sui *memDbSuite) TestSyncStatus() {
 	sui.Require().Equal(x.UpdatedAt, v.UpdatedAt)
 }
 
+func (sui *memDbSuite) TestOverNW() {
+	ctx := context.TODO()
+	nws := []model.Network{ // overlapped
+		sui.newNetwork("nwc", "10.100.0.101/32"),
+		sui.newNetwork("nwd", "10.100.0.1/24"),
+		//sui.newNetwork("nwd", "10.100.0.100/30"),
+	}
+	w := sui.regWriter()
+	e := w.SyncNetworks(ctx, nws, NoScope)
+	sui.Require().NoError(e)
+	e = w.Commit()
+	sui.Require().Error(e)
+}
+
 func (sui *memDbSuite) TestCheckNetworksOverlap() {
 	ctx := context.TODO()
-	nws := []model.Network{ //not overlapped
+	nws := []model.Network{ //not overlappedd
 		//sui.newNetwork("nwa", "10.100.0.10/32"),
 		//sui.newNetwork("nwb", "10.100.0.10/31"),
 		//sui.newNetwork("nwc", "10.100.0.10/30"),
 		//sui.newNetwork("nwd", "10.100.0.10/24"),
-
 		sui.newNetwork("nw1", "10.10.10.1/24"),
 		sui.newNetwork("nw2", "10.10.11.2/24"),
 		sui.newNetwork("nw3", "10.10.12.3/24"),
@@ -454,7 +469,7 @@ func (sui *memDbSuite) TestSyncSGRules() {
 
 	//delete one Rule from DB
 	w = sui.regWriter()
-	err = w.SyncSGRules(ctx, nil, SGRule(r1))
+	err = w.SyncSGRules(ctx, nil, PKScopeOfSGRules(r1))
 	sui.Require().NoError(err)
 	err = w.Commit()
 	sui.Require().NoError(err)
@@ -483,4 +498,219 @@ func (sui *memDbSuite) TestSyncSGRules() {
 	}, NoScope)
 	sui.Require().NoError(err)
 	sui.Require().Equal(0, cRules)
+}
+
+func (sui *memDbSuite) newCidrSgRule(proto model.NetworkTransport, cidr string, sg string,
+	traffic model.Traffic, ports ...model.SGRulePorts) model.CidrSgRule {
+
+	return model.CidrSgRule{
+		ID: model.CidrSgRuleIdenity{
+			Transport: proto,
+			CIDR:      sui.newIPNet(cidr),
+			SG:        sg,
+			Traffic:   traffic,
+		},
+		Ports: ports,
+	}
+}
+
+func (sui *memDbSuite) TestSync_CidrSgRules_FailNoSG() {
+	ctx := context.TODO()
+	rules := []model.CidrSgRule{sui.newCidrSgRule(
+		model.TCP,
+		"1.1.1.1/32",
+		"sg1",
+		model.EGRESS,
+	)}
+	w := sui.regWriter()
+	err := w.SyncCidrSgRules(ctx, rules, NoScope)
+	sui.Require().NoError(err)
+	err = w.Commit()
+	sui.Require().Error(err)
+	n := strings.Index(err.Error(), "not found ref to SG")
+	sui.Require().True(n >= 0)
+}
+
+func (sui *memDbSuite) Test_CidrSgRules_List() {
+	ctx := context.TODO()
+
+	sg1 := sui.newSG("sg1")
+	sg2 := sui.newSG("sg2")
+	w := sui.regWriter()
+	err := w.SyncSecurityGroups(ctx, []model.SecurityGroup{sg1, sg2}, NoScope)
+	sui.Require().NoError(err)
+	err = w.Commit()
+	sui.Require().NoError(err)
+
+	rule1 := sui.newCidrSgRule(
+		model.TCP,
+		"1.1.1.1/32",
+		sg1.Name,
+		model.EGRESS,
+	)
+	rule2 := sui.newCidrSgRule(
+		model.UDP,
+		"1.1.1.1/32",
+		sg2.Name,
+		model.INGRESS,
+	)
+	w = sui.regWriter()
+	err = w.SyncCidrSgRules(ctx, []model.CidrSgRule{rule1, rule2}, NoScope)
+	sui.Require().NoError(err)
+	err = w.Commit()
+	sui.Require().NoError(err)
+
+	var allRules dict.HDict[string, model.CidrSgRule]
+	var allRules2check dict.HDict[string, model.CidrSgRule]
+	_ = allRules.Insert(rule1.ID.String(), rule1)
+	_ = allRules.Insert(rule2.ID.String(), rule2)
+	sui.Require().Equal(2, allRules.Len())
+	r := sui.regReader()
+	for _, sc := range []Scope{NoScope, SG(sg1.Name, sg2.Name)} {
+		err = r.ListCidrSgRules(ctx, func(csr model.CidrSgRule) error {
+			allRules2check.Insert(csr.ID.String(), csr)
+			return nil
+		}, sc)
+		sui.Require().NoError(err)
+		sui.Require().Equal(allRules.Len(), allRules2check.Len())
+		eq := allRules.Eq(&allRules2check, func(vL, vR model.CidrSgRule) bool {
+			return vL.IsEq(vR)
+		})
+		sui.Require().True(eq)
+		allRules2check.Clear()
+	}
+
+	expRules := []model.CidrSgRule{rule1, rule2}
+	for i, sg := range []model.SecurityGroup{sg1, sg2} {
+		var retRule *model.CidrSgRule
+		err = r.ListCidrSgRules(ctx, func(csr model.CidrSgRule) error {
+			retRule = &csr
+			return nil
+		}, SG(sg.Name))
+		sui.Require().NoError(err)
+		sui.Require().NotNil(retRule)
+		expRules[i].IsEq(*retRule)
+	}
+}
+
+func (sui *memDbSuite) Test_CidrSgRules_DelSG() {
+	ctx := context.TODO()
+
+	sg1 := sui.newSG("sg1")
+	sg2 := sui.newSG("sg2")
+	w := sui.regWriter()
+	err := w.SyncSecurityGroups(ctx, []model.SecurityGroup{sg1, sg2}, NoScope)
+	sui.Require().NoError(err)
+	err = w.Commit()
+	sui.Require().NoError(err)
+
+	rule1 := sui.newCidrSgRule(
+		model.TCP,
+		"1.1.1.1/32",
+		sg1.Name,
+		model.EGRESS,
+	)
+	rule2 := sui.newCidrSgRule(
+		model.UDP,
+		"1.1.1.1/32",
+		sg2.Name,
+		model.INGRESS,
+	)
+	w = sui.regWriter()
+	err = w.SyncCidrSgRules(ctx, []model.CidrSgRule{rule1, rule2}, NoScope)
+	sui.Require().NoError(err)
+	err = w.Commit()
+	sui.Require().NoError(err)
+
+	w = sui.regWriter()
+	err = w.SyncSecurityGroups(ctx, nil, SG(sg1.Name))
+	sui.Require().NoError(err)
+	err = w.Commit()
+	sui.Require().NoError(err)
+
+	r := sui.regReader()
+	var rules []model.CidrSgRule
+	err = r.ListCidrSgRules(ctx, func(csr model.CidrSgRule) error {
+		rules = append(rules, csr)
+		return nil
+	}, NoScope)
+	sui.Require().NoError(err)
+	sui.Require().Equal(1, len(rules))
+	sui.Require().True(rules[0].IsEq(rule2))
+}
+
+func (sui *memDbSuite) Test_CidrSgRules_IntersectCIDRS() {
+	ctx := context.TODO()
+
+	w := sui.regWriter()
+	sg1 := sui.newSG("sg1")
+	err := w.SyncSecurityGroups(ctx, []model.SecurityGroup{sg1}, NoScope)
+	sui.Require().NoError(err)
+
+	rule1 := sui.newCidrSgRule(
+		model.UDP,
+		"1.1.1.100/32",
+		sg1.Name,
+		model.EGRESS,
+	)
+	rule2 := sui.newCidrSgRule(
+		model.TCP,
+		"1.1.1.1/24",
+		sg1.Name,
+		model.EGRESS,
+	)
+	rule3 := sui.newCidrSgRule(
+		model.UDP,
+		"1.1.1.101/32",
+		sg1.Name,
+		model.EGRESS,
+	)
+	rule4 := sui.newCidrSgRule(
+		model.UDP,
+		"1.1.1.1/24",
+		sg1.Name,
+		model.EGRESS,
+	)
+	err = w.SyncCidrSgRules(ctx,
+		[]model.CidrSgRule{rule1, rule2, rule3, rule4},
+		NoScope)
+	sui.Require().NoError(err)
+	err = w.Commit()
+	sui.Require().Error(err)
+	i := strings.Index(err.Error(), "have CIDRS with intersected")
+	sui.Require().True(i >= 0)
+}
+
+func (sui *memDbSuite) Test_CidrSgRules_NoIntersectCIDRS() {
+	ctx := context.TODO()
+
+	w := sui.regWriter()
+	sg1 := sui.newSG("sg1")
+	err := w.SyncSecurityGroups(ctx, []model.SecurityGroup{sg1}, NoScope)
+	sui.Require().NoError(err)
+
+	rule1 := sui.newCidrSgRule(
+		model.UDP,
+		"1.1.1.100/32",
+		sg1.Name,
+		model.EGRESS,
+	)
+	rule2 := sui.newCidrSgRule(
+		model.TCP,
+		"1.1.1.1/24",
+		sg1.Name,
+		model.EGRESS,
+	)
+	rule3 := sui.newCidrSgRule(
+		model.UDP,
+		"1.1.1.1/24",
+		sg1.Name,
+		model.INGRESS,
+	)
+	err = w.SyncCidrSgRules(ctx,
+		[]model.CidrSgRule{rule1, rule2, rule3},
+		NoScope)
+	sui.Require().NoError(err)
+	err = w.Commit()
+	sui.Require().NoError(err)
 }

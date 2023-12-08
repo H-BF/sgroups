@@ -62,6 +62,12 @@ go-deps: ##install golang dependencies
 	$(GO) mod verify && \
 	echo -=OK=-
 
+.PHONY: test-tf-provider
+test-tf-provider: ##run tests for tf provider only
+	@echo running tf provider tests... && \
+	$(GO) clean -testcache && \
+	$(GO) test -v ./cmd/sgroups-tf-v2/internal/provider && \
+	echo -=OK=-
 
 .PHONY: test
 test: ##run tests
@@ -116,6 +122,17 @@ sgroups-tf: | go-deps ##build SGroups Terraform provider
 sgroups-tf: APP=sgroups-tf
 sgroups-tf: OUT=$(CURDIR)/bin/terraform-provider-sgroups
 sgroups-tf:
+	@echo build \"$(APP)\" for OS/ARCH=\"$(os)/$(arch)\" ... && \
+	echo into \"$(OUT)\" && \
+	env GOOS=$(os) GOARCH=$(arch) CGO_ENABLED=0 \
+	$(GO) build -ldflags="$(LDFLAGS)" -o $(OUT) $(CURDIR)/cmd/$(APP) &&\
+	echo -=OK=- 
+
+.PHONY: sgroups-tf-v2	
+sgroups-tf-v2: | go-deps ##build SGroups Terraform provider V2 
+sgroups-tf-v2: APP=sgroups-tf-v2
+sgroups-tf-v2: OUT=$(CURDIR)/bin/terraform-provider-sgroups
+sgroups-tf-v2:
 	@echo build \"$(APP)\" for OS/ARCH=\"$(os)/$(arch)\" ... && \
 	echo into \"$(OUT)\" && \
 	env GOOS=$(os) GOARCH=$(arch) CGO_ENABLED=0 \

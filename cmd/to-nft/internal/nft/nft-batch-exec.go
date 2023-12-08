@@ -30,16 +30,19 @@ type (
 )
 
 // Exec -
-func (exc BatchPerformer) Exec(ctx context.Context, opts ...BatchOpt) error {
-	b := batch{
+func (exc *BatchPerformer) Exec(ctx context.Context, opts ...BatchOpt) error {
+	b := &batch{
 		log:        logger.FromContext(ctx),
-		tableName:  exc.TableName,
 		txProvider: exc.Tx,
 	}
 	for _, o := range opts {
-		o.apply(&b)
+		o.apply(b)
 	}
-	return b.execute(ctx)
+	e := b.execute(ctx)
+	if e == nil {
+		exc.TableName = b.table.Name
+	}
+	return e
 }
 
 func (f funcBatchOpt) apply(b *batch) {
@@ -78,5 +81,33 @@ func WithSg2SgRules(r cases.SG2SGRules) funcBatchOpt {
 func WithSg2FqdnRules(r cases.SG2FQDNRules) funcBatchOpt {
 	return func(b *batch) {
 		b.sg2fqdnRules = r
+	}
+}
+
+// WithSgSgIcmpRules -
+func WithSgSgIcmpRules(r cases.SgSgIcmpRules) funcBatchOpt {
+	return func(b *batch) {
+		b.sg2sgIcmpRules = r
+	}
+}
+
+// WithSgSgIcmpRules -
+func WithSgIcmpRules(r cases.SgIcmpRules) funcBatchOpt {
+	return func(b *batch) {
+		b.sgIcmpRules = r
+	}
+}
+
+// WithLocalSGs -
+func WithLocalSGs(sgs cases.SGs) funcBatchOpt {
+	return func(b *batch) {
+		b.localSGs = sgs
+	}
+}
+
+// WithCidrSgRules -
+func WithCidrSgRules(rules cases.CidrSgRules) funcBatchOpt {
+	return func(b *batch) {
+		b.cidrSgRules = rules
 	}
 }

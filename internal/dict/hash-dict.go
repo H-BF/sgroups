@@ -28,7 +28,7 @@ func (dict *HDict[Tk, Tv]) Len() int {
 }
 
 // Del -
-func (dict HDict[Tk, Tv]) Del(keys ...Tk) {
+func (dict *HDict[Tk, Tv]) Del(keys ...Tk) {
 	if dict.hmap != nil {
 		for _, k := range keys {
 			delete(dict.hmap, k)
@@ -53,7 +53,7 @@ func (dict *HDict[Tk, Tv]) Insert(k Tk, v Tv) bool {
 }
 
 // Get -
-func (dict HDict[Tk, Tv]) Get(k Tk) (v Tv, ok bool) {
+func (dict *HDict[Tk, Tv]) Get(k Tk) (v Tv, ok bool) {
 	if dict.hmap != nil {
 		v, ok = dict.hmap[k]
 	}
@@ -61,13 +61,13 @@ func (dict HDict[Tk, Tv]) Get(k Tk) (v Tv, ok bool) {
 }
 
 // At -
-func (dict HDict[Tk, Tv]) At(k Tk) Tv {
+func (dict *HDict[Tk, Tv]) At(k Tk) Tv {
 	v, _ := dict.Get(k)
 	return v
 }
 
 // Keys -
-func (dict HDict[Tk, Tv]) Keys() []Tk {
+func (dict *HDict[Tk, Tv]) Keys() []Tk {
 	ret := make([]Tk, 0, dict.Len())
 	if dict.hmap != nil {
 		linq.From(dict.hmap).ForEach(func(i any) {
@@ -79,7 +79,7 @@ func (dict HDict[Tk, Tv]) Keys() []Tk {
 }
 
 // Items -
-func (dict HDict[Tk, Tv]) Items() Items[Tk, Tv] {
+func (dict *HDict[Tk, Tv]) Items() Items[Tk, Tv] {
 	var ret Items[Tk, Tv]
 	ret.Reserve(dict.Len())
 	linq.From(dict.hmap).ForEach(func(i any) {
@@ -90,7 +90,7 @@ func (dict HDict[Tk, Tv]) Items() Items[Tk, Tv] {
 }
 
 // Iterate -
-func (dict HDict[Tk, Tv]) Iterate(f func(k Tk, v Tv) bool) {
+func (dict *HDict[Tk, Tv]) Iterate(f func(k Tk, v Tv) bool) {
 	if dict.hmap != nil {
 		cont := true
 		linq.From(dict.hmap).
@@ -105,7 +105,7 @@ func (dict HDict[Tk, Tv]) Iterate(f func(k Tk, v Tv) bool) {
 }
 
 // Eq -
-func (dict HDict[Tk, Tv]) Eq(other HDict[Tk, Tv], valuesEq func(vL, vR Tv) bool) bool {
+func (dict *HDict[Tk, Tv]) Eq(other Dict[Tk, Tv], valuesEq func(vL, vR Tv) bool) bool {
 	if dict.Len() != other.Len() {
 		return false
 	}

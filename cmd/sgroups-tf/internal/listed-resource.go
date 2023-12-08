@@ -18,6 +18,8 @@ var errHasItemDups = errors.New("found duplicates in 'items'")
 
 type anyConstructor[T any] func(raw any) (string, *T, error)
 
+type anyConstructorWithKey[T any] func(key string, raw any) (string, *T, error)
+
 type listedResource[T any] struct {
 	source []string
 	mapped map[string]*T
@@ -45,6 +47,17 @@ func (rk *listedResource[T]) id(defVal string) string {
 func (rk *listedResource[T]) addlist(raw []any, c anyConstructor[T]) error {
 	for _, r := range raw {
 		k, o, e := c(r)
+		if e != nil {
+			return e
+		}
+		_ = rk.add(k, o)
+	}
+	return nil
+}
+
+func (rk *listedResource[T]) addMap(raw map[string]any, c anyConstructorWithKey[T]) error {
+	for key, value := range raw {
+		k, o, e := c(key, value)
 		if e != nil {
 			return e
 		}
@@ -132,24 +145,49 @@ func makeSyncReq[T any](op sgroupsAPI.SyncReq_SyncOp, arg []*T) *sgroupsAPI.Sync
 	return ret
 }
 
-type listedRcCRUD[T any] struct {
-	tf2proto   anyConstructor[T]
+type tf2proto[T any] interface {
+	anyConstructorWithKey[T] | anyConstructor[T]
+}
+
+type listedRcCRUD[T any, C tf2proto[T]] struct {
+	tf2proto   C
 	labelItems string
 	client     SGClient
 }
 
-func (c listedRcCRUD[T]) create(ctx context.Context, rd *schema.ResourceData) error {
-	items, _ := rd.Get(c.labelItems).([]any)
-	var h listedResource[T]
-	h.init("", ";")
-	if err := h.addlist(items, c.tf2proto); err != nil {
-		return err
+func (c listedRcCRUD[T, C]) fillListedResource(rd any, h *listedResource[T]) error {
+	var nItems int
+	switch items := rd.(type) {
+	case []any:
+		nItems = len(items)
+		c := any(c.tf2proto).(anyConstructor[T])
+		if err := h.addlist(items, c); err != nil {
+			return err
+		}
+	case map[string]any:
+		nItems = len(items)
+		c := any(c.tf2proto).(anyConstructorWithKey[T])
+		if err := h.addMap(items, c); err != nil {
+			return err
+		}
+	case nil:
+	default:
+		return errors.Errorf("unexpected format of 'schema.ResourceData' %#v", rd)
 	}
-	if len(items) > len(h.mapped) {
+	if nItems > len(h.mapped) {
 		return errHasItemDups
 	}
-	if sgs := h.objects(); len(sgs) > 0 {
-		req := makeSyncReq(sgroupsAPI.SyncReq_Upsert, sgs)
+	return nil
+}
+
+func (c listedRcCRUD[T, C]) create(ctx context.Context, rd *schema.ResourceData) error {
+	var h listedResource[T]
+	h.init("", ";")
+	if err := c.fillListedResource(rd.Get(c.labelItems), &h); err != nil {
+		return err
+	}
+	if objs := h.objects(); len(objs) > 0 {
+		req := makeSyncReq(sgroupsAPI.SyncReq_Upsert, objs)
 		if _, err := c.client.Sync(ctx, req); err != nil {
 			return err
 		}
@@ -158,11 +196,10 @@ func (c listedRcCRUD[T]) create(ctx context.Context, rd *schema.ResourceData) er
 	return nil
 }
 
-func (c listedRcCRUD[T]) delete(ctx context.Context, rd *schema.ResourceData) error {
-	items, _ := rd.Get(c.labelItems).([]any)
+func (c listedRcCRUD[T, C]) delete(ctx context.Context, rd *schema.ResourceData) error {
 	var h listedResource[T]
 	h.init("", ";")
-	if err := h.addlist(items, c.tf2proto); err != nil {
+	if err := c.fillListedResource(rd.Get(c.labelItems), &h); err != nil {
 		return err
 	}
 	if del := h.objects(); len(del) > 0 {
@@ -173,20 +210,16 @@ func (c listedRcCRUD[T]) delete(ctx context.Context, rd *schema.ResourceData) er
 	return nil
 }
 
-func (c listedRcCRUD[T]) update(ctx context.Context, rd *schema.ResourceData) error {
+func (c listedRcCRUD[T, C]) update(ctx context.Context, rd *schema.ResourceData) error {
 	var h, h1 listedResource[T]
 	h.init("", ";")
 	h1.init("", ";")
-	items, _ := rd.Get(c.labelItems).([]any)
-	if err := h1.addlist(items, c.tf2proto); err != nil {
+	if err := c.fillListedResource(rd.Get(c.labelItems), &h1); err != nil {
 		return err
-	}
-	if len(items) > len(h1.mapped) {
-		return errHasItemDups
 	}
 	var del []*T
 	old, _ := rd.GetChange(c.labelItems)
-	if err := h.addlist(old.([]any), c.tf2proto); err != nil {
+	if err := c.fillListedResource(old, &h); err != nil {
 		return err
 	}
 	h.walk(func(k string, nw *T) bool {

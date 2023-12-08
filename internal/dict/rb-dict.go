@@ -42,7 +42,7 @@ func (dict *RBDict[Tk, Tv]) Clear() {
 }
 
 // Len -
-func (dict RBDict[Tk, Tv]) Len() int {
+func (dict *RBDict[Tk, Tv]) Len() int {
 	if dict.m == nil {
 		return 0
 	}
@@ -50,7 +50,7 @@ func (dict RBDict[Tk, Tv]) Len() int {
 }
 
 // Del -
-func (dict RBDict[Tk, Tv]) Del(keys ...Tk) {
+func (dict *RBDict[Tk, Tv]) Del(keys ...Tk) {
 	if dict.m != nil {
 		for _, k := range keys {
 			dict.m.Remove(k)
@@ -75,7 +75,7 @@ func (dict *RBDict[Tk, Tv]) Insert(k Tk, v Tv) bool {
 }
 
 // Get -
-func (dict RBDict[Tk, Tv]) Get(k Tk) (v Tv, ok bool) {
+func (dict *RBDict[Tk, Tv]) Get(k Tk) (v Tv, ok bool) {
 	if dict.m != nil {
 		var x any
 		if x, ok = dict.m.Get(k); ok {
@@ -86,7 +86,7 @@ func (dict RBDict[Tk, Tv]) Get(k Tk) (v Tv, ok bool) {
 }
 
 // Keys -
-func (dict RBDict[Tk, Tv]) Keys() []Tk {
+func (dict *RBDict[Tk, Tv]) Keys() []Tk {
 	ret := make([]Tk, 0, dict.Len())
 	dict.Iterate(func(k Tk, _ Tv) bool {
 		ret = append(ret, k)
@@ -96,7 +96,7 @@ func (dict RBDict[Tk, Tv]) Keys() []Tk {
 }
 
 // Items -
-func (dict RBDict[Tk, Tv]) Items() Items[Tk, Tv] {
+func (dict *RBDict[Tk, Tv]) Items() Items[Tk, Tv] {
 	var ret Items[Tk, Tv]
 	ret.Reserve(dict.Len())
 	dict.Iterate(func(k Tk, v Tv) bool {
@@ -107,7 +107,7 @@ func (dict RBDict[Tk, Tv]) Items() Items[Tk, Tv] {
 }
 
 // Iterate -
-func (dict RBDict[Tk, Tv]) Iterate(f func(k Tk, v Tv) bool) {
+func (dict *RBDict[Tk, Tv]) Iterate(f func(k Tk, v Tv) bool) {
 	if dict.m != nil {
 		for it := dict.m.Iterator(); it.Next(); {
 			k, v := it.Key().(Tk),
@@ -120,13 +120,13 @@ func (dict RBDict[Tk, Tv]) Iterate(f func(k Tk, v Tv) bool) {
 }
 
 // At -
-func (dict RBDict[Tk, Tv]) At(k Tk) Tv {
+func (dict *RBDict[Tk, Tv]) At(k Tk) Tv {
 	v, _ := dict.Get(k)
 	return v
 }
 
 // Eq -
-func (dict RBDict[Tk, Tv]) Eq(other RBDict[Tk, Tv], valuesEq func(vL, vR Tv) bool) bool {
+func (dict *RBDict[Tk, Tv]) Eq(other Dict[Tk, Tv], valuesEq func(vL, vR Tv) bool) bool {
 	if dict.Len() != other.Len() {
 		return false
 	}

@@ -1,8 +1,6 @@
 package sgroups
 
 import (
-	"context"
-
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 
@@ -12,33 +10,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
-
-type syncRules struct {
-	wr    registry.Writer
-	rules []*sg.Rule
-	ops   sg.SyncReq_SyncOp
-}
-
-func (snc syncRules) process(ctx context.Context) error { //nolint:dupl
-	rules := make([]model.SGRule, 0, len(snc.rules))
-	for _, rl := range snc.rules {
-		var item model.SGRule
-		if err := (sgRule{SGRule: &item}).from(rl); err != nil {
-			return status.Error(codes.InvalidArgument, err.Error())
-		}
-		rules = append(rules, item)
-	}
-	var opts []registry.Option
-	if err := syncOptionsFromProto(snc.ops, &opts); err != nil {
-		return status.Error(codes.InvalidArgument, err.Error())
-	}
-	var sc registry.Scope = registry.NoScope
-	if snc.ops == sg.SyncReq_Delete {
-		sc = registry.SGRule(rules...)
-		rules = nil
-	}
-	return snc.wr.SyncSGRules(ctx, rules, sc, opts...)
-}
 
 type rulePorts []model.SGRulePorts
 
@@ -62,7 +33,7 @@ func (nt networkTransport) from(src common.Networks_NetIP_Transport) error {
 		*nt.NetworkTransport = model.UDP
 	default:
 		return status.Errorf(codes.InvalidArgument,
-			"bad network transport (%v)", src)
+			"bad IP proto (%v)", src)
 	}
 	return nil
 }
@@ -101,3 +72,14 @@ func (r sgRule) from(src *sg.Rule) error {
 	}
 	return err
 }
+
+var syncSGRules = syncAlg[model.SGRule, *sg.Rule]{
+	makePrimaryKeyScope: func(rr []model.SGRule) registry.Scope {
+		return registry.PKScopeOfSGRules(rr...)
+	},
+	proto2model: func(r *sg.Rule) (model.SGRule, error) {
+		var item model.SGRule
+		err := sgRule{SGRule: &item}.from(r)
+		return item, err
+	},
+}.process

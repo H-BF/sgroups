@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"regexp"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -21,6 +23,51 @@ type (
 	nameUtils struct{}
 	setsUtils struct{}
 )
+
+const (
+	// MainTablePrefix -
+	MainTablePrefix = "main"
+)
+
+var (
+	reMainTable = regexp.MustCompile(`^` + MainTablePrefix + `(-\d+)?$`)
+
+	nextUnixEpochInSeconds func() int64
+)
+
+func init() {
+	var (
+		prev int64
+		m    sync.Mutex
+	)
+	nextUnixEpochInSeconds = func() int64 {
+		const milli = 1000
+		m.Lock()
+		defer m.Unlock()
+		for {
+			d := time.Now().UnixMilli()
+			delta := d - prev
+			if delta > milli {
+				prev = d
+				break
+			}
+			time.Sleep(time.Duration((milli - delta) * int64(time.Millisecond)))
+		}
+		return prev / milli
+	}
+}
+
+func (nameUtils) genMainTableName() string {
+	return fmt.Sprintf("%s-%v", MainTablePrefix, nextUnixEpochInSeconds())
+}
+
+func (nameUtils) isLikeMainTableName(s string) bool {
+	return reMainTable.MatchString(s)
+}
+
+func (nameUtils) nameOfInOutChain(dir direction, sgName string) string {
+	return tern(dir == dirIN, chnFWIN, chnFWOUT) + "-" + sgName
+}
 
 func (nameUtils) nameOfFqdnNetSet(ipV ipVersion, domain model.FQDN) string {
 	return fmt.Sprintf("NetIPv%v-fqdn-%s", ipV, strings.ToLower(domain.String()))
@@ -55,6 +102,10 @@ func (nameUtils) nameOfSG2FQDNRuleDetails(tp model.NetworkTransport, sgFrom stri
 	return fmt.Sprintf("%s-%s-%s-fqdn", tp, sgFrom, domain)
 }
 
+func (nameUtils) nameCidrSgRuleDetails(rule *model.CidrSgRule) string {
+	return rule.ID.String()
+}
+
 func (setsUtils) nets2SetElements(nets []net.IPNet, ipV int) []nftLib.SetElement {
 	const (
 		b32  = 32
@@ -71,6 +122,8 @@ func (setsUtils) nets2SetElements(nets []net.IPNet, ipV int) []nftLib.SetElement
 			ipLast = tern(ones < b32, iplib.NextIP(ipLast), ipLast)
 		case iplib.IP6Version:
 			ipLast = tern(ones < b128, iplib.NextIP(ipLast), ipLast)
+		default:
+			return nil
 		}
 		////TODO: need expert opinion
 		//elements = append(elements, nftLib.SetElement{
