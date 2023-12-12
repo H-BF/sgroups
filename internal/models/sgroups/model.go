@@ -380,7 +380,7 @@ func (o SgIcmpRule) IsEq(other SgIcmpRule) bool {
 		o.Trace == other.Trace &&
 		o.Sg == other.Sg &&
 		o.Icmp.IPv == other.Icmp.IPv &&
-		o.Icmp.Types.Eq(&o.Icmp.Types)
+		o.Icmp.Types.Eq(&other.Icmp.Types)
 }
 
 // ID -
@@ -397,7 +397,7 @@ func (o SgSgIcmpRule) IsEq(other SgSgIcmpRule) bool {
 		o.Trace == other.Trace &&
 		o.SgFrom == other.SgFrom &&
 		o.Icmp.IPv == other.Icmp.IPv &&
-		o.Icmp.Types.Eq(&o.Icmp.Types)
+		o.Icmp.Types.Eq(&other.Icmp.Types)
 }
 
 // ID -
