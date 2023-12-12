@@ -7,7 +7,6 @@ import (
 	"github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
-	"github.com/H-BF/protos/pkg/api/common"
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -19,7 +18,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
 
 func NewSgsResource() resource.Resource {
@@ -28,22 +26,14 @@ func NewSgsResource() resource.Resource {
 		ItemsDescription:    "Security Groups",
 	}
 	return &sgsResource{
-		suffix:       "_groups",
-		description:  d,
-		toSubjOfSync: sgs2SyncSubj,
-		read:         readSgs,
+		suffix:      "_groups",
+		description: d,
+		readState:   readSgState,
 	}
 }
 
 type (
-	securityGroupSubject struct {
-		syncGroups     *protos.SyncSecurityGroups
-		syncIcmpParams *protos.SyncSgIcmpRules
-	}
-
-	sgsResource = CollectionResource[sgItem, securityGroupSubject]
-
-	sgsResourceModel = CollectionResourceModel[sgItem, securityGroupSubject]
+	sgsResource = CollectionResource[sgItem, tfSg2Backend]
 
 	sgItem struct {
 		Name          types.String `tfsdk:"name"`
@@ -56,7 +46,7 @@ type (
 	}
 )
 
-func (item sgItem) ResourceAttributes() map[string]schema.Attribute {
+func (item sgItem) Attributes() map[string]schema.Attribute {
 	icmpParams := IcmpParameters{}
 	return map[string]schema.Attribute{
 		"name": schema.StringAttribute{
@@ -96,14 +86,14 @@ func (item sgItem) ResourceAttributes() map[string]schema.Attribute {
 			Description: "ICMP parameters for security group",
 			Optional:    true,
 			Computed:    true,
-			Attributes:  icmpParams.ResourceAttributes(),
+			Attributes:  icmpParams.Attributes(),
 			Default:     objectdefault.StaticValue(icmpParams.nullObj()),
 		},
 		"icmp6": schema.SingleNestedAttribute{
 			Description: "ICMP6 parameters for security group",
 			Optional:    true,
 			Computed:    true,
-			Attributes:  icmpParams.ResourceAttributes(),
+			Attributes:  icmpParams.Attributes(),
 			Default:     objectdefault.StaticValue(icmpParams.nullObj()),
 		},
 	}
@@ -119,81 +109,7 @@ func (item sgItem) IsDiffer(ctx context.Context, other sgItem) bool {
 		item.Icmp6.Equal(other.Icmp6))
 }
 
-func (item sgItem) icmpObj2Proto(ctx context.Context, version common.IpAddrFamily) (*protos.SgIcmpRule, diag.Diagnostics) {
-	var (
-		icmpParams IcmpParameters
-		diags      diag.Diagnostics
-	)
-	switch version {
-	case common.IpAddrFamily_IPv4:
-		diags.Append(item.Icmp.As(ctx, &icmpParams, basetypes.ObjectAsOptions{UnhandledUnknownAsEmpty: true})...)
-	case common.IpAddrFamily_IPv6:
-		diags.Append(item.Icmp6.As(ctx, &icmpParams, basetypes.ObjectAsOptions{UnhandledUnknownAsEmpty: true})...)
-	default:
-		panic("unexpected `version` value")
-	}
-	if diags.HasError() {
-		return nil, diags
-	}
-	protoRule := &protos.SgIcmpRule{
-		Sg:    item.Name.ValueString(),
-		ICMP:  &common.ICMP{IPv: version},
-		Logs:  icmpParams.Logs.ValueBool(),
-		Trace: icmpParams.Trace.ValueBool(),
-	}
-	diags.Append(icmpParams.Type.ElementsAs(ctx, &protoRule.ICMP.Types, true)...)
-	if diags.HasError() {
-		return nil, diags
-	}
-	return protoRule, nil
-}
-
-func sgs2SyncSubj(
-	ctx context.Context, items map[string]sgItem,
-) (*securityGroupSubject, diag.Diagnostics) {
-	syncSubject := securityGroupSubject{
-		syncGroups:     &protos.SyncSecurityGroups{},
-		syncIcmpParams: &protos.SyncSgIcmpRules{},
-	}
-	var diags diag.Diagnostics
-	for _, sgFeatures := range items {
-		da := sgFeatures.DefaultAction.ValueString()
-		var networks []string
-		diags.Append(sgFeatures.Networks.ElementsAs(ctx, &networks, true)...)
-		if diags.HasError() {
-			return nil, diags
-		}
-		syncSubject.syncGroups.Groups = append(syncSubject.syncGroups.Groups, &protos.SecGroup{
-			Name:          sgFeatures.Name.ValueString(),
-			Networks:      networks,
-			DefaultAction: protos.SecGroup_DefaultAction(protos.SecGroup_DefaultAction_value[da]),
-			Trace:         sgFeatures.Trace.ValueBool(),
-			Logs:          sgFeatures.Logs.ValueBool(),
-		})
-
-		if !sgFeatures.Icmp.IsNull() {
-			protoRule, d := sgFeatures.icmpObj2Proto(ctx, common.IpAddrFamily_IPv4)
-			diags.Append(d...)
-			if diags.HasError() {
-				return nil, diags
-			}
-			syncSubject.syncIcmpParams.Rules = append(syncSubject.syncIcmpParams.Rules, protoRule)
-		}
-
-		if !sgFeatures.Icmp6.IsNull() {
-			protoRule, d := sgFeatures.icmpObj2Proto(ctx, common.IpAddrFamily_IPv6)
-			diags.Append(d...)
-			if diags.HasError() {
-				return nil, diags
-			}
-			syncSubject.syncIcmpParams.Rules = append(syncSubject.syncIcmpParams.Rules, protoRule)
-		}
-	}
-
-	return &syncSubject, diags
-}
-
-func readSgs(ctx context.Context, state sgsResourceModel, client *sgAPI.Client) (sgsResourceModel, diag.Diagnostics) {
+func readSgState(ctx context.Context, state NamedResources[sgItem], client *sgAPI.Client) (NamedResources[sgItem], diag.Diagnostics) {
 	var (
 		diags          diag.Diagnostics
 		err            error
@@ -202,7 +118,7 @@ func readSgs(ctx context.Context, state sgsResourceModel, client *sgAPI.Client) 
 		id2Icmp        dict.HDict[model.SgIcmpRuleID, *protos.SgIcmpRule]
 		icmpParams     IcmpParameters
 	)
-	newState := sgsResourceModel{Items: make(map[string]sgItem)}
+	newState := NewNamedResources[sgItem]()
 	if len(state.Items) > 0 {
 		var listGroupsReq protos.ListSecurityGroupsReq
 		linq.From(state.Items).
@@ -238,7 +154,7 @@ func readSgs(ctx context.Context, state sgsResourceModel, client *sgAPI.Client) 
 		networks, d := types.SetValueFrom(ctx, types.StringType, sg.GetNetworks())
 		diags.Append(d...)
 		if d.HasError() {
-			return sgsResourceModel{}, diags
+			return NamedResources[sgItem]{}, diags
 		}
 		if _, ok := state.Items[sg.GetName()]; ok {
 			newItem := sgItem{
@@ -257,7 +173,7 @@ func readSgs(ctx context.Context, state sgsResourceModel, client *sgAPI.Client) 
 				icmpValue, d := icmpParams.fromProto(ctx, icmp)
 				diags.Append(d...)
 				if diags.HasError() {
-					return sgsResourceModel{}, diags
+					return NamedResources[sgItem]{}, diags
 				}
 				newItem.Icmp = icmpValue
 			}
@@ -268,7 +184,7 @@ func readSgs(ctx context.Context, state sgsResourceModel, client *sgAPI.Client) 
 				icmpValue, d := icmpParams.fromProto(ctx, icmp)
 				diags.Append(d...)
 				if diags.HasError() {
-					return sgsResourceModel{}, diags
+					return NamedResources[sgItem]{}, diags
 				}
 				newItem.Icmp6 = icmpValue
 			}

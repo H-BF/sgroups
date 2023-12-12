@@ -1,0 +1,187 @@
+initial-backend:
+  networks: 
+  - |
+    {
+      "name": "net1",
+      "network": {
+        "CIDR": "10.10.10.0/24"
+      }
+    }
+  - |
+    {
+      "name": "net2",
+      "network": {
+        "CIDR": "10.10.20.0/24"
+      }
+    }
+  - |
+    {
+      "name": "net3",
+      "network": {
+        "CIDR": "10.10.30.0/24"
+      }
+    }
+cases:
+- name: "create sgs with icmp blocks"
+  tf-config: |
+    resource "sgroups_groups" "sgs-set-1" {
+      items = {
+        sg1 = {
+          name = "sg1"
+          logs = true
+          trace = true
+          default_action = "DROP"
+          networks = ["net1", "net2"]
+          icmp = {
+            logs = true
+            trace = true
+            type = [1,2,3]
+          }
+          icmp6 = {
+            logs = false
+            trace = false
+            type = [0,255]
+          }
+        }
+        sg2 = {
+          name = "sg2"
+          default_action = "DROP"
+          networks = ["net3"]
+          icmp = {
+            type = [1,2,3]
+          }
+        }
+      }
+    }
+  expected-backend:
+    sec-groups:
+    - |
+      {
+        "defaultAction": "DROP",
+        "logs": true,
+        "name": "sg1",
+        "networks": ["net1", "net2"],
+        "trace": true
+      }
+    - |
+      {
+        "defaultAction": "DROP",
+        "logs": false,
+        "name": "sg2",
+        "networks": ["net3"],
+        "trace": false
+      }
+    sg-icmp-rules:
+    - |
+      {
+        "ICMP": {
+          "IPv": "IPv4",
+          "Types": [
+            1,2,3
+          ]
+        },
+        "Sg": "sg1",
+        "logs": true,
+        "trace": true
+      }
+    - |
+      {
+        "ICMP": {
+          "IPv": "IPv6",
+          "Types": [
+            0,255
+          ]
+        },
+        "Sg": "sg1",
+        "logs": false,
+        "trace": false
+      }
+    - |
+      {
+        "ICMP": {
+          "IPv": "IPv4",
+          "Types": [
+            1,2,3
+          ]
+        },
+        "Sg": "sg2",
+        "logs": false,
+        "trace": false
+      }
+- name: "remove icmp in first sg and change in second"
+  tf-config: |
+    resource "sgroups_groups" "sgs-set-1" {
+      items = {
+        sg1 = {
+          name = "sg1"
+          logs = true
+          trace = true
+          default_action = "DROP"
+          networks = ["net1", "net2"]
+        }
+        sg2 = {
+          name = "sg2"
+          default_action = "DROP"
+          networks = ["net3"]
+          icmp = {
+            type = [255]
+            logs = true
+          }
+        }
+      }
+    }
+  expected-backend:
+    sec-groups:
+    - |
+      {
+        "defaultAction": "DROP",
+        "logs": true,
+        "name": "sg1",
+        "networks": ["net1", "net2"],
+        "trace": true
+      }
+    - |
+      {
+        "defaultAction": "DROP",
+        "logs": false,
+        "name": "sg2",
+        "networks": ["net3"],
+        "trace": false
+      }
+    sg-icmp-rules:
+    - |
+      {
+        "ICMP": {
+          "IPv": "IPv4",
+          "Types": [255]
+        },
+        "Sg": "sg2",
+        "logs": true,
+        "trace": false
+      }
+  not-expected-backend:
+    sg-icmp-rules:
+    - |
+      {
+        "ICMP": {
+          "IPv": "IPv4",
+          "Types": [
+            1,2,3
+          ]
+        },
+        "Sg": "sg1",
+        "logs": true,
+        "trace": true
+      }
+    - |
+      {
+        "ICMP": {
+          "IPv": "IPv6",
+          "Types": [
+            0,255
+          ]
+        },
+        "Sg": "sg1",
+        "logs": false,
+        "trace": false
+      }

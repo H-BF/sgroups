@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/H-BF/protos/pkg/api/common"
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
@@ -27,17 +26,14 @@ func NewSgToSgRulesResource() resource.Resource {
 		ItemsDescription:    "SG -> SG rules",
 	}
 	return &sgToSgRulesResource{
-		suffix:       "_rules",
-		description:  d,
-		toSubjOfSync: sgSgRules2SyncSubj,
-		read:         readSgSgRules,
+		suffix:      "_rules",
+		description: d,
+		readState:   readSgSgRules,
 	}
 }
 
 type (
-	sgToSgRulesResource = CollectionResource[sgSgRule, protos.SyncSGRules]
-
-	sgToSgRulesResourceModel = CollectionResourceModel[sgSgRule, protos.SyncSGRules]
+	sgToSgRulesResource = CollectionResource[sgSgRule, tfSgSgRules2Backend]
 
 	sgSgRule struct {
 		Proto  types.String `tfsdk:"proto"`
@@ -88,7 +84,7 @@ func (item sgSgRule) IsDiffer(ctx context.Context, other sgSgRule) bool {
 		model.AreRulePortsEq(itemModelPorts, otherModelPorts))
 }
 
-func (item sgSgRule) ResourceAttributes() map[string]schema.Attribute { //nolint:dupl
+func (item sgSgRule) Attributes() map[string]schema.Attribute { //nolint:dupl
 	return map[string]schema.Attribute{
 		"proto": schema.StringAttribute{
 			Description: "IP-L4 proto <tcp|udp>",
@@ -118,50 +114,16 @@ func (item sgSgRule) ResourceAttributes() map[string]schema.Attribute { //nolint
 			Description: "access ports",
 			Optional:    true,
 			NestedObject: schema.NestedAttributeObject{
-				Attributes: AccessPorts{}.ResourceAttributes(),
+				Attributes: AccessPorts{}.Attributes(),
 			},
 			PlanModifiers: []planmodifier.List{ListAccessPortsModifier()},
 		},
 	}
 }
 
-func sgSgRules2SyncSubj(ctx context.Context, items map[string]sgSgRule) (*protos.SyncSGRules, diag.Diagnostics) { //nolint:dupl
-	syncObj := new(protos.SyncSGRules)
+func readSgSgRules(ctx context.Context, state NamedResources[sgSgRule], client *sgAPI.Client) (NamedResources[sgSgRule], diag.Diagnostics) {
 	var diags diag.Diagnostics
-	for _, features := range items {
-		var accPorts []AccessPorts
-		diags.Append(features.Ports.ElementsAs(ctx, &accPorts, false)...)
-		if diags.HasError() {
-			return nil, diags
-		}
-		// this conversion necessary to validate string with ports
-		if _, err := toModelPorts(accPorts); err != nil {
-			diags.AddError("ports conv", err.Error())
-			return nil, diags
-		}
-		protoValue, ok := common.Networks_NetIP_Transport_value[strings.ToUpper(
-			features.Proto.ValueString(),
-		)]
-		if !ok {
-			diags.AddError(
-				"proto conv",
-				fmt.Sprintf("no proto conv for value(%s)", features.Proto.ValueString()))
-			return nil, diags
-		}
-		syncObj.Rules = append(syncObj.Rules, &protos.Rule{
-			SgFrom:    features.SgFrom.ValueString(),
-			SgTo:      features.SgTo.ValueString(),
-			Transport: common.Networks_NetIP_Transport(protoValue),
-			Logs:      features.Logs.ValueBool(),
-			Ports:     portsToProto(accPorts),
-		})
-	}
-	return syncObj, diags
-}
-
-func readSgSgRules(ctx context.Context, state sgToSgRulesResourceModel, client *sgAPI.Client) (sgToSgRulesResourceModel, diag.Diagnostics) {
-	var diags diag.Diagnostics
-	newState := sgToSgRulesResourceModel{Items: make(map[string]sgSgRule)}
+	newState := NewNamedResources[sgSgRule]()
 	var resp *protos.RulesResp
 	if len(state.Items) > 0 {
 		var req protos.FindRulesReq

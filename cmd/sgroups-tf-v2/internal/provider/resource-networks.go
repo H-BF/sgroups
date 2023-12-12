@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 
-	"github.com/H-BF/protos/pkg/api/common"
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/H-BF/sgroups/cmd/sgroups-tf-v2/internal/validators"
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
@@ -22,24 +21,21 @@ func NewNetworksResource() resource.Resource {
 		ItemsDescription:    "Networks",
 	}
 	return &networksResource{
-		suffix:       "_networks",
-		description:  d,
-		toSubjOfSync: networks2SyncSubj,
-		read:         readNetworks,
+		suffix:      "_networks",
+		description: d,
+		readState:   readNetworks,
 	}
 }
 
 type (
-	networksResource      = CollectionResource[networkItem, protos.SyncNetworks]
-	networksResourceModel = CollectionResourceModel[networkItem, protos.SyncNetworks]
-
-	networkItem struct {
+	networksResource = CollectionResource[networkItem, tfNetworks2Backend]
+	networkItem      struct {
 		Name types.String `tfsdk:"name"`
 		Cidr types.String `tfsdk:"cidr"`
 	}
 )
 
-func (item networkItem) ResourceAttributes() map[string]schema.Attribute {
+func (item networkItem) Attributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"name": schema.StringAttribute{
 			Description: "security group name",
@@ -59,25 +55,13 @@ func (item networkItem) IsDiffer(ctx context.Context, other networkItem) bool {
 		item.Cidr.Equal(other.Cidr))
 }
 
-func networks2SyncSubj(_ context.Context, items map[string]networkItem) (*protos.SyncNetworks, diag.Diagnostics) {
-	sn := &protos.SyncNetworks{}
-	var diags diag.Diagnostics
-	for _, netFeatures := range items {
-		sn.Networks = append(sn.Networks, &protos.Network{
-			Name:    netFeatures.Name.ValueString(),
-			Network: &common.Networks_NetIP{CIDR: netFeatures.Cidr.ValueString()},
-		})
-	}
-	return sn, diags
-}
-
-func readNetworks(ctx context.Context, state networksResourceModel, client *sgAPI.Client) (networksResourceModel, diag.Diagnostics) {
+func readNetworks(ctx context.Context, state NamedResources[networkItem], client *sgAPI.Client) (NamedResources[networkItem], diag.Diagnostics) {
 	var (
 		diags    diag.Diagnostics
 		err      error
 		listResp *protos.ListNetworksResp
 	)
-	newState := networksResourceModel{Items: make(map[string]networkItem)}
+	newState := NewNamedResources[networkItem]()
 	if len(state.Items) > 0 {
 		var listReq protos.ListNetworksReq
 
@@ -88,7 +72,7 @@ func readNetworks(ctx context.Context, state networksResourceModel, client *sgAP
 		listResp, err = client.ListNetworks(ctx, &listReq)
 		if err != nil {
 			diags.AddError("read networks", err.Error())
-			return networksResourceModel{}, diags
+			return NamedResources[networkItem]{}, diags
 		}
 	}
 

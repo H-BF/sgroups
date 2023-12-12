@@ -16,7 +16,7 @@ type (
 	}
 )
 
-func (p AccessPorts) ResourceAttributes() map[string]schema.Attribute {
+func (p AccessPorts) Attributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"s": schema.StringAttribute{
 			Description: "source port/ports range",
