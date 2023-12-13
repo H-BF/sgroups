@@ -9,7 +9,6 @@ import (
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
-	"github.com/H-BF/protos/pkg/api/common"
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -20,8 +19,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 func NewCidrRulesResource() resource.Resource {
@@ -30,17 +27,14 @@ func NewCidrRulesResource() resource.Resource {
 		ItemsDescription:    "CIDR-SG rules",
 	}
 	return &cidrRulesResource{
-		suffix:       "_cidr_rules",
-		description:  d,
-		toSubjOfSync: cidrRules2SyncSubj,
-		read:         readCidrRules,
+		suffix:      "_cidr_rules",
+		description: d,
+		readState:   readCidrRules,
 	}
 }
 
 type (
-	cidrRulesResource = CollectionResource[cidrRule, protos.SyncCidrSgRules]
-
-	cidrRulesResourceModel = CollectionResourceModel[cidrRule, protos.SyncCidrSgRules]
+	cidrRulesResource = CollectionResource[cidrRule, tfCidrSgRules2Backend]
 
 	cidrRule struct {
 		Proto   types.String `tfsdk:"proto"`
@@ -75,7 +69,7 @@ func (item cidrRule) Key() *cidrRuleKey {
 	}
 }
 
-func (item cidrRule) ResourceAttributes() map[string]schema.Attribute {
+func (item cidrRule) Attributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"proto": schema.StringAttribute{
 			Description: "IP-L4 proto <tcp|udp>",
@@ -106,7 +100,7 @@ func (item cidrRule) ResourceAttributes() map[string]schema.Attribute {
 			Description: "access ports",
 			Optional:    true,
 			NestedObject: schema.NestedAttributeObject{
-				Attributes: AccessPorts{}.ResourceAttributes(),
+				Attributes: AccessPorts{}.Attributes(),
 			},
 			PlanModifiers: []planmodifier.List{ListAccessPortsModifier()},
 		},
@@ -147,55 +141,9 @@ func (item cidrRule) IsDiffer(ctx context.Context, other cidrRule) bool {
 		model.AreRulePortsEq(itemModelPorts, otherModelPorts))
 }
 
-func cidrRules2SyncSubj(ctx context.Context, items map[string]cidrRule) (*protos.SyncCidrSgRules, diag.Diagnostics) {
-	syncCidrRules := new(protos.SyncCidrSgRules)
+func readCidrRules(ctx context.Context, state NamedResources[cidrRule], client *sgAPI.Client) (NamedResources[cidrRule], diag.Diagnostics) {
 	var diags diag.Diagnostics
-	for _, features := range items {
-		var accPorts []AccessPorts
-		diags.Append(features.Ports.ElementsAs(ctx, &accPorts, false)...)
-		if diags.HasError() {
-			return nil, diags
-		}
-		// this conversion necessary to validate string with ports
-		if _, err := toModelPorts(accPorts); err != nil {
-			diags.AddError("ports conv", err.Error())
-			return nil, diags
-		}
-		protoValue, ok := common.Networks_NetIP_Transport_value[strings.ToUpper(
-			features.Proto.ValueString(),
-		)]
-		if !ok {
-			diags.AddError(
-				"proto conv",
-				fmt.Sprintf("no proto conv for value(%s)", features.Proto.ValueString()))
-			return nil, diags
-		}
-		caser := cases.Title(language.AmericanEnglish).String
-		trafficValue, ok := common.Traffic_value[caser(
-			features.Traffic.ValueString(),
-		)]
-		if !ok {
-			diags.AddError(
-				"traffic conv",
-				fmt.Sprintf("no traffic conv for value(%s)", features.Traffic.ValueString()))
-			return nil, diags
-		}
-		syncCidrRules.Rules = append(syncCidrRules.Rules, &protos.CidrSgRule{
-			Transport: common.Networks_NetIP_Transport(protoValue),
-			CIDR:      features.Cidr.ValueString(),
-			SG:        features.SgName.ValueString(),
-			Traffic:   common.Traffic(trafficValue),
-			Ports:     portsToProto(accPorts),
-			Logs:      features.Logs.ValueBool(),
-			Trace:     features.Trace.ValueBool(),
-		})
-	}
-	return syncCidrRules, diags
-}
-
-func readCidrRules(ctx context.Context, state cidrRulesResourceModel, client *sgAPI.Client) (cidrRulesResourceModel, diag.Diagnostics) {
-	var diags diag.Diagnostics
-	newState := cidrRulesResourceModel{Items: make(map[string]cidrRule)}
+	newState := NewNamedResources[cidrRule]()
 	var resp *protos.CidrSgRulesResp
 	var err error
 	if len(state.Items) > 0 {

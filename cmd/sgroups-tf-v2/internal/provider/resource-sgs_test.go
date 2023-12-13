@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"testing"
 
-	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/H-BF/sgroups/cmd/sgroups-tf-v2/internal/provider/fixtures"
 	domain "github.com/H-BF/sgroups/internal/models/sgroups"
-	"github.com/stretchr/testify/suite"
 
+	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
+	"github.com/stretchr/testify/suite"
 )
 
 type sgsTests struct {
@@ -21,9 +21,19 @@ func TestAccSgs(t *testing.T) {
 	suite.Run(t, new(sgsTests))
 }
 
-func (sui *sgsTests) TestSgs() {
+func (sui *sgsTests) TestSgs_Straight() {
+	resourceTestCase := sui.makeTestSgsFromFixtureFilename("data/sgs.yaml")
+	resource.Test(sui.T(), resourceTestCase)
+}
+
+func (sui *sgsTests) TestSgs_SWARM_190() {
+	resourceTestCase := sui.makeTestSgsFromFixtureFilename("data/sgs-SWARM-190.yaml")
+	resource.Test(sui.T(), resourceTestCase)
+}
+
+func (sui *sgsTests) makeTestSgsFromFixtureFilename(name string) resource.TestCase {
 	testData := fixtures.AccTests{Ctx: sui.ctx}
-	testData.LoadFixture(sui.T(), "data/sgs.yaml")
+	testData.LoadFixture(sui.T(), name)
 	testData.InitBackend(sui.T(), sui.sgClient)
 	resourceTestCase := resource.TestCase{
 		ProtoV6ProviderFactories: sui.providerFactories,
@@ -56,7 +66,7 @@ func (sui *sgsTests) TestSgs() {
 					allIcmps := sui.listAllSgIcmpRules()
 					var icmpsChecker fixtures.ExpectationsChecker[protos.SgIcmpRule, domain.SgIcmpRule]
 					icmpsChecker.Init(allIcmps)
-					if !icmpsChecker.WeExpectFindAll(expectedBackendIcmps) {
+					if len(expectedBackendIcmps) > 0 && !icmpsChecker.WeExpectFindAll(expectedBackendIcmps) {
 						return fmt.Errorf("on check '%s' we expect to find all these SgIcmpRules[%s] in [%s]",
 							tcName, slice2string(expectedBackendIcmps...), slice2string(allIcmps...))
 					}
@@ -71,7 +81,7 @@ func (sui *sgsTests) TestSgs() {
 		})
 	}
 
-	resource.Test(sui.T(), resourceTestCase)
+	return resourceTestCase
 }
 
 func (sui *sgsTests) listAllSgs() []*protos.SecGroup {

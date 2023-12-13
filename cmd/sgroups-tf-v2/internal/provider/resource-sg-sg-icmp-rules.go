@@ -28,17 +28,14 @@ func NewSgToSgIcmpRulesResource() resource.Resource {
 		ItemsDescription:    "SG to SG ICMP rules",
 	}
 	return &sgSgIcmpRulesResource{
-		suffix:       "_icmp_rules",
-		description:  d,
-		toSubjOfSync: sgSgIcmpRules2SyncSubj,
-		read:         readSgSgIcmpRules,
+		suffix:      "_icmp_rules",
+		description: d,
+		readState:   readSgSgIcmpRules,
 	}
 }
 
 type (
-	sgSgIcmpRulesResource = CollectionResource[sgSgIcmpRule, protos.SyncSgSgIcmpRules]
-
-	sgSgIcmpRulesResourceModel = CollectionResourceModel[sgSgIcmpRule, protos.SyncSgSgIcmpRules]
+	sgSgIcmpRulesResource = CollectionResource[sgSgIcmpRule, tfSgSgIcmpRules2Backend]
 
 	sgSgIcmpRule struct {
 		SgFrom    types.String `tfsdk:"sg_from"`
@@ -82,7 +79,7 @@ func (item sgSgIcmpRule) IsDiffer(ctx context.Context, other sgSgIcmpRule) bool 
 		item.Trace.Equal(other.Trace))
 }
 
-func (item sgSgIcmpRule) ResourceAttributes() map[string]schema.Attribute {
+func (item sgSgIcmpRule) Attributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"sg_from": schema.StringAttribute{
 			Description: "Security Group from",
@@ -124,7 +121,7 @@ func (item sgSgIcmpRule) ResourceAttributes() map[string]schema.Attribute {
 	}
 }
 
-func (item sgSgIcmpRule) icmp2Proto(ctx context.Context, diags diag.Diagnostics) *common.ICMP {
+func (item sgSgIcmpRule) icmp2Proto(ctx context.Context, diags *diag.Diagnostics) *common.ICMP {
 	ret := new(common.ICMP)
 
 	switch item.IpVersion.ValueString() {
@@ -140,31 +137,11 @@ func (item sgSgIcmpRule) icmp2Proto(ctx context.Context, diags diag.Diagnostics)
 	return ret
 }
 
-func sgSgIcmpRules2SyncSubj(ctx context.Context, items map[string]sgSgIcmpRule) (*protos.SyncSgSgIcmpRules, diag.Diagnostics) {
-	syncObj := new(protos.SyncSgSgIcmpRules)
-	var diags diag.Diagnostics
-	for _, features := range items {
-		icmp := features.icmp2Proto(ctx, diags)
-		if diags.HasError() {
-			return nil, diags
-		}
-		syncObj.Rules = append(syncObj.Rules, &protos.SgSgIcmpRule{
-			SgFrom: features.SgFrom.ValueString(),
-			SgTo:   features.SgTo.ValueString(),
-			ICMP:   icmp,
-			Logs:   features.Logs.ValueBool(),
-			Trace:  features.Trace.ValueBool(),
-		})
-	}
-
-	return syncObj, diags
-}
-
 func readSgSgIcmpRules(
-	ctx context.Context, state sgSgIcmpRulesResourceModel, client *sgAPI.Client,
-) (sgSgIcmpRulesResourceModel, diag.Diagnostics) {
+	ctx context.Context, state NamedResources[sgSgIcmpRule], client *sgAPI.Client,
+) (NamedResources[sgSgIcmpRule], diag.Diagnostics) {
 	var diags diag.Diagnostics
-	newState := sgSgIcmpRulesResourceModel{Items: make(map[string]sgSgIcmpRule)}
+	newState := NewNamedResources[sgSgIcmpRule]()
 	var resp *protos.SgSgIcmpRulesResp
 	if len(state.Items) > 0 {
 		req := new(protos.FindSgSgIcmpRulesReq)
@@ -186,7 +163,7 @@ func readSgSgIcmpRules(
 		typeSet, d := types.SetValueFrom(ctx, types.Int64Type, icmpRule.ICMP.GetTypes())
 		diags.Append(d...)
 		if d.HasError() {
-			return sgSgIcmpRulesResourceModel{}, diags
+			return newState, diags
 		}
 		it := sgSgIcmpRule{
 			SgFrom:    types.StringValue(icmpRule.GetSgFrom()),
