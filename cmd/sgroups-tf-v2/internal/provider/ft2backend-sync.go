@@ -37,6 +37,13 @@ var (
 	_ tf2backend[sgSgIcmpRule] = (*tfSgSgIcmpRules2Backend)(nil)
 	_ tf2backend[sgFqdnRule]   = (*tfSgFqdnRules2Backend)(nil)
 	_ tf2backend[cidrRule]     = (*tfCidrSgRules2Backend)(nil)
+
+	_ = tfNetworks2Backend.sync
+	_ = tfSg2Backend.sync
+	_ = tfSgSgRules2Backend.sync
+	_ = tfSgSgIcmpRules2Backend.sync
+	_ = tfSgFqdnRules2Backend.sync
+	_ = tfCidrSgRules2Backend.sync
 )
 
 func (tfNetworks2Backend) sync(ctx context.Context, items NamedResources[networkItem], client *sgAPI.Client, op protos.SyncReq_SyncOp) diag.Diagnostics {
@@ -61,7 +68,7 @@ func (tfNetworks2Backend) sync(ctx context.Context, items NamedResources[network
 	return diags
 }
 
-func (tfSg2Backend) sync(ctx context.Context, items NamedResources[sgItem], client *sgAPI.Client, op protos.SyncReq_SyncOp) diag.Diagnostics {
+func (tfSg2Backend) sync(ctx context.Context, items NamedResources[sgItem], client *sgAPI.Client, op protos.SyncReq_SyncOp) diag.Diagnostics { //nolint:gocyclo
 	var diags diag.Diagnostics
 	var icmp dict.HDict[string, types.Object]
 	var icmp6 dict.HDict[string, types.Object]
@@ -167,7 +174,7 @@ func (tfSg2Backend) sync(ctx context.Context, items NamedResources[sgItem], clie
 	return diags
 }
 
-func (tfSgSgRules2Backend) sync(ctx context.Context, items NamedResources[sgSgRule], client *sgAPI.Client, op protos.SyncReq_SyncOp) diag.Diagnostics {
+func (tfSgSgRules2Backend) sync(ctx context.Context, items NamedResources[sgSgRule], client *sgAPI.Client, op protos.SyncReq_SyncOp) diag.Diagnostics { //nolint:dupl
 	var syncObj protos.SyncSGRules
 	var diags diag.Diagnostics
 	for _, features := range items.Items {
@@ -210,7 +217,6 @@ func (tfSgSgRules2Backend) sync(ctx context.Context, items NamedResources[sgSgRu
 			err.Error(),
 		)
 	}
-
 	return diags
 }
 
@@ -243,7 +249,7 @@ func (tfSgSgIcmpRules2Backend) sync(ctx context.Context, items NamedResources[sg
 	return diags
 }
 
-func (tfSgFqdnRules2Backend) sync(ctx context.Context, items NamedResources[sgFqdnRule], client *sgAPI.Client, op protos.SyncReq_SyncOp) diag.Diagnostics {
+func (tfSgFqdnRules2Backend) sync(ctx context.Context, items NamedResources[sgFqdnRule], client *sgAPI.Client, op protos.SyncReq_SyncOp) diag.Diagnostics { //nolint:dupl
 	var syncFqdnRules protos.SyncFqdnRules
 	var diags diag.Diagnostics
 	for _, features := range items.Items {
