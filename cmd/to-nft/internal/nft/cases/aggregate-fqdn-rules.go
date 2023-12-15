@@ -32,6 +32,26 @@ type (
 	}
 )
 
+// IsEq -
+func (rules *SG2FQDNRules) IsEq(other SG2FQDNRules) bool {
+	eq := rules.SGs.IsEq(other.SGs)
+	if eq {
+		var l, r dict.HDict[string, *model.FQDNRule]
+		if len(rules.Rules) == len(other.Rules) {
+			for i := range rules.Rules {
+				a := &rules.Rules[i]
+				b := &other.Rules[i]
+				l.Insert(a.ID.String(), a)
+				r.Insert(a.ID.String(), b)
+			}
+		}
+		eq = l.Eq(&r, func(vL, vR *model.FQDNRule) bool {
+			return vL.IsEq(*vR)
+		})
+	}
+	return eq
+}
+
 func (ld FQDNRulesLoader) Load(ctx context.Context, sgs SGs) (rr SG2FQDNRules, err error) {
 	const api = "FQDNRules/Load"
 

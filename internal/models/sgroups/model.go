@@ -280,7 +280,8 @@ func (nw Network) IsEq(other Network) bool {
 func (sg SecurityGroup) IsEq(other SecurityGroup) bool {
 	eq := sg.DefaultAction == other.DefaultAction &&
 		sg.Logs == other.Logs &&
-		sg.Trace == other.Trace
+		sg.Trace == other.Trace &&
+		sg.Name == other.Name
 	if eq {
 		var a, b dict.HSet[string]
 		a.PutMany(sg.Networks...)

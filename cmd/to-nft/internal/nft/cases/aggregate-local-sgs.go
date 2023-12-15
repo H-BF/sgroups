@@ -137,6 +137,38 @@ func (loc SGs) Names() []SgName {
 	return loc.Keys()
 }
 
+// IsEq -
+func (loc *SGs) IsEq(other SGs) bool {
+	return loc.Eq(&other.HDict, func(lSg, rSg *SG) bool {
+		return lSg.IsEq(rSg.SecurityGroup)
+	})
+}
+
+// IsEq -
+func (sgsNws *SGsNetworks) IsEq(other SGsNetworks) bool {
+	eq := sgsNws.Len() == other.Len()
+	if eq {
+		var x, y dict.Dict[string, *model.Network]
+		eq = sgsNws.Eq(&other, func(vL, vR []model.Network) bool {
+			if len(vL) == len(vR) {
+				x.Clear()
+				y.Clear()
+				for i := range vL {
+					_ = x.Insert(vL[i].Name, &vL[i])
+				}
+				for i := range vR {
+					_ = y.Insert(vR[i].Name, &vR[i])
+				}
+				return x.Eq(y, func(nwL, nwR *model.Network) bool {
+					return nwL.IsEq(*nwR)
+				})
+			}
+			return false
+		})
+	}
+	return eq
+}
+
 // LoadFromSGNames -
 func (sgsNws *SGsNetworks) LoadFromSGNames(ctx context.Context, client SGClient, sgNames []string) error {
 	const api = "SG(s)/Networks/Load"

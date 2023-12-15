@@ -15,6 +15,9 @@ base-rules:
   networks: ["10.10.1.0/24", "10.10.2.0/24",....]  # optional or value will borrow data from "extapi/svc/sgroups/address"
 logger:
   level: INFO
+netlink:
+  watcher: #netlink watcher
+    linger: 10s
 dns:
   nameservers: ["8.8.8.8", "1.1.1.1", "...", ] #default ["8.8.8.8"]
   proto: tcp|udp #default udp
@@ -50,6 +53,9 @@ const (
 	AppGracefulShutdown config.ValueT[time.Duration] = "graceful-schutdown"
 	// NetNS network namespace
 	NetNS config.ValueT[string] = "netns"
+
+	// NetlinkWatcherLinger netlingk watched linger duration, min(1s)
+	NetlinkWatcherLinger config.ValueT[time.Duration] = "netlink/watcher/linger"
 
 	// BaseRulesOutNets represents always list open networks for outgoing requests
 	BaseRulesOutNets config.ValueT[[]config.NetCIDR] = "base-rules/networks"

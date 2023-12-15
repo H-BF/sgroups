@@ -44,9 +44,10 @@ func main() {
 		config.WithDefValue{Key: AppLoggerLevel, Val: "DEBUG"},
 		config.WithDefValue{Key: AppGracefulShutdown, Val: 10 * time.Second},
 		config.WithDefValue{Key: NetNS, Val: ""},
+		config.WithDefValue{Key: NetlinkWatcherLinger, Val: "10s"},
 		config.WithDefValue{Key: ServicesDefDialDuration, Val: 10 * time.Second},
 		config.WithDefValue{Key: SGroupsAddress, Val: "tcp://127.0.0.1:9000"},
-		config.WithDefValue{Key: SGroupsSyncStatusInterval, Val: "30s"},
+		config.WithDefValue{Key: SGroupsSyncStatusInterval, Val: "10s"},
 		config.WithDefValue{Key: SGroupsSyncStatusPush, Val: false},
 		//DNS group
 		config.WithDefValue{Key: DnsNameservers, Val: `["8.8.8.8"]`},
@@ -155,9 +156,11 @@ func runNftJob(ctx context.Context, resolver DomainAddressQuerier) (err error) {
 	return err
 }
 
-func makeNetlinkWatcher(netNs string) (nl.NetlinkWatcher, error) {
+func makeNetlinkWatcher(ctx context.Context, netNs string) (nl.NetlinkWatcher, error) {
 	opts := []nl.WatcherOption{
-		nl.WithLinger{Linger: 10 * time.Second},
+		nl.WithLinger{
+			Linger: NetlinkWatcherLinger.MustValue(ctx),
+		},
 	}
 	if len(netNs) > 0 {
 		opts = append(opts, nl.WithNetns{Netns: netNs})
@@ -222,7 +225,7 @@ func (m *mainJob) init(ctx context.Context, dnsResolver DomainAddressQuerier) (e
 	if m.sgClient, err = NewSGClient(ctx); err != nil {
 		return err
 	}
-	if m.nlWatcher, err = makeNetlinkWatcher(m.netNs); err != nil {
+	if m.nlWatcher, err = makeNetlinkWatcher(ctx, m.netNs); err != nil {
 		return err
 	}
 	if m.nftProcessor, err = makeNftprocessor(ctx, *m.sgClient, dnsResolver, m.netNs); err != nil {

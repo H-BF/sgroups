@@ -17,6 +17,17 @@ type CidrSgRules struct {
 	Rules dict.RBDict[model.CidrSgRuleIdenity, *model.CidrSgRule]
 }
 
+// IsEq -
+func (rules *CidrSgRules) IsEq(order CidrSgRules) bool {
+	eq := rules.SGs.IsEq(order.SGs)
+	if eq {
+		eq = rules.Rules.Eq(&order.Rules, func(vL, vR *model.CidrSgRule) bool {
+			return vL.IsEq(*vR)
+		})
+	}
+	return eq
+}
+
 func (rules *CidrSgRules) Load(ctx context.Context, client SGClient, locals SGs) (err error) {
 	const api = "cidr-sg-rules/Load"
 
