@@ -6,6 +6,7 @@ import (
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/host"
+	"github.com/H-BF/sgroups/internal/dict"
 
 	"github.com/H-BF/corlib/logger"
 	"github.com/pkg/errors"
@@ -50,59 +51,56 @@ func (loader LocalDataLoader) Load(ctx context.Context, client SGClient, ncnf ho
 		v4, v6 := ncnf.LocalIPs()
 		locIPs = append(append(locIPs, v4...), v6...)
 	}
-	_ = locIPs
+	if len(locIPs) == 0 {
+		return res, err
+	}
+
+	log := loader.Logger
+	log.Debugf("loading local SG(s) from host local IP(s) %s ...", locIPs)
+	if err = res.LocalSGs.LoadFromIPs(ctx, client, locIPs); err != nil {
+		return res, err
+	}
+	log.Debugf("found local SG(s) %s", res.LocalSGs.Names())
+
+	log.Debugw("loading SG-SG rules...")
+	if err = res.SG2SGRules.Load(ctx, client, res.LocalSGs); err != nil {
+		return res, err
+	}
+
+	log.Debugw("loading SG-ICMP rules...")
+	if err = res.SgIcmpRules.Load(ctx, client, res.LocalSGs); err != nil {
+		return res, err
+	}
+
+	log.Debugw("loading SG-SG-ICMP rules...")
+	if err = res.SgSgIcmpRules.Load(ctx, client, res.LocalSGs); err != nil {
+		return res, err
+	}
+
+	log.Debugw("loading SG-FQDN rules...")
+	res.SG2FQDNRules, err = FQDNRulesLoader{SGSrv: client, DnsRes: loader.DnsRes}.Load(ctx, res.LocalSGs)
+	if err != nil {
+		return res, err
+	}
+
+	log.Debugw("loading CIDR-SG-INGRESS/EGRESS rules...")
+	if err = res.CidrSgRules.Load(ctx, client, res.LocalSGs); err != nil {
+		return res, err
+	}
+
+	var allSgNames []string
+	{
+		var set dict.HSet[string]
+		set.PutMany(res.LocalSGs.Keys()...)
+		set.PutMany(res.SG2SGRules.SGs.Keys()...)
+		set.PutMany(res.SG2FQDNRules.SGs.Keys()...)
+		set.PutMany(res.SgIcmpRules.SGs.Keys()...)
+		set.PutMany(res.SgSgIcmpRules.SGs.Keys()...)
+		set.PutMany(res.CidrSgRules.SGs.Keys()...)
+		allSgNames = set.Values()
+	}
+	log.Debugw("loading networks...")
+	err = res.Networks.LoadFromSGNames(ctx, client, allSgNames)
 
 	return res, err
 }
-
-/*//
-localIPsV4, loaclIPsV6 := netConf.LocalIPs()
-allLoaclIPs := append(localIPsV4, loaclIPsV6...)
-log.Infof("start loading data according host net config")
-
-log.Debugw("loading SG...", "host-local-IP(s)", slice2stringer(allLoaclIPs...))
-if applied.LocalSGs, err = impl.loadLocalSGs(ctx, allLoaclIPs); err != nil {
-	return applied, err
-}
-
-stringerOfLocalSGs := slice2stringer(applied.LocalSGs.Names()...)
-log.Debugw("loading SG-SG rules...", "local-SG(s)", stringerOfLocalSGs)
-if localRules, err = impl.loadSgSgRules(ctx, applied.LocalSGs); err != nil {
-	return applied, err
-}
-applied.SG2SGRules = localRules
-
-log.Debugw("loading SG-ICMP rules...", "local-SG(s)", stringerOfLocalSGs)
-if err = applied.SgIcmpRules.Load(ctx, impl.sgClient, applied.LocalSGs); err != nil {
-	return applied, err
-}
-
-log.Debugw("loading SG-SG-ICMP rules...", "local-SG(s)", stringerOfLocalSGs)
-if err = applied.SgSgIcmpRules.Load(ctx, impl.sgClient, applied.LocalSGs); err != nil {
-	return applied, err
-}
-
-log.Debugw("loading SG-FQDN rules...", "local-SG(s)", stringerOfLocalSGs)
-if fqdnRules, err = impl.loadFQDNRules(ctx, applied.LocalSGs); err != nil {
-	return applied, err
-}
-applied.SG2FQDNRules = fqdnRules
-
-log.Debugw("loading CIDR-SG-INGRESS/EGRESS rules...", "local-SG(s)", stringerOfLocalSGs)
-if err = applied.CidrSgRules.Load(ctx, impl.sgClient, applied.LocalSGs); err != nil {
-	return applied, err
-}
-
-sgNames := applied.GetAllUsedSgNames()
-log.Debugw("loading networks...", "SG(s)", slice2stringer(sgNames...))
-if err = networks.LoadFromSGNames(ctx, impl.sgClient, sgNames); err != nil {
-	return applied, err
-}
-log.Info("data loaded; will apply it now")
-*/
-
-/*//
-func stringers(args ...fmt.Stringer) []fmt.Stringer {
-	return args
-}
-*/
