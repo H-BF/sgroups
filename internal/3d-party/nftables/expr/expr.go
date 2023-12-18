@@ -17,6 +17,7 @@ package expr
 
 import (
 	"encoding/binary"
+	"fmt"
 
 	"github.com/google/nftables/binaryutil"
 	"github.com/google/nftables/internal/parseexprfunc"
@@ -25,6 +26,11 @@ import (
 )
 
 func init() {
+	err := NftNdpiInit()
+	if err != nil {
+		fmt.Println("err:", err)
+		return
+	}
 	parseexprfunc.ParseExprBytesFunc = func(fam byte, ad *netlink.AttributeDecoder, b []byte) ([]interface{}, error) {
 		exprs, err := exprsFromBytes(fam, ad, b)
 		if err != nil {
