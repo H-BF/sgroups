@@ -181,12 +181,12 @@ func makeNftprocessor(ctx context.Context, sgClient SGClient, dnsRes DomainAddre
 	if err != nil {
 		return nil, errors.WithMessage(err, "load base rules")
 	}
-	opts = append(opts, nft.DnsResolver{DomainAddressQuerier: dnsRes})
 	return nft.NewNfTablesProcessor(sgClient, opts...), nil
 }
 
 type mainJob struct {
 	appSubject              observer.Subject
+	dnsResolver             DomainAddressQuerier
 	netNs                   string
 	SyncStatusCheckInterval time.Duration
 	SyncStatusUsePush       bool
@@ -214,6 +214,7 @@ func (m *mainJob) init(ctx context.Context, dnsResolver DomainAddressQuerier) (e
 			m.cleanup()
 		}
 	}()
+	m.dnsResolver = dnsResolver
 	m.appSubject = AgentSubject()
 	m.netNs, err = NetNS.Value(ctx)
 	if err != nil && !errors.Is(err, config.ErrNotFound) {
@@ -236,8 +237,11 @@ func (m *mainJob) init(ctx context.Context, dnsResolver DomainAddressQuerier) (e
 
 func (m *mainJob) run(ctx context.Context) error {
 	defer m.cleanup()
-	jb := jobs.NewNftApplierJob(m.nftProcessor,
-		jobs.WithAgentSubject{Subject: m.appSubject})
+	jb := jobs.NewNftApplierJob(m.nftProcessor, *m.sgClient,
+		jobs.WithAgentSubject{Subject: m.appSubject},
+		jobs.WithDnsResolver{DnsRes: m.dnsResolver},
+		jobs.WithNetNS(m.netNs),
+	)
 	defer jb.Close()
 	nle := NetlinkEventSource{
 		AgentSubj:      m.appSubject,

@@ -12,22 +12,24 @@ import (
 	"github.com/pkg/errors"
 )
 
-// LocalData are used by agent to build Host Based Firewall rules
-type LocalData struct {
-	LocalSGs      SGs
-	SG2SGRules    SG2SGRules
-	SG2FQDNRules  SG2FQDNRules
-	SgIcmpRules   SgIcmpRules
-	SgSgIcmpRules SgSgIcmpRules
-	CidrSgRules   CidrSgRules
-	Networks      SGsNetworks
-}
+type (
+	// LocalData are used by agent to build Host Based Firewall rules
+	LocalData struct {
+		LocalSGs      SGs
+		SG2SGRules    SG2SGRules
+		SG2FQDNRules  SG2FQDNRules
+		SgIcmpRules   SgIcmpRules
+		SgSgIcmpRules SgSgIcmpRules
+		CidrSgRules   CidrSgRules
+		Networks      SGsNetworks
+	}
 
-// LocalDataLoader
-type LocalDataLoader struct {
-	Logger logger.TypeOfLogger
-	DnsRes internal.DomainAddressQuerier // optional
-}
+	// LocalDataLoader
+	LocalDataLoader struct {
+		Logger logger.TypeOfLogger
+		DnsRes internal.DomainAddressQuerier // optional
+	}
+)
 
 // IsEq checks wether this object is equal the other one
 func (ld *LocalData) IsEq(other LocalData) bool {
