@@ -25,8 +25,6 @@ import (
 )
 
 func init() {
-	nftNdpiInit()
-
 	parseexprfunc.ParseExprBytesFunc = func(fam byte, ad *netlink.AttributeDecoder, b []byte) ([]interface{}, error) {
 		exprs, err := exprsFromBytes(fam, ad, b)
 		if err != nil {
