@@ -37,60 +37,57 @@ const (
 )
 
 const (
-	NDPI_GIT_RELEASE   = "4.3.0-8-6ae5394"
-	NDPI_NUM_BITS      = 512
+	//Version of the ndpi
+	NDPI_GIT_RELEASE = "4.3.0-8-6ae5394"
+	//Number of ndpi protocols
+	NDPI_NUM_BITS = 512
+	//Mask for available ndpi protocols
 	NDPI_NUM_BITS_MASK = (512 - 1)
-	NDPI_BITS          = 32 // sizeof(uint32) * 8
+	//Number of bits to describe one protocol
+	NDPI_BITS = 32 // sizeof(uint32) * 8
 )
 
-type ndpi_ndpi_mask uint32
+type ndpiMaskType uint32
 
-func howmanybits(x, y int) int {
-	return ((x) + ((y) - 1)) / (y)
+const NDPI_NUM_FDS_BITS = (NDPI_NUM_BITS + (NDPI_BITS - 1)) / NDPI_BITS
+
+type ndpiProtoBitmask struct {
+	fds_bits [NDPI_NUM_FDS_BITS]ndpiMaskType
 }
 
-const NDPI_NUM_FDS_BITS = ((NDPI_NUM_BITS) + ((NDPI_BITS) - 1)) / (NDPI_BITS) //howmanybits(NDPI_NUM_BITS, NDPI_BITS)
-
-type ndpi_protocol_bitmask_struct_t struct {
-	fds_bits [NDPI_NUM_FDS_BITS]ndpi_ndpi_mask
-}
-
-type NDPI_PROTOCOL_BITMASK = ndpi_protocol_bitmask_struct_t
-
-func NDPI_SET(p *NDPI_PROTOCOL_BITMASK, n uint32) {
+// Set ndpi protocol bit to bitmask
+func (p *ndpiProtoBitmask) set(n uint32) {
 	p.fds_bits[n/NDPI_BITS] |= 1 << (n % NDPI_BITS)
 }
 
-func NDPI_CLR(p *NDPI_PROTOCOL_BITMASK, n uint32) {
+// Clear ndpi protocol bit form bitmask
+func (p *ndpiProtoBitmask) clr(n uint32) {
 	p.fds_bits[n/NDPI_BITS] &= ^(1 << (n % NDPI_BITS))
 }
 
-func NDPI_ISSET(p *NDPI_PROTOCOL_BITMASK, n uint32) bool {
+// Check if ndpi protocol bit is set
+func (p *ndpiProtoBitmask) isSet(n uint32) bool {
 	return (p.fds_bits[n/NDPI_BITS] & (1 << (n % NDPI_BITS))) != 0
 }
 
-func NDPI_ZERO(p *NDPI_PROTOCOL_BITMASK) {
-	for i := range p.fds_bits {
-		p.fds_bits[i] = 0
-	}
+// Check if protocols were set
+func (p *ndpiProtoBitmask) compareProtocol(value uint32) bool {
+	return p.isSet(value & NDPI_NUM_BITS_MASK)
 }
 
-func NDPI_ONE(p *NDPI_PROTOCOL_BITMASK) {
-	for i := range p.fds_bits {
-		p.fds_bits[i] = ^ndpi_ndpi_mask(0)
-	}
+// Add protocol to bitmask
+func (p *ndpiProtoBitmask) addProtocol(value uint32) {
+	p.set(value & NDPI_NUM_BITS_MASK)
 }
 
-func NDPI_COMPARE_PROTOCOL_TO_BITMASK(bmask NDPI_PROTOCOL_BITMASK, value uint32) bool {
-	return NDPI_ISSET(&bmask, value&NDPI_NUM_BITS_MASK)
+// Delete protocol from bitmask
+func (p *ndpiProtoBitmask) delProtocol(value uint32) {
+	p.clr(value & NDPI_NUM_BITS_MASK)
 }
 
-func NDPI_ADD_PROTOCOL_TO_BITMASK(bmask *NDPI_PROTOCOL_BITMASK, value uint32) {
-	NDPI_SET(bmask, value&NDPI_NUM_BITS_MASK)
-}
-
-func NDPI_DEL_PROTOCOL_FROM_BITMASK(bmask *NDPI_PROTOCOL_BITMASK, value uint32) {
-	NDPI_CLR(bmask, value&NDPI_NUM_BITS_MASK)
+// Check if ndpi protocol bitmask is empty
+func (p *ndpiProtoBitmask) isEmpty() bool {
+	return p.fds_bits == ndpiProtoBitmask{}.fds_bits
 }
 
 const NDPI_PROTOCOL_UNKNOWN = 0
@@ -105,7 +102,7 @@ const (
 type Ndpi struct {
 	NdpiFlags uint16
 
-	proto    NDPI_PROTOCOL_BITMASK
+	proto    ndpiProtoBitmask
 	ProtoStr string
 
 	// Equivalent to expression flags.
@@ -120,7 +117,7 @@ var (
 	protoDisabled = make([]bool, NDPI_NUM_BITS+1)
 )
 
-func (dpi *Ndpi) ndpiProtoStrToArr(proto string) error {
+func (dpi *Ndpi) addProtoToBitmask(proto string) error {
 	arrProto := strings.Split(strings.ToLower(proto), ",")
 	for _, prEl := range arrProto {
 		num := -1
@@ -143,9 +140,9 @@ func (dpi *Ndpi) ndpiProtoStrToArr(proto string) error {
 			for i := 0; i < NDPI_NUM_BITS; i++ {
 				if len(protoStr[i]) > 0 && !strings.HasPrefix(protoStr[i], "badproto_") && (protoDisabled[i] == false) {
 					if op == true {
-						NDPI_ADD_PROTOCOL_TO_BITMASK(&dpi.proto, uint32(i))
+						dpi.proto.addProtocol(uint32(i))
 					} else {
-						NDPI_DEL_PROTOCOL_FROM_BITMASK(&dpi.proto, uint32(i))
+						dpi.proto.delProtocol(uint32(i))
 					}
 				}
 			}
@@ -156,9 +153,9 @@ func (dpi *Ndpi) ndpiProtoStrToArr(proto string) error {
 			}
 
 			if op == true {
-				NDPI_ADD_PROTOCOL_TO_BITMASK(&dpi.proto, uint32(num))
+				dpi.proto.addProtocol(uint32(num))
 			} else {
-				NDPI_DEL_PROTOCOL_FROM_BITMASK(&dpi.proto, uint32(num))
+				dpi.proto.delProtocol(uint32(num))
 			}
 		}
 
@@ -187,11 +184,11 @@ func (e *Ndpi) marshal(fam byte) ([]byte, error) {
 	}
 
 	if e.Key&NFTNL_EXPR_NDPI_PROTO != 0 {
-		err := e.ndpiProtoStrToArr(e.ProtoStr)
+		err := e.addProtoToBitmask(e.ProtoStr)
 		if err != nil {
 			return nil, err
 		}
-		if !NDPI_BITMASK_IS_EMPTY(&e.proto) {
+		if !e.proto.isEmpty() {
 			byteArray := make([]byte, len(e.proto.fds_bits)*4)
 			for i, num := range e.proto.fds_bits {
 				binary.LittleEndian.PutUint32(byteArray[i*4:], uint32(num))
@@ -232,18 +229,18 @@ func (e *Ndpi) unmarshal(fam byte, data []byte) error {
 			e.Hostname = data[:len(data)-1]
 		case NFTA_NDPI_PROTO:
 			for i := 0; i < len(data)/4; i++ {
-				e.proto.fds_bits[i] = ndpi_ndpi_mask(binaryutil.BigEndian.Uint32(data[i*4:]))
+				e.proto.fds_bits[i] = ndpiMaskType(binaryutil.BigEndian.Uint32(data[i*4:]))
 			}
 		}
 	}
 	return ad.Err()
 }
 
-func NftNdpiInit() error {
-	return nftNdpiGetProtos(protoStr, protoDisabled)
+func nftNdpiInit() error {
+	return getNdpiProtoFromFile(protoStr, protoDisabled)
 }
 
-func nftNdpiGetProtos(protoStr []string, protoDisabled []bool) error {
+func getNdpiProtoFromFile(protoStr []string, protoDisabled []bool) error {
 	pname := ""
 	var mark string
 	var index uint32
@@ -296,13 +293,4 @@ func nftNdpiGetProtos(protoStr []string, protoDisabled []bool) error {
 	}
 
 	return nil
-}
-
-func NDPI_BITMASK_IS_EMPTY(a *NDPI_PROTOCOL_BITMASK) bool {
-	for i := 0; i < NDPI_NUM_FDS_BITS; i++ {
-		if a.fds_bits[i] != 0 {
-			return false
-		}
-	}
-	return true
 }
