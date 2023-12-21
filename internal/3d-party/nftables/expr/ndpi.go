@@ -2,6 +2,7 @@ package expr
 
 import (
 	"encoding/binary"
+	"io"
 	"regexp"
 	"strconv"
 
@@ -92,6 +93,11 @@ func (p *ndpiProtoBitmask) isEmpty() bool {
 	return p.fds_bits == ndpiProtoBitmask{}.fds_bits
 }
 
+// it itreates over nonzero bits
+func (p *ndpiProtoBitmask) iterate(func(n int) bool) {
+	//TODO: Resolve code
+}
+
 const NDPI_PROTOCOL_UNKNOWN = 0
 
 const (
@@ -113,6 +119,7 @@ type Ndpi struct {
 	Hostname string
 }
 
+/*// TODO: Дичь дичайшая
 func (dpi *Ndpi) bitmaskToProtocols(mask ndpiProtoBitmask) {
 	dpi.Protocols = make([]string, 0)
 
@@ -132,6 +139,18 @@ func (dpi *Ndpi) bitmaskToProtocols(mask ndpiProtoBitmask) {
 			}
 		}
 	}
+}
+*/
+
+func (dpi *Ndpi) poplulateProtocols(mask ndpiProtoBitmask) {
+	dpi.Protocols = nil
+	mask.iterate(func(n int) bool {
+		p := NdpiSate.Protocols.numbit2ProtoName[n]
+		if p != "" {
+			dpi.Protocols = append(dpi.Protocols, p)
+		}
+		return true
+	})
 }
 
 func (dpi *Ndpi) protocolsToBitmask() (ret ndpiProtoBitmask, err error) {
@@ -240,7 +259,7 @@ func (e *Ndpi) unmarshal(fam byte, data []byte) error {
 			for i := 0; i < len(data)/4; i++ {
 				mask.fds_bits[i] = ndpiMaskType(binaryutil.BigEndian.Uint32(data[i*4:]))
 			}
-			e.bitmaskToProtocols(mask)
+			e.poplulateProtocols(mask)
 		}
 	}
 	return ad.Err()
@@ -249,12 +268,13 @@ func (e *Ndpi) unmarshal(fam byte, data []byte) error {
 type ndpiModuleState struct {
 	FailReason error
 	Protocols  struct {
-		Supported map[string]ndpiMaskType
-		Disabled  map[string]bool
+		Supported        map[string]ndpiMaskType
+		numbit2ProtoName [NDPI_NUM_BITS]string //TODO: populate this
+		Disabled         map[string]bool
 	}
 }
 
-type ndpiModuleLoader = func(*bufio.Scanner) ndpiModuleState
+type ndpiModuleLoader = func(io.Reader) ndpiModuleState
 
 var (
 	// NdpiModuleProtocolsFile -
@@ -270,23 +290,21 @@ var (
 	}
 )
 
-func mod_4_3_0_8_6ae5394_Loader(r *bufio.Scanner) (ret ndpiModuleState) {
+func mod_4_3_0_8_6ae5394_Loader(r io.Reader) (ret ndpiModuleState) {
 	reParser := regexp.MustCompile(
 		`^([\da-f]+)\s+((?:[\da-f]+/[\da-f]+)|disabled)\s+([^\s#]+)`,
 	)
 	ret.Protocols.Supported = make(map[string]ndpiMaskType)
 	ret.Protocols.Disabled = make(map[string]bool)
 
-	for r.Scan() {
-		li := r.Text()
+	sc := bufio.NewScanner(r)
+	for sc.Scan() {
+		li := sc.Text()
 		ss := reParser.FindStringSubmatch(li)
-
 		if len(ss) == 4 {
-
 			protoName := ss[3]
 			protoMark := ss[2]
 			protoId, err := strconv.ParseUint(ss[1], 16, 32)
-
 			if err == nil {
 				if protoMark != "disabled" {
 					ret.Protocols.Supported[protoName] = ndpiMaskType(protoId)
@@ -327,5 +345,6 @@ func ndpiLoadInternal() (ret ndpiModuleState) {
 		ret.FailReason = fmt.Errorf("unsupported '%s' version detected", ver)
 		return ret
 	}
-	return loader(scanner)
+	_, _ = f.Seek(0, 0)
+	return loader(f)
 }
