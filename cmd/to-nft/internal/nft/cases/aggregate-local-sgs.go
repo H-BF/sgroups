@@ -148,7 +148,7 @@ func (loc *SGs) IsEq(other SGs) bool {
 func (sgsNws *SGsNetworks) IsEq(other SGsNetworks) bool {
 	eq := sgsNws.Len() == other.Len()
 	if eq {
-		var x, y dict.Dict[string, *model.Network]
+		var x, y dict.HDict[string, *model.Network]
 		eq = sgsNws.Eq(&other, func(vL, vR []model.Network) bool {
 			if len(vL) == len(vR) {
 				x.Clear()
@@ -159,7 +159,7 @@ func (sgsNws *SGsNetworks) IsEq(other SGsNetworks) bool {
 				for i := range vR {
 					_ = y.Insert(vR[i].Name, &vR[i])
 				}
-				return x.Eq(y, func(nwL, nwR *model.Network) bool {
+				return x.Eq(&y, func(nwL, nwR *model.Network) bool {
 					return nwL.IsEq(*nwR)
 				})
 			}

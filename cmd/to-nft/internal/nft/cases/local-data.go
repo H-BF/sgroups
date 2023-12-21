@@ -33,13 +33,26 @@ type (
 
 // IsEq checks wether this object is equal the other one
 func (ld *LocalData) IsEq(other LocalData) bool {
-	return ld.LocalSGs.IsEq(other.LocalSGs) &&
-		ld.SG2SGRules.IsEq(other.SG2SGRules) &&
-		ld.SG2FQDNRules.IsEq(other.SG2FQDNRules) &&
-		ld.SgIcmpRules.IsEq(other.SgIcmpRules) &&
-		ld.SgSgIcmpRules.IsEq(other.SgSgIcmpRules) &&
-		ld.CidrSgRules.IsEq(other.CidrSgRules) &&
-		ld.Networks.IsEq(other.Networks)
+	eq := ld.LocalSGs.IsEq(other.LocalSGs)
+	if eq {
+		eq = ld.SG2SGRules.IsEq(other.SG2SGRules)
+	}
+	if eq {
+		eq = ld.SG2FQDNRules.IsEq(other.SG2FQDNRules)
+	}
+	if eq {
+		eq = ld.SgIcmpRules.IsEq(other.SgIcmpRules)
+	}
+	if eq {
+		eq = ld.SgSgIcmpRules.IsEq(other.SgSgIcmpRules)
+	}
+	if eq {
+		eq = ld.CidrSgRules.IsEq(other.CidrSgRules)
+	}
+	if eq {
+		eq = ld.Networks.IsEq(other.Networks)
+	}
+	return eq
 }
 
 // Load -

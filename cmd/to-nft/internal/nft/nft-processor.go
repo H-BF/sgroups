@@ -70,6 +70,7 @@ func (impl *nfTablesProcessorImpl) ApplyConf(ctx context.Context, data cases.Loc
 		WithBaseRules(impl.baseRules),
 	)
 	if err == nil {
+		applied.LocalData = data
 		applied.BaseRules = impl.baseRules
 		applied.TargetTable = pfm.TableName
 		applied.NetNS = impl.netNS
