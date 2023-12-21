@@ -2,9 +2,8 @@ package expr
 
 import (
 	"encoding/binary"
-	"io"
 	"regexp"
-	"unsafe"
+	"strconv"
 
 	"bufio"
 	"fmt"
@@ -111,13 +110,34 @@ type Ndpi struct {
 	// Indicates that an option is set by setting a bit
 	Key uint32
 
-	Hostname []byte
+	Hostname string
 }
 
-func (dpi *Ndpi) protolsToBitmask() (ret ndpiProtoBitmask, err error) {
+func (dpi *Ndpi) bitmaskToProtocols(mask ndpiProtoBitmask) {
+	dpi.Protocols = make([]string, 0)
+
+	if mask.isEmpty() {
+		return
+	}
+
+	for i, bitmask := range mask.fds_bits {
+		for j := uint32(0); j < NDPI_BITS; j++ {
+			mask := uint32(i)*NDPI_BITS + j
+			if bitmask&(1<<j) != 0 {
+				for name, idp := range NdpiSate.Protocols.Supported {
+					if mask == idp {
+						dpi.Protocols = append(dpi.Protocols, name)
+					}
+				}
+			}
+		}
+	}
+}
+
+func (dpi *Ndpi) protocolsToBitmask() (ret ndpiProtoBitmask, err error) {
 	for _, prEl := range dpi.Protocols {
 		if prEl == "all" {
-			for name, v := range NdpiSate.Protocols.Suppoted {
+			for name, v := range NdpiSate.Protocols.Supported {
 				if !strings.HasPrefix(name, "badproto_") {
 					ret.addProtocol(v)
 				}
@@ -129,7 +149,7 @@ func (dpi *Ndpi) protolsToBitmask() (ret ndpiProtoBitmask, err error) {
 			doAdd = false
 			prEl = prEl[1:]
 		}
-		idp, found := NdpiSate.Protocols.Suppoted[prEl]
+		idp, found := NdpiSate.Protocols.Supported[prEl]
 		if doAdd {
 			if NdpiSate.Protocols.Disabled[prEl] {
 				return ret, fmt.Errorf("disabled protoсol '%s'", prEl)
@@ -150,15 +170,21 @@ func (e *Ndpi) marshal(fam byte) ([]byte, error) {
 	var attrs []netlink.Attribute
 
 	if e.Key&NFTNL_EXPR_NDPI_HOSTNAME != 0 {
-		hostname := append(e.Hostname, '\x00')
 		attrs = append(attrs, netlink.Attribute{
 			Type: NFTA_NDPI_HOSTNAME,
-			Data: hostname,
+			Data: []byte(e.Hostname),
 		})
+		if len(e.Hostname) > 1 && e.Hostname[0] == '/' && e.Hostname[len(e.Hostname)-1] == '/' {
+			_, err := regexp.Compile(e.Hostname)
+			if err != nil {
+				return nil, fmt.Errorf("Incorrect regular expression: %v", err)
+			}
+			e.NdpiFlags |= NFT_NDPI_FLAG_RE
+		}
 		e.NdpiFlags |= NFT_NDPI_FLAG_HOST
 	}
 
-	if e.Key&NFTNL_EXPR_NDPI_FLAGS != 0 {
+	if (e.Key&NFTNL_EXPR_NDPI_FLAGS != 0) || e.NdpiFlags != 0 {
 		attrs = append(attrs, netlink.Attribute{
 			Type: NFTA_NDPI_FLAGS,
 			Data: binaryutil.BigEndian.PutUint16(e.NdpiFlags),
@@ -166,12 +192,12 @@ func (e *Ndpi) marshal(fam byte) ([]byte, error) {
 	}
 
 	if e.Key&NFTNL_EXPR_NDPI_PROTO != 0 {
-		mask, err := e.protolsToBitmask()
+		mask, err := e.protocolsToBitmask()
 		if err != nil {
 			return nil, err
 		}
 		if !mask.isEmpty() {
-			var byteArray [unsafe.Sizeof(mask.fds_bits) * 4]byte
+			byteArray := make([]byte, len(mask.fds_bits)*4)
 			for i, num := range mask.fds_bits {
 				binary.LittleEndian.PutUint32(byteArray[i*4:], uint32(num))
 			}
@@ -208,27 +234,27 @@ func (e *Ndpi) unmarshal(fam byte, data []byte) error {
 			e.NdpiFlags = binaryutil.BigEndian.Uint16(data)
 		case NFTA_NDPI_HOSTNAME:
 			// Getting rid of \x00 at the end of string
-			e.Hostname = data[:len(data)-1]
+			e.Hostname = string(data[:len(data)-1])
 		case NFTA_NDPI_PROTO:
-			//for i := 0; i < len(data)/4; i++ {
-			//	e.proto.fds_bits[i] = ndpiMaskType(binaryutil.BigEndian.Uint32(data[i*4:]))
-			//}
-
-			// TODO: нужен код, который заполнит Ndpi.Protocols
+			var mask ndpiProtoBitmask
+			for i := 0; i < len(data)/4; i++ {
+				mask.fds_bits[i] = ndpiMaskType(binaryutil.BigEndian.Uint32(data[i*4:]))
+			}
+			e.bitmaskToProtocols(mask)
 		}
 	}
 	return ad.Err()
 }
 
-type ndpiModuleSate struct {
+type ndpiModuleState struct {
 	FailReason error
 	Protocols  struct {
-		Suppoted map[string]ndpiMaskType
-		Disabled map[string]bool
+		Supported map[string]ndpiMaskType
+		Disabled  map[string]bool
 	}
 }
 
-type ndpiModuleLoader = func(io.Reader) ndpiModuleSate
+type ndpiModuleLoader = func(*bufio.Scanner) ndpiModuleState
 
 var (
 	// NdpiModuleProtocolsFile -
@@ -244,23 +270,36 @@ var (
 	}
 )
 
-func mod_4_3_0_8_6ae5394_Loader(r io.Reader) (ret ndpiModuleSate) {
+func mod_4_3_0_8_6ae5394_Loader(r *bufio.Scanner) (ret ndpiModuleState) {
 	reParser := regexp.MustCompile(
 		`^([\da-f]+)\s+((?:[\da-f]+/[\da-f]+)|disabled)\s+([^\s#]+)`,
 	)
-	ret.Protocols.Suppoted = make(map[string]ndpiMaskType)
+	ret.Protocols.Supported = make(map[string]ndpiMaskType)
 	ret.Protocols.Disabled = make(map[string]bool)
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		li := scanner.Text()
+
+	for r.Scan() {
+		li := r.Text()
 		ss := reParser.FindStringSubmatch(li)
-		_ = ss
-		//TODO: Нужен код
+
+		if len(ss) == 4 {
+
+			protoName := ss[3]
+			protoMark := ss[2]
+			protoId, err := strconv.ParseUint(ss[1], 16, 32)
+
+			if err == nil {
+				if protoMark != "disabled" {
+					ret.Protocols.Supported[protoName] = ndpiMaskType(protoId)
+				}
+				ret.Protocols.Disabled[protoName] = (protoMark == "disabled")
+			}
+		}
 	}
+
 	return ret
 }
 
-func ndpiLoadInternal() (ret ndpiModuleSate) {
+func ndpiLoadInternal() (ret ndpiModuleState) {
 	f, err := os.Open(NdpiModuleProtocolsFile)
 	if err != nil {
 		ret.FailReason = fmt.Errorf("opening xt_ndpi kernel module: %v", err)
@@ -269,6 +308,7 @@ func ndpiLoadInternal() (ret ndpiModuleSate) {
 	defer f.Close()
 	scanner := bufio.NewScanner(f)
 	var ver string
+
 	for scanner.Scan() {
 		line := scanner.Text()
 		ss := reVerDetect.FindStringSubmatch(line)
@@ -277,6 +317,7 @@ func ndpiLoadInternal() (ret ndpiModuleSate) {
 			break
 		}
 	}
+
 	if ver == "" {
 		ret.FailReason = fmt.Errorf("no version detected")
 		return ret
@@ -286,5 +327,5 @@ func ndpiLoadInternal() (ret ndpiModuleSate) {
 		ret.FailReason = fmt.Errorf("unsupported '%s' version detected", ver)
 		return ret
 	}
-	return loader(f)
+	return loader(scanner)
 }
