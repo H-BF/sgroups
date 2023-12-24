@@ -102,11 +102,10 @@ func (jb *NftApplierJob) Run(ctx context.Context) error {
 					FQDN:      o.FQDN,
 					Addresses: o.DnsAnswer.IPs,
 				}
-				err := nft.PatchAppliedRules(ctx, appliedRules, p)
-				if errors.Is(err, nft.ErrPatchNotApplicable) {
-					break
-				}
-				if err != nil {
+				if err := nft.PatchAppliedRules(ctx, appliedRules, p); err != nil {
+					if errors.Is(err, nft.ErrPatchNotApplicable) {
+						break
+					}
 					return err
 				}
 			}

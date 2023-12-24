@@ -16,10 +16,11 @@ func PatchAppliedRules(ctx context.Context, rules *AppliedRules, p Patch) (err e
 		log = log.WithField("net-ns", rules.NetNS)
 	}
 	defer func() {
-		if err != nil {
-			log.Errorf("%v", err)
-		} else {
+		if err == nil {
 			log.Infof("%s is applied", p)
+		} else {
+			tern(errors.Is(err, ErrPatchNotApplicable),
+				log.Warnf, log.Errorf)("%v", err)
 		}
 	}()
 
