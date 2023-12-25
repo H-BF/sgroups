@@ -142,16 +142,16 @@ func (jb *NftApplierJob) handleNetlinkEvent(_ context.Context, ev internal.Netli
 		cnf = jb.netConf.Clone()
 	}
 	cnf.UpdFromWatcher(ev.Updates...)
-	if apply := jb.netConf == nil; !apply {
+	apply := jb.netConf == nil
+	if !apply {
 		apply = !jb.netConf.IPAdresses.Eq(cnf.IPAdresses)
-		if !apply {
-			return
-		}
 	}
 	jb.netConf = &cnf
-	jb.agentSubject.Notify(applyConfigEvent{
-		TextMessageEvent: observer.NewTextEvent("net conf has changed"),
-	})
+	if apply {
+		jb.agentSubject.Notify(applyConfigEvent{
+			TextMessageEvent: observer.NewTextEvent("net conf has changed"),
+		})
+	}
 }
 
 func (jb *NftApplierJob) doApply(ctx context.Context) error {
