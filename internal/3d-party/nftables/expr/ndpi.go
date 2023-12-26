@@ -46,7 +46,7 @@ const (
 	NDPI_NUM_BITS = 512
 	//Mask for available ndpi protocols
 	NDPI_NUM_BITS_MASK = (512 - 1)
-	//Number of bits to describe one protocol
+	//Number of bits to describe one chunk of protocols
 	NDPI_BITS = 32 // sizeof(uint32) * 8
 )
 
@@ -94,8 +94,19 @@ func (p *ndpiProtoBitmask) isEmpty() bool {
 }
 
 // it itreates over nonzero bits
-func (p *ndpiProtoBitmask) iterate(func(n int) bool) {
-	//TODO: Resolve code
+func (p *ndpiProtoBitmask) iterate(fn func(n int) bool) {
+	for i, bitmask := range p.fds_bits {
+		if bitmask == 0 {
+			continue
+		}
+
+		for j := 0; j < int(NDPI_BITS); j++ {
+			if ((1 << j) & bitmask) == 0 {
+				continue
+			}
+			fn(i*int(NDPI_BITS) + j)
+		}
+	}
 }
 
 const NDPI_PROTOCOL_UNKNOWN = 0
@@ -119,33 +130,10 @@ type Ndpi struct {
 	Hostname string
 }
 
-/*// TODO: Дичь дичайшая
-func (dpi *Ndpi) bitmaskToProtocols(mask ndpiProtoBitmask) {
-	dpi.Protocols = make([]string, 0)
-
-	if mask.isEmpty() {
-		return
-	}
-
-	for i, bitmask := range mask.fds_bits {
-		for j := uint32(0); j < NDPI_BITS; j++ {
-			mask := uint32(i)*NDPI_BITS + j
-			if bitmask&(1<<j) != 0 {
-				for name, idp := range NdpiSate.Protocols.Supported {
-					if mask == idp {
-						dpi.Protocols = append(dpi.Protocols, name)
-					}
-				}
-			}
-		}
-	}
-}
-*/
-
 func (dpi *Ndpi) poplulateProtocols(mask ndpiProtoBitmask) {
 	dpi.Protocols = nil
 	mask.iterate(func(n int) bool {
-		p := NdpiSate.Protocols.numbit2ProtoName[n]
+		p := NdpiState.Protocols.numbit2ProtoName[n]
 		if p != "" {
 			dpi.Protocols = append(dpi.Protocols, p)
 		}
@@ -156,7 +144,7 @@ func (dpi *Ndpi) poplulateProtocols(mask ndpiProtoBitmask) {
 func (dpi *Ndpi) protocolsToBitmask() (ret ndpiProtoBitmask, err error) {
 	for _, prEl := range dpi.Protocols {
 		if prEl == "all" {
-			for name, v := range NdpiSate.Protocols.Supported {
+			for name, v := range NdpiState.Protocols.Supported {
 				if !strings.HasPrefix(name, "badproto_") {
 					ret.addProtocol(v)
 				}
@@ -168,9 +156,9 @@ func (dpi *Ndpi) protocolsToBitmask() (ret ndpiProtoBitmask, err error) {
 			doAdd = false
 			prEl = prEl[1:]
 		}
-		idp, found := NdpiSate.Protocols.Supported[prEl]
+		idp, found := NdpiState.Protocols.Supported[prEl]
 		if doAdd {
-			if NdpiSate.Protocols.Disabled[prEl] {
+			if NdpiState.Protocols.Disabled[prEl] {
 				return ret, fmt.Errorf("disabled protoсol '%s'", prEl)
 			}
 			if !found {
@@ -269,7 +257,7 @@ type ndpiModuleState struct {
 	FailReason error
 	Protocols  struct {
 		Supported        map[string]ndpiMaskType
-		numbit2ProtoName [NDPI_NUM_BITS]string //TODO: populate this
+		numbit2ProtoName [NDPI_NUM_BITS]string
 		Disabled         map[string]bool
 	}
 }
@@ -277,11 +265,11 @@ type ndpiModuleState struct {
 type ndpiModuleLoader = func(io.Reader) ndpiModuleState
 
 var (
-	// NdpiModuleProtocolsFile -
+	// NdpiModuleProtocolsFile - ndpi kernel file contains description for protocols
 	NdpiModuleProtocolsFile = "/proc/net/xt_ndpi/proto"
 
-	// NdpiSate -
-	NdpiSate = ndpiLoadInternal()
+	// NdpiState - structure contains lists of supported and disabled protocols
+	NdpiState = ndpiLoadInternal()
 
 	reVerDetect = regexp.MustCompile(`#id.*#version\s+([^\s]+)`)
 
@@ -308,6 +296,7 @@ func mod_4_3_0_8_6ae5394_Loader(r io.Reader) (ret ndpiModuleState) {
 			if err == nil {
 				if protoMark != "disabled" {
 					ret.Protocols.Supported[protoName] = ndpiMaskType(protoId)
+					ret.Protocols.numbit2ProtoName[ndpiMaskType(protoId)] = protoName
 				}
 				ret.Protocols.Disabled[protoName] = (protoMark == "disabled")
 			}
@@ -345,6 +334,15 @@ func ndpiLoadInternal() (ret ndpiModuleState) {
 		ret.FailReason = fmt.Errorf("unsupported '%s' version detected", ver)
 		return ret
 	}
-	_, _ = f.Seek(0, 0)
+	//Since we're reading from a kernel module we have to reopen the file
+	//if a new read buffer will be created
+	f.Close()
+	f, err = os.Open(NdpiModuleProtocolsFile)
+	if err != nil {
+		ret.FailReason = fmt.Errorf("opening xt_ndpi kernel module: %v", err)
+		return ret
+	}
+	defer f.Close()
+
 	return loader(f)
 }
