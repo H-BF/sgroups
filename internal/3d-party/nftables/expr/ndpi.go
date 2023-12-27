@@ -104,7 +104,9 @@ func (p *ndpiProtoBitmask) iterate(fn func(n int) bool) {
 			if ((1 << j) & bitmask) == 0 {
 				continue
 			}
-			fn(i*int(NDPI_BITS) + j)
+			if !fn(i*int(NDPI_BITS) + j) {
+				return
+			}
 		}
 	}
 }
@@ -307,9 +309,15 @@ func mod_4_3_0_8_6ae5394_Loader(r io.Reader) (ret ndpiModuleState) {
 }
 
 func ndpiLoadInternal() (ret ndpiModuleState) {
-	f, err := os.Open(NdpiModuleProtocolsFile)
+	openModuleInfo := func() (io.ReadCloser, error) {
+		f, err := os.Open(NdpiModuleProtocolsFile)
+		if err != nil {
+			err = fmt.Errorf("opening 'xt_ndpi' kernel module: %v", err)
+		}
+		return f, err
+	}
+	f, err := openModuleInfo()
 	if err != nil {
-		ret.FailReason = fmt.Errorf("opening xt_ndpi kernel module: %v", err)
 		return ret
 	}
 	defer f.Close()
@@ -336,13 +344,10 @@ func ndpiLoadInternal() (ret ndpiModuleState) {
 	}
 	//Since we're reading from a kernel module we have to reopen the file
 	//if a new read buffer will be created
-	f.Close()
-	f, err = os.Open(NdpiModuleProtocolsFile)
-	if err != nil {
-		ret.FailReason = fmt.Errorf("opening xt_ndpi kernel module: %v", err)
+	var f1 io.ReadCloser
+	if f1, err = openModuleInfo(); err != nil {
 		return ret
 	}
-	defer f.Close()
-
-	return loader(f)
+	defer f1.Close()
+	return loader(f1)
 }
