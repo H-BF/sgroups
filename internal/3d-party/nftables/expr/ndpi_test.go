@@ -7,17 +7,26 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type TestNftNdpi struct {
+/*//TODO:     Тесты - П Е Р Е Д Е Л А Т Ь
+1 - каждый тест не должен иметь состояний влияющих на другой тест
+2 - нету тестов на marshal/unmarshal
+3 - if !assert.Error(suite.T(), err) {
+		suite.T().FailNow()
+		return false
+	} <-- вместо этой конструкции нужно использовать sui.Require().NoError(err)
+*/
+
+type ndpiTestSuite struct {
 	suite.Suite
 }
 
-func (sui *TestNftNdpi) SetupTest() {
+func (sui *ndpiTestSuite) SetupTest() {
 	NdpiModuleProtocolsFile = "./test-data/ndpi-info.txt"
 	NdpiState = ndpiLoadInternal()
-
+	sui.Require().NoError(NdpiState.FailReason) //TODO: Это сразу отсанавливает выполнение если что не так
 }
 
-func (sui *TestNftNdpi) proto2InvalidBitmask(expMask ndpiProtoBitmask) bool {
+func (sui *ndpiTestSuite) proto2InvalidBitmask(expMask ndpiProtoBitmask) bool {
 	var err error
 	suite.mask, err = suite.ndpi.protocolsToBitmask()
 	if !assert.Error(suite.T(), err) {
@@ -28,7 +37,7 @@ func (sui *TestNftNdpi) proto2InvalidBitmask(expMask ndpiProtoBitmask) bool {
 	return assert.Equal(suite.T(), expMask, suite.mask)
 }
 
-func (sui *TestNftNdpi) proto2ValidBitmask(expMask ndpiProtoBitmask) bool {
+func (sui *ndpiTestSuite) proto2ValidBitmask(expMask ndpiProtoBitmask) bool {
 	var err error
 	suite.mask, err = suite.ndpi.protocolsToBitmask()
 	if !assert.NoError(suite.T(), err) {
@@ -39,22 +48,22 @@ func (sui *TestNftNdpi) proto2ValidBitmask(expMask ndpiProtoBitmask) bool {
 	return assert.Equal(suite.T(), expMask, suite.mask)
 }
 
-func (sui *TestNftNdpi) bitmask2Proto(expProtos []string) bool {
+func (sui *ndpiTestSuite) bitmask2Proto(expProtos []string) bool {
 	suite.ndpi.Protocols = nil
-	suite.ndpi.poplulateProtocols(suite.mask)
+	sui.ndpi.poplulateProtocols(suite.mask)
 	return assert.Equal(suite.T(), expProtos, suite.ndpi.Protocols)
 }
 
-func (sui *TestNftNdpi) Test_NdpiUnSupportedProtocols() {
+func (sui *ndpiTestSuite) Test_NdpiUnSupportedProtocols() {
 	suite.ndpi.Protocols = []string{"memcached", "signal", "xbox", "modbus", "whatsappcall"}
-	ok := suite.proto2InvalidBitmask(ndpiProtoBitmask{})
+	ok := sui.proto2InvalidBitmask(ndpiProtoBitmask{})
 	if !ok {
 		return
 	}
-	suite.bitmask2Proto(nil)
+	sui.bitmask2Proto(nil)
 }
 
-func (suite *TestNftNdpi) Test_NdpiOneSupportedProtocol() {
+func (suite *ndpiTestSuite) Test_NdpiOneSupportedProtocol() {
 	suite.ndpi.Protocols = []string{"http"}
 	expMask := ndpiProtoBitmask{
 		fds_bits: [NDPI_NUM_FDS_BITS]ndpiMaskType{
@@ -68,7 +77,7 @@ func (suite *TestNftNdpi) Test_NdpiOneSupportedProtocol() {
 	suite.bitmask2Proto([]string{"http"})
 }
 
-func (sui *TestNftNdpi) Test_NdpiSubstractionProtocols() {
+func (sui *ndpiTestSuite) Test_NdpiSubstractionProtocols() {
 	suite.ndpi.Protocols = []string{"http", "-http"}
 
 	ok := suite.proto2ValidBitmask(ndpiProtoBitmask{})
@@ -78,21 +87,21 @@ func (sui *TestNftNdpi) Test_NdpiSubstractionProtocols() {
 	suite.bitmask2Proto(nil)
 }
 
-func (sui *TestNftNdpi) Test_NdpiDublicatedProtocols() {
+func (sui *ndpiTestSuite) Test_NdpiDublicatedProtocols() {
 	suite.ndpi.Protocols = []string{"http", "http", "http"}
 	expMask := ndpiProtoBitmask{
 		fds_bits: [NDPI_NUM_FDS_BITS]ndpiMaskType{
 			0: 0x80,
 		},
 	}
-	ok := suite.proto2ValidBitmask(expMask)
+	ok := sui.proto2ValidBitmask(expMask)
 	if !ok {
 		return
 	}
-	suite.bitmask2Proto([]string{"http"})
+	sui.bitmask2Proto([]string{"http"})
 }
 
-func (sui *TestNftNdpi) Test_NdpiSeveralSuportedProtocols() {
+func (sui *ndpiTestSuite) Test_NdpiSeveralSuportedProtocols() {
 	suite.ndpi.Protocols = []string{
 		NdpiState.Protocols.numbit2ProtoName[7],
 		NdpiState.Protocols.numbit2ProtoName[5],
@@ -104,12 +113,12 @@ func (sui *TestNftNdpi) Test_NdpiSeveralSuportedProtocols() {
 			0: 0x2a4,
 		},
 	}
-	ok := suite.proto2ValidBitmask(expMask)
+	ok := sui.proto2ValidBitmask(expMask)
 	if !ok {
 		return
 	}
 	//reordered according to bitmask
-	suite.bitmask2Proto([]string{
+	sui.bitmask2Proto([]string{
 		NdpiState.Protocols.numbit2ProtoName[2],
 		NdpiState.Protocols.numbit2ProtoName[5],
 		NdpiState.Protocols.numbit2ProtoName[7],
@@ -117,6 +126,6 @@ func (sui *TestNftNdpi) Test_NdpiSeveralSuportedProtocols() {
 	})
 }
 
-func TestNftNdpiRun(t *testing.T) {
-	suite.Run(t, new(TestNftNdpi))
+func Test_NDPI(t *testing.T) {
+	suite.Run(t, new(ndpiTestSuite))
 }

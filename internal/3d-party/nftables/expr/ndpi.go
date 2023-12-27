@@ -74,7 +74,7 @@ func (p *ndpiProtoBitmask) test(n uint32) bool {
 }
 
 // Check if protocols were set
-func (p *ndpiProtoBitmask) compareProtocol(value uint32) bool {
+func (p *ndpiProtoBitmask) compareProtocol(value uint32) bool { //TODO: нигде не используется
 	return p.test(value & NDPI_NUM_BITS_MASK)
 }
 
@@ -120,14 +120,19 @@ const (
 	NFTA_NDPI_HOSTNAME
 )
 
+// NewNdpi creates NDPI expression
+func NewNdpi(hostName string, protocols ...string) (*Ndpi, error) {
+	//TODO: need impl
+}
+
 type Ndpi struct {
-	NdpiFlags uint16
+	NdpiFlags uint16 //TODO этот флаг нужно как-то грамотно спрятать или вообще убрать
 
 	Protocols []string
 
 	// Equivalent to expression flags.
 	// Indicates that an option is set by setting a bit
-	Key uint32
+	Key uint32 //TODO это нужно как-то грамотно спрятать или вообще убрать
 
 	Hostname string
 }
@@ -186,7 +191,7 @@ func (e *Ndpi) marshal(fam byte) ([]byte, error) {
 		if len(e.Hostname) > 1 && e.Hostname[0] == '/' && e.Hostname[len(e.Hostname)-1] == '/' {
 			_, err := regexp.Compile(e.Hostname)
 			if err != nil {
-				return nil, fmt.Errorf("Incorrect regular expression: %v", err)
+				return nil, fmt.Errorf("incorrect regular expression: %v", err)
 			}
 			e.NdpiFlags |= NFT_NDPI_FLAG_RE
 		}
