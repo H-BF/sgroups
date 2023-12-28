@@ -23,86 +23,133 @@ type ndpiTestSuite struct {
 func (sui *ndpiTestSuite) SetupTest() {
 	NdpiModuleProtocolsFile = "./test-data/ndpi-info.txt"
 	NdpiState = ndpiLoadInternal()
-	sui.Require().NoError(NdpiState.FailReason) //TODO: Это сразу отсанавливает выполнение если что не так
+	sui.Require().NoError(NdpiState.FailReason)
 }
 
-func (sui *ndpiTestSuite) proto2InvalidBitmask(expMask ndpiProtoBitmask) bool {
-	var err error
-	suite.mask, err = suite.ndpi.protocolsToBitmask()
-	if !assert.Error(suite.T(), err) {
-		suite.T().FailNow()
-		return false
+func (sui *ndpiTestSuite) bitmask2Proto(mask *ndpiProtoBitmask, expProtos []string) bool {
+	ndpi := Ndpi{
+		Protocols: nil,
+	}
+	ndpi.poplulateProtocols(mask)
+	return assert.Equal(sui.T(), expProtos, ndpi.Protocols)
+}
+
+type BaseProtoConverterI interface {
+	proto2Bitmask(protos []string, expMask *ndpiProtoBitmask) (ndpiProtoBitmask, bool)
+	bitmask2Proto(mask *ndpiProtoBitmask, expProtos []string) bool
+}
+
+type InvalidProto2Bitmask struct {
+	*ndpiTestSuite
+}
+
+func (sui *InvalidProto2Bitmask) proto2Bitmask(protos []string, expMask *ndpiProtoBitmask) (ndpiProtoBitmask, bool) {
+	ndpi := Ndpi{
+		Protocols: protos,
+	}
+	mask, err := ndpi.protocolsToBitmask()
+	sui.Require().Error(err)
+	if err == nil {
+		return mask, false
 	}
 
-	return assert.Equal(suite.T(), expMask, suite.mask)
+	return mask, assert.Equal(sui.T(), *expMask, mask)
 }
 
-func (sui *ndpiTestSuite) proto2ValidBitmask(expMask ndpiProtoBitmask) bool {
-	var err error
-	suite.mask, err = suite.ndpi.protocolsToBitmask()
-	if !assert.NoError(suite.T(), err) {
-		suite.T().FailNow()
-		return false
+type ValidProto2Bitmask struct {
+	*ndpiTestSuite
+}
+
+func (sui *ValidProto2Bitmask) proto2Bitmask(protos []string, expMask *ndpiProtoBitmask) (ndpiProtoBitmask, bool) {
+	ndpi := Ndpi{
+		Protocols: protos,
+	}
+	mask, err := ndpi.protocolsToBitmask()
+	sui.Require().NoError(err)
+	if err != nil {
+		return mask, false
 	}
 
-	return assert.Equal(suite.T(), expMask, suite.mask)
+	return mask, assert.Equal(sui.T(), *expMask, mask)
 }
 
-func (sui *ndpiTestSuite) bitmask2Proto(expProtos []string) bool {
-	suite.ndpi.Protocols = nil
-	sui.ndpi.poplulateProtocols(suite.mask)
-	return assert.Equal(suite.T(), expProtos, suite.ndpi.Protocols)
+type protoType int
+
+const (
+	validProto protoType = iota
+	invalidProto
+)
+
+func NewProtoConverter(t protoType, s *ndpiTestSuite) BaseProtoConverterI {
+	switch t {
+	case validProto:
+		return &ValidProto2Bitmask{ndpiTestSuite: s}
+	case invalidProto:
+		return &InvalidProto2Bitmask{ndpiTestSuite: s}
+	default:
+		return nil
+	}
 }
 
 func (sui *ndpiTestSuite) Test_NdpiUnSupportedProtocols() {
-	suite.ndpi.Protocols = []string{"memcached", "signal", "xbox", "modbus", "whatsappcall"}
-	ok := sui.proto2InvalidBitmask(ndpiProtoBitmask{})
+	sui.T().Parallel()
+	protocols := []string{"memcached", "signal", "xbox", "modbus", "whatsappcall"}
+	expMask := ndpiProtoBitmask{}
+	pc := NewProtoConverter(invalidProto, sui)
+	mask, ok := pc.proto2Bitmask(protocols, &expMask)
 	if !ok {
 		return
 	}
-	sui.bitmask2Proto(nil)
+	pc.bitmask2Proto(&mask, nil)
 }
 
-func (suite *ndpiTestSuite) Test_NdpiOneSupportedProtocol() {
-	suite.ndpi.Protocols = []string{"http"}
+func (sui *ndpiTestSuite) Test_NdpiOneSupportedProtocol() {
+	sui.T().Parallel()
+	protocols := []string{"http"}
 	expMask := ndpiProtoBitmask{
 		fds_bits: [NDPI_NUM_FDS_BITS]ndpiMaskType{
 			0: 0x80,
 		},
 	}
-	ok := suite.proto2ValidBitmask(expMask)
+	pc := NewProtoConverter(validProto, sui)
+	mask, ok := pc.proto2Bitmask(protocols, &expMask)
 	if !ok {
 		return
 	}
-	suite.bitmask2Proto([]string{"http"})
+	pc.bitmask2Proto(&mask, protocols)
 }
 
 func (sui *ndpiTestSuite) Test_NdpiSubstractionProtocols() {
-	suite.ndpi.Protocols = []string{"http", "-http"}
-
-	ok := suite.proto2ValidBitmask(ndpiProtoBitmask{})
+	sui.T().Parallel()
+	protocols := []string{"http", "-http"}
+	expMask := ndpiProtoBitmask{}
+	pc := NewProtoConverter(validProto, sui)
+	mask, ok := pc.proto2Bitmask(protocols, &expMask)
 	if !ok {
 		return
 	}
-	suite.bitmask2Proto(nil)
+	pc.bitmask2Proto(&mask, nil)
 }
 
 func (sui *ndpiTestSuite) Test_NdpiDublicatedProtocols() {
-	suite.ndpi.Protocols = []string{"http", "http", "http"}
+	sui.T().Parallel()
+	protocols := []string{"http", "http", "http"}
 	expMask := ndpiProtoBitmask{
 		fds_bits: [NDPI_NUM_FDS_BITS]ndpiMaskType{
 			0: 0x80,
 		},
 	}
-	ok := sui.proto2ValidBitmask(expMask)
+	pc := NewProtoConverter(validProto, sui)
+	mask, ok := pc.proto2Bitmask(protocols, &expMask)
 	if !ok {
 		return
 	}
-	sui.bitmask2Proto([]string{"http"})
+	pc.bitmask2Proto(&mask, protocols[:1])
 }
 
 func (sui *ndpiTestSuite) Test_NdpiSeveralSuportedProtocols() {
-	suite.ndpi.Protocols = []string{
+	sui.T().Parallel()
+	protocols := []string{
 		NdpiState.Protocols.numbit2ProtoName[7],
 		NdpiState.Protocols.numbit2ProtoName[5],
 		NdpiState.Protocols.numbit2ProtoName[2],
@@ -113,17 +160,83 @@ func (sui *ndpiTestSuite) Test_NdpiSeveralSuportedProtocols() {
 			0: 0x2a4,
 		},
 	}
-	ok := sui.proto2ValidBitmask(expMask)
+	pc := NewProtoConverter(validProto, sui)
+	mask, ok := pc.proto2Bitmask(protocols, &expMask)
 	if !ok {
 		return
 	}
 	//reordered according to bitmask
-	sui.bitmask2Proto([]string{
+	pc.bitmask2Proto(&mask, []string{
 		NdpiState.Protocols.numbit2ProtoName[2],
 		NdpiState.Protocols.numbit2ProtoName[5],
 		NdpiState.Protocols.numbit2ProtoName[7],
 		NdpiState.Protocols.numbit2ProtoName[9],
 	})
+}
+
+func (sui *ndpiTestSuite) Test_NdpiMixedProtocols() {
+	sui.T().Parallel()
+	protocols := []string{"http", "signal", "dns"}
+	expMask := ndpiProtoBitmask{
+		fds_bits: [NDPI_NUM_FDS_BITS]ndpiMaskType{
+			0: 0x80,
+		},
+	}
+	pc := NewProtoConverter(invalidProto, sui)
+	mask, ok := pc.proto2Bitmask(protocols, &expMask)
+	if !ok {
+		return
+	}
+
+	pc.bitmask2Proto(&mask, protocols[:1])
+}
+
+func (sui *ndpiTestSuite) Test_NdpiMarshalHostOneProto() {
+	sui.T().Parallel()
+	expFlags := NFT_NDPI_FLAG_HOST
+	expHost := "youtube"
+	expProto := []string{"http"}
+	ndpiBuilder := NewNdpiBuilder()
+	ndpi := ndpiBuilder.SetHostname(expHost).SetProto(expProto).Build()
+	_, err := ndpi.marshal(0)
+	sui.Require().NoError(err)
+	assert.Equal(sui.T(), expFlags, ndpi.NdpiFlags)
+	assert.Equal(sui.T(), expHost, ndpi.Hostname)
+	assert.Equal(sui.T(), expProto, ndpi.Protocols)
+}
+
+func (sui *ndpiTestSuite) Test_NdpiMarshalHostProtos() {
+	sui.T().Parallel()
+	expFlags := NFT_NDPI_FLAG_HOST
+	expHost := "youtube"
+	expProto := []string{"http", "dns"}
+	ndpiBuilder := NewNdpiBuilder()
+	ndpi := ndpiBuilder.SetHostname(expHost).SetProto(expProto).Build()
+	_, err := ndpi.marshal(0)
+	sui.Require().NoError(err)
+	assert.Equal(sui.T(), expFlags, ndpi.NdpiFlags)
+	assert.Equal(sui.T(), expHost, ndpi.Hostname)
+	assert.Equal(sui.T(), expProto, ndpi.Protocols)
+}
+
+func (sui *ndpiTestSuite) Test_NdpiMarshalRegex() {
+	sui.T().Parallel()
+	expFlags := (NFT_NDPI_FLAG_HOST | NFT_NDPI_FLAG_RE)
+	ndpiBuilder := NewNdpiBuilder()
+	ndpi := ndpiBuilder.SetHostname("/youtube/").SetProto([]string{"http"}).Build()
+	_, err := ndpi.marshal(0)
+	sui.Require().NoError(err)
+	assert.Equal(sui.T(), expFlags, ndpi.NdpiFlags)
+}
+
+func (sui *ndpiTestSuite) Test_NdpiMarshalHost() {
+	sui.T().Parallel()
+	expFlags := (NFT_NDPI_FLAG_HOST | NFT_NDPI_FLAG_EMPTY)
+	ndpiBuilder := NewNdpiBuilder()
+	ndpi := ndpiBuilder.SetHostname("youtube").Build()
+	_, err := ndpi.marshal(0)
+	sui.Require().NoError(err)
+	assert.Equal(sui.T(), expFlags, ndpi.NdpiFlags)
 }
 
 func Test_NDPI(t *testing.T) {

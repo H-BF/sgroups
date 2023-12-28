@@ -68,16 +68,6 @@ func (p *ndpiProtoBitmask) clr(n uint32) {
 	p.fds_bits[n/NDPI_BITS] &= ^(1 << (n % NDPI_BITS))
 }
 
-// Check if ndpi protocol bit is set
-func (p *ndpiProtoBitmask) test(n uint32) bool {
-	return (p.fds_bits[n/NDPI_BITS] & (1 << (n % NDPI_BITS))) != 0
-}
-
-// Check if protocols were set
-func (p *ndpiProtoBitmask) compareProtocol(value uint32) bool { //TODO: нигде не используется
-	return p.test(value & NDPI_NUM_BITS_MASK)
-}
-
 // Add protocol to bitmask
 func (p *ndpiProtoBitmask) addProtocol(value uint32) {
 	p.set(value & NDPI_NUM_BITS_MASK)
@@ -120,24 +110,85 @@ const (
 	NFTA_NDPI_HOSTNAME
 )
 
-// NewNdpi creates NDPI expression
-func NewNdpi(hostName string, protocols ...string) (*Ndpi, error) {
-	//TODO: need impl
-}
-
 type Ndpi struct {
-	NdpiFlags uint16 //TODO этот флаг нужно как-то грамотно спрятать или вообще убрать
+	/*Additional flags to setup and observe different option for the NDPI.
+	Range of values: 0x0 ... 0x3FFF
+	Available flags to setup:
+		NFT_NDPI_FLAG_INVERT 		= 0x01
+		NFT_NDPI_FLAG_ERROR 		= 0x2
+		NFT_NDPI_FLAG_M_PROTO		= 0x4
+		NFT_NDPI_FLAG_P_PROTO		= 0x8
+		NFT_NDPI_FLAG_HAVE_MASTER	= 0x10
+		NFT_NDPI_FLAG_INPROGRESS	= 0x100
+		NFT_NDPI_FLAG_JA3S			= 0x200
+		NFT_NDPI_FLAG_JA3C			= 0x400
+		NFT_NDPI_FLAG_TLSFP			= 0x800
+		NFT_NDPI_FLAG_TLSV			= 0x1000
+		NFT_NDPI_FLAG_UNTRACKED		= 0x2000
+	*/
+	NdpiFlags uint16
 
 	Protocols []string
 
 	// Equivalent to expression flags.
 	// Indicates that an option is set by setting a bit
-	Key uint32 //TODO это нужно как-то грамотно спрятать или вообще убрать
+	Key uint32
 
 	Hostname string
 }
 
-func (dpi *Ndpi) poplulateProtocols(mask ndpiProtoBitmask) {
+type NdpiBuilderI interface {
+	SetHostname(val string) NdpiBuilderI
+	SetProto(val []string) NdpiBuilderI
+	SetNdpiFlags(val uint16) NdpiBuilderI
+	SetKey(val uint32) NdpiBuilderI
+	Build() Ndpi
+}
+
+type NdpiBuilder struct {
+	ndpiFlags uint16
+
+	protocols []string
+
+	key uint32
+
+	hostname string
+}
+
+func (b *NdpiBuilder) SetHostname(val string) NdpiBuilderI {
+	b.hostname = val
+	return b
+}
+
+func (b *NdpiBuilder) SetProto(val []string) NdpiBuilderI {
+	b.protocols = val
+	return b
+}
+
+func (b *NdpiBuilder) SetNdpiFlags(val uint16) NdpiBuilderI {
+	b.ndpiFlags = val
+	return b
+}
+
+func (b *NdpiBuilder) SetKey(val uint32) NdpiBuilderI {
+	b.key = val
+	return b
+}
+
+func (b *NdpiBuilder) Build() Ndpi {
+	return Ndpi{
+		Hostname:  b.hostname,
+		Protocols: b.protocols,
+		NdpiFlags: b.ndpiFlags,
+		Key:       b.key,
+	}
+}
+
+func NewNdpiBuilder() NdpiBuilderI {
+	return &NdpiBuilder{}
+}
+
+func (dpi *Ndpi) poplulateProtocols(mask *ndpiProtoBitmask) {
 	dpi.Protocols = nil
 	mask.iterate(func(n int) bool {
 		p := NdpiState.Protocols.numbit2ProtoName[n]
@@ -182,14 +233,16 @@ func (dpi *Ndpi) protocolsToBitmask() (ret ndpiProtoBitmask, err error) {
 func (e *Ndpi) marshal(fam byte) ([]byte, error) {
 
 	var attrs []netlink.Attribute
+	var mask ndpiProtoBitmask
+	var err error
 
-	if e.Key&NFTNL_EXPR_NDPI_HOSTNAME != 0 {
+	if e.Hostname != "" {
 		attrs = append(attrs, netlink.Attribute{
 			Type: NFTA_NDPI_HOSTNAME,
 			Data: []byte(e.Hostname),
 		})
-		if len(e.Hostname) > 1 && e.Hostname[0] == '/' && e.Hostname[len(e.Hostname)-1] == '/' {
-			_, err := regexp.Compile(e.Hostname)
+		if e.Hostname[0] == '/' && e.Hostname[len(e.Hostname)-1] == '/' {
+			_, err = regexp.Compile(e.Hostname)
 			if err != nil {
 				return nil, fmt.Errorf("incorrect regular expression: %v", err)
 			}
@@ -198,28 +251,30 @@ func (e *Ndpi) marshal(fam byte) ([]byte, error) {
 		e.NdpiFlags |= NFT_NDPI_FLAG_HOST
 	}
 
+	if len(e.Protocols) != 0 {
+		mask, err = e.protocolsToBitmask()
+		if err != nil {
+			return nil, err
+		}
+		byteArray := make([]byte, len(mask.fds_bits)*4)
+		for i, num := range mask.fds_bits {
+			binary.LittleEndian.PutUint32(byteArray[i*4:], uint32(num))
+		}
+		attrs = append(attrs, netlink.Attribute{
+			Type: NFTA_NDPI_PROTO,
+			Data: byteArray[:],
+		})
+	}
+
+	if mask.isEmpty() {
+		e.NdpiFlags |= NFT_NDPI_FLAG_EMPTY
+	}
+
 	if (e.Key&NFTNL_EXPR_NDPI_FLAGS != 0) || e.NdpiFlags != 0 {
 		attrs = append(attrs, netlink.Attribute{
 			Type: NFTA_NDPI_FLAGS,
 			Data: binaryutil.BigEndian.PutUint16(e.NdpiFlags),
 		})
-	}
-
-	if e.Key&NFTNL_EXPR_NDPI_PROTO != 0 {
-		mask, err := e.protocolsToBitmask()
-		if err != nil {
-			return nil, err
-		}
-		if !mask.isEmpty() {
-			byteArray := make([]byte, len(mask.fds_bits)*4)
-			for i, num := range mask.fds_bits {
-				binary.LittleEndian.PutUint32(byteArray[i*4:], uint32(num))
-			}
-			attrs = append(attrs, netlink.Attribute{
-				Type: NFTA_NDPI_PROTO,
-				Data: byteArray[:],
-			})
-		}
 	}
 
 	data, err := netlink.MarshalAttributes(attrs)
@@ -254,7 +309,7 @@ func (e *Ndpi) unmarshal(fam byte, data []byte) error {
 			for i := 0; i < len(data)/4; i++ {
 				mask.fds_bits[i] = ndpiMaskType(binaryutil.BigEndian.Uint32(data[i*4:]))
 			}
-			e.poplulateProtocols(mask)
+			e.poplulateProtocols(&mask)
 		}
 	}
 	return ad.Err()
