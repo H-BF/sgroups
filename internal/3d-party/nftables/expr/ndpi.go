@@ -126,7 +126,7 @@ type Ndpi struct {
 		NFT_NDPI_FLAG_TLSV			= 0x1000
 		NFT_NDPI_FLAG_UNTRACKED		= 0x2000
 	*/
-	Flags uint16 //TODO: rename  Flags --> Flags
+	Flags uint16
 
 	Protocols []string
 
@@ -143,6 +143,15 @@ type ndpiOpt interface {
 
 type ndpiOptFunc func(*Ndpi)
 
+/*//                              TODO
+1) NewNdpi(ndpi *Ndpi, opts ...ndpiOpt) (res *Ndpi, err error) <-- это полня дичь
+   значит возврашаемся к прежней сигнатуре NewNdpi(opts ...ndpiOpt) (res *Ndpi, err error)
+
+2) Для NewNdpi нужно завести отдельный класс ошибки ErrNdpi
+
+3) НЕ использовать эту функцию в marshal/unmarshal
+*/
+
 // NewNdpi creates Ndpi expression properly
 func NewNdpi(ndpi *Ndpi, opts ...ndpiOpt) (res *Ndpi, err error) {
 	var mask ndpiProtoBitmask
@@ -155,9 +164,14 @@ func NewNdpi(ndpi *Ndpi, opts ...ndpiOpt) (res *Ndpi, err error) {
 	for _, o := range opts {
 		o.apply(res)
 	}
+
+	/*// TODO
+	сначала разбираемся с Hostname и Protocols а потом правильно выставляем key и Flags
+	*/
+
 	if (res.key&NFTNL_EXPR_NDPI_HOSTNAME) != 0 && res.Hostname != "" {
 		if res.Hostname[0] == '/' && res.Hostname[len(res.Hostname)-1] == '/' {
-			_, err = regexp.Compile(res.Hostname)
+			_, err = regexp.Compile(res.Hostname) // <--TODO: это тут не надо, в модуле наверняка другой RE движок
 			if err != nil {
 				return nil, fmt.Errorf("incorrect regular expression: %v", err)
 			}
@@ -181,7 +195,7 @@ func NewNdpi(ndpi *Ndpi, opts ...ndpiOpt) (res *Ndpi, err error) {
 		}
 	}
 
-	if res.Flags != 0 && (res.key&NFTNL_EXPR_NDPI_FLAGS) == 0 {
+	if res.Flags != 0 && (res.key&NFTNL_EXPR_NDPI_FLAGS) == 0 { //TODO лишняя логика  res.Flags != 0 && (res.key&NFTNL_EXPR_NDPI_FLAGS) == 0 ---> res.Flags != 0
 		res.key |= NFTNL_EXPR_NDPI_FLAGS
 	}
 
@@ -196,7 +210,7 @@ func (f ndpiOptFunc) apply(o *Ndpi) { //impl ndpiOpt
 func NdpiWithHost(hosname string) ndpiOpt {
 	return ndpiOptFunc(func(o *Ndpi) {
 		o.Hostname = hosname
-		o.key |= NFTNL_EXPR_NDPI_HOSTNAME
+		o.key |= NFTNL_EXPR_NDPI_HOSTNAME // <-- TODO: перести этот код в NewNdpi
 	})
 }
 
@@ -204,15 +218,15 @@ func NdpiWithHost(hosname string) ndpiOpt {
 func NdpiWithProtocols(pp ...string) ndpiOpt {
 	return ndpiOptFunc(func(o *Ndpi) {
 		o.Protocols = append(o.Protocols, pp...)
-		o.key |= NFTNL_EXPR_NDPI_PROTO
+		o.key |= NFTNL_EXPR_NDPI_PROTO // <-- TODO: перести этот код в NewNdpi
 	})
 }
 
-// NdpiWithFlags
+// NdpiWithFlags -
 func NdpiWithFlags(flags uint16) ndpiOpt {
 	return ndpiOptFunc(func(o *Ndpi) {
 		o.Flags = flags
-		o.key |= NFTNL_EXPR_NDPI_FLAGS
+		o.key |= NFTNL_EXPR_NDPI_FLAGS // <-- TODO: перести этот код в NewNdpi
 	})
 }
 
