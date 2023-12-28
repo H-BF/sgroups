@@ -9,6 +9,7 @@ import (
 	pkgNet "github.com/H-BF/corlib/pkg/net"
 	"github.com/H-BF/corlib/server"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 )
 
@@ -33,8 +34,15 @@ func main() {
 	if err = setupLogger(); err != nil {
 		logger.Fatal(ctx, errors.WithMessage(err, "when setup logger"))
 	}
-	if err = setupMetrics(); err != nil {
-		logger.Fatal(ctx, errors.WithMessage(err, "when setup metrics"))
+
+	if MetricsEnable.MustValue(ctx) {
+		opt := app.AddMetrics{
+			Metrics: []prometheus.Collector{app.NewHealthcheckMetric(nil)},
+		}
+		err = app.SetupMetrics(opt)
+		if err != nil {
+			logger.Fatal(ctx, errors.WithMessage(err, "when setup metrics"))
+		}
 	}
 
 	var ep *pkgNet.Endpoint

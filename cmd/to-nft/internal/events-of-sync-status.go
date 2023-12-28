@@ -81,9 +81,11 @@ func (ss *SyncStatusEventSource) push(ctx context.Context, tc *time.Ticker, log 
 		err    error
 		resp   *sgAPI.SyncStatusResp
 	)
+	HcSyncStatus.Set(true)
 loop:
 	for req := new(emptypb.Empty); ; {
 		if err != nil {
+			HcSyncStatus.Set(false)
 			stream = nil
 			if e := errors.Cause(err); status.Code(e) != codes.Canceled {
 				log.Error(err, "; it will reconnect after ", reconnectTimeut)
@@ -106,6 +108,7 @@ loop:
 			resp, err = stream.Recv()
 		}
 		if err == nil {
+			HcSyncStatus.Set(true)
 			syncStatus.Store(model.SyncStatus{
 				UpdatedAt: resp.GetUpdatedAt().AsTime(),
 			}, nil)
@@ -115,6 +118,7 @@ loop:
 }
 
 func (ss *SyncStatusEventSource) pull(ctx context.Context, tc *time.Ticker, log logger.TypeOfLogger) error {
+	HcSyncStatus.Set(true)
 	for {
 		select {
 		case <-ctx.Done():
@@ -122,9 +126,11 @@ func (ss *SyncStatusEventSource) pull(ctx context.Context, tc *time.Ticker, log 
 		case <-tc.C:
 			st, e := ss.getSyncStatus(ctx)
 			if e == nil && st != nil {
+				HcSyncStatus.Set(true)
 				ss.AgentSubj.Notify(SyncStatusValue{SyncStatus: *st})
 			}
 			if e = errors.Cause(e); e != nil && status.Code(e) != codes.Canceled {
+				HcSyncStatus.Set(false)
 				log.Error(e)
 				ss.AgentSubj.Notify(SyncStatusError{error: e})
 			}
