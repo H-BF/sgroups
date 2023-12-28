@@ -110,6 +110,11 @@ const (
 	NFTA_NDPI_HOSTNAME
 )
 
+/*//TODO: Так я понял, до свободного творчества будем расти вместе по шагам
+1 - убираем этот билдер
+2 - пишем норм функцию NewNdpi c опциями см ниже
+*/
+
 type Ndpi struct {
 	/*Additional flags to setup and observe different option for the NDPI.
 	Range of values: 0x0 ... 0x3FFF
@@ -126,7 +131,7 @@ type Ndpi struct {
 		NFT_NDPI_FLAG_TLSV			= 0x1000
 		NFT_NDPI_FLAG_UNTRACKED		= 0x2000
 	*/
-	NdpiFlags uint16
+	NdpiFlags uint16 //TODO: rename  NdpiFlags --> Flags
 
 	Protocols []string
 
@@ -136,6 +141,49 @@ type Ndpi struct {
 
 	Hostname string
 }
+
+type ndpiOpt interface {
+	apply(*Ndpi)
+}
+
+type ndpiOptFunc func(*Ndpi)
+
+// NewNdpi creates Ndpi expression properly
+func NewNdpi(opts ...ndpiOpt) (res *Ndpi, err error) {
+	res = new(Ndpi)
+	for _, o := range opts {
+		o.apply(res)
+	}
+	/*// TODO
+	1 здесь в зависимости о установленных Hostname Protocols ожидаю что Flags и Key устаковят правильные биты
+	2 если что-то установнено неправильно - значит - ошибка
+	3 если модуль Ndpi не подгружет - ошика
+	3 если есть конфликт модуля и переданных протоколов - ошибка
+	*/
+	return res, err
+}
+
+func (f ndpiOptFunc) apply(o *Ndpi) { //impl ndpiOpt
+	f(o)
+}
+
+// ----НАПРИМЕР
+
+// NdpiWithHost -
+func NdpiWithHost(hosname string) ndpiOpt {
+	return ndpiOptFunc(func(o *Ndpi) {
+		o.Hostname = hosname
+	})
+}
+
+// NdpiWithProtocols -
+func NdpiWithProtocols(pp ...string) ndpiOpt {
+	return ndpiOptFunc(func(o *Ndpi) {
+		o.Protocols = append(o.Protocols, pp...)
+	})
+}
+
+// +NdpiWithKeys +NdpiWithFlags
 
 type NdpiBuilderI interface {
 	SetHostname(val string) NdpiBuilderI
