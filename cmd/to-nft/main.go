@@ -15,6 +15,9 @@ import (
 
 	"github.com/H-BF/corlib/logger"
 	"github.com/H-BF/corlib/pkg/parallel"
+	"github.com/H-BF/corlib/server"
+
+	pkgNet "github.com/H-BF/corlib/pkg/net"
 	gs "github.com/H-BF/corlib/pkg/patterns/graceful-shutdown"
 	"github.com/H-BF/corlib/pkg/patterns/observer"
 	"github.com/pkg/errors"
@@ -57,12 +60,37 @@ func main() {
 		config.WithDefValue{Key: DnsDialDuration, Val: "3s"},
 		config.WithDefValue{Key: DnsWriteDuration, Val: "5s"},
 		config.WithDefValue{Key: DnsReadDuration, Val: "5s"},
+		//telemetry group
+		config.WithDefValue{Key: TelemetryEndpoint, Val: "127.0.0.1:5000"},
+		config.WithDefValue{Key: MetricsEnable, Val: true},
+		config.WithDefValue{Key: HealthcheckEnable, Val: true},
+		config.WithDefValue{Key: UserAgent, Val: ""},
 	)
 	if err != nil {
 		logger.Fatal(ctx, err)
 	}
 	if err = SetupLogger(); err != nil {
 		logger.Fatal(ctx, errors.WithMessage(err, "setup logger"))
+	}
+	if err = SetupMetrics(ctx); err != nil {
+		logger.Fatal(ctx, errors.WithMessage(err, "setup metrics"))
+	}
+
+	err = WhenSetupTelemtryServer(ctx, func(srv *server.APIServer) error {
+		addr := TelemetryEndpoint.MustValue(ctx)
+		ep, e := pkgNet.ParseEndpoint(addr)
+		if e != nil {
+			return errors.WithMessagef(e, "parse telemetry endpoint (%s): %v", addr, e)
+		}
+		go func() { //start telemetry endpoint
+			if e1 := srv.Run(ctx, ep); e1 != nil {
+				logger.Fatalf(ctx, "telemetry server is failed: %v", e1)
+			}
+		}()
+		return nil
+	})
+	if err != nil {
+		logger.Fatal(ctx, errors.WithMessage(err, "setup telemetry server"))
 	}
 
 	var dnsResolver DomainAddressQuerier
@@ -78,6 +106,12 @@ func main() {
 		)
 		AgentSubject().ObserversAttach(o)
 	}
+
+	AgentSubject().ObserversAttach(
+		observer.NewObserver(agentMetricsObserver, true,
+			jobs.AppliedConfEvent{}, SyncStatusError{},
+			NetlinkError{}, jobs.DomainAddresses{}),
+	)
 
 	go func() {
 		r := jobs.FqdnRefresher{
@@ -124,6 +158,23 @@ func exitOnSuccessHanler(ev observer.EventType) {
 	os.Exit(0)
 }
 
+func agentMetricsObserver(ev observer.EventType) {
+	if metrics := GetAgentMetrics(); metrics != nil {
+		switch o := ev.(type) {
+		case jobs.AppliedConfEvent:
+			metrics.ObserveApplyConfig()
+		case SyncStatusError:
+			metrics.ObserveError(ESrcSgBakend)
+		case NetlinkError:
+			metrics.ObserveError(ESrcNetWatcher)
+		case jobs.DomainAddresses:
+			if o.DnsAnswer.Err != nil {
+				metrics.ObserveError(ESrcDNS)
+			}
+		}
+	}
+}
+
 func runNftJob(ctx context.Context, resolver DomainAddressQuerier) (err error) {
 	const waitBeforeRestart = 10 * time.Second
 
@@ -138,9 +189,12 @@ func runNftJob(ctx context.Context, resolver DomainAddressQuerier) (err error) {
 		if err = jb.init(ctx1, resolver); err != nil {
 			break
 		}
+
+		HcMainJob.Set(true)
 		if err = jb.run(ctx1); err == nil {
 			break
 		}
+		HcMainJob.Set(false)
 		if !jb.continueOnFailure {
 			break
 		}

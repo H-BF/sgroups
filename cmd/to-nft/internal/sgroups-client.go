@@ -34,7 +34,8 @@ func NewSGClient(ctx context.Context) (*SGClient, error) {
 		return nil, errors.WithMessage(err, api)
 	}
 	bld := grpc_client.FromAddress(addr).
-		WithDialDuration(dialDuration)
+		WithDialDuration(dialDuration).
+		WithUserAgent(UserAgent.MustValue(ctx))
 	var c SGClient
 	if c, err = sgAPI.NewClosableClient(ctx, bld); err != nil {
 		return nil, err
