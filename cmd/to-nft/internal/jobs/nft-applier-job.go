@@ -6,6 +6,7 @@ import (
 	"github.com/H-BF/sgroups/cmd/to-nft/internal"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/host"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft"
+	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	"github.com/H-BF/sgroups/internal/queue"
 
@@ -13,12 +14,12 @@ import (
 	"github.com/H-BF/corlib/pkg/patterns/observer"
 	"github.com/c-robinson/iplib"
 	"github.com/pkg/errors"
-	uuid "github.com/satori/go.uuid"
 )
 
-func NewNftApplierJob(proc nft.NfTablesProcessor, opts ...Option) *NftApplierJob {
+func NewNftApplierJob(proc nft.NfTablesProcessor, client internal.SGClient, opts ...Option) *NftApplierJob {
 	ret := &NftApplierJob{
 		nftProcessor: proc,
+		client:       client,
 		agentSubject: internal.AgentSubject(),
 		que:          queue.NewFIFO(),
 	}
@@ -26,6 +27,10 @@ func NewNftApplierJob(proc nft.NfTablesProcessor, opts ...Option) *NftApplierJob
 		switch t := o.(type) {
 		case WithAgentSubject:
 			ret.agentSubject = t.Subject
+		case WithDnsResolver:
+			ret.dnsResolver = t.DnsRes
+		case WithNetNS:
+			ret.netNS = string(t)
 		}
 	}
 	ret.Observer = observer.NewObserver(
@@ -43,12 +48,14 @@ func NewNftApplierJob(proc nft.NfTablesProcessor, opts ...Option) *NftApplierJob
 // NftApplierJob -
 type NftApplierJob struct {
 	observer.Observer
+	netNS        string
+	client       internal.SGClient
 	nftProcessor nft.NfTablesProcessor
 	agentSubject observer.Subject
+	dnsResolver  internal.DomainAddressQuerier
 	que          *queue.FIFO
 	syncStatus   *model.SyncStatus
 	netConf      *host.NetConf
-	appliedRules *nft.AppliedRules
 }
 
 type applyConfigEvent struct {
@@ -84,7 +91,8 @@ func (jb *NftApplierJob) Run(ctx context.Context) error {
 				return err
 			}
 		case DomainAddresses:
-			if jb.appliedRules == nil {
+			appliedRules := nft.LastAppliedRules(jb.netNS)
+			if appliedRules == nil {
 				break
 			}
 			if o.DnsAnswer.Err == nil {
@@ -94,11 +102,10 @@ func (jb *NftApplierJob) Run(ctx context.Context) error {
 					FQDN:      o.FQDN,
 					Addresses: o.DnsAnswer.IPs,
 				}
-				err := nft.PatchAppliedRules(ctx, jb.appliedRules, p)
-				if errors.Is(err, nft.ErrPatchNotApplicable) {
-					break
-				}
-				if err != nil {
+				if err := nft.PatchAppliedRules(ctx, appliedRules, p); err != nil {
+					if errors.Is(err, nft.ErrPatchNotApplicable) {
+						break
+					}
 					return err
 				}
 			}
@@ -135,39 +142,59 @@ func (jb *NftApplierJob) handleNetlinkEvent(_ context.Context, ev internal.Netli
 		cnf = jb.netConf.Clone()
 	}
 	cnf.UpdFromWatcher(ev.Updates...)
-	if apply := jb.netConf == nil; !apply {
+	apply := jb.netConf == nil
+	if !apply {
 		apply = !jb.netConf.IPAdresses.Eq(cnf.IPAdresses)
-		if !apply {
-			return
-		}
 	}
 	jb.netConf = &cnf
-	jb.agentSubject.Notify(applyConfigEvent{
-		TextMessageEvent: observer.NewTextEvent("net conf has changed"),
-	})
+	if apply {
+		jb.agentSubject.Notify(applyConfigEvent{
+			TextMessageEvent: observer.NewTextEvent("net conf has changed"),
+		})
+	}
 }
 
 func (jb *NftApplierJob) doApply(ctx context.Context) error {
 	if jb.netConf == nil || jb.syncStatus == nil {
 		return nil
 	}
-	appliedRules, err := jb.nftProcessor.ApplyConf(ctx, *jb.netConf)
+
+	log := logger.FromContext(ctx)
+	localDataLoader := cases.LocalDataLoader{
+		Logger: log,
+		DnsRes: jb.dnsResolver,
+	}
+
+	localData, err := localDataLoader.Load(ctx, jb.client, *jb.netConf)
 	if err != nil {
 		return err
 	}
-	jb.appliedRules = &appliedRules
+	log.Debug("local data are loaded")
+	if data := nft.LastAppliedRules(jb.netNS); data != nil {
+		eq := data.LocalData.IsEq(localData)
+		if eq {
+			log.Debug("local data did not change since last load; new rules will not geneate")
+			return nil
+		}
+	}
+
+	var appliedRules nft.AppliedRules
+	if appliedRules, err = jb.nftProcessor.ApplyConf(ctx, localData); err != nil {
+		return err
+	}
+	nft.LastAppliedRulesUpd(jb.netNS, &appliedRules)
 	ev := AppliedConfEvent{
-		UID:          uuid.NewV4(),
 		NetConf:      jb.netConf.Clone(),
 		AppliedRules: appliedRules,
 	}
 	jb.agentSubject.Notify(ev)
 
 	reqs := make([]observer.EventType, 0,
-		appliedRules.SG2FQDNRules.A.Len()+
-			appliedRules.SG2FQDNRules.AAAA.Len())
+		appliedRules.LocalData.SG2FQDNRules.Resolved.A.Len()+
+			appliedRules.LocalData.SG2FQDNRules.Resolved.AAAA.Len())
 
-	sources := sli(appliedRules.SG2FQDNRules.A, appliedRules.SG2FQDNRules.AAAA)
+	sources := sli(appliedRules.LocalData.SG2FQDNRules.Resolved.A,
+		appliedRules.LocalData.SG2FQDNRules.Resolved.AAAA)
 	for i, ipV := range sli(iplib.IP4Version, iplib.IP6Version) {
 		sources[i].Iterate(func(domain model.FQDN, addr internal.DomainAddresses) bool {
 			ev := Ask2ResolveDomainAddresses{

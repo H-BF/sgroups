@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal"
@@ -11,27 +12,27 @@ import (
 	"github.com/H-BF/sgroups/internal/config"
 	"github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
+	nftlib "github.com/google/nftables"
+	"github.com/pkg/errors"
 
 	"github.com/c-robinson/iplib"
+	uuid "github.com/satori/go.uuid"
 )
 
 type (
 	// AppliedRules -
 	AppliedRules struct {
-		NetNS         string
-		TargetTable   string
-		BaseRules     BaseRules
-		LocalSGs      cases.SGs
-		SG2SGRules    cases.SG2SGRules
-		SG2FQDNRules  cases.SG2FQDNRules
-		SgIcmpRules   cases.SgIcmpRules
-		SgSgIcmpRules cases.SgSgIcmpRules
-		CidrSgRules   cases.CidrSgRules
+		ID          uuid.UUID
+		NetNS       string
+		TargetTable string
+		BaseRules   BaseRules
+		LocalData   cases.LocalData
 	}
 
 	// Patch -
 	Patch interface {
 		String() string
+		Appply(context.Context, *AppliedRules) error
 		isAppliedRulesPatch()
 	}
 
@@ -50,7 +51,7 @@ type (
 
 	// NfTablesProcessor abstract interface
 	NfTablesProcessor interface {
-		ApplyConf(ctx context.Context, conf NetConf) (AppliedRules, error)
+		ApplyConf(ctx context.Context, data cases.LocalData) (AppliedRules, error)
 		Close() error
 	}
 
@@ -63,14 +64,26 @@ type (
 	BaseRules struct {
 		Nets []config.NetCIDR
 	}
-
-	// DnsResolver -
-	DnsResolver struct {
-		internal.DomainAddressQuerier
-	}
 )
 
+// LastAppliedRules -
+func LastAppliedRules(netNS string) *AppliedRules {
+	lastAppliedRulesMx.RLock()
+	defer lastAppliedRulesMx.RUnlock()
+	return lastAppliedRules.At(netNS)
+}
+
+// LastAppliedRulesUpd -
+func LastAppliedRulesUpd(netNS string, data *AppliedRules) {
+	lastAppliedRulesMx.Lock()
+	defer lastAppliedRulesMx.Unlock()
+	lastAppliedRules.Put(netNS, data)
+}
+
 var (
+	lastAppliedRules   dict.HDict[string, *AppliedRules]
+	lastAppliedRulesMx sync.RWMutex
+
 	_ Patch = (*UpdateFqdnNetsets)(nil)
 )
 
@@ -78,7 +91,7 @@ func (UpdateFqdnNetsets) isAppliedRulesPatch() {}
 
 // String impl Stringer interface
 func (p UpdateFqdnNetsets) String() string {
-	return fmt.Sprintf("fqdn-netset(ip-v: %v; domain: '%s'; addrs: %s)",
+	return fmt.Sprintf("patch/fqdn-netset(ip-v: %v; domain: '%s'; addrs: %s)",
 		p.IPVersion, p.FQDN, slice2stringer(p.Addresses...))
 }
 
@@ -94,44 +107,55 @@ func (ns UpdateFqdnNetsets) NetSet() []net.IPNet {
 	return ret
 }
 
+// Appply -
+func (ns UpdateFqdnNetsets) Appply(ctx context.Context, rules *AppliedRules) error {
+	const api = "apply"
+
+	if !isIn(ns.IPVersion, sli(iplib.IP4Version, iplib.IP6Version)) {
+		return errors.WithMessagef(ErrPatchNotApplicable,
+			"%s/%s failed cause it has bad IPv", ns, api)
+	}
+	tx, err := NewTx(rules.NetNS)
+	if err != nil {
+		return err
+	}
+	defer tx.Close()
+	var nftConf NFTablesConf
+	if err = nftConf.Load(tx.Conn); err != nil {
+		return err
+	}
+	targetTable := NfTableKey{
+		TableFamily: nftlib.TableFamilyINet,
+		Name:        rules.TargetTable,
+	}
+	netSets := nftConf.Sets.At(targetTable)
+	netsetName := nameUtils{}.
+		nameOfFqdnNetSet(ns.IPVersion, ns.FQDN)
+	set := netSets.At(netsetName)
+	if set.Set == nil {
+		return errors.WithMessagef(ErrPatchNotApplicable,
+			"%s/%s failed cause targed netset '%s' does not exist", ns, api, netsetName)
+	}
+	elements := setsUtils{}.nets2SetElements(ns.NetSet(), ns.IPVersion)
+	if err = tx.SetAddElements(set.Set, elements); err != nil {
+		panic(err)
+	}
+	if err = tx.FlushAndClose(); err != nil {
+		return err
+	}
+	data := rules.LocalData.SG2FQDNRules.Resolved
+	src := tern(ns.IPVersion == iplib.IP4Version,
+		&data.A, &data.AAAA)
+	data.Lock()
+	defer data.Unlock()
+	src.Put(ns.FQDN, internal.DomainAddresses{
+		TTL: ns.TTL,
+		IPs: ns.Addresses,
+	})
+	return nil
+}
+
 //DNS resolver
 
-func (WithNetNS) isNfTablesProcessorOpt()   {}
-func (BaseRules) isNfTablesProcessorOpt()   {}
-func (DnsResolver) isNfTablesProcessorOpt() {}
-
-// Patch -
-func (rules *AppliedRules) Patch(p Patch, apply func() error) error {
-	switch v := p.(type) {
-	case UpdateFqdnNetsets:
-		if !isIn(v.IPVersion, sli(iplib.IP4Version, iplib.IP6Version)) {
-			return ErrPatchNotApplicable
-		}
-		src := tern(v.IPVersion == iplib.IP4Version,
-			&rules.SG2FQDNRules.A, &rules.SG2FQDNRules.AAAA)
-		if _, ok := src.Get(v.FQDN); !ok {
-			break
-		}
-		if err := apply(); err != nil {
-			return err
-		}
-		src.Put(v.FQDN, internal.DomainAddresses{
-			TTL: v.TTL,
-			IPs: v.Addresses,
-		})
-		return nil
-	}
-	return ErrPatchNotApplicable
-}
-
-// GetAllUsedSgNames -
-func (rules *AppliedRules) GetAllUsedSgNames() []string {
-	var ret dict.HSet[string]
-	ret.PutMany(rules.LocalSGs.Keys()...)
-	ret.PutMany(rules.SG2SGRules.SGs.Keys()...)
-	ret.PutMany(rules.SG2FQDNRules.SGs.Keys()...)
-	ret.PutMany(rules.SgIcmpRules.SGs.Keys()...)
-	ret.PutMany(rules.SgSgIcmpRules.SGs.Keys()...)
-	ret.PutMany(rules.CidrSgRules.SGs.Keys()...)
-	return ret.Values()
-}
+func (WithNetNS) isNfTablesProcessorOpt() {}
+func (BaseRules) isNfTablesProcessorOpt() {}

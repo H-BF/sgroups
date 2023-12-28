@@ -17,6 +17,17 @@ type SG2SGRules struct {
 	Rules dict.HDict[model.SGRuleIdentity, *model.SGRule]
 }
 
+// IsEq -
+func (rules *SG2SGRules) IsEq(other SG2SGRules) bool {
+	eq := rules.SGs.IsEq(other.SGs)
+	if eq {
+		eq = rules.Rules.Eq(&other.Rules, func(vL, vR *model.SGRule) bool {
+			return vL.IsEq(*vR)
+		})
+	}
+	return eq
+}
+
 // Load ...
 func (rules *SG2SGRules) Load(ctx context.Context, client SGClient, locals SGs) (err error) {
 	const api = "sg-rules/Load"

@@ -47,9 +47,10 @@ func main() {
 		config.WithDefValue{Key: AppLoggerLevel, Val: "DEBUG"},
 		config.WithDefValue{Key: AppGracefulShutdown, Val: 10 * time.Second},
 		config.WithDefValue{Key: NetNS, Val: ""},
+		config.WithDefValue{Key: NetlinkWatcherLinger, Val: "10s"},
 		config.WithDefValue{Key: ServicesDefDialDuration, Val: 10 * time.Second},
 		config.WithDefValue{Key: SGroupsAddress, Val: "tcp://127.0.0.1:9000"},
-		config.WithDefValue{Key: SGroupsSyncStatusInterval, Val: "30s"},
+		config.WithDefValue{Key: SGroupsSyncStatusInterval, Val: "10s"},
 		config.WithDefValue{Key: SGroupsSyncStatusPush, Val: false},
 		//DNS group
 		config.WithDefValue{Key: DnsNameservers, Val: `["8.8.8.8"]`},
@@ -209,9 +210,11 @@ func runNftJob(ctx context.Context, resolver DomainAddressQuerier) (err error) {
 	return err
 }
 
-func makeNetlinkWatcher(netNs string) (nl.NetlinkWatcher, error) {
+func makeNetlinkWatcher(ctx context.Context, netNs string) (nl.NetlinkWatcher, error) {
 	opts := []nl.WatcherOption{
-		nl.WithLinger{Linger: 10 * time.Second},
+		nl.WithLinger{
+			Linger: NetlinkWatcherLinger.MustValue(ctx),
+		},
 	}
 	if len(netNs) > 0 {
 		opts = append(opts, nl.WithNetns{Netns: netNs})
@@ -232,12 +235,12 @@ func makeNftprocessor(ctx context.Context, sgClient SGClient, dnsRes DomainAddre
 	if err != nil {
 		return nil, errors.WithMessage(err, "load base rules")
 	}
-	opts = append(opts, nft.DnsResolver{DomainAddressQuerier: dnsRes})
 	return nft.NewNfTablesProcessor(sgClient, opts...), nil
 }
 
 type mainJob struct {
 	appSubject              observer.Subject
+	dnsResolver             DomainAddressQuerier
 	netNs                   string
 	SyncStatusCheckInterval time.Duration
 	SyncStatusUsePush       bool
@@ -265,6 +268,7 @@ func (m *mainJob) init(ctx context.Context, dnsResolver DomainAddressQuerier) (e
 			m.cleanup()
 		}
 	}()
+	m.dnsResolver = dnsResolver
 	m.appSubject = AgentSubject()
 	m.netNs, err = NetNS.Value(ctx)
 	if err != nil && !errors.Is(err, config.ErrNotFound) {
@@ -276,7 +280,7 @@ func (m *mainJob) init(ctx context.Context, dnsResolver DomainAddressQuerier) (e
 	if m.sgClient, err = NewSGClient(ctx); err != nil {
 		return err
 	}
-	if m.nlWatcher, err = makeNetlinkWatcher(m.netNs); err != nil {
+	if m.nlWatcher, err = makeNetlinkWatcher(ctx, m.netNs); err != nil {
 		return err
 	}
 	if m.nftProcessor, err = makeNftprocessor(ctx, *m.sgClient, dnsResolver, m.netNs); err != nil {
@@ -287,8 +291,11 @@ func (m *mainJob) init(ctx context.Context, dnsResolver DomainAddressQuerier) (e
 
 func (m *mainJob) run(ctx context.Context) error {
 	defer m.cleanup()
-	jb := jobs.NewNftApplierJob(m.nftProcessor,
-		jobs.WithAgentSubject{Subject: m.appSubject})
+	jb := jobs.NewNftApplierJob(m.nftProcessor, *m.sgClient,
+		jobs.WithAgentSubject{Subject: m.appSubject},
+		jobs.WithDnsResolver{DnsRes: m.dnsResolver},
+		jobs.WithNetNS(m.netNs),
+	)
 	defer jb.Close()
 	nle := NetlinkEventSource{
 		AgentSubj:      m.appSubject,
