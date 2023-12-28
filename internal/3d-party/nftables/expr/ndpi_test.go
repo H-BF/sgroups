@@ -196,11 +196,11 @@ func (sui *ndpiTestSuite) Test_NdpiMarshalHostOneProto() {
 	expFlags := NFT_NDPI_FLAG_HOST
 	expHost := "youtube"
 	expProto := []string{"http"}
-	ndpiBuilder := NewNdpiBuilder()
-	ndpi := ndpiBuilder.SetHostname(expHost).SetProto(expProto).Build()
-	_, err := ndpi.marshal(0)
+	ndpi, err := NewNdpi(nil, NdpiWithHost(expHost), NdpiWithProtocols(expProto[0]))
 	sui.Require().NoError(err)
-	assert.Equal(sui.T(), expFlags, ndpi.NdpiFlags)
+	_, err = ndpi.marshal(0)
+	sui.Require().NoError(err)
+	assert.Equal(sui.T(), expFlags, ndpi.Flags)
 	assert.Equal(sui.T(), expHost, ndpi.Hostname)
 	assert.Equal(sui.T(), expProto, ndpi.Protocols)
 }
@@ -210,11 +210,11 @@ func (sui *ndpiTestSuite) Test_NdpiMarshalHostProtos() {
 	expFlags := NFT_NDPI_FLAG_HOST
 	expHost := "youtube"
 	expProto := []string{"http", "dns"}
-	ndpiBuilder := NewNdpiBuilder()
-	ndpi := ndpiBuilder.SetHostname(expHost).SetProto(expProto).Build()
-	_, err := ndpi.marshal(0)
+	ndpi, err := NewNdpi(nil, NdpiWithHost(expHost), NdpiWithProtocols(expProto[0], expProto[1]))
 	sui.Require().NoError(err)
-	assert.Equal(sui.T(), expFlags, ndpi.NdpiFlags)
+	_, err = ndpi.marshal(0)
+	sui.Require().NoError(err)
+	assert.Equal(sui.T(), expFlags, ndpi.Flags)
 	assert.Equal(sui.T(), expHost, ndpi.Hostname)
 	assert.Equal(sui.T(), expProto, ndpi.Protocols)
 }
@@ -222,21 +222,21 @@ func (sui *ndpiTestSuite) Test_NdpiMarshalHostProtos() {
 func (sui *ndpiTestSuite) Test_NdpiMarshalRegex() {
 	sui.T().Parallel()
 	expFlags := (NFT_NDPI_FLAG_HOST | NFT_NDPI_FLAG_RE)
-	ndpiBuilder := NewNdpiBuilder()
-	ndpi := ndpiBuilder.SetHostname("/youtube/").SetProto([]string{"http"}).Build()
-	_, err := ndpi.marshal(0)
+	ndpi, err := NewNdpi(nil, NdpiWithHost("/youtube/"), NdpiWithProtocols("http"))
 	sui.Require().NoError(err)
-	assert.Equal(sui.T(), expFlags, ndpi.NdpiFlags)
+	_, err = ndpi.marshal(0)
+	sui.Require().NoError(err)
+	assert.Equal(sui.T(), expFlags, ndpi.Flags)
 }
 
 func (sui *ndpiTestSuite) Test_NdpiMarshalHost() {
 	sui.T().Parallel()
 	expFlags := (NFT_NDPI_FLAG_HOST | NFT_NDPI_FLAG_EMPTY)
-	ndpiBuilder := NewNdpiBuilder()
-	ndpi := ndpiBuilder.SetHostname("youtube").Build()
-	_, err := ndpi.marshal(0)
+	ndpi, err := NewNdpi(nil, NdpiWithHost("youtube"))
 	sui.Require().NoError(err)
-	assert.Equal(sui.T(), expFlags, ndpi.NdpiFlags)
+	_, err = ndpi.marshal(0)
+	sui.Require().NoError(err)
+	assert.Equal(sui.T(), expFlags, ndpi.Flags)
 }
 
 func Test_NDPI(t *testing.T) {
