@@ -143,26 +143,28 @@ type ndpiOpt interface {
 
 type ndpiOptFunc func(*Ndpi)
 
+// ErrNdpi -
 type ErrNdpi struct {
-	Msg string `json:"msg"`
+	Err error
 }
 
-func (e ErrNdpi) Error() string { return e.Msg }
-
-func (e ErrNdpi) Reason(err error) ErrNdpi {
-	return ErrNdpi{
-		Msg: e.Msg + "; Reason: " + err.Error(),
-	}
+// Error -
+func (e ErrNdpi) Error() string {
+	return fmt.Sprintf("NDPI: %v", e.Err)
 }
 
-var (
-	ErrNdpiIncorrectProto = ErrNdpi{
-		Msg: "ndpi: incorrect protocols",
-	}
-)
+// Cause -
+func (e ErrNdpi) Cause() error {
+	return e.Err
+}
 
 // NewNdpi creates Ndpi expression properly
 func NewNdpi(opts ...ndpiOpt) (res *Ndpi, err error) {
+	if NdpiState.FailReason != nil {
+		return nil, ErrNdpi{
+			Err: fmt.Errorf("mdule not loaded: %v", NdpiState.FailReason),
+		}
+	}
 	var mask ndpiProtoBitmask
 	res = new(Ndpi)
 
@@ -181,7 +183,7 @@ func NewNdpi(opts ...ndpiOpt) (res *Ndpi, err error) {
 	if len(res.Protocols) != 0 {
 		mask, err = res.protocolsToBitmask()
 		if err != nil {
-			return nil, ErrNdpiIncorrectProto.Reason(err)
+			return nil, err
 		}
 		res.key |= NFTNL_EXPR_NDPI_PROTO
 	}
@@ -190,7 +192,7 @@ func NewNdpi(opts ...ndpiOpt) (res *Ndpi, err error) {
 		res.Flags |= NFT_NDPI_FLAG_EMPTY
 	}
 
-	return res, err
+	return res, nil
 }
 
 func (f ndpiOptFunc) apply(o *Ndpi) { //impl ndpiOpt
@@ -248,10 +250,10 @@ func (dpi *Ndpi) protocolsToBitmask() (ret ndpiProtoBitmask, err error) {
 		idp, found := NdpiState.Protocols.Supported[prEl]
 		if doAdd {
 			if NdpiState.Protocols.Disabled[prEl] {
-				return ret, fmt.Errorf("disabled protoсol '%s'", prEl)
+				return ret, ErrNdpi{Err: fmt.Errorf("disabled protoсol '%s'", prEl)}
 			}
 			if !found {
-				return ret, fmt.Errorf("unsupported protoсol '%s'", prEl)
+				return ret, ErrNdpi{Err: fmt.Errorf("unsupported protoсol '%s'", prEl)}
 			}
 			ret.addProtocol(idp)
 		} else if found {

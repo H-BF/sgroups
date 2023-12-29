@@ -7,13 +7,15 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-/*//TODO:     Тесты - П Е Р Е Д Е Л А Т Ь
-1 - каждый тест не должен иметь состояний влияющих на другой тест
-2 - нету тестов на marshal/unmarshal
-3 - if !assert.Error(suite.T(), err) {
-		suite.T().FailNow()
-		return false
-	} <-- вместо этой конструкции нужно использовать sui.Require().NoError(err)
+/*//TODO:                      Не тесты а Адов *Т*Р*Э*Ш
+1) убираем все Parallel
+2) заменяем assert -> require
+3) Убирием эту дичь BaseProtoConverterI и делаем простые и понятные тесты
+4) Не делаем экспортируемых функций если на это нет обоснований
+5) Тесты на marshal/unmarshal - в помойку ибо - дерьмо полное
+   ожилается что ты создаешь лбъект - маршалишь - анмаршалишь и онвый объект идентичен старому
+
+ДАВАЙ УЖЕ ВКЛЮЧАЙСЯ, Я УЖЕ РЕАЛЬНО УСТАЛ РАЗГРЕБАТЬ ЭТО
 */
 
 type ndpiTestSuite struct {
@@ -92,7 +94,7 @@ func NewProtoConverter(t protoType, s *ndpiTestSuite) BaseProtoConverterI {
 }
 
 func (sui *ndpiTestSuite) Test_NdpiUnSupportedProtocols() {
-	sui.T().Parallel()
+	sui.T().Parallel() //<-- TODO: Убираем Parallel
 	protocols := []string{"memcached", "signal", "xbox", "modbus", "whatsappcall"}
 	expMask := ndpiProtoBitmask{}
 	pc := NewProtoConverter(invalidProto, sui)
@@ -104,7 +106,7 @@ func (sui *ndpiTestSuite) Test_NdpiUnSupportedProtocols() {
 }
 
 func (sui *ndpiTestSuite) Test_NdpiOneSupportedProtocol() {
-	sui.T().Parallel()
+	sui.T().Parallel() //<-- TODO: Убираем Parallel
 	protocols := []string{"http"}
 	expMask := ndpiProtoBitmask{
 		fds_bits: [NDPI_NUM_FDS_BITS]ndpiMaskType{
@@ -120,7 +122,7 @@ func (sui *ndpiTestSuite) Test_NdpiOneSupportedProtocol() {
 }
 
 func (sui *ndpiTestSuite) Test_NdpiSubstractionProtocols() {
-	sui.T().Parallel()
+	sui.T().Parallel() //<-- TODO: Убираем Parallel
 	protocols := []string{"http", "-http"}
 	expMask := ndpiProtoBitmask{}
 	pc := NewProtoConverter(validProto, sui)
@@ -132,7 +134,7 @@ func (sui *ndpiTestSuite) Test_NdpiSubstractionProtocols() {
 }
 
 func (sui *ndpiTestSuite) Test_NdpiDublicatedProtocols() {
-	sui.T().Parallel()
+	sui.T().Parallel() //<-- TODO: Убираем Parallel
 	protocols := []string{"http", "http", "http"}
 	expMask := ndpiProtoBitmask{
 		fds_bits: [NDPI_NUM_FDS_BITS]ndpiMaskType{
@@ -148,7 +150,7 @@ func (sui *ndpiTestSuite) Test_NdpiDublicatedProtocols() {
 }
 
 func (sui *ndpiTestSuite) Test_NdpiSeveralSuportedProtocols() {
-	sui.T().Parallel()
+	sui.T().Parallel() //<-- TODO: Убираем Parallel
 	protocols := []string{
 		NdpiState.Protocols.numbit2ProtoName[7],
 		NdpiState.Protocols.numbit2ProtoName[5],
@@ -175,7 +177,7 @@ func (sui *ndpiTestSuite) Test_NdpiSeveralSuportedProtocols() {
 }
 
 func (sui *ndpiTestSuite) Test_NdpiMixedProtocols() {
-	sui.T().Parallel()
+	sui.T().Parallel() //<-- TODO: Убираем Parallel
 	protocols := []string{"http", "signal", "dns"}
 	expMask := ndpiProtoBitmask{
 		fds_bits: [NDPI_NUM_FDS_BITS]ndpiMaskType{
@@ -192,7 +194,7 @@ func (sui *ndpiTestSuite) Test_NdpiMixedProtocols() {
 }
 
 func (sui *ndpiTestSuite) Test_NdpiMarshalHostOneProto() {
-	sui.T().Parallel()
+	sui.T().Parallel() //<-- TODO: Убираем Parallel
 	expFlags := NFT_NDPI_FLAG_HOST
 	expHost := "youtube"
 	expProto := []string{"http"}
@@ -206,7 +208,7 @@ func (sui *ndpiTestSuite) Test_NdpiMarshalHostOneProto() {
 }
 
 func (sui *ndpiTestSuite) Test_NdpiMarshalHostProtos() {
-	sui.T().Parallel()
+	sui.T().Parallel() //<-- TODO: Убираем Parallel
 	expFlags := NFT_NDPI_FLAG_HOST
 	expHost := "youtube"
 	expProto := []string{"http", "dns"}
@@ -220,7 +222,7 @@ func (sui *ndpiTestSuite) Test_NdpiMarshalHostProtos() {
 }
 
 func (sui *ndpiTestSuite) Test_NdpiMarshalRegex() {
-	sui.T().Parallel()
+	sui.T().Parallel() //<-- TODO: Убираем Parallel
 	expFlags := (NFT_NDPI_FLAG_HOST | NFT_NDPI_FLAG_RE)
 	ndpi, err := NewNdpi(NdpiWithHost("/youtube/"), NdpiWithProtocols("http"))
 	sui.Require().NoError(err)
@@ -230,7 +232,7 @@ func (sui *ndpiTestSuite) Test_NdpiMarshalRegex() {
 }
 
 func (sui *ndpiTestSuite) Test_NdpiMarshalHost() {
-	sui.T().Parallel()
+	sui.T().Parallel() //<-- TODO: Убираем Parallel
 	expFlags := (NFT_NDPI_FLAG_HOST | NFT_NDPI_FLAG_EMPTY)
 	ndpi, err := NewNdpi(NdpiWithHost("youtube"))
 	sui.Require().NoError(err)
