@@ -196,7 +196,7 @@ func (sui *ndpiTestSuite) Test_NdpiMarshalHostOneProto() {
 	expFlags := NFT_NDPI_FLAG_HOST
 	expHost := "youtube"
 	expProto := []string{"http"}
-	ndpi, err := NewNdpi(nil, NdpiWithHost(expHost), NdpiWithProtocols(expProto[0]))
+	ndpi, err := NewNdpi(NdpiWithHost(expHost), NdpiWithProtocols(expProto[0]))
 	sui.Require().NoError(err)
 	_, err = ndpi.marshal(0)
 	sui.Require().NoError(err)
@@ -210,7 +210,7 @@ func (sui *ndpiTestSuite) Test_NdpiMarshalHostProtos() {
 	expFlags := NFT_NDPI_FLAG_HOST
 	expHost := "youtube"
 	expProto := []string{"http", "dns"}
-	ndpi, err := NewNdpi(nil, NdpiWithHost(expHost), NdpiWithProtocols(expProto[0], expProto[1]))
+	ndpi, err := NewNdpi(NdpiWithHost(expHost), NdpiWithProtocols(expProto[0], expProto[1]))
 	sui.Require().NoError(err)
 	_, err = ndpi.marshal(0)
 	sui.Require().NoError(err)
@@ -222,7 +222,7 @@ func (sui *ndpiTestSuite) Test_NdpiMarshalHostProtos() {
 func (sui *ndpiTestSuite) Test_NdpiMarshalRegex() {
 	sui.T().Parallel()
 	expFlags := (NFT_NDPI_FLAG_HOST | NFT_NDPI_FLAG_RE)
-	ndpi, err := NewNdpi(nil, NdpiWithHost("/youtube/"), NdpiWithProtocols("http"))
+	ndpi, err := NewNdpi(NdpiWithHost("/youtube/"), NdpiWithProtocols("http"))
 	sui.Require().NoError(err)
 	_, err = ndpi.marshal(0)
 	sui.Require().NoError(err)
@@ -232,7 +232,7 @@ func (sui *ndpiTestSuite) Test_NdpiMarshalRegex() {
 func (sui *ndpiTestSuite) Test_NdpiMarshalHost() {
 	sui.T().Parallel()
 	expFlags := (NFT_NDPI_FLAG_HOST | NFT_NDPI_FLAG_EMPTY)
-	ndpi, err := NewNdpi(nil, NdpiWithHost("youtube"))
+	ndpi, err := NewNdpi(NdpiWithHost("youtube"))
 	sui.Require().NoError(err)
 	_, err = ndpi.marshal(0)
 	sui.Require().NoError(err)
