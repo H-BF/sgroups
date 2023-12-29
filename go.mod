@@ -3,7 +3,7 @@ module github.com/H-BF/sgroups
 go 1.20
 
 require (
-	github.com/H-BF/corlib v0.0.6
+	github.com/H-BF/corlib v0.0.7
 	github.com/H-BF/protos v0.7.0
 	github.com/ahmetb/go-linq/v3 v3.2.0
 	github.com/c-robinson/iplib v1.0.6
@@ -43,7 +43,8 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-//replace github.com/H-BF/corlib v0.0.1 => ../corlib
+//replace github.com/H-BF/corlib v0.0.7 => ../corlib
+
 //replace github.com/H-BF/protos v0.6.0 => ../protos
 replace github.com/google/nftables v0.3.3 => ./internal/3d-party/nftables
 
