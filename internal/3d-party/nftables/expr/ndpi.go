@@ -192,6 +192,10 @@ func NewNdpi(opts ...ndpiOpt) (res *Ndpi, err error) {
 		res.Flags |= NFT_NDPI_FLAG_EMPTY
 	}
 
+	if res.Flags != 0 {
+		res.key |= NFTNL_EXPR_NDPI_FLAGS
+	}
+
 	return res, nil
 }
 
@@ -324,15 +328,15 @@ func (e *Ndpi) unmarshal(fam byte, data []byte) error {
 			e.key |= NFTNL_EXPR_NDPI_FLAGS
 		case NFTA_NDPI_HOSTNAME:
 			// Getting rid of \x00 at the end of string
-			e.Hostname = string(data[:len(data)-1])
-			e.key = NFTNL_EXPR_NDPI_HOSTNAME
+			e.Hostname = string(data)
+			e.key |= NFTNL_EXPR_NDPI_HOSTNAME
 		case NFTA_NDPI_PROTO:
 			var mask ndpiProtoBitmask
 			for i := 0; i < len(data)/4; i++ {
-				mask.fds_bits[i] = ndpiMaskType(binaryutil.BigEndian.Uint32(data[i*4:]))
+				mask.fds_bits[i] = ndpiMaskType(binary.LittleEndian.Uint32(data[i*4:]))
 			}
 			e.poplulateProtocols(&mask)
-			e.key = NFTNL_EXPR_NDPI_PROTO
+			e.key |= NFTNL_EXPR_NDPI_PROTO
 		}
 	}
 
