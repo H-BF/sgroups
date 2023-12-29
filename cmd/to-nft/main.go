@@ -223,7 +223,7 @@ func makeNetlinkWatcher(ctx context.Context, netNs string) (nl.NetlinkWatcher, e
 	return nlWatcher, errors.WithMessage(err, "create net-watcher")
 }
 
-func makeNftprocessor(ctx context.Context, sgClient SGClient, dnsRes DomainAddressQuerier, netNs string) (nft.NfTablesProcessor, error) {
+func makeNftprocessor(ctx context.Context, sgClient SGClient, netNs string) (nft.NfTablesProcessor, error) {
 	var opts []nft.NfTablesProcessorOpt
 	if len(netNs) > 0 {
 		opts = append(opts, nft.WithNetNS{NetNS: netNs})
@@ -283,7 +283,7 @@ func (m *mainJob) init(ctx context.Context, dnsResolver DomainAddressQuerier) (e
 	if m.nlWatcher, err = makeNetlinkWatcher(ctx, m.netNs); err != nil {
 		return err
 	}
-	if m.nftProcessor, err = makeNftprocessor(ctx, *m.sgClient, dnsResolver, m.netNs); err != nil {
+	if m.nftProcessor, err = makeNftprocessor(ctx, *m.sgClient, m.netNs); err != nil {
 		return err
 	}
 	return nil
