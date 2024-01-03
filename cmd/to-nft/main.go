@@ -44,6 +44,7 @@ func main() {
 		config.WithDefValue{Key: ExitOnSuccess, Val: false},
 		config.WithDefValue{Key: ContinueOnFailure, Val: false},
 		//config.WithDefValue{Key: BaseRulesOutNets, Val: `["192.168.1.0/24","192.168.2.0/24"]`},
+		config.WithDefValue{Key: FqdnStrategy, Val: FqdnRulesStartegyDNS},
 		config.WithDefValue{Key: AppLoggerLevel, Val: "DEBUG"},
 		config.WithDefValue{Key: AppGracefulShutdown, Val: 10 * time.Second},
 		config.WithDefValue{Key: NetNS, Val: ""},

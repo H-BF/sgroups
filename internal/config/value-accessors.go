@@ -44,12 +44,14 @@ func (v ValueT[T]) MustValue(ctx context.Context, opts ...ValueOpt[T]) T {
 }
 
 // Value ...
-func (v ValueT[T]) Value(_ context.Context, opts ...ValueOpt[T]) (T, error) {
+func (v ValueT[T]) Value(_ context.Context, opts ...ValueOpt[T]) (ret T, err error) {
 	const api = "config/Value"
 
+	defer func() {
+		err = errors.WithMessagef(err, "%s: key '%v'", api, v)
+	}()
+
 	var (
-		ret    T
-		err    error
 		sinkIn []func(T) error
 		def    func() (T, error)
 	)
@@ -73,12 +75,19 @@ func (v ValueT[T]) Value(_ context.Context, opts ...ValueOpt[T]) (T, error) {
 	} else {
 		ret, err = def()
 	}
-	if err == nil {
-		for _, s := range sinkIn {
-			if err = s(ret); err != nil {
-				return ret, errors.WithMessagef(err, "%s: key '%v'", api, v)
-			}
+	if err != nil {
+		return ret, err
+	}
+	for _, s := range sinkIn {
+		if err = s(ret); err != nil {
+			return ret, err
 		}
 	}
-	return ret, errors.WithMessagef(err, "%s: key '%v'", api, v)
+	switch ty := any(ret).(type) {
+	case OneOf[T]:
+		err = validateOneOf(ty)
+	case interface{ Validate() error }:
+		err = ty.Validate()
+	}
+	return ret, err
 }
