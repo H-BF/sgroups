@@ -22,7 +22,7 @@ type IcmpParameters struct {
 	Type  types.Set  `tfsdk:"type"`
 }
 
-func (params IcmpParameters) ResourceAttributes() map[string]schema.Attribute {
+func (params IcmpParameters) Attributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"logs": schema.BoolAttribute{
 			Description: "toggle logging on every rule in security group",

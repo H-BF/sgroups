@@ -15,6 +15,9 @@ import (
 
 	"github.com/H-BF/corlib/logger"
 	"github.com/H-BF/corlib/pkg/parallel"
+	"github.com/H-BF/corlib/server"
+
+	pkgNet "github.com/H-BF/corlib/pkg/net"
 	gs "github.com/H-BF/corlib/pkg/patterns/graceful-shutdown"
 	"github.com/H-BF/corlib/pkg/patterns/observer"
 	"github.com/pkg/errors"
@@ -44,9 +47,10 @@ func main() {
 		config.WithDefValue{Key: AppLoggerLevel, Val: "DEBUG"},
 		config.WithDefValue{Key: AppGracefulShutdown, Val: 10 * time.Second},
 		config.WithDefValue{Key: NetNS, Val: ""},
+		config.WithDefValue{Key: NetlinkWatcherLinger, Val: "10s"},
 		config.WithDefValue{Key: ServicesDefDialDuration, Val: 10 * time.Second},
 		config.WithDefValue{Key: SGroupsAddress, Val: "tcp://127.0.0.1:9000"},
-		config.WithDefValue{Key: SGroupsSyncStatusInterval, Val: "30s"},
+		config.WithDefValue{Key: SGroupsSyncStatusInterval, Val: "10s"},
 		config.WithDefValue{Key: SGroupsSyncStatusPush, Val: false},
 		//DNS group
 		config.WithDefValue{Key: DnsNameservers, Val: `["8.8.8.8"]`},
@@ -57,12 +61,37 @@ func main() {
 		config.WithDefValue{Key: DnsDialDuration, Val: "3s"},
 		config.WithDefValue{Key: DnsWriteDuration, Val: "5s"},
 		config.WithDefValue{Key: DnsReadDuration, Val: "5s"},
+		//telemetry group
+		config.WithDefValue{Key: TelemetryEndpoint, Val: "127.0.0.1:5000"},
+		config.WithDefValue{Key: MetricsEnable, Val: true},
+		config.WithDefValue{Key: HealthcheckEnable, Val: true},
+		config.WithDefValue{Key: UserAgent, Val: ""},
 	)
 	if err != nil {
 		logger.Fatal(ctx, err)
 	}
 	if err = SetupLogger(); err != nil {
 		logger.Fatal(ctx, errors.WithMessage(err, "setup logger"))
+	}
+	if err = SetupMetrics(ctx); err != nil {
+		logger.Fatal(ctx, errors.WithMessage(err, "setup metrics"))
+	}
+
+	err = WhenSetupTelemtryServer(ctx, func(srv *server.APIServer) error {
+		addr := TelemetryEndpoint.MustValue(ctx)
+		ep, e := pkgNet.ParseEndpoint(addr)
+		if e != nil {
+			return errors.WithMessagef(e, "parse telemetry endpoint (%s): %v", addr, e)
+		}
+		go func() { //start telemetry endpoint
+			if e1 := srv.Run(ctx, ep); e1 != nil {
+				logger.Fatalf(ctx, "telemetry server is failed: %v", e1)
+			}
+		}()
+		return nil
+	})
+	if err != nil {
+		logger.Fatal(ctx, errors.WithMessage(err, "setup telemetry server"))
 	}
 
 	var dnsResolver DomainAddressQuerier
@@ -78,6 +107,12 @@ func main() {
 		)
 		AgentSubject().ObserversAttach(o)
 	}
+
+	AgentSubject().ObserversAttach(
+		observer.NewObserver(agentMetricsObserver, true,
+			jobs.AppliedConfEvent{}, SyncStatusError{},
+			NetlinkError{}, jobs.DomainAddresses{}),
+	)
 
 	go func() {
 		r := jobs.FqdnRefresher{
@@ -124,6 +159,23 @@ func exitOnSuccessHanler(ev observer.EventType) {
 	os.Exit(0)
 }
 
+func agentMetricsObserver(ev observer.EventType) {
+	if metrics := GetAgentMetrics(); metrics != nil {
+		switch o := ev.(type) {
+		case jobs.AppliedConfEvent:
+			metrics.ObserveApplyConfig()
+		case SyncStatusError:
+			metrics.ObserveError(ESrcSgBakend)
+		case NetlinkError:
+			metrics.ObserveError(ESrcNetWatcher)
+		case jobs.DomainAddresses:
+			if o.DnsAnswer.Err != nil {
+				metrics.ObserveError(ESrcDNS)
+			}
+		}
+	}
+}
+
 func runNftJob(ctx context.Context, resolver DomainAddressQuerier) (err error) {
 	const waitBeforeRestart = 10 * time.Second
 
@@ -138,9 +190,12 @@ func runNftJob(ctx context.Context, resolver DomainAddressQuerier) (err error) {
 		if err = jb.init(ctx1, resolver); err != nil {
 			break
 		}
+
+		HcMainJob.Set(true)
 		if err = jb.run(ctx1); err == nil {
 			break
 		}
+		HcMainJob.Set(false)
 		if !jb.continueOnFailure {
 			break
 		}
@@ -155,9 +210,11 @@ func runNftJob(ctx context.Context, resolver DomainAddressQuerier) (err error) {
 	return err
 }
 
-func makeNetlinkWatcher(netNs string) (nl.NetlinkWatcher, error) {
+func makeNetlinkWatcher(ctx context.Context, netNs string) (nl.NetlinkWatcher, error) {
 	opts := []nl.WatcherOption{
-		nl.WithLinger{Linger: 10 * time.Second},
+		nl.WithLinger{
+			Linger: NetlinkWatcherLinger.MustValue(ctx),
+		},
 	}
 	if len(netNs) > 0 {
 		opts = append(opts, nl.WithNetns{Netns: netNs})
@@ -166,7 +223,7 @@ func makeNetlinkWatcher(netNs string) (nl.NetlinkWatcher, error) {
 	return nlWatcher, errors.WithMessage(err, "create net-watcher")
 }
 
-func makeNftprocessor(ctx context.Context, sgClient SGClient, dnsRes DomainAddressQuerier, netNs string) (nft.NfTablesProcessor, error) {
+func makeNftprocessor(ctx context.Context, sgClient SGClient, netNs string) (nft.NfTablesProcessor, error) {
 	var opts []nft.NfTablesProcessorOpt
 	if len(netNs) > 0 {
 		opts = append(opts, nft.WithNetNS{NetNS: netNs})
@@ -178,12 +235,12 @@ func makeNftprocessor(ctx context.Context, sgClient SGClient, dnsRes DomainAddre
 	if err != nil {
 		return nil, errors.WithMessage(err, "load base rules")
 	}
-	opts = append(opts, nft.DnsResolver{DomainAddressQuerier: dnsRes})
 	return nft.NewNfTablesProcessor(sgClient, opts...), nil
 }
 
 type mainJob struct {
 	appSubject              observer.Subject
+	dnsResolver             DomainAddressQuerier
 	netNs                   string
 	SyncStatusCheckInterval time.Duration
 	SyncStatusUsePush       bool
@@ -211,6 +268,7 @@ func (m *mainJob) init(ctx context.Context, dnsResolver DomainAddressQuerier) (e
 			m.cleanup()
 		}
 	}()
+	m.dnsResolver = dnsResolver
 	m.appSubject = AgentSubject()
 	m.netNs, err = NetNS.Value(ctx)
 	if err != nil && !errors.Is(err, config.ErrNotFound) {
@@ -222,10 +280,10 @@ func (m *mainJob) init(ctx context.Context, dnsResolver DomainAddressQuerier) (e
 	if m.sgClient, err = NewSGClient(ctx); err != nil {
 		return err
 	}
-	if m.nlWatcher, err = makeNetlinkWatcher(m.netNs); err != nil {
+	if m.nlWatcher, err = makeNetlinkWatcher(ctx, m.netNs); err != nil {
 		return err
 	}
-	if m.nftProcessor, err = makeNftprocessor(ctx, *m.sgClient, dnsResolver, m.netNs); err != nil {
+	if m.nftProcessor, err = makeNftprocessor(ctx, *m.sgClient, m.netNs); err != nil {
 		return err
 	}
 	return nil
@@ -233,8 +291,11 @@ func (m *mainJob) init(ctx context.Context, dnsResolver DomainAddressQuerier) (e
 
 func (m *mainJob) run(ctx context.Context) error {
 	defer m.cleanup()
-	jb := jobs.NewNftApplierJob(m.nftProcessor,
-		jobs.WithAgentSubject{Subject: m.appSubject})
+	jb := jobs.NewNftApplierJob(m.nftProcessor, *m.sgClient,
+		jobs.WithAgentSubject{Subject: m.appSubject},
+		jobs.WithDnsResolver{DnsRes: m.dnsResolver},
+		jobs.WithNetNS(m.netNs),
+	)
 	defer jb.Close()
 	nle := NetlinkEventSource{
 		AgentSubj:      m.appSubject,

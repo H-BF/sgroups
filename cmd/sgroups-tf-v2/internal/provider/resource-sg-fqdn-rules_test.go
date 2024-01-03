@@ -21,9 +21,19 @@ func TestAccSgFqdnRules(t *testing.T) {
 	suite.Run(t, new(sgFqdnRulesTests))
 }
 
-func (sui *sgFqdnRulesTests) TestSgFqdnRules() {
+func (sui *sgFqdnRulesTests) TestSgFqdnRules_Straight() {
+	resourceTestCase := sui.testSgFqdnRulesFromFixtureFilename("data/sg-fqdn-rules.yaml")
+	resource.Test(sui.T(), resourceTestCase)
+}
+
+func (sui *sgFqdnRulesTests) TestSgFqdnRules__PortsAreEmptyList() {
+	resourceTestCase := sui.testSgFqdnRulesFromFixtureFilename("data/sg-fqdn-rules_ports-are-empty-list.yaml")
+	resource.Test(sui.T(), resourceTestCase)
+}
+
+func (sui *sgFqdnRulesTests) testSgFqdnRulesFromFixtureFilename(name string) resource.TestCase {
 	testData := fixtures.AccTests{Ctx: sui.ctx}
-	testData.LoadFixture(sui.T(), "data/sg-fqdn-rules.yaml")
+	testData.LoadFixture(sui.T(), name)
 	testData.InitBackend(sui.T(), sui.sgClient)
 	resourceTestCase := resource.TestCase{
 		ProtoV6ProviderFactories: sui.providerFactories,
@@ -56,7 +66,7 @@ func (sui *sgFqdnRulesTests) TestSgFqdnRules() {
 		})
 	}
 
-	resource.Test(sui.T(), resourceTestCase)
+	return resourceTestCase
 }
 
 func (sui *sgFqdnRulesTests) listAllFqdnRules() []*protos.FqdnRule {

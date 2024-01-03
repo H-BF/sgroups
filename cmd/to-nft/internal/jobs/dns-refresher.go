@@ -84,7 +84,7 @@ func (rf *FqdnRefresher) Run(ctx context.Context) {
 				rf.AgentSubj.Notify(ev)
 			case Ask2ResolveDomainAddresses:
 				if activeQueries.At(ev) != nil {
-					return
+					continue
 				}
 				ttl := ev.TTL
 				if ttl < time.Minute {

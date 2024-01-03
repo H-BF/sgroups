@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/H-BF/protos/pkg/api/common"
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
@@ -29,24 +28,21 @@ func NewFqdnRulesResource() resource.Resource {
 		ItemsDescription:    "SG -> FQDN rules",
 	}
 	return &fqdnRulesResource{
-		suffix:       "_fqdn_rules",
-		description:  d,
-		toSubjOfSync: sgFqdnRules2SyncSubj,
-		read:         readFqdnRules,
+		suffix:      "_fqdn_rules",
+		description: d,
+		readState:   readFqdnRules,
 	}
 }
 
 type (
-	fqdnRulesResource = CollectionResource[sgFqdnRule, protos.SyncFqdnRules]
-
-	fqdnRulesResourceModel = CollectionResourceModel[sgFqdnRule, protos.SyncFqdnRules]
+	fqdnRulesResource = CollectionResource[sgFqdnRule, tfSgFqdnRules2Backend]
 
 	sgFqdnRule struct {
-		Proto  types.String  `tfsdk:"proto"`
-		SgFrom types.String  `tfsdk:"sg_from"`
-		Fqdn   types.String  `tfsdk:"fqdn"`
-		Ports  []AccessPorts `tfsdk:"ports"`
-		Logs   types.Bool    `tfsdk:"logs"`
+		Proto  types.String `tfsdk:"proto"`
+		SgFrom types.String `tfsdk:"sg_from"`
+		Fqdn   types.String `tfsdk:"fqdn"`
+		Ports  types.List   `tfsdk:"ports"`
+		Logs   types.Bool   `tfsdk:"logs"`
 	}
 
 	sgFqdnRuleKey struct {
@@ -88,7 +84,7 @@ func (item sgFqdnRule) Key() *sgFqdnRuleKey {
 	}
 }
 
-func (item sgFqdnRule) ResourceAttributes() map[string]schema.Attribute { //nolint:dupl
+func (item sgFqdnRule) Attributes() map[string]schema.Attribute { //nolint:dupl
 	return map[string]schema.Attribute{
 		"proto": schema.StringAttribute{
 			Description: "IP-L4 proto <tcp|udp>",
@@ -118,19 +114,25 @@ func (item sgFqdnRule) ResourceAttributes() map[string]schema.Attribute { //noli
 			Description: "access ports",
 			Optional:    true,
 			NestedObject: schema.NestedAttributeObject{
-				Attributes: AccessPorts{}.ResourceAttributes(),
+				Attributes: AccessPorts{}.Attributes(),
 			},
 			PlanModifiers: []planmodifier.List{ListAccessPortsModifier()},
 		},
 	}
 }
 
-func (item sgFqdnRule) IsDiffer(other sgFqdnRule) bool {
-	var itemModelPorts, otherModelPorts []model.SGRulePorts
+func (item sgFqdnRule) IsDiffer(ctx context.Context, other sgFqdnRule) bool {
+	var (
+		itemModelPorts, otherModelPorts []model.SGRulePorts
+		itemAccPorts, otherAccPorts     []AccessPorts
+	)
+
+	_ = item.Ports.ElementsAs(ctx, &itemAccPorts, false)
+	_ = other.Ports.ElementsAs(ctx, &otherAccPorts, false)
 
 	// `toModelPorts` can not be failed because its validate then created
-	itemModelPorts, _ = toModelPorts(item.Ports)
-	otherModelPorts, _ = toModelPorts(other.Ports)
+	itemModelPorts, _ = toModelPorts(itemAccPorts)
+	otherModelPorts, _ = toModelPorts(otherAccPorts)
 
 	return !(strings.EqualFold(item.Proto.ValueString(), other.Proto.ValueString()) &&
 		item.SgFrom.Equal(other.SgFrom) &&
@@ -140,46 +142,9 @@ func (item sgFqdnRule) IsDiffer(other sgFqdnRule) bool {
 		model.AreRulePortsEq(itemModelPorts, otherModelPorts))
 }
 
-func portsToProto(data []AccessPorts) []*protos.AccPorts {
-	var ret []*protos.AccPorts
-	for _, port := range data {
-		ret = append(ret, port.toProto())
-	}
-	return ret
-}
-
-func sgFqdnRules2SyncSubj(ctx context.Context, items map[string]sgFqdnRule) (*protos.SyncFqdnRules, diag.Diagnostics) { //nolint:dupl
-	syncFqdnRules := new(protos.SyncFqdnRules)
+func readFqdnRules(ctx context.Context, state NamedResources[sgFqdnRule], client *sgAPI.Client) (NamedResources[sgFqdnRule], diag.Diagnostics) {
 	var diags diag.Diagnostics
-	for _, features := range items {
-		// this conversion necessary to validate string with ports
-		if _, err := toModelPorts(features.Ports); err != nil {
-			diags.AddError("ports conv", err.Error())
-			return nil, diags
-		}
-		protoValue, ok := common.Networks_NetIP_Transport_value[strings.ToUpper(
-			features.Proto.ValueString(),
-		)]
-		if !ok {
-			diags.AddError(
-				"proto conv",
-				fmt.Sprintf("no proto conv for value(%s)", features.Proto.ValueString()))
-			return nil, diags
-		}
-		syncFqdnRules.Rules = append(syncFqdnRules.Rules, &protos.FqdnRule{
-			SgFrom:    features.SgFrom.ValueString(),
-			FQDN:      features.Fqdn.ValueString(),
-			Transport: common.Networks_NetIP_Transport(protoValue),
-			Logs:      features.Logs.ValueBool(),
-			Ports:     portsToProto(features.Ports),
-		})
-	}
-	return syncFqdnRules, diags
-}
-
-func readFqdnRules(ctx context.Context, state fqdnRulesResourceModel, client *sgAPI.Client) (fqdnRulesResourceModel, diag.Diagnostics) {
-	var diags diag.Diagnostics
-	newState := fqdnRulesResourceModel{Items: make(map[string]sgFqdnRule)}
+	newState := NewNamedResources[sgFqdnRule]()
 	var resp *protos.FqdnRulesResp
 	var err error
 	if len(state.Items) > 0 {
@@ -194,19 +159,21 @@ func readFqdnRules(ctx context.Context, state fqdnRulesResourceModel, client *sg
 		}
 	}
 	for _, fqdnRule := range resp.GetRules() {
-		var ports []AccessPorts
-		for _, accPorts := range fqdnRule.GetPorts() {
-			ports = append(ports, AccessPorts{
-				Source:      types.StringValue(accPorts.S),
-				Destination: types.StringValue(accPorts.D),
+		accPorts := []AccessPorts{}
+		for _, p := range fqdnRule.GetPorts() {
+			accPorts = append(accPorts, AccessPorts{
+				Source:      types.StringValue(p.S),
+				Destination: types.StringValue(p.D),
 			})
 		}
+		portsList, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: AccessPorts{}.AttrTypes()}, accPorts)
+		diags.Append(d...)
 		it := sgFqdnRule{
 			Proto:  types.StringValue(strings.ToLower(fqdnRule.GetTransport().String())),
 			SgFrom: types.StringValue(fqdnRule.GetSgFrom()),
 			Fqdn:   types.StringValue(strings.ToLower(fqdnRule.GetFQDN())),
 			Logs:   types.BoolValue(fqdnRule.GetLogs()),
-			Ports:  ports,
+			Ports:  portsList,
 		}
 		k := it.Key().String()
 		if _, ok := state.Items[k]; ok {

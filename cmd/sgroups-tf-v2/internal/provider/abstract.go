@@ -22,16 +22,8 @@ type (
 	*/
 
 	SingleResource[T any] interface {
-		ResourceAttributes() map[string]schema.Attribute
-		IsDiffer(T) bool
-	}
-
-	subjectOfSync interface {
-		securityGroupSubject |
-			protos.SyncNetworks |
-			protos.SyncSGRules |
-			protos.SyncFqdnRules |
-			protos.SyncSgSgIcmpRules
+		Attributes() map[string]schema.Attribute
+		IsDiffer(context.Context, T) bool
 	}
 
 	Description struct {
@@ -39,12 +31,11 @@ type (
 		ItemsDescription    string
 	}
 
-	CollectionResource[T SingleResource[T], S subjectOfSync] struct {
-		suffix       string
-		description  Description
-		client       *sgAPI.Client
-		toSubjOfSync func(context.Context, map[string]T) (*S, diag.Diagnostics)
-		read         func(context.Context, CollectionResourceModel[T, S], *sgAPI.Client) (CollectionResourceModel[T, S], diag.Diagnostics)
+	CollectionResource[T SingleResource[T], S tf2backend[T]] struct {
+		suffix      string
+		description Description
+		client      *sgAPI.Client
+		readState   func(context.Context, NamedResources[T], *sgAPI.Client) (NamedResources[T], diag.Diagnostics)
 	}
 )
 
@@ -61,7 +52,7 @@ func (c *CollectionResource[T, S]) Schema(_ context.Context, _ resource.SchemaRe
 				Description: c.description.ItemsDescription,
 				Required:    true,
 				NestedObject: schema.NestedAttributeObject{
-					Attributes: sr.ResourceAttributes(),
+					Attributes: sr.Attributes(),
 				},
 			},
 		},
@@ -69,37 +60,24 @@ func (c *CollectionResource[T, S]) Schema(_ context.Context, _ resource.SchemaRe
 }
 
 func (c *CollectionResource[T, S]) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
-	var plan CollectionResourceModel[T, S]
+	var plan NamedResources[T]
 
 	// Read Terraform plan data into the model
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	// Convert from Terraform data model into GRPC data model
-	syncReqs, diags := plan.toSyncReq(ctx, protos.SyncReq_Upsert, c.toSubjOfSync)
-	if diags.HasError() {
-		resp.Diagnostics.Append(diags...)
+	var syncer S
+	if di := syncer.sync(ctx, plan, c.client, protos.SyncReq_Upsert); di.HasError() {
+		resp.Diagnostics.Append(di...)
 		return
 	}
-
-	// Send GRPC requests
-	for _, syncReq := range syncReqs {
-		if _, err := c.client.Sync(ctx, syncReq); err != nil {
-			resp.Diagnostics.AddError(
-				"create "+c.description.ItemsDescription,
-				err.Error())
-			return
-		}
-	}
-
 	// Save data into Terraform state
 	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
 }
 
 func (c *CollectionResource[T, S]) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	var state CollectionResourceModel[T, S]
+	var state NamedResources[T]
 
 	// Read Terraform prior state data into the model
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
@@ -109,7 +87,7 @@ func (c *CollectionResource[T, S]) Read(ctx context.Context, req resource.ReadRe
 
 	// Create GRPC request and convert response to Terraform data model
 	var diags diag.Diagnostics
-	if state, diags = c.read(ctx, state, c.client); diags.HasError() {
+	if state, diags = c.readState(ctx, state, c.client); diags.HasError() {
 		for _, diagError := range diags.Errors() {
 			resp.Diagnostics.AddError(
 				"read "+c.description.ItemsDescription,
@@ -122,7 +100,7 @@ func (c *CollectionResource[T, S]) Read(ctx context.Context, req resource.ReadRe
 }
 
 func (c *CollectionResource[T, S]) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var plan, state CollectionResourceModel[T, S]
+	var plan, state NamedResources[T]
 
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
@@ -130,85 +108,48 @@ func (c *CollectionResource[T, S]) Update(ctx context.Context, req resource.Upda
 		return
 	}
 
-	itemsToDelete := map[string]T{}
+	itemsToDelete := NewNamedResources[T]()
 	for name, itemFeatures := range state.Items {
 		if _, ok := plan.Items[name]; !ok {
 			// if item is missing in plan state - delete it
-			itemsToDelete[name] = itemFeatures
+			itemsToDelete.Items[name] = itemFeatures
 		}
 	}
-
-	if len(itemsToDelete) > 0 {
-		tempModel := CollectionResourceModel[T, S]{
-			Items: itemsToDelete,
-		}
-		delReqs, diags := tempModel.toSyncReq(ctx, protos.SyncReq_Delete, c.toSubjOfSync)
-		if diags.HasError() {
-			resp.Diagnostics.Append(diags...)
+	if len(itemsToDelete.Items) > 0 {
+		var syncer S
+		if di := syncer.sync(ctx, itemsToDelete, c.client, protos.SyncReq_Delete); di.HasError() {
+			resp.Diagnostics.Append(di...)
 			return
 		}
-		for _, delReq := range delReqs {
-			if _, err := c.client.Sync(ctx, delReq); err != nil {
-				resp.Diagnostics.AddError(
-					"delete "+c.description.ItemsDescription,
-					err.Error())
-				return
-			}
-		}
 	}
 
-	itemsToUpdate := map[string]T{}
+	itemsToUpdate := NewNamedResources[T]()
 	for name, itemFeatures := range plan.Items {
 		// in plan state can have unchanged items which should be ignored
 		// missing items before and changed items should be updated
-		if oldItemFeatures, ok := state.Items[name]; !ok || itemFeatures.IsDiffer(oldItemFeatures) {
-			itemsToUpdate[name] = itemFeatures
+		if oldItemFeatures, ok := state.Items[name]; !ok || itemFeatures.IsDiffer(ctx, oldItemFeatures) {
+			itemsToUpdate.Items[name] = itemFeatures
 		}
 	}
-
-	if len(itemsToUpdate) > 0 {
-		tempModel := CollectionResourceModel[T, S]{
-			Items: itemsToUpdate,
-		}
-		updateReqs, diags := tempModel.toSyncReq(ctx, protos.SyncReq_Upsert, c.toSubjOfSync)
-		if diags.HasError() {
-			resp.Diagnostics.Append(diags...)
+	if len(itemsToUpdate.Items) > 0 {
+		var syncer S
+		if di := syncer.sync(ctx, itemsToUpdate, c.client, protos.SyncReq_Upsert); di.HasError() {
+			resp.Diagnostics.Append(di...)
 			return
 		}
-		for _, updateReq := range updateReqs {
-			if _, err := c.client.Sync(ctx, updateReq); err != nil {
-				resp.Diagnostics.AddError(
-					"update "+c.description.ItemsDescription,
-					err.Error())
-				return
-			}
-		}
 	}
-
 	resp.Diagnostics.Append(resp.State.Set(ctx, plan)...)
 }
 
 func (c *CollectionResource[T, S]) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state CollectionResourceModel[T, S]
-
+	var state NamedResources[T]
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	delReqs, diags := state.toSyncReq(ctx, protos.SyncReq_Delete, c.toSubjOfSync)
-	if diags.HasError() {
-		resp.Diagnostics.Append(diags...)
-		return
-	}
-
-	for _, delReq := range delReqs {
-		if _, err := c.client.Sync(ctx, delReq); err != nil {
-			resp.Diagnostics.AddError(
-				"delete "+c.description.ItemsDescription,
-				err.Error())
-			return
-		}
+	var syncer S
+	if di := syncer.sync(ctx, state, c.client, protos.SyncReq_Delete); di.HasError() {
+		resp.Diagnostics.Append(di...)
 	}
 }
 
@@ -227,8 +168,3 @@ func (c *CollectionResource[T, S]) Configure(_ context.Context, req resource.Con
 	}
 	c.client = &client
 }
-
-var (
-	_ resource.Resource              = &CollectionResource[networkItem, protos.SyncNetworks]{}
-	_ resource.ResourceWithConfigure = &CollectionResource[networkItem, protos.SyncNetworks]{}
-)

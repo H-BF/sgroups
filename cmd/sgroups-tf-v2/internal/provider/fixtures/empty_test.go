@@ -2,6 +2,7 @@ package fixtures
 
 import (
 	"context"
+	"net"
 	"sort"
 	"testing"
 
@@ -31,14 +32,15 @@ func Test_Load_AccTests(t *testing.T) {
 
 func Test_ExtractKey(t *testing.T) {
 	var (
-		net        domain.Network
+		network    domain.Network
 		sg         domain.SecurityGroup
 		fqdnRule   domain.FQDNRule
 		sgRule     domain.SGRule
 		sgIcmpRule domain.SgSgIcmpRule
+		cidrRule   domain.CidrSgRule
 	)
-	net.Name = "123"
-	require.Equal(t, net.Name, extractKey(net))
+	network.Name = "123"
+	require.Equal(t, network.Name, extractKey(network))
 
 	sg.Name = "sg1"
 	require.Equal(t, sg.Name, extractKey(sg))
@@ -62,4 +64,14 @@ func Test_ExtractKey(t *testing.T) {
 	sgIcmpRule.SgTo = "b"
 
 	require.Equal(t, "sg(a)sg(b)icmp4", extractKey(sgIcmpRule))
+
+	_, ipnet, _ := net.ParseCIDR("192.168.1.1/24")
+	cidrRule.ID = domain.CidrSgRuleIdenity{
+		Transport: 0,
+		Traffic:   1,
+		SG:        "sg1",
+		CIDR:      *ipnet,
+	}
+
+	require.Equal(t, "tcp:cidr(192.168.1.0/24)sg(sg1)ingress", extractKey(cidrRule))
 }

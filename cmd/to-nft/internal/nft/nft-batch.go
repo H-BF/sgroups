@@ -58,20 +58,15 @@ type (
 
 	ruleDetails struct {
 		logs     bool
+		trace    bool
 		accports []accports
 	}
 
 	batch struct {
 		log        logger.TypeOfLogger
 		txProvider TxProvider
-
-		localSGs       cases.SGs
-		networks       cases.SGsNetworks
-		localRules     cases.SG2SGRules
-		baseRules      BaseRules
-		sg2fqdnRules   cases.SG2FQDNRules
-		sg2sgIcmpRules cases.SgSgIcmpRules
-		sgIcmpRules    cases.SgIcmpRules
+		baseRules  BaseRules
+		data       cases.LocalData
 
 		table       *nftLib.Table
 		ruleDetails di.HDict[string, *ruleDetails]
@@ -139,6 +134,7 @@ func (bt *batch) prepare() {
 	bt.addFQDNNetSets()
 	bt.initSG2SGRulesDetails()
 	bt.initSG2FQDNRulesDetails()
+	bt.initCidrSgRulesDetails()
 	bt.initRootChains()
 	bt.initBaseRules()
 	bt.makeInOutChains(dirIN)
@@ -343,10 +339,10 @@ func (bt *batch) initBaseRules() {
 }
 
 func (bt *batch) addSGNetSets() {
-	filter := sli(bt.localRules.SGs, bt.sg2fqdnRules.SGs,
-		bt.sgIcmpRules.SGs, bt.sg2sgIcmpRules.SGs, bt.localSGs)
+	filter := sli(bt.data.SG2SGRules.SGs, bt.data.SgIcmpRules.SGs,
+		bt.data.SgIcmpRules.SGs, bt.data.SgSgIcmpRules.SGs, bt.data.LocalSGs)
 
-	bt.networks.Iterate(func(sgName string, nws []model.Network) bool {
+	bt.data.Networks.Iterate(func(sgName string, nws []model.Network) bool {
 		var allow bool
 		for _, f := range filter {
 			if allow = f.At(sgName) != nil; allow {
@@ -421,18 +417,18 @@ func (bt *batch) addFQDNNetSets() {
 		})
 	}
 
-	bt.sg2fqdnRules.A.Iterate(func(domain model.FQDN, a internal.DomainAddresses) bool {
+	bt.data.SG2FQDNRules.Resolved.A.Iterate(func(domain model.FQDN, a internal.DomainAddresses) bool {
 		f(iplib.IP4Version, domain, a)
 		return true
 	})
-	bt.sg2fqdnRules.AAAA.Iterate(func(domain model.FQDN, a internal.DomainAddresses) bool {
+	bt.data.SG2FQDNRules.Resolved.AAAA.Iterate(func(domain model.FQDN, a internal.DomainAddresses) bool {
 		f(iplib.IP6Version, domain, a)
 		return true
 	})
 }
 
 func (bt *batch) initSG2SGRulesDetails() {
-	for _, r := range bt.localRules.AllRules() {
+	for _, r := range bt.data.SG2SGRules.AllRules() {
 		item := ruleDetails{
 			accports: setsUtils{}.makeAccPorts(r.Ports),
 			logs:     r.Logs,
@@ -449,7 +445,7 @@ func (bt *batch) initSG2SGRulesDetails() {
 }
 
 func (bt *batch) initSG2FQDNRulesDetails() {
-	for _, r := range bt.sg2fqdnRules.Rules {
+	for _, r := range bt.data.SG2FQDNRules.Rules {
 		item := ruleDetails{
 			accports: setsUtils{}.makeAccPorts(r.Ports),
 			logs:     r.Logs,
@@ -466,9 +462,27 @@ func (bt *batch) initSG2FQDNRulesDetails() {
 	}
 }
 
+func (bt *batch) initCidrSgRulesDetails() {
+	bt.data.CidrSgRules.Rules.Iterate(func(_ model.CidrSgRuleIdenity, r *model.CidrSgRule) bool {
+		item := ruleDetails{
+			accports: setsUtils{}.makeAccPorts(r.Ports),
+			logs:     r.Logs,
+			trace:    r.Trace,
+		}
+		if len(item.accports) == 0 {
+			item.accports = append(item.accports, accports{})
+		}
+		bt.ruleDetails.Put(
+			nameUtils{}.nameCidrSgRuleDetails(r),
+			&item,
+		)
+		return true
+	})
+}
+
 func (bt *batch) populateOutSgFqdnRules(sg *cases.SG) {
 	targetChName := nameUtils{}.nameOfInOutChain(dirOUT, sg.Name)
-	rules := bt.sg2fqdnRules.RulesForSG(sg.Name)
+	rules := bt.data.SG2FQDNRules.RulesForSG(sg.Name)
 	for _, ipV := range sli(model.IPv4, model.IPv6) {
 		ipV := ipV
 		for _, rule := range rules {
@@ -506,7 +520,7 @@ func (bt *batch) populateOutSgFqdnRules(sg *cases.SG) {
 
 func (bt *batch) populateDefaultIcmpRules(dir direction, sg *cases.SG) {
 	targetChName := nameUtils{}.nameOfInOutChain(dir, sg.Name)
-	rules := bt.sgIcmpRules.Rules4Sg(sg.Name)
+	rules := bt.data.SgIcmpRules.Rules4Sg(sg.Name)
 	for i := range rules {
 		rule := rules[i]
 		bt.addJob("populate-def-icmp-rule", func(tx *Tx) error {
@@ -533,7 +547,7 @@ func (bt *batch) populateInOutSgIcmpRules(dir direction, sg *cases.SG) {
 	targetChName := nameUtils{}.nameOfInOutChain(dir, sg.Name)
 	isIN := dir == dirIN
 	rules := tern(isIN,
-		bt.sg2sgIcmpRules.In, bt.sg2sgIcmpRules.Out,
+		bt.data.SgSgIcmpRules.In, bt.data.SgSgIcmpRules.Out,
 	)(sg.Name)
 	api := fmt.Sprintf("populate-%s-sg-icmp-rule", tern(isIN, "in", "out"))
 	for i := range rules {
@@ -568,7 +582,7 @@ func (bt *batch) populateInOutSgIcmpRules(dir direction, sg *cases.SG) {
 func (bt *batch) populateInOutSgRules(dir direction, sg *cases.SG) {
 	targetSGchName := nameUtils{}.nameOfInOutChain(dir, sg.Name)
 	isIN := dir == dirIN
-	rules := tern(isIN, bt.localRules.In, bt.localRules.Out)(sg.Name)
+	rules := tern(isIN, bt.data.SG2SGRules.In, bt.data.SG2SGRules.Out)(sg.Name)
 	api := fmt.Sprintf("populate-%s-sg-rule", tern(isIN, "in", "out"))
 	for _, ipV := range sli(model.IPv4, model.IPv6) {
 		ipV := ipV
@@ -623,8 +637,47 @@ func (bt *batch) populateInOutSgRules(dir direction, sg *cases.SG) {
 	}
 }
 
+func (bt *batch) populateInOutCidrSgRules(dir direction, sg *cases.SG) {
+	isIN := dir == dirIN
+	rules := bt.data.CidrSgRules.GetRulesForTrafficAndSG(
+		tern(isIN, model.INGRESS, model.EGRESS),
+		sg.Name,
+	)
+	api := fmt.Sprintf("populate-cidr-sg-%sgress-rule", tern(isIN, "in", "e"))
+	targetSGchName := nameUtils{}.nameOfInOutChain(dir, sg.Name)
+	for _, rule := range rules {
+		rule := rule
+		detailsName := nameUtils{}.nameCidrSgRuleDetails(rule)
+		details := bt.ruleDetails.At(detailsName)
+		if details == nil {
+			continue
+		}
+		for i := range details.accports {
+			ports := details.accports[i]
+			bt.addJob(api, func(tx *Tx) error {
+				bt.log.Debugf("add '%s' rule into '%s'/'%s'",
+					rule.ID, bt.table.Name, targetSGchName)
+				chnApplyTo := bt.chains.At(targetSGchName)
+				if chnApplyTo == nil {
+					return nil
+				}
+				rb := beginRule().
+					metaNFTRACE(details.trace).
+					srcOrDstSingleIpNet(rule.ID.CIDR, isIN).
+					protoIP(rule.ID.Transport)
+				rb = ports.D(ports.S(rb)).counter()
+				if details.logs {
+					rb = rb.dlogs(nfte.LogFlagsIPOpt)
+				}
+				rb.accept().applyRule(chnApplyTo, tx.Conn)
+				return nil
+			})
+		}
+	}
+}
+
 func (bt *batch) makeInOutChains(dir direction) {
-	bt.localSGs.Iterate(func(_ string, sg *cases.SG) bool {
+	bt.data.LocalSGs.Iterate(func(_ string, sg *cases.SG) bool {
 		bt.chainInOutProlog(dir, sg)
 		bt.populateDefaultIcmpRules(dir, sg)
 		bt.populateInOutSgIcmpRules(dir, sg)
@@ -632,6 +685,7 @@ func (bt *batch) makeInOutChains(dir direction) {
 		if dir == dirOUT {
 			bt.populateOutSgFqdnRules(sg)
 		}
+		bt.populateInOutCidrSgRules(dir, sg)
 		bt.chainInOutEpilog(dir, sg)
 		return true
 	})

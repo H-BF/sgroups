@@ -21,8 +21,8 @@ type (
 	SG2FQDNRules struct {
 		SGs   SGs
 		Rules []model.FQDNRule
-		A     dict.RBDict[model.FQDN, internal.DomainAddresses]
-		AAAA  dict.RBDict[model.FQDN, internal.DomainAddresses]
+
+		Resolved *ResolvedFQDN
 	}
 
 	// FQDNRulesLoader -
@@ -30,7 +30,34 @@ type (
 		SGSrv  SGClient
 		DnsRes internal.DomainAddressQuerier
 	}
+
+	// ResolvedFQDN -
+	ResolvedFQDN struct {
+		sync.Mutex
+		A    dict.RBDict[model.FQDN, internal.DomainAddresses]
+		AAAA dict.RBDict[model.FQDN, internal.DomainAddresses]
+	}
 )
+
+// IsEq -
+func (rules *SG2FQDNRules) IsEq(other SG2FQDNRules) bool {
+	eq := rules.SGs.IsEq(other.SGs)
+	if eq {
+		var l, r dict.HDict[string, *model.FQDNRule]
+		if len(rules.Rules) == len(other.Rules) {
+			for i := range rules.Rules {
+				a := &rules.Rules[i]
+				b := &other.Rules[i]
+				l.Insert(a.ID.String(), a)
+				r.Insert(a.ID.String(), b)
+			}
+		}
+		eq = l.Eq(&r, func(vL, vR *model.FQDNRule) bool {
+			return vL.IsEq(*vR)
+		})
+	}
+	return eq
+}
 
 func (ld FQDNRulesLoader) Load(ctx context.Context, sgs SGs) (rr SG2FQDNRules, err error) {
 	const api = "FQDNRules/Load"
@@ -44,6 +71,7 @@ func (ld FQDNRulesLoader) Load(ctx context.Context, sgs SGs) (rr SG2FQDNRules, e
 		req.SgFrom = append(req.SgFrom, sgName)
 		return true
 	})
+	rr.Resolved = new(ResolvedFQDN)
 	if len(req.SgFrom) > 0 {
 		var resp *sgAPI.FqdnRulesResp
 		if resp, err = ld.SGSrv.FindFqdnRules(ctx, &req); err != nil {
@@ -76,21 +104,22 @@ func (ld FQDNRulesLoader) resolveDomainAddresses(ctx context.Context, rr *SG2FQD
 		Select(func(i any) any {
 			return i.(model.FQDNRule).ID.FqdnTo
 		}).ToSlice(&domains)
+
+	resolved := rr.Resolved
 	if ld.DnsRes == nil {
 		for i := range domains {
-			rr.A.Put(domains[i], internal.DomainAddresses{})
-			//rr.AAAA.Put(domains[i], internal.DomainAddresses{})
+			resolved.A.Put(domains[i], internal.DomainAddresses{})
+			//resolved.AAAA.Put(domains[i], internal.DomainAddresses{})
 		}
 	} else {
-		var mx sync.Mutex
 		_ = parallel.ExecAbstract(len(domains), parallelism, func(i int) error {
 			domain := domains[i].String()
 			addrA := ld.DnsRes.A(ctx, domain)
 			//addrAAAA := ld.DnsRes.AAAA(ctx, domain)
-			mx.Lock()
-			defer mx.Unlock()
-			rr.A.Put(domains[i], addrA)
-			//rr.AAAA.Put(domains[i], addrAAAA)
+			resolved.Lock()
+			resolved.A.Put(domains[i], addrA)
+			//resolved.AAAA.Put(domains[i], addrAAAA)
+			resolved.Unlock()
 			return nil
 		})
 	}

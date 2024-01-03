@@ -25,6 +25,28 @@ type (
 	}
 )
 
+// IsEq -
+func (rules *SgIcmpRules) IsEq(other SgIcmpRules) bool {
+	eq := rules.SGs.IsEq(other.SGs)
+	if eq {
+		eq = rules.Rules.Eq(&other.Rules, func(vL, vR *model.SgIcmpRule) bool {
+			return vL.IsEq(*vR)
+		})
+	}
+	return eq
+}
+
+// IsEq -
+func (rules *SgSgIcmpRules) IsEq(other SgSgIcmpRules) bool {
+	eq := rules.SGs.IsEq(other.SGs)
+	if eq {
+		eq = rules.Rules.Eq(&other.Rules, func(vL, vR *model.SgSgIcmpRule) bool {
+			return vL.IsEq(*vR)
+		})
+	}
+	return eq
+}
+
 // Load get sg-sg-icmp rules from local SG(s)
 func (rules *SgSgIcmpRules) Load(ctx context.Context, client SGClient, locals SGs) (err error) {
 	const api = "SgSgIcmpRules/Load"

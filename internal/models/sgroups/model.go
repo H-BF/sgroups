@@ -28,6 +28,9 @@ type (
 	// NetworkTransport net transport
 	NetworkTransport uint8
 
+	// Traffic packet traffic any of [INGRESS, EGRESS]
+	Traffic uint8
+
 	// ChainDefaultAction default action for SG {DROP|ACCEPT}
 	ChainDefaultAction uint8
 
@@ -72,6 +75,14 @@ type (
 		FqdnTo    FQDN
 	}
 
+	// CidrSgRuleIdenity -
+	CidrSgRuleIdenity struct {
+		Transport NetworkTransport
+		Traffic   Traffic
+		SG        string
+		CIDR      net.IPNet
+	}
+
 	// SGRulePorts source and destination port ranges
 	SGRulePorts struct {
 		S PortRanges
@@ -84,6 +95,9 @@ type (
 	// FQDNRule  security rule for From SG to FQDN
 	FQDNRule = ruleT[FQDNRuleIdentity]
 
+	// CidrSgRule proto:CIDR:SG:[INGRESS|EGRESS] rule
+	CidrSgRule = ruleT[CidrSgRuleIdenity]
+
 	// SyncStatus succeeded sync-op status
 	SyncStatus struct {
 		UpdatedAt time.Time
@@ -93,6 +107,7 @@ type (
 		ID    T
 		Ports []SGRulePorts
 		Logs  bool
+		Trace bool
 	}
 
 	ruleID[T any] interface {
@@ -134,8 +149,9 @@ type (
 )
 
 var (
-	_ ruleID[SGRuleIdentity]   = (*SGRuleIdentity)(nil)
-	_ ruleID[FQDNRuleIdentity] = (*FQDNRuleIdentity)(nil)
+	_ ruleID[SGRuleIdentity]    = (*SGRuleIdentity)(nil)
+	_ ruleID[FQDNRuleIdentity]  = (*FQDNRuleIdentity)(nil)
+	_ ruleID[CidrSgRuleIdenity] = (*CidrSgRuleIdenity)(nil)
 )
 
 // PortRangeFactory ...
@@ -157,6 +173,14 @@ const (
 
 	// UDP ...
 	UDP
+)
+
+const (
+	// INGRESS as is
+	INGRESS Traffic = iota + 1
+
+	// EGRESS as is
+	EGRESS
 )
 
 const (
@@ -183,6 +207,17 @@ func (nw Network) String() string {
 // String impl Stringer
 func (nt NetworkTransport) String() string {
 	return [...]string{"tcp", "udp"}[nt]
+}
+
+// String -
+func (tfc Traffic) String() string {
+	switch tfc {
+	case INGRESS:
+		return "ingress"
+	case EGRESS:
+		return "egress"
+	}
+	return fmt.Sprintf("Undef(%v)", int(tfc))
 }
 
 // String impl Stringer
@@ -220,6 +255,20 @@ func (nt *NetworkTransport) FromString(s string) error {
 	return nil
 }
 
+// FromString init from string
+func (tfc *Traffic) FromString(s string) error {
+	const api = "Traffic/FromString"
+	switch strings.ToLower(s) {
+	case "ingress":
+		*tfc = INGRESS
+	case "egress":
+		*tfc = EGRESS
+	default:
+		return errors.WithMessage(fmt.Errorf("unknown value '%s'", s), api)
+	}
+	return nil
+}
+
 // IsEq -
 func (nw Network) IsEq(other Network) bool {
 	return nw.Name == other.Name &&
@@ -231,7 +280,8 @@ func (nw Network) IsEq(other Network) bool {
 func (sg SecurityGroup) IsEq(other SecurityGroup) bool {
 	eq := sg.DefaultAction == other.DefaultAction &&
 		sg.Logs == other.Logs &&
-		sg.Trace == other.Trace
+		sg.Trace == other.Trace &&
+		sg.Name == other.Name
 	if eq {
 		var a, b dict.HSet[string]
 		a.PutMany(sg.Networks...)
@@ -290,7 +340,8 @@ func (sgRuleKey FQDNRuleIdentity) String() string {
 func (rule ruleT[T]) IsEq(other ruleT[T]) bool {
 	return any(rule.ID).(ruleID[T]).IsEq(other.ID) &&
 		AreRulePortsEq(rule.Ports, other.Ports) &&
-		rule.Logs == other.Logs
+		rule.Logs == other.Logs &&
+		rule.Trace == other.Trace
 }
 
 // String impl Stringer
@@ -330,7 +381,7 @@ func (o SgIcmpRule) IsEq(other SgIcmpRule) bool {
 		o.Trace == other.Trace &&
 		o.Sg == other.Sg &&
 		o.Icmp.IPv == other.Icmp.IPv &&
-		o.Icmp.Types.Eq(&o.Icmp.Types)
+		o.Icmp.Types.Eq(&other.Icmp.Types)
 }
 
 // ID -
@@ -347,7 +398,7 @@ func (o SgSgIcmpRule) IsEq(other SgSgIcmpRule) bool {
 		o.Trace == other.Trace &&
 		o.SgFrom == other.SgFrom &&
 		o.Icmp.IPv == other.Icmp.IPv &&
-		o.Icmp.Types.Eq(&o.Icmp.Types)
+		o.Icmp.Types.Eq(&other.Icmp.Types)
 }
 
 // ID -
@@ -367,4 +418,32 @@ func (o SgSgIcmpRuleID) IdentityHash() string {
 // String -
 func (o SgSgIcmpRuleID) String() string {
 	return fmt.Sprintf("sg(%s)sg(%s)icmp%v", o.SgFrom, o.SgTo, o.IPv)
+}
+
+// String -
+func (o CidrSgRuleIdenity) String() string {
+	return fmt.Sprintf("%s:cidr(%s)sg(%s)%s",
+		o.Transport, &o.CIDR, o.SG, o.Traffic)
+}
+
+// IdentityHash -
+func (o CidrSgRuleIdenity) IdentityHash() string {
+	return o.String()
+}
+
+// Cmp -
+func (o CidrSgRuleIdenity) Cmp(other CidrSgRuleIdenity) int {
+	l, r := o.String(), other.String()
+	if l == r {
+		return 0
+	}
+	if l < r {
+		return -1
+	}
+	return 1
+}
+
+// IsEq -
+func (o CidrSgRuleIdenity) IsEq(other CidrSgRuleIdenity) bool {
+	return o.String() == other.String()
 }

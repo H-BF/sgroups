@@ -183,7 +183,7 @@ func (rd *pgDbReader) ListSGRules(ctx context.Context, consume func(model.SGRule
 		return pgxIterateRowsAndClose(rows, scanner, func(rule pg.SGRule) error {
 			m, e1 := rule.ToModel()
 			if e1 != nil {
-				return e
+				return e1
 			}
 			return consume(m)
 		})
@@ -227,7 +227,7 @@ func (rd *pgDbReader) ListFqdnRules(ctx context.Context, consume func(model.FQDN
 		return pgxIterateRowsAndClose(rows, scanner, func(rule pg.SG2FQDNRule) error {
 			m, e1 := rule.ToModel()
 			if e1 != nil {
-				return e
+				return e1
 			}
 			return consume(m)
 		})
@@ -270,7 +270,7 @@ func (rd *pgDbReader) ListSgIcmpRules(ctx context.Context, consume func(model.Sg
 		return pgxIterateRowsAndClose(rows, scanner, func(rule pg.SgIcmpRule) error {
 			m, e1 := rule.ToModel()
 			if e1 != nil {
-				return e
+				return e1
 			}
 			return consume(m)
 		})
@@ -332,7 +332,50 @@ func (rd *pgDbReader) ListSgSgIcmpRules(ctx context.Context, consume func(model.
 		return pgxIterateRowsAndClose(rows, scanner, func(rule pg.SgSgIcmpRule) error {
 			m, e1 := rule.ToModel()
 			if e1 != nil {
-				return e
+				return e1
+			}
+			return consume(m)
+		})
+	})
+}
+
+func (rd *pgDbReader) argsForListCidrSgRules(scope Scope) ([]any, error) {
+	var sgs []string
+	switch sc := scope.(type) {
+	case scopedSG:
+		for sg := range sc {
+			sgs = append(sgs, sg)
+		}
+	case noScope:
+	default:
+		return nil, errors.WithMessagef(ErrUnexpectedScope, "%#v", scope)
+	}
+	args := []any{pgx.QueryExecModeDescribeExec, nil}
+	if sgs != nil {
+		args[1] = sgs
+	}
+	return args, nil
+}
+
+// ListCidrSgRules impl Reader
+func (rd *pgDbReader) ListCidrSgRules(ctx context.Context, consume func(model.CidrSgRule) error, scope Scope) error { //nolint:dupl
+	const (
+		qry = "select proto, cidr, sg, traffic, ports, logs, trace from sgroups.list_cidr_sg_rule($1)"
+	)
+	args, err := rd.argsForListCidrSgRules(scope)
+	if err != nil {
+		return err
+	}
+	return rd.doIt(ctx, func(c *pgx.Conn) error {
+		rows, e := c.Query(ctx, qry, args...)
+		if e != nil {
+			return e
+		}
+		scanner := pgx.RowToStructByName[pg.CidrSgRule]
+		return pgxIterateRowsAndClose(rows, scanner, func(rule pg.CidrSgRule) error {
+			m, e1 := rule.ToModel()
+			if e1 != nil {
+				return e1
 			}
 			return consume(m)
 		})

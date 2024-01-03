@@ -123,7 +123,8 @@ cases:
         "FQDN": "front.example.org",
         "transport": "TCP"
       }
-    not-expected-backend:
+  not-expected-backend:
+    sg-fqdn-rules:
     - |
       {
         "logs": true,

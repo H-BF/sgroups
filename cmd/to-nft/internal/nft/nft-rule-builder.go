@@ -2,6 +2,7 @@ package nft
 
 import (
 	"fmt"
+	"net"
 
 	di "github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
@@ -362,4 +363,35 @@ func (rb ruleBuilder) metaNFTRACE(on bool) ruleBuilder {
 		)
 	}
 	return rb
+}
+
+func (rb ruleBuilder) srcOrDstSingleIpNet(n net.IPNet, isSource bool) ruleBuilder {
+	var isIP4 bool
+	switch len(n.IP) {
+	case net.IPv4len:
+		isIP4 = true
+	case net.IPv6len:
+	default:
+		panic(
+			errors.Errorf("wrong IPNet '%s'", n),
+		)
+	}
+	set := NfSet{
+		Elements: setsUtils{}.nets2SetElements(sli(n),
+			tern(isIP4, iplib.IP4Version, iplib.IP6Version)),
+		Set: &nftLib.Set{
+			ID:        nextSetID(),
+			Name:      "__set%d",
+			Constant:  true,
+			KeyType:   tern(isIP4, nftLib.TypeIPAddr, nftLib.TypeIP6Addr),
+			Interval:  true,
+			Anonymous: true,
+		},
+	}
+	_ = rb.sets.Insert(set.ID, set)
+
+	return tern(isSource,
+		tern(isIP4, rb.saddr4, rb.saddr6),
+		tern(isIP4, rb.daddr4, rb.daddr6),
+	)().inSet(set.Set)
 }

@@ -1,0 +1,116 @@
+initial-backend:
+  networks: 
+  - |
+    {
+      "name": "net1",
+      "network": {
+        "CIDR": "10.10.10.0/24"
+      }
+    }
+  - |
+    {
+      "name": "net2",
+      "network": {
+        "CIDR": "10.10.20.0/24"
+      }
+    }
+  sec-groups:
+  - |
+    {
+      "defaultAction": "ACCEPT",
+      "logs": false,
+      "name": "group1",
+      "networks": ["net1"],
+      "trace": false
+    }
+  - |
+    {
+      "defaultAction": "DROP",
+      "logs": true,
+      "name": "group2",
+      "networks": ["net2"],
+      "trace": true
+    }
+cases:
+- name: "create new any rule set"
+  tf-config: |
+    resource "sgroups_fqdn_rules" "sg-fqdn-rules-set-1" {
+      items = {
+        "tcp:sg(group1)fqdn(front.example.org)" = {
+          proto = "tcp"
+          sg_from = "group1"
+          fqdn = "front.example.org"
+          ports = [
+            {
+              d = "80,443"
+              s = "1000-2000"
+            }
+          ]
+          logs = true
+        }
+      }
+    }
+  expected-backend:
+    sg-fqdn-rules:
+    - |
+      {
+        "logs": true,
+        "ports": [
+          {
+            "d": "80,443",
+            "s": "1000-2000"
+          }
+        ],
+        "sgFrom": "group1",
+        "FQDN": "front.example.org",
+        "transport": "TCP"
+      }
+- name: "add another rule with empty list for ports"
+  tf-config: |
+    resource "sgroups_fqdn_rules" "sg-fqdn-rules-set-1" {
+      items = {
+        "tcp:sg(group1)fqdn(front.example.org)" = {
+          proto = "tcp"
+          sg_from = "group1"
+          fqdn = "front.example.org"
+          ports = [
+            {
+              d = "22,80,443"
+              s = "3000-4000"
+            }
+          ]
+          logs = false
+        }
+
+        "udp:sg(group2)fqdn(store.example.org)" = {
+          proto = "udp"
+          sg_from = "group2"
+          fqdn = "store.example.org"
+          ports = []
+          logs = true
+        }
+      }
+    }
+  expected-backend:
+    sg-fqdn-rules:
+    - |
+      {
+        "logs": false,
+        "ports": [
+          {
+            "d": "22,80,443",
+            "s": "3000-4000"
+          }
+        ],
+        "sgFrom": "group1",
+        "FQDN": "front.example.org",
+        "transport": "TCP"
+      }
+    - |
+      {
+        "logs": true,
+        "ports": [],
+        "sgFrom": "group2",
+        "FQDN": "store.example.org",
+        "transport": "UDP"
+      }

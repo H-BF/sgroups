@@ -15,6 +15,9 @@ base-rules:
   networks: ["10.10.1.0/24", "10.10.2.0/24",....]  # optional or value will borrow data from "extapi/svc/sgroups/address"
 logger:
   level: INFO
+netlink:
+  watcher: #netlink watcher
+    linger: 10s
 dns:
   nameservers: ["8.8.8.8", "1.1.1.1", "...", ] #default ["8.8.8.8"]
   proto: tcp|udp #default udp
@@ -34,6 +37,14 @@ extapi:
 	  sync-status:
         interval: 20s #mandatory
         push: true
+
+telemetry:
+  useragent: "string"
+  endpoint: 127.0.0.1:5000
+  metrics:
+    enable: true
+  healthcheck:
+    enable: true
 */
 
 const (
@@ -50,6 +61,9 @@ const (
 	AppGracefulShutdown config.ValueT[time.Duration] = "graceful-schutdown"
 	// NetNS network namespace
 	NetNS config.ValueT[string] = "netns"
+
+	// NetlinkWatcherLinger netlingk watched linger duration, min(1s)
+	NetlinkWatcherLinger config.ValueT[time.Duration] = "netlink/watcher/linger"
 
 	// BaseRulesOutNets represents always list open networks for outgoing requests
 	BaseRulesOutNets config.ValueT[[]config.NetCIDR] = "base-rules/networks"
@@ -82,4 +96,13 @@ const (
 	SGroupsSyncStatusInterval config.ValueT[time.Duration] = "extapi/svc/sgroups/sync-status/interval"
 	//SGroupsSyncStatusPush use push model of 'sync-status'
 	SGroupsSyncStatusPush config.ValueT[bool] = "extapi/svc/sgroups/sync-status/push"
+
+	// TelemetryEndpoint server endpoint
+	TelemetryEndpoint config.ValueT[string] = "telemetry/endpoint"
+	// MetricsEnable enable api metrics
+	MetricsEnable config.ValueT[bool] = "telemetry/metrics/enable"
+	// HealthcheckEnable enables|disables health check handler
+	HealthcheckEnable config.ValueT[bool] = "telemetry/healthcheck/enable"
+	// UserAgent
+	UserAgent config.ValueT[string] = "telemetry/useragent"
 )
