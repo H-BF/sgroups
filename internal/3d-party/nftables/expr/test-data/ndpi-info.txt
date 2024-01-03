@@ -1,0 +1,22 @@
+#id     mark ~mask     name   # count #version 4.3.0-8-6ae5394
+00         0/000001ff unknown          # 0 debug=0 
+01         1/000001ff ftp_control      # 0 debug=0 
+02         2/000001ff pop3             # 0 debug=0 
+03         3/000001ff smtp             # 0 debug=0 
+04         4/000001ff imap             # 0 debug=0 
+05         5/000001ff dns              # 0 debug=0 
+06         6/000001ff ipp              # 0 debug=0 
+07         7/000001ff http             # 0 debug=0 
+08         8/000001ff mdns             # 0 debug=0 
+09         9/000001ff ntp              # 0 debug=0 
+0a         a/000001ff netbios          # 0 debug=0
+0b         disabled signal             # 0
+0c         disabled memcached          # 0
+0d         disabled smbv23             # 0
+0e         disabled mining             # 0
+0f         disabled nestlogsink        # 0
+10         disabled modbus             # 0
+11         disabled whatsappcall       # 0
+12         disabled datasaver          # 0
+13         disabled xbox               # 0
+14         disabled qq                 # 0
