@@ -76,6 +76,7 @@ type (
 		Proto  Proto            `db:"proto"`
 		Ports  SgRulePortsArray `db:"ports"`
 		Logs   bool             `db:"logs"`
+		//L7Protocols []string         `db:"protocols"`
 	}
 
 	// SyncStatus -

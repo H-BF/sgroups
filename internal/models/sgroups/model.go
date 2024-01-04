@@ -92,8 +92,11 @@ type (
 	// SGRule security rule for From-To security groups
 	SGRule = ruleT[SGRuleIdentity]
 
-	// FQDNRule  security rule for From SG to FQDN
-	FQDNRule = ruleT[FQDNRuleIdentity]
+	// FQDNRule rule for from SG to FQDN
+	FQDNRule struct {
+		ruleT[FQDNRuleIdentity]
+		NdpiProtocols dict.RBSet[dict.StringCiKey]
+	}
 
 	// CidrSgRule proto:CIDR:SG:[INGRESS|EGRESS] rule
 	CidrSgRule = ruleT[CidrSgRuleIdenity]
@@ -342,6 +345,12 @@ func (rule ruleT[T]) IsEq(other ruleT[T]) bool {
 		AreRulePortsEq(rule.Ports, other.Ports) &&
 		rule.Logs == other.Logs &&
 		rule.Trace == other.Trace
+}
+
+// IsEq -
+func (rule FQDNRule) IsEq(other FQDNRule) bool {
+	return rule.ruleT.IsEq(other.ruleT) &&
+		rule.NdpiProtocols.Eq(&other.NdpiProtocols)
 }
 
 // String impl Stringer

@@ -1,6 +1,7 @@
 package sgroups
 
 import (
+	"github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 
@@ -24,6 +25,9 @@ func (ri sgFqdnRuleIdentity) from(src *sg.FqdnRule) error {
 }
 
 func (r sgFqdnRule) from(src *sg.FqdnRule) error {
+	for _, p := range src.GetProtocols() {
+		_ = r.NdpiProtocols.Insert(dict.StringCiKey(p))
+	}
 	err := sgFqdnRuleIdentity{FQDNRuleIdentity: &r.ID}.
 		from(src)
 	if err == nil {
