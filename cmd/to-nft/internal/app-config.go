@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"strings"
 	"time"
 
 	"github.com/H-BF/sgroups/internal/config"
@@ -116,7 +117,7 @@ type FqdnRulesStrategy string
 
 // Eq -
 func (o FqdnRulesStrategy) Eq(other FqdnRulesStrategy) bool {
-	return o == other
+	return strings.EqualFold(string(o), string(other))
 }
 
 // Variants -

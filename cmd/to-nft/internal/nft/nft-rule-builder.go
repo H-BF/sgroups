@@ -395,3 +395,12 @@ func (rb ruleBuilder) srcOrDstSingleIpNet(n net.IPNet, isSource bool) ruleBuilde
 		tern(isIP4, rb.daddr4, rb.daddr6),
 	)().inSet(set.Set)
 }
+
+func (rb ruleBuilder) ndpi(dom model.FQDN, protocols ...string) ruleBuilder {
+	n, e := NewNdpi(NdpiWithHost(dom.String()), NdpiWithProtocols(protocols...))
+	if e != nil {
+		panic(e)
+	}
+	rb.exprs = append(rb.exprs, n)
+	return rb
+}

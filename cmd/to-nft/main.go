@@ -36,6 +36,7 @@ func main() {
 	if false {
 		//TODO: REMOVE THIS
 		os.Setenv("NFT_NETNS", "ns1")
+		//os.Setenv("NFT_FQDN-RULES_STRATEGY", "sobaka")
 	}
 
 	err := config.InitGlobalConfig(
@@ -71,6 +72,7 @@ func main() {
 	if err != nil {
 		logger.Fatal(ctx, err)
 	}
+
 	if err = SetupLogger(); err != nil {
 		logger.Fatal(ctx, errors.WithMessage(err, "setup logger"))
 	}
@@ -95,9 +97,15 @@ func main() {
 		logger.Fatal(ctx, errors.WithMessage(err, "setup telemetry server"))
 	}
 
+	fqdnStrategy := FqdnStrategy.MustValue(ctx)
+	useDNS := fqdnStrategy.Eq(FqdnRulesStartegyDNS) || fqdnStrategy.Eq(FqdnRulesStartegyCombine)
+
 	var dnsResolver DomainAddressQuerier
-	if dnsResolver, err = NewDomainAddressQuerier(ctx); err != nil {
-		logger.Fatal(ctx, errors.WithMessage(err, "setup DNS resolver"))
+	if useDNS {
+		dnsResolver, err = NewDomainAddressQuerier(ctx)
+		if err != nil {
+			logger.Fatal(ctx, errors.WithMessage(err, "setup DNS resolver"))
+		}
 	}
 
 	if exitOnSuccess := ExitOnSuccess.MustValue(ctx); exitOnSuccess {
@@ -115,20 +123,21 @@ func main() {
 			NetlinkError{}, jobs.DomainAddresses{}),
 	)
 
-	go func() {
-		r := jobs.FqdnRefresher{
-			Resolver:  dnsResolver,
-			AgentSubj: AgentSubject(),
-		}
-		r.Run(ctx)
-	}()
+	if useDNS {
+		go func() {
+			r := jobs.FqdnRefresher{
+				Resolver:  dnsResolver,
+				AgentSubj: AgentSubject(),
+			}
+			r.Run(ctx)
+		}()
+	}
 
 	gracefulDuration := AppGracefulShutdown.MustValue(ctx)
 	errc := make(chan error, 1)
 	go func() {
 		defer close(errc)
 		errc <- runNftJob(ctx, dnsResolver)
-		//errc <- runNftJob(ctx, nil)
 	}()
 	var jobErr error
 	select {
