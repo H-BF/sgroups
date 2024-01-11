@@ -203,6 +203,29 @@ loop:
 	return err
 }
 
+func (bt *batch) cleanOnFail(ctx context.Context) error {
+	if bt.table == nil {
+		return nil
+	}
+	tx, err := bt.txProvider()
+	if err != nil {
+		return err
+	}
+	defer tx.Close()
+	var tabs []*nftLib.Table
+	if tabs, err = tx.ListTables(); err != nil {
+		return err
+	}
+	for _, t := range tabs {
+		if t.Name == bt.table.Name && t.Family == bt.table.Family {
+			tx.DelTable(t)
+			err = tx.Flush()
+			break
+		}
+	}
+	return err
+}
+
 func (bt *batch) initTable() {
 	bt.addJob("init-table", func(tx *Tx) error {
 		tlist, e := tx.ListTablesOfFamily(nftLib.TableFamilyINet)
@@ -521,8 +544,13 @@ func (bt *batch) populateOutSgFqdnRules(sg *cases.SG) {
 					if daddr == nil && strategy&useDNS != 0 {
 						return nil
 					}
-					bt.log.Debugf("add fqdn rule '%s' into '%s'/'%s' for addr-set '%s'",
-						rule.ID.FqdnTo, bt.table.Name, targetChName, daddrSetName)
+					if daddrSetName != "" {
+						bt.log.Debugf("add fqdn rule '%s' with '%s' strategy into '%s'/'%s' for addr-set '%s'",
+							rule.ID.FqdnTo, string(bt.fqdnStrategy), bt.table.Name, targetChName, daddrSetName)
+					} else {
+						bt.log.Debugf("add fqdn rule '%s' with '%s' strategy into '%s'/'%s'",
+							rule.ID.FqdnTo, string(bt.fqdnStrategy), bt.table.Name, targetChName)
+					}
 					r := beginRule()
 					if strategy&useDNS != 0 {
 						r = r.daddr(ipV).inSet(daddr)

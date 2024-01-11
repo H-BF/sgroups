@@ -41,6 +41,8 @@ func (exc *BatchPerformer) Exec(ctx context.Context, data cases.LocalData, opts 
 	e := b.execute(ctx)
 	if e == nil {
 		exc.TableName = b.table.Name
+	} else {
+		_ = b.cleanOnFail(ctx)
 	}
 	return e
 }
