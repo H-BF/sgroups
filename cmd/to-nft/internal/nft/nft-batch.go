@@ -544,7 +544,7 @@ func (bt *batch) populateOutSgFqdnRules(sg *cases.SG) {
 					if daddr == nil && strategy&useDNS != 0 {
 						return nil
 					}
-					if daddrSetName != "" {
+					if daddr != nil {
 						bt.log.Debugf("add fqdn rule '%s' with '%s' strategy into '%s'/'%s' for addr-set '%s'",
 							rule.ID.FqdnTo, string(bt.fqdnStrategy), bt.table.Name, targetChName, daddrSetName)
 					} else {

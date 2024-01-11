@@ -14,12 +14,11 @@ import (
 	"github.com/H-BF/sgroups/pkg/nl"
 
 	"github.com/H-BF/corlib/logger"
-	"github.com/H-BF/corlib/pkg/parallel"
-	"github.com/H-BF/corlib/server"
-
 	pkgNet "github.com/H-BF/corlib/pkg/net"
+	"github.com/H-BF/corlib/pkg/parallel"
 	gs "github.com/H-BF/corlib/pkg/patterns/graceful-shutdown"
 	"github.com/H-BF/corlib/pkg/patterns/observer"
+	"github.com/H-BF/corlib/server"
 	"github.com/pkg/errors"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
@@ -36,7 +35,7 @@ func main() {
 	if false {
 		//TODO: REMOVE THIS
 		os.Setenv("NFT_NETNS", "ns1")
-		//os.Setenv("NFT_FQDN-RULES_STRATEGY", "sobaka")
+		//os.Setenv("NFT_FQDN-RULES_STRATEGY", "ndpi")
 	}
 
 	err := config.InitGlobalConfig(
