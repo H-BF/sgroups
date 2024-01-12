@@ -253,7 +253,7 @@ func (o SG2FQDNRule) ToModel() (sgm.FQDNRule, error) {
 
 // FromModel -
 func (o *SG2FQDNRule) FromModel(m sgm.FQDNRule) error {
-	o.NdpiProtocols = nil
+	o.NdpiProtocols = []string{} //lint:nolint
 	m.NdpiProtocols.Iterate(func(k dict.StringCiKey) bool {
 		o.NdpiProtocols = append(o.NdpiProtocols, string(k))
 		return true
