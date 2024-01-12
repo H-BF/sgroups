@@ -6,6 +6,7 @@ import (
 	"unsafe"
 
 	"github.com/H-BF/corlib/pkg/ranges"
+	"github.com/H-BF/sgroups/internal/dict"
 	oz "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/pkg/errors"
 )
@@ -215,6 +216,26 @@ func (o CidrSgRuleIdenity) Validate() error {
 			return nil
 		})),
 	)
+}
+
+// Validate validate of FQDNRule
+func (o FQDNRule) Validate() error {
+	return oz.ValidateStruct(&o,
+		oz.Field(&o.ruleT),
+		oz.Field(&o.NdpiProtocols, oz.By(func(_ any) error {
+			const lim = 255
+			if n := o.NdpiProtocols.Len(); n > lim {
+				return errors.Errorf("protocols count is %v but it must be <= %v", n, lim)
+			}
+			var e error
+			o.NdpiProtocols.Iterate(func(k dict.StringCiKey) bool {
+				if len(k) == 0 || !reCName.MatchString(string(k)) {
+					e = errors.Errorf("bad protocol name '%v'", k)
+				}
+				return e == nil
+			})
+			return nil
+		})))
 }
 
 var (

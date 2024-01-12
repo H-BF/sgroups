@@ -89,6 +89,40 @@ begin
     return ret is not null;
 end;
 $$ language plpgsql strict;
+
+
+drop function if exists sgroups.check_ndpi_protocols(citext[]);
+create or replace function sgroups.check_ndpi_protocols(pp citext[])
+    returns boolean
+as $$
+declare
+    cnt int;
+    bad citext;
+begin
+    select coalesce(array_length(pp, 1), 0) into cnt;
+    if cnt > 255 then
+        raise exception 'protocol count is (%) but it must be <= 255', cnt;
+    end if;
+    with x(p) as (
+      select unnest(pp)
+    ) select p
+        from x
+       where not(p ~ '^\S')
+          or not(p ~ '\S$')
+          or coalesce(length(p), 0) = 0
+        into bad;
+    if bad is not null then
+        raise exception 'bad protocol name '%'', bad;
+    end if;
+    return true;
+end;
+$$ language plpgsql immutable;
+
+alter table sgroups.tbl_fqdn_rule
+        add constraint "check-ndpi-protocols"
+            check (
+                sgroups.check_ndpi_protocols(ndpi_protocols)
+            );
 -- +goose StatementEnd
 
 -- +goose Down
