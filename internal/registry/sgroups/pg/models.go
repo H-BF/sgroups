@@ -71,12 +71,12 @@ type (
 
 	// SG2FQDNRule -
 	SG2FQDNRule struct {
-		SgFrom string           `db:"sg_from"`
-		FqndTo FQDN             `db:"fqdn_to"`
-		Proto  Proto            `db:"proto"`
-		Ports  SgRulePortsArray `db:"ports"`
-		Logs   bool             `db:"logs"`
-		//L7Protocols []string         `db:"protocols"`
+		SgFrom        string           `db:"sg_from"`
+		FqndTo        FQDN             `db:"fqdn_to"`
+		Proto         Proto            `db:"proto"`
+		Ports         SgRulePortsArray `db:"ports"`
+		Logs          bool             `db:"logs"`
+		NdpiProtocols []string         `db:"ndpi_protocols"`
 	}
 
 	// SyncStatus -
