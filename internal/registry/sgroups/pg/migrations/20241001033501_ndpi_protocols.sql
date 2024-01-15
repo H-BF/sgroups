@@ -112,7 +112,7 @@ begin
           or coalesce(length(p), 0) = 0
         into bad;
     if bad is not null then
-        raise exception 'bad protocol name '%'', bad;
+        raise exception 'bad protocol name `%`', bad;
     end if;
     return true;
 end;
