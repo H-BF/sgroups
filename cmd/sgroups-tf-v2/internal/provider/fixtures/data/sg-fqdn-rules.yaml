@@ -32,7 +32,7 @@ initial-backend:
       "trace": true
     }
 cases:
-- name: "add-new-sg-fqdn-rules"
+- name: "add new sg fqdn rules"
   tf-config: |
     resource "sgroups_fqdn_rules" "sg-fqdn-rules-set-1" {
       items = {
@@ -40,6 +40,10 @@ cases:
           proto = "tcp"
           sg_from = "group1"
           fqdn = "front.example.org"
+          protocols = [
+            "http",
+            "ssh"
+          ]
           ports = [
             {
               d = "80,443"
@@ -73,6 +77,10 @@ cases:
             "s": "1000-2000"
           }
         ],
+        "protocols": [
+          "http",
+          "ssh"
+        ],
         "sgFrom": "group1",
         "FQDN": "front.example.org",
         "transport": "TCP"
@@ -90,7 +98,61 @@ cases:
         "FQDN": "store.example.org",
         "transport": "UDP"
       }
-- name: "change-first-and-delete-second"
+- name: "change first and delete second"
+  tf-config: |
+    resource "sgroups_fqdn_rules" "sg-fqdn-rules-set-1" {
+      items = {
+        "tcp:sg(group1)fqdn(front.example.org)" = {
+          proto = "tcp"
+          sg_from = "group1"
+          fqdn = "front.example.org"
+          protocols = [
+            "dns"
+          ]
+          ports = [
+            {
+              d = "22,80,443"
+              s = "3000-4000"
+            }
+          ]
+          logs = false
+        }
+      }
+    }
+  expected-backend:
+    sg-fqdn-rules:
+    - |
+      {
+        "logs": false,
+        "ports": [
+          {
+            "d": "22,80,443",
+            "s": "3000-4000"
+          }
+        ],
+        "protocols": [
+          "dns"
+        ],
+        "sgFrom": "group1",
+        "FQDN": "front.example.org",
+        "transport": "TCP"
+      }
+  not-expected-backend:
+    sg-fqdn-rules:
+    - |
+      {
+        "logs": true,
+        "ports": [
+          {
+            "d": "15000-16000",
+            "s": "15000-16000"
+          }
+        ],
+        "sgFrom": "group2",
+        "FQDN": "store.example.org",
+        "transport": "UDP"
+      }
+- name: "remove protocols"
   tf-config: |
     resource "sgroups_fqdn_rules" "sg-fqdn-rules-set-1" {
       items = {
@@ -122,19 +184,4 @@ cases:
         "sgFrom": "group1",
         "FQDN": "front.example.org",
         "transport": "TCP"
-      }
-  not-expected-backend:
-    sg-fqdn-rules:
-    - |
-      {
-        "logs": true,
-        "ports": [
-          {
-            "d": "15000-16000",
-            "s": "15000-16000"
-          }
-        ],
-        "sgFrom": "group2",
-        "FQDN": "store.example.org",
-        "transport": "UDP"
       }
