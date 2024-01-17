@@ -48,32 +48,28 @@ func (f *typeCastFunc[T]) load() error {
 		}
 		return nil
 	}
-	castInvoker, ok := typeCastInvokers[tyDest]
-	if !ok {
-		for t, v := range typeCastInvokers {
-			ok = t.ConvertibleTo(tyDest) &&
-				kindDest == t.Kind()
-			if ok {
-				castInvoker = v
-				break
-			}
-		}
-		if castInvoker == nil {
-			return errors.WithMessagef(ErrTypeCastNotSupported, "for-type('%s')", tyDest)
-		}
-	}
 	*f = func(in any) (T, error) {
-		var v interface{}
 		var ret T
-		var e error
-		if e1 := castInvoker.InvokeNoResult(in, &v, &e); e1 != nil || e != nil {
-			return ret, multierr.Combine(e1, e)
+		if castInvoker := typeCastInvokers[tyDest]; castInvoker != nil {
+			var v interface{}
+			var e error
+			if e1 := castInvoker.InvokeNoResult(in, &v, &e); e1 != nil || e != nil {
+				return ret, multierr.Combine(e1, e)
+			}
+			reflect.ValueOf(&ret).Elem().
+				Set(
+					reflect.ValueOf(v),
+				)
+		} else {
+			x := reflect.ValueOf(in)
+			if !x.Type().ConvertibleTo(tyDest) {
+				return ret, errors.WithMessagef(ErrTypeCastNotSupported, "for-type('%s')", tyDest)
+			}
+			reflect.ValueOf(&ret).Elem().
+				Set(
+					x.Convert(tyDest),
+				)
 		}
-		reflect.
-			ValueOf(&ret).Elem().
-			Set(
-				reflect.ValueOf(v).Convert(tyDest),
-			)
 		return ret, nil
 	}
 	return nil

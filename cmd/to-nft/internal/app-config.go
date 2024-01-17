@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"strings"
 	"time"
 
 	"github.com/H-BF/sgroups/internal/config"
@@ -13,6 +14,8 @@ netns: NetworkNS #is optional; def-val = ""
 graceful-shutdown: 10s
 base-rules:
   networks: ["10.10.1.0/24", "10.10.2.0/24",....]  # optional or value will borrow data from "extapi/svc/sgroups/address"
+fqdn-rules:
+  strategy: dns|ndpi|combine #default = dns
 logger:
   level: INFO
 netlink:
@@ -68,6 +71,9 @@ const (
 	// BaseRulesOutNets represents always list open networks for outgoing requests
 	BaseRulesOutNets config.ValueT[[]config.NetCIDR] = "base-rules/networks"
 
+	// FqdnStrategy use strategy to build SG-FQDN rules (DNS|NDPI|Combine); DNS is default
+	FqdnStrategy config.ValueT[FqdnRulesStrategy] = "fqdn-rules/strategy"
+
 	// DnsNameservers IP list of trusted nameservers; default = ["8.8.8.8"]
 	DnsNameservers config.ValueT[[]config.IP] = "dns/nameservers"
 	// DnsProto tcp or udp protp we shoud use; default = udp
@@ -105,4 +111,28 @@ const (
 	HealthcheckEnable config.ValueT[bool] = "telemetry/healthcheck/enable"
 	// UserAgent
 	UserAgent config.ValueT[string] = "telemetry/useragent"
+)
+
+type FqdnRulesStrategy string
+
+// Eq -
+func (o FqdnRulesStrategy) Eq(other FqdnRulesStrategy) bool {
+	return strings.EqualFold(string(o), string(other))
+}
+
+// Variants -
+func (FqdnRulesStrategy) Variants() []FqdnRulesStrategy {
+	r := [...]FqdnRulesStrategy{
+		FqdnRulesStartegyDNS, FqdnRulesStartegyNDPI, FqdnRulesStartegyCombine,
+	}
+	return r[:]
+}
+
+const (
+	// FqdnRulesStartegyDNS -
+	FqdnRulesStartegyDNS FqdnRulesStrategy = "dns"
+	// FqdnRulesStartegyNDPI -
+	FqdnRulesStartegyNDPI FqdnRulesStrategy = "ndpi"
+	// FqdnRulesStartegyCombine -
+	FqdnRulesStartegyCombine FqdnRulesStrategy = "combine"
 )

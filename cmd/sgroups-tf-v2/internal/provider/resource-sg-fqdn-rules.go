@@ -38,11 +38,12 @@ type (
 	fqdnRulesResource = CollectionResource[sgFqdnRule, tfSgFqdnRules2Backend]
 
 	sgFqdnRule struct {
-		Proto  types.String `tfsdk:"proto"`
-		SgFrom types.String `tfsdk:"sg_from"`
-		Fqdn   types.String `tfsdk:"fqdn"`
-		Ports  types.List   `tfsdk:"ports"`
-		Logs   types.Bool   `tfsdk:"logs"`
+		Proto     types.String `tfsdk:"proto"`
+		SgFrom    types.String `tfsdk:"sg_from"`
+		Fqdn      types.String `tfsdk:"fqdn"`
+		Ports     types.List   `tfsdk:"ports"`
+		Logs      types.Bool   `tfsdk:"logs"`
+		Protocols types.Set    `tfsdk:"protocols"`
 	}
 
 	sgFqdnRuleKey struct {
@@ -118,6 +119,11 @@ func (item sgFqdnRule) Attributes() map[string]schema.Attribute { //nolint:dupl
 			},
 			PlanModifiers: []planmodifier.List{ListAccessPortsModifier()},
 		},
+		"protocols": schema.SetAttribute{
+			Description: "protocols for nDPI",
+			Optional:    true,
+			ElementType: types.StringType,
+		},
 	}
 }
 
@@ -139,6 +145,7 @@ func (item sgFqdnRule) IsDiffer(ctx context.Context, other sgFqdnRule) bool {
 		model.FQDN(item.Fqdn.ValueString()).
 			IsEq(model.FQDN(other.Fqdn.ValueString())) &&
 		item.Logs.Equal(other.Logs) &&
+		item.Protocols.Equal(other.Protocols) &&
 		model.AreRulePortsEq(itemModelPorts, otherModelPorts))
 }
 
@@ -168,12 +175,18 @@ func readFqdnRules(ctx context.Context, state NamedResources[sgFqdnRule], client
 		}
 		portsList, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: AccessPorts{}.AttrTypes()}, accPorts)
 		diags.Append(d...)
+		protocolsList, d := types.SetValueFrom(ctx, types.StringType, fqdnRule.GetProtocols())
+		diags.Append(d...)
+		if diags.HasError() {
+			return newState, diags
+		}
 		it := sgFqdnRule{
-			Proto:  types.StringValue(strings.ToLower(fqdnRule.GetTransport().String())),
-			SgFrom: types.StringValue(fqdnRule.GetSgFrom()),
-			Fqdn:   types.StringValue(strings.ToLower(fqdnRule.GetFQDN())),
-			Logs:   types.BoolValue(fqdnRule.GetLogs()),
-			Ports:  portsList,
+			Proto:     types.StringValue(strings.ToLower(fqdnRule.GetTransport().String())),
+			SgFrom:    types.StringValue(fqdnRule.GetSgFrom()),
+			Fqdn:      types.StringValue(strings.ToLower(fqdnRule.GetFQDN())),
+			Logs:      types.BoolValue(fqdnRule.GetLogs()),
+			Ports:     portsList,
+			Protocols: protocolsList,
 		}
 		k := it.Key().String()
 		if _, ok := state.Items[k]; ok {

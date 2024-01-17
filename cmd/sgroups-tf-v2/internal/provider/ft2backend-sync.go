@@ -263,7 +263,7 @@ func (tfSgFqdnRules2Backend) sync(ctx context.Context, items NamedResources[sgFq
 			diags.AddError("ports conv", err.Error())
 			return diags
 		}
-		protoValue, ok := common.Networks_NetIP_Transport_value[strings.ToUpper(
+		transportValue, ok := common.Networks_NetIP_Transport_value[strings.ToUpper(
 			features.Proto.ValueString(),
 		)]
 		if !ok {
@@ -272,12 +272,18 @@ func (tfSgFqdnRules2Backend) sync(ctx context.Context, items NamedResources[sgFq
 				fmt.Sprintf("no proto conv for value(%s)", features.Proto.ValueString()))
 			return diags
 		}
+		var protocols []string
+		diags.Append(features.Protocols.ElementsAs(ctx, &protocols, false)...)
+		if diags.HasError() {
+			return diags
+		}
 		syncFqdnRules.Rules = append(syncFqdnRules.Rules, &protos.FqdnRule{
 			SgFrom:    features.SgFrom.ValueString(),
 			FQDN:      features.Fqdn.ValueString(),
-			Transport: common.Networks_NetIP_Transport(protoValue),
+			Transport: common.Networks_NetIP_Transport(transportValue),
 			Logs:      features.Logs.ValueBool(),
 			Ports:     portsToProto(accPorts),
+			Protocols: protocols,
 		})
 	}
 	req := protos.SyncReq{

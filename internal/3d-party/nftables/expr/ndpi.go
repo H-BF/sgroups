@@ -404,8 +404,8 @@ func ndpiLoadInternal() (ret ndpiModuleState) {
 		}
 		return f, err
 	}
-	f, err := openModuleInfo()
-	if err != nil {
+	var f io.ReadCloser
+	if f, ret.FailReason = openModuleInfo(); ret.FailReason != nil {
 		return ret
 	}
 	defer f.Close()
@@ -433,7 +433,7 @@ func ndpiLoadInternal() (ret ndpiModuleState) {
 	//Since we're reading from a kernel module we have to reopen the file
 	//if a new read buffer will be created
 	var f1 io.ReadCloser
-	if f1, err = openModuleInfo(); err != nil {
+	if f1, ret.FailReason = openModuleInfo(); ret.FailReason != nil {
 		return ret
 	}
 	defer f1.Close()

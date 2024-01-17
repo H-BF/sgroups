@@ -68,11 +68,12 @@ type (
 		baseRules  BaseRules
 		data       cases.LocalData
 
-		table       *nftLib.Table
-		ruleDetails di.HDict[string, *ruleDetails]
-		addrsets    di.HDict[string, *nftLib.Set]
-		chains      di.HDict[string, *nftLib.Chain]
-		jobs        *list.List
+		fqdnStrategy internal.FqdnRulesStrategy
+		table        *nftLib.Table
+		ruleDetails  di.HDict[string, *ruleDetails]
+		addrsets     di.HDict[string, *nftLib.Set]
+		chains       di.HDict[string, *nftLib.Chain]
+		jobs         *list.List
 	}
 )
 
@@ -156,6 +157,7 @@ func (bt *batch) execute(ctx context.Context) error {
 		it  jobItem
 		tx  *Tx
 	)
+	bt.fqdnStrategy = internal.FqdnStrategy.MustValue(ctx)
 	defer func() {
 		if tx != nil {
 			_ = tx.Close()
@@ -197,6 +199,29 @@ loop:
 	}
 	if err != nil && len(it.name) > 0 {
 		err = errors.WithMessage(err, it.name)
+	}
+	return err
+}
+
+func (bt *batch) cleanOnFail(ctx context.Context) error {
+	if bt.table == nil {
+		return nil
+	}
+	tx, err := bt.txProvider()
+	if err != nil {
+		return err
+	}
+	defer tx.Close()
+	var tabs []*nftLib.Table
+	if tabs, err = tx.ListTables(); err != nil {
+		return err
+	}
+	for _, t := range tabs {
+		if t.Name == bt.table.Name && t.Family == bt.table.Family {
+			tx.DelTable(t)
+			err = tx.Flush()
+			break
+		}
 	}
 	return err
 }
@@ -382,6 +407,9 @@ func (bt *batch) addSGNetSets() {
 }
 
 func (bt *batch) addFQDNNetSets() {
+	if bt.fqdnStrategy.Eq(internal.FqdnRulesStartegyNDPI) {
+		return
+	}
 	f := func(IPv int, domain model.FQDN, a internal.DomainAddresses) {
 		bt.addJob("add-fqdn-net-sets", func(tx *Tx) error {
 			nameOfSet := nameUtils{}.nameOfFqdnNetSet(IPv, domain)
@@ -481,6 +509,19 @@ func (bt *batch) initCidrSgRulesDetails() {
 }
 
 func (bt *batch) populateOutSgFqdnRules(sg *cases.SG) {
+	const (
+		useDNS = 1 << iota
+		useNDPI
+	)
+	var strategy int
+	if bt.fqdnStrategy.Eq(internal.FqdnRulesStartegyNDPI) {
+		strategy = useNDPI
+	} else if bt.fqdnStrategy.Eq(internal.FqdnRulesStartegyDNS) {
+		strategy = useDNS
+	} else if bt.fqdnStrategy.Eq(internal.FqdnRulesStartegyCombine) {
+		strategy = useNDPI | useDNS
+	}
+
 	targetChName := nameUtils{}.nameOfInOutChain(dirOUT, sg.Name)
 	rules := bt.data.SG2FQDNRules.RulesForSG(sg.Name)
 	for _, ipV := range sli(model.IPv4, model.IPv6) {
@@ -496,17 +537,38 @@ func (bt *batch) populateOutSgFqdnRules(sg *cases.SG) {
 				ports := rd.accports[i]
 				bt.addJob("populate-fqdn-rule", func(tx *Tx) error {
 					chnApplyTo := bt.chains.At(targetChName)
-					daddr := bt.addrsets.At(daddrSetName)
-					if daddr == nil || chnApplyTo == nil {
+					if chnApplyTo == nil {
 						return nil
 					}
-					bt.log.Debugf("add fqdn rule '%s' into '%s'/'%s' for addr-set '%s'",
-						rule.ID.FqdnTo, bt.table.Name, targetChName, daddrSetName)
-					r := ports.D(
+					daddr := bt.addrsets.At(daddrSetName)
+					if daddr == nil && strategy&useDNS != 0 {
+						return nil
+					}
+					if daddr != nil {
+						bt.log.Debugf("add fqdn rule '%s' with '%s' strategy into '%s'/'%s' for addr-set '%s'",
+							rule.ID.FqdnTo, string(bt.fqdnStrategy), bt.table.Name, targetChName, daddrSetName)
+					} else {
+						bt.log.Debugf("add fqdn rule '%s' with '%s' strategy into '%s'/'%s'",
+							rule.ID.FqdnTo, string(bt.fqdnStrategy), bt.table.Name, targetChName)
+					}
+					r := beginRule()
+					if strategy&useDNS != 0 {
+						r = r.daddr(ipV).inSet(daddr)
+					}
+					r = ports.D(
 						ports.S(
-							beginRule().daddr(ipV).inSet(daddr).protoIP(rule.ID.Transport),
+							r.protoIP(rule.ID.Transport),
 						),
-					).counter()
+					)
+					if strategy&useNDPI != 0 {
+						var protocols []string
+						rule.NdpiProtocols.Iterate(func(k di.StringCiKey) bool {
+							protocols = append(protocols, string(k))
+							return true
+						})
+						r = r.ndpi(rule.ID.FqdnTo, protocols...)
+					}
+					r = r.counter()
 					if rd.logs {
 						r = r.dlogs(nfte.LogFlagsIPOpt)
 					}
@@ -514,6 +576,9 @@ func (bt *batch) populateOutSgFqdnRules(sg *cases.SG) {
 					return nil
 				})
 			}
+		}
+		if strategy&useDNS == 0 {
+			break
 		}
 	}
 }

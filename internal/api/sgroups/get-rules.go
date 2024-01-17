@@ -3,6 +3,7 @@ package sgroups
 import (
 	"context"
 
+	"github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 
@@ -65,6 +66,10 @@ func sgRule2proto(src model.SGRule) (*sg.Rule, error) {
 
 func sgFqdnRule2proto(src model.FQDNRule) (*sg.FqdnRule, error) {
 	var ret sg.FqdnRule
+	src.NdpiProtocols.Iterate(func(p dict.StringCiKey) bool {
+		ret.Protocols = append(ret.Protocols, string(p))
+		return true
+	})
 	if t, e := netTranport2proto(src.ID.Transport); e != nil {
 		return nil, e
 	} else {
