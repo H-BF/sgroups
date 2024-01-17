@@ -203,7 +203,7 @@ loop:
 	return err
 }
 
-func (bt *batch) cleanOnFail(ctx context.Context) error {
+func (bt *batch) cleanOnFail(_ context.Context) error {
 	if bt.table == nil {
 		return nil
 	}

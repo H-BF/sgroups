@@ -134,7 +134,7 @@ func (dict *RBDict[Tk, Tv]) Eq(other Dict[Tk, Tv], valuesEq func(vL, vR Tv) bool
 	dict.Iterate(func(k Tk, v Tv) bool {
 		v1, ok := other.Get(k)
 		eq := ok && valuesEq(v, v1)
-		n += tern(eq, 0, 1)
+		n += tern(eq, 1, 0)
 		return eq
 	})
 	return n == dict.Len()

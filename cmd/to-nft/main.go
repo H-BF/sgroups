@@ -24,7 +24,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func main() {
+func main() { //nolint:gocyclo
 	flag.Parse()
 	SetupContext()
 	SetupAgentSubject()
