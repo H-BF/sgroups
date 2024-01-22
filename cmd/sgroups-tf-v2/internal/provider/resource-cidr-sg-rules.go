@@ -37,13 +37,13 @@ type (
 	cidrRulesResource = CollectionResource[cidrRule, tfCidrSgRules2Backend]
 
 	cidrRule struct {
-		Proto   types.String `tfsdk:"proto"`
-		Cidr    types.String `tfsdk:"cidr"`
-		SgName  types.String `tfsdk:"sg_name"`
-		Traffic types.String `tfsdk:"traffic"`
-		Ports   types.List   `tfsdk:"ports"`
-		Logs    types.Bool   `tfsdk:"logs"`
-		Trace   types.Bool   `tfsdk:"trace"`
+		Transport types.String `tfsdk:"transport"`
+		Cidr      types.String `tfsdk:"cidr"`
+		SgName    types.String `tfsdk:"sg_name"`
+		Traffic   types.String `tfsdk:"traffic"`
+		Ports     types.List   `tfsdk:"ports"`
+		Logs      types.Bool   `tfsdk:"logs"`
+		Trace     types.Bool   `tfsdk:"trace"`
 	}
 
 	cidrRuleKey struct {
@@ -62,7 +62,7 @@ func (k cidrRuleKey) String() string {
 
 func (item cidrRule) Key() *cidrRuleKey {
 	return &cidrRuleKey{
-		proto:   item.Proto.ValueString(),
+		proto:   item.Transport.ValueString(),
 		cidr:    item.Cidr.ValueString(),
 		sgName:  item.SgName.ValueString(),
 		traffic: item.Traffic.ValueString(),
@@ -71,7 +71,7 @@ func (item cidrRule) Key() *cidrRuleKey {
 
 func (item cidrRule) Attributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
-		"proto": schema.StringAttribute{
+		"transport": schema.StringAttribute{
 			Description: "IP-L4 proto <tcp|udp>",
 			Required:    true,
 			Validators: []validator.String{
@@ -132,7 +132,7 @@ func (item cidrRule) IsDiffer(ctx context.Context, other cidrRule) bool {
 	itemModelPorts, _ = toModelPorts(itemAccPorts)
 	otherModelPorts, _ = toModelPorts(otherAccPorts)
 
-	return !(item.Proto.Equal(other.Proto) &&
+	return !(item.Transport.Equal(other.Transport) &&
 		item.Cidr.Equal(other.Cidr) &&
 		item.SgName.Equal(other.SgName) &&
 		item.Traffic.Equal(other.Traffic) &&
@@ -159,10 +159,10 @@ func readCidrRules(ctx context.Context, state NamedResources[cidrRule], client *
 	}
 	for _, rule := range resp.GetRules() {
 		it := cidrRule{
-			Proto:   types.StringValue(strings.ToLower(rule.Transport.String())),
-			Cidr:    types.StringValue(rule.GetCIDR()),
-			SgName:  types.StringValue(rule.GetSG()),
-			Traffic: types.StringValue(strings.ToLower(rule.GetTraffic().String())),
+			Transport: types.StringValue(strings.ToLower(rule.Transport.String())),
+			Cidr:      types.StringValue(rule.GetCIDR()),
+			SgName:    types.StringValue(rule.GetSG()),
+			Traffic:   types.StringValue(strings.ToLower(rule.GetTraffic().String())),
 		}
 		k := it.Key().String()
 		if _, ok := state.Items[k]; ok {

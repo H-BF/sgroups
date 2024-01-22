@@ -38,7 +38,7 @@ type (
 	fqdnRulesResource = CollectionResource[sgFqdnRule, tfSgFqdnRules2Backend]
 
 	sgFqdnRule struct {
-		Proto     types.String `tfsdk:"proto"`
+		Transport types.String `tfsdk:"transport"`
 		SgFrom    types.String `tfsdk:"sg_from"`
 		Fqdn      types.String `tfsdk:"fqdn"`
 		Ports     types.List   `tfsdk:"ports"`
@@ -79,7 +79,7 @@ func (k sgFqdnRuleKey) String() string {
 // Key -
 func (item sgFqdnRule) Key() *sgFqdnRuleKey {
 	return &sgFqdnRuleKey{
-		proto:  item.Proto.ValueString(),
+		proto:  item.Transport.ValueString(),
 		sgFrom: item.SgFrom.ValueString(),
 		fqdnTo: item.Fqdn.ValueString(),
 	}
@@ -87,7 +87,7 @@ func (item sgFqdnRule) Key() *sgFqdnRuleKey {
 
 func (item sgFqdnRule) Attributes() map[string]schema.Attribute { //nolint:dupl
 	return map[string]schema.Attribute{
-		"proto": schema.StringAttribute{
+		"transport": schema.StringAttribute{
 			Description: "IP-L4 proto <tcp|udp>",
 			Required:    true,
 			Validators: []validator.String{
@@ -140,7 +140,7 @@ func (item sgFqdnRule) IsDiffer(ctx context.Context, other sgFqdnRule) bool {
 	itemModelPorts, _ = toModelPorts(itemAccPorts)
 	otherModelPorts, _ = toModelPorts(otherAccPorts)
 
-	return !(strings.EqualFold(item.Proto.ValueString(), other.Proto.ValueString()) &&
+	return !(strings.EqualFold(item.Transport.ValueString(), other.Transport.ValueString()) &&
 		item.SgFrom.Equal(other.SgFrom) &&
 		model.FQDN(item.Fqdn.ValueString()).
 			IsEq(model.FQDN(other.Fqdn.ValueString())) &&
@@ -181,7 +181,7 @@ func readFqdnRules(ctx context.Context, state NamedResources[sgFqdnRule], client
 			return newState, diags
 		}
 		it := sgFqdnRule{
-			Proto:     types.StringValue(strings.ToLower(fqdnRule.GetTransport().String())),
+			Transport: types.StringValue(strings.ToLower(fqdnRule.GetTransport().String())),
 			SgFrom:    types.StringValue(fqdnRule.GetSgFrom()),
 			Fqdn:      types.StringValue(strings.ToLower(fqdnRule.GetFQDN())),
 			Logs:      types.BoolValue(fqdnRule.GetLogs()),
