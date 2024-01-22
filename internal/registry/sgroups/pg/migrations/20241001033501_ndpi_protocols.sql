@@ -127,5 +127,5 @@ alter table sgroups.tbl_fqdn_rule
 
 -- +goose Down
 -- +goose StatementBegin
-drop schema if exists sgroups cascade;
+SELECT no-down-scenarion;
 -- +goose StatementEnd
