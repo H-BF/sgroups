@@ -189,12 +189,12 @@ func (tfSgSgRules2Backend) sync(ctx context.Context, items NamedResources[sgSgRu
 			return diags
 		}
 		protoValue, ok := common.Networks_NetIP_Transport_value[strings.ToUpper(
-			features.Proto.ValueString(),
+			features.Transport.ValueString(),
 		)]
 		if !ok {
 			diags.AddError(
 				"proto conv",
-				fmt.Sprintf("no proto conv for value(%s)", features.Proto.ValueString()))
+				fmt.Sprintf("no proto conv for value(%s)", features.Transport.ValueString()))
 			return diags
 		}
 		syncObj.Rules = append(syncObj.Rules, &protos.Rule{
@@ -264,12 +264,12 @@ func (tfSgFqdnRules2Backend) sync(ctx context.Context, items NamedResources[sgFq
 			return diags
 		}
 		transportValue, ok := common.Networks_NetIP_Transport_value[strings.ToUpper(
-			features.Proto.ValueString(),
+			features.Transport.ValueString(),
 		)]
 		if !ok {
 			diags.AddError(
 				"proto conv",
-				fmt.Sprintf("no proto conv for value(%s)", features.Proto.ValueString()))
+				fmt.Sprintf("no proto conv for value(%s)", features.Transport.ValueString()))
 			return diags
 		}
 		var protocols []string
@@ -315,12 +315,12 @@ func (tfCidrSgRules2Backend) sync(ctx context.Context, items NamedResources[cidr
 			return diags
 		}
 		protoValue, ok := common.Networks_NetIP_Transport_value[strings.ToUpper(
-			features.Proto.ValueString(),
+			features.Transport.ValueString(),
 		)]
 		if !ok {
 			diags.AddError(
 				"proto conv",
-				fmt.Sprintf("no proto conv for value(%s)", features.Proto.ValueString()))
+				fmt.Sprintf("no proto conv for value(%s)", features.Transport.ValueString()))
 			return diags
 		}
 		caser := cases.Title(language.AmericanEnglish).String

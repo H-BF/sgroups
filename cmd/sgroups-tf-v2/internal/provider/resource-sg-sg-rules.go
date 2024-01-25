@@ -36,11 +36,11 @@ type (
 	sgToSgRulesResource = CollectionResource[sgSgRule, tfSgSgRules2Backend]
 
 	sgSgRule struct {
-		Proto  types.String `tfsdk:"proto"`
-		SgFrom types.String `tfsdk:"sg_from"`
-		SgTo   types.String `tfsdk:"sg_to"`
-		Ports  types.List   `tfsdk:"ports"`
-		Logs   types.Bool   `tfsdk:"logs"`
+		Transport types.String `tfsdk:"transport"`
+		SgFrom    types.String `tfsdk:"sg_from"`
+		SgTo      types.String `tfsdk:"sg_to"`
+		Ports     types.List   `tfsdk:"ports"`
+		Logs      types.Bool   `tfsdk:"logs"`
 	}
 
 	sgSgRuleKey struct {
@@ -59,7 +59,7 @@ func (k sgSgRuleKey) String() string {
 // Key -
 func (item sgSgRule) Key() *sgSgRuleKey {
 	return &sgSgRuleKey{
-		proto:  item.Proto.ValueString(),
+		proto:  item.Transport.ValueString(),
 		sgFrom: item.SgFrom.ValueString(),
 		sgTo:   item.SgTo.ValueString(),
 	}
@@ -77,7 +77,7 @@ func (item sgSgRule) IsDiffer(ctx context.Context, other sgSgRule) bool {
 	// `toModelPorts` can not be failed because its validate then created
 	itemModelPorts, _ = toModelPorts(itemAccPorts)
 	otherModelPorts, _ = toModelPorts(otherAccPorts)
-	return !(strings.EqualFold(item.Proto.ValueString(), other.Proto.ValueString()) &&
+	return !(strings.EqualFold(item.Transport.ValueString(), other.Transport.ValueString()) &&
 		item.SgFrom.Equal(other.SgFrom) &&
 		item.SgTo.Equal(other.SgTo) &&
 		item.Logs.Equal(other.Logs) &&
@@ -86,7 +86,7 @@ func (item sgSgRule) IsDiffer(ctx context.Context, other sgSgRule) bool {
 
 func (item sgSgRule) Attributes() map[string]schema.Attribute { //nolint:dupl
 	return map[string]schema.Attribute{
-		"proto": schema.StringAttribute{
+		"transport": schema.StringAttribute{
 			Description: "IP-L4 proto <tcp|udp>",
 			Required:    true,
 			Validators: []validator.String{
@@ -152,11 +152,11 @@ func readSgSgRules(ctx context.Context, state NamedResources[sgSgRule], client *
 		portsList, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: AccessPorts{}.AttrTypes()}, accPorts)
 		diags.Append(d...)
 		it := sgSgRule{
-			Proto:  types.StringValue(strings.ToLower(sgRule.GetTransport().String())),
-			SgFrom: types.StringValue(sgRule.GetSgFrom()),
-			SgTo:   types.StringValue(sgRule.GetSgTo()),
-			Logs:   types.BoolValue(sgRule.GetLogs()),
-			Ports:  portsList,
+			Transport: types.StringValue(strings.ToLower(sgRule.GetTransport().String())),
+			SgFrom:    types.StringValue(sgRule.GetSgFrom()),
+			SgTo:      types.StringValue(sgRule.GetSgTo()),
+			Logs:      types.BoolValue(sgRule.GetLogs()),
+			Ports:     portsList,
 		}
 		k := it.Key().String()
 		if _, ok := state.Items[k]; ok {
