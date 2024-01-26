@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	NFT_NDPI_FLAG_INVERT uint16 = 0x01 << iota
+	NFT_NDPI_FLAG_INVERT uint32 = 0x01 << iota
 	NFT_NDPI_FLAG_ERROR
 	NFT_NDPI_FLAG_M_PROTO
 	NFT_NDPI_FLAG_P_PROTO
@@ -25,6 +25,7 @@ const (
 	NFT_NDPI_FLAG_HOST
 	NFT_NDPI_FLAG_RE
 	NFT_NDPI_FLAG_EMPTY
+	NFT_NDPI_FLAG_PROTO
 	NFT_NDPI_FLAG_INPROGRESS
 	NFT_NDPI_FLAG_JA3S
 	NFT_NDPI_FLAG_JA3C
@@ -41,7 +42,7 @@ const (
 
 const (
 	//Version of the ndpi
-	NDPI_GIT_RELEASE = "4.3.0-8-6ae5394"
+	NDPI_GIT_RELEASE = "4.9"
 	//Number of ndpi protocols
 	NDPI_NUM_BITS = 512
 	//Mask for available ndpi protocols
@@ -126,7 +127,7 @@ type Ndpi struct {
 		NFT_NDPI_FLAG_TLSV			= 0x1000
 		NFT_NDPI_FLAG_UNTRACKED		= 0x2000
 	*/
-	Flags uint16
+	Flags uint32
 
 	Protocols []string
 
@@ -218,7 +219,7 @@ func NdpiWithProtocols(pp ...string) ndpiOpt {
 }
 
 // NdpiWithFlags -
-func NdpiWithFlags(flags uint16) ndpiOpt {
+func NdpiWithFlags(flags uint32) ndpiOpt {
 	return ndpiOptFunc(func(o *Ndpi) {
 		o.Flags = flags
 		o.key |= NFTNL_EXPR_NDPI_FLAGS
@@ -298,7 +299,7 @@ func (e *Ndpi) marshal(fam byte) ([]byte, error) {
 	if e.key&NFTNL_EXPR_NDPI_FLAGS != 0 {
 		attrs = append(attrs, netlink.Attribute{
 			Type: NFTA_NDPI_FLAGS,
-			Data: binaryutil.BigEndian.PutUint16(e.Flags),
+			Data: binaryutil.BigEndian.PutUint32(e.Flags),
 		})
 	}
 
@@ -324,7 +325,7 @@ func (e *Ndpi) unmarshal(fam byte, data []byte) error {
 		data := ad.Bytes()
 		switch ad.Type() {
 		case NFTA_NDPI_FLAGS:
-			e.Flags = binaryutil.BigEndian.Uint16(data)
+			e.Flags = binaryutil.BigEndian.Uint32(data)
 			e.key |= NFTNL_EXPR_NDPI_FLAGS
 		case NFTA_NDPI_HOSTNAME:
 			// Getting rid of \x00 at the end of string
@@ -361,14 +362,14 @@ var (
 	// NdpiState - structure contains lists of supported and disabled protocols
 	NdpiState = ndpiLoadInternal()
 
-	reVerDetect = regexp.MustCompile(`#id.*#version\s+([^\s]+)`)
+	reVerDetect = regexp.MustCompile(`#id.*#version\s+(\d+\.\d+)`)
 
 	ndpiModuleLoaders = map[string]ndpiModuleLoader{
-		NDPI_GIT_RELEASE: mod_4_3_0_8_6ae5394_Loader,
+		NDPI_GIT_RELEASE: mod_v4_9_Loader,
 	}
 )
 
-func mod_4_3_0_8_6ae5394_Loader(r io.Reader) (ret ndpiModuleState) {
+func mod_v4_9_Loader(r io.Reader) (ret ndpiModuleState) {
 	reParser := regexp.MustCompile(
 		`^([\da-f]+)\s+((?:[\da-f]+/[\da-f]+)|disabled)\s+([^\s#]+)`,
 	)
