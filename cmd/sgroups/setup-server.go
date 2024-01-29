@@ -9,8 +9,10 @@ import (
 	"github.com/H-BF/corlib/server"
 	"github.com/H-BF/corlib/server/interceptors"
 	serverPrometheusMetrics "github.com/H-BF/corlib/server/metrics/prometheus"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 const (
@@ -30,9 +32,20 @@ func setupSgServer(ctx context.Context) (*server.APIServer, error) {
 	if err != nil {
 		return nil, err
 	}
+	xOpt := server.WithGatewayOptions(
+		runtime.WithMarshalerOption(runtime.MIMEWildcard, &runtime.JSONPb{
+			MarshalOptions: protojson.MarshalOptions{
+				EmitUnpopulated: true,
+			},
+			UnmarshalOptions: protojson.UnmarshalOptions{
+				DiscardUnknown: false, //we fail when find unknown field in request
+			},
+		}),
+	)
 	opts := []server.APIServerOption{
 		server.WithServices(srv),
 		server.WithDocs(doc, ""),
+		xOpt,
 	}
 
 	//если есть регистр Прометеуса то - подклчим метрики

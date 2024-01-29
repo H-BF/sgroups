@@ -6,7 +6,9 @@ import (
 	"reflect"
 	"sync"
 	"sync/atomic"
+	"time"
 
+	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	"github.com/H-BF/sgroups/internal/patterns"
 )
 
@@ -26,6 +28,14 @@ type (
 
 // NewRegistryFromMemDB new Registry from MemDB
 func NewRegistryFromMemDB(m MemDB) Registry {
+	w := m.Writer()
+	_ = w.Upsert(TblSyncStatus, syncStatus{
+		ID: 1,
+		SyncStatus: model.SyncStatus{
+			UpdatedAt: time.Now(),
+		},
+	})
+	_ = w.Commit()
 	ret := &memDbRegisrtyHolder{
 		subject: patterns.NewSubject(),
 	}
