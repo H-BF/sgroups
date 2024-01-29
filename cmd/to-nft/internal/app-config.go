@@ -48,6 +48,8 @@ telemetry:
     enable: true
   healthcheck:
     enable: true
+  profile:
+    enable: true
 */
 
 const (
