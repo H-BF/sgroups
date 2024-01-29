@@ -27,6 +27,9 @@ func WhenSetupTelemtryServer(ctx context.Context, f func(*server.APIServer) erro
 	if hc, _ := HealthcheckEnable.Value(ctx); hc {
 		opts = append(opts, server.WithHttpHandler("/healthcheck", app.HcHandler{}))
 	}
+	if p, _ := ProfileEnable.Value(ctx); p {
+		opts = append(opts, server.WithHttpHandler("/debug", app.PProfHandler()))
+	}
 	if len(opts) == 0 {
 		return nil
 	}

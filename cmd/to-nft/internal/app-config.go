@@ -111,6 +111,8 @@ const (
 	HealthcheckEnable config.ValueT[bool] = "telemetry/healthcheck/enable"
 	// UserAgent
 	UserAgent config.ValueT[string] = "telemetry/useragent"
+	// ProfileEnable avaliable at /debug/pprof/index
+	ProfileEnable config.ValueT[bool] = "telemetry/profile/enable"
 )
 
 type FqdnRulesStrategy string
