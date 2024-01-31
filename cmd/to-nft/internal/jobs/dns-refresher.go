@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal"
@@ -37,8 +38,6 @@ type (
 		observer.EventType
 	}
 
-	fqdn2timer = dict.RBDict[Ask2ResolveDomainAddresses, *time.Timer]
-
 	// FqdnRefresher -
 	FqdnRefresher struct {
 		AgentSubj observer.Subject
@@ -47,6 +46,10 @@ type (
 )
 
 func (rf *FqdnRefresher) Run(ctx context.Context) {
+	type fqdn2timer = struct {
+		sync.Mutex
+		dict.RBDict[Ask2ResolveDomainAddresses, *time.Timer]
+	}
 	var activeQueries fqdn2timer
 	defer activeQueries.Iterate(func(_ Ask2ResolveDomainAddresses, v *time.Timer) bool {
 		_ = v.Stop()
@@ -83,24 +86,27 @@ func (rf *FqdnRefresher) Run(ctx context.Context) {
 				}
 				rf.AgentSubj.Notify(ev)
 			case Ask2ResolveDomainAddresses:
-				if activeQueries.At(ev) != nil {
-					continue
+				activeQueries.Lock()
+				if activeQueries.At(ev) == nil {
+					ttl := ev.TTL
+					if ttl < time.Minute {
+						ttl = time.Minute
+					}
+					log.Debugw("ask-to-resolve",
+						"ip-v", ev.IpVersion,
+						"domain", ev.FQDN.String(),
+						"after", jsonview.Stringer(ttl),
+					)
+					newTimer := time.AfterFunc(ttl, func() {
+						activeQueries.Lock()
+						activeQueries.Del(ev)
+						activeQueries.Unlock()
+						ret := rf.resolve(ctx, ev)
+						que.Put(ret)
+					})
+					activeQueries.Put(ev, newTimer)
 				}
-				ttl := ev.TTL
-				if ttl < time.Minute {
-					ttl = time.Minute
-				}
-				log.Debugw("ask-to-resolve",
-					"ip-v", ev.IpVersion,
-					"domain", ev.FQDN.String(),
-					"after", jsonview.Stringer(ttl),
-				)
-				newTimer := time.AfterFunc(ttl, func() {
-					defer activeQueries.Del(ev)
-					ret := rf.resolve(ctx, ev)
-					que.Put(ret)
-				})
-				activeQueries.Put(ev, newTimer)
+				activeQueries.Unlock()
 			}
 		}
 	}

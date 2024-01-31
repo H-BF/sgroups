@@ -67,6 +67,7 @@ func main() { //nolint:gocyclo
 		config.WithDefValue{Key: MetricsEnable, Val: true},
 		config.WithDefValue{Key: HealthcheckEnable, Val: true},
 		config.WithDefValue{Key: UserAgent, Val: ""},
+		config.WithDefValue{Key: ProfileEnable, Val: true},
 	)
 	if err != nil {
 		logger.Fatal(ctx, err)
@@ -105,6 +106,7 @@ func main() { //nolint:gocyclo
 		if err != nil {
 			logger.Fatal(ctx, errors.WithMessage(err, "setup DNS resolver"))
 		}
+		dnsResolver = NewDomainAddressQuerierCache(dnsResolver)
 	}
 
 	if exitOnSuccess := ExitOnSuccess.MustValue(ctx); exitOnSuccess {
