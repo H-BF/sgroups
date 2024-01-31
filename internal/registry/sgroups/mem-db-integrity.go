@@ -395,3 +395,36 @@ func IntegrityChecker4CidrSgRules() IntegrityChecker { //nolint:gocyclo
 		return errors.WithMessage(err, api)
 	}
 }
+
+func IntegrityChecker4SgSgRules() IntegrityChecker {
+	const api = "Integrity-of-SgSgRules"
+
+	return func(reader MemDbReader) error {
+		it, e := reader.Get(TblSgSgRules, indexID)
+		if isInvalidTableErr(e) {
+			return nil
+		}
+		if e != nil {
+			return errors.WithMessage(e, api)
+		}
+		for x := it.Next(); x != nil; x = it.Next() { // validate SG refs
+			rule := x.(*model.SgSgRule)
+			sg, e1 := reader.First(TblSecGroups, indexID, rule.ID.SgLocal)
+			if e1 != nil {
+				return errors.WithMessagef(e1, "%s: find ref to SgLocal '%s'", api, rule.ID.SgLocal)
+			}
+			if sg == nil {
+				return errors.Errorf("%s: not found ref to SgLocal '%s'", api, rule.ID.SgLocal)
+			}
+
+			sg, e1 = reader.First(TblSecGroups, indexID, rule.ID.Sg)
+			if e1 != nil {
+				return errors.WithMessagef(e1, "%s: find ref to Sg '%s'", api, rule.ID.Sg)
+			}
+			if sg == nil {
+				return errors.Errorf("%s: not found ref to Sg '%s'", api, rule.ID.Sg)
+			}
+		}
+		return nil
+	}
+}

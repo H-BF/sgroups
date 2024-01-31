@@ -3,7 +3,6 @@ package sgroups
 import (
 	"context"
 	"net"
-	"strings"
 	"testing"
 	"time"
 
@@ -528,8 +527,7 @@ func (sui *memDbSuite) TestSync_CidrSgRules_FailNoSG() {
 	sui.Require().NoError(err)
 	err = w.Commit()
 	sui.Require().Error(err)
-	n := strings.Index(err.Error(), "not found ref to SG")
-	sui.Require().True(n >= 0)
+	sui.Require().Contains(err.Error(), "not found ref to SG")
 }
 
 func (sui *memDbSuite) Test_CidrSgRules_List() {
@@ -590,7 +588,7 @@ func (sui *memDbSuite) Test_CidrSgRules_List() {
 		}, SG(sg.Name))
 		sui.Require().NoError(err)
 		sui.Require().NotNil(retRule)
-		expRules[i].IsEq(*retRule)
+		sui.Require().True(expRules[i].IsEq(*retRule))
 	}
 }
 
@@ -678,8 +676,7 @@ func (sui *memDbSuite) Test_CidrSgRules_IntersectCIDRS() {
 	sui.Require().NoError(err)
 	err = w.Commit()
 	sui.Require().Error(err)
-	i := strings.Index(err.Error(), "have CIDRS with intersected")
-	sui.Require().True(i >= 0)
+	sui.Require().Contains(err.Error(), "have CIDRS with intersected")
 }
 
 func (sui *memDbSuite) Test_CidrSgRules_NoIntersectCIDRS() {
@@ -714,4 +711,155 @@ func (sui *memDbSuite) Test_CidrSgRules_NoIntersectCIDRS() {
 	sui.Require().NoError(err)
 	err = w.Commit()
 	sui.Require().NoError(err)
+}
+
+func (sui *memDbSuite) newSgSgRule(proto model.NetworkTransport, sgLocal, sg string,
+	traffic model.Traffic, ports ...model.SGRulePorts) model.SgSgRule {
+
+	return model.SgSgRule{
+		ID: model.SgSgRuleIdentity{
+			Transport: proto,
+			Traffic:   traffic,
+			SgLocal:   sgLocal,
+			Sg:        sg,
+		},
+		Ports: ports,
+	}
+}
+
+func (sui *memDbSuite) TestSync_SgSgRules_FailNoSG() {
+	ctx := context.TODO()
+	rules := []model.SgSgRule{sui.newSgSgRule(
+		model.TCP,
+		"sg1",
+		"sg2",
+		model.EGRESS)}
+	w := sui.regWriter()
+	err := w.SyncSgSgRules(ctx, rules, NoScope)
+	sui.Require().NoError(err)
+	err = w.Commit()
+	sui.Require().Error(err)
+	sui.Require().Contains(err.Error(), "not found ref to SgLocal")
+}
+
+func (sui *memDbSuite) Test_SgSgRules_List() {
+	ctx := context.TODO()
+
+	sg1 := sui.newSG("sg1")
+	sg2 := sui.newSG("sg2")
+	sg3 := sui.newSG("sg3")
+	sg4 := sui.newSG("sg4")
+	w := sui.regWriter()
+	err := w.SyncSecurityGroups(ctx, []model.SecurityGroup{sg1, sg2, sg3, sg4}, NoScope)
+	sui.Require().NoError(err)
+	err = w.Commit()
+	sui.Require().NoError(err)
+
+	rule1 := sui.newSgSgRule(
+		model.TCP,
+		sg1.Name,
+		sg2.Name,
+		model.EGRESS)
+	rule2 := sui.newSgSgRule(
+		model.UDP,
+		sg3.Name,
+		sg4.Name,
+		model.INGRESS)
+
+	w = sui.regWriter()
+	err = w.SyncSgSgRules(ctx, []model.SgSgRule{rule1, rule2}, NoScope)
+	sui.Require().NoError(err)
+	err = w.Commit()
+	sui.Require().NoError(err)
+
+	var allRules dict.HDict[string, model.SgSgRule]
+	var allRules2check dict.HDict[string, model.SgSgRule]
+	_ = allRules.Insert(rule1.ID.String(), rule1)
+	_ = allRules.Insert(rule2.ID.String(), rule2)
+	sui.Require().Equal(2, allRules.Len())
+	r := sui.regReader()
+	sgLocalScope := SGLocal(sg1.Name, sg3.Name)
+	sgScope := SG(sg2.Name, sg4.Name)
+	for _, sc := range []Scope{NoScope, sgLocalScope, sgScope, And(sgLocalScope, sgScope)} {
+		err = r.ListSgSgRules(ctx, func(r model.SgSgRule) error {
+			allRules2check.Insert(r.ID.String(), r)
+			return nil
+		}, sc)
+		sui.Require().NoError(err)
+		sui.Require().Equal(allRules.Len(), allRules2check.Len())
+		eq := allRules.Eq(&allRules2check, func(vL, vR model.SgSgRule) bool {
+			return vL.IsEq(vR)
+		})
+		sui.Require().True(eq)
+		allRules2check.Clear()
+	}
+
+	expRules := []model.SgSgRule{rule1, rule2}
+	for i, sg := range []model.SecurityGroup{sg1, sg3} {
+		var retRule *model.SgSgRule
+		err = r.ListSgSgRules(ctx, func(r model.SgSgRule) error {
+			retRule = &r
+			return nil
+		}, SGLocal(sg.Name))
+		sui.Require().NoError(err)
+		sui.Require().NotNil(retRule)
+		sui.Require().True(expRules[i].IsEq(*retRule))
+	}
+	for i, sg := range []model.SecurityGroup{sg2, sg4} {
+		var retRule *model.SgSgRule
+		err = r.ListSgSgRules(ctx, func(r model.SgSgRule) error {
+			retRule = &r
+			return nil
+		}, SG(sg.Name))
+		sui.Require().NoError(err)
+		sui.Require().NotNil(retRule)
+		sui.Require().True(expRules[i].IsEq(*retRule))
+	}
+}
+
+func (sui *memDbSuite) TestSgSgRules_DelSG() {
+	ctx := context.TODO()
+
+	sg1 := sui.newSG("sg1")
+	sg2 := sui.newSG("sg2")
+	sg3 := sui.newSG("sg3")
+	sg4 := sui.newSG("sg4")
+	w := sui.regWriter()
+	err := w.SyncSecurityGroups(ctx, []model.SecurityGroup{sg1, sg2, sg3, sg4}, NoScope)
+	sui.Require().NoError(err)
+	err = w.Commit()
+	sui.Require().NoError(err)
+
+	rule1 := sui.newSgSgRule(
+		model.TCP,
+		sg1.Name,
+		sg2.Name,
+		model.EGRESS)
+	rule2 := sui.newSgSgRule(
+		model.UDP,
+		sg3.Name,
+		sg4.Name,
+		model.INGRESS)
+
+	w = sui.regWriter()
+	err = w.SyncSgSgRules(ctx, []model.SgSgRule{rule1, rule2}, NoScope)
+	sui.Require().NoError(err)
+	err = w.Commit()
+	sui.Require().NoError(err)
+
+	w = sui.regWriter()
+	err = w.SyncSecurityGroups(ctx, nil, SG(sg1.Name))
+	sui.Require().NoError(err)
+	err = w.Commit()
+	sui.Require().NoError(err)
+
+	r := sui.regReader()
+	var rules []model.SgSgRule
+	err = r.ListSgSgRules(ctx, func(r model.SgSgRule) error {
+		rules = append(rules, r)
+		return nil
+	}, NoScope)
+	sui.Require().NoError(err)
+	sui.Require().Equal(1, len(rules))
+	sui.Require().True(rules[0].IsEq(rule2))
 }

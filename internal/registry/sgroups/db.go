@@ -27,6 +27,9 @@ const (
 
 	// TblCidrSgRules table l4-proto:[INGRESS|EGRESS]-CIDR-SG rules
 	TblCidrSgRules
+
+	// TblSgSgRules table proto:[INGRESS|EGRESS]-SG-SG rules
+	TblSgSgRules
 )
 
 // SchemaName database scheme name
@@ -54,6 +57,7 @@ var tableID2string = map[TableID]string{
 	TblSgIcmpRules:   "tbl_sg_icmp_rule",
 	TblSgSgIcmpRules: "tbl_sg_sg_icmp_rule",
 	TblCidrSgRules:   "tbl_cidr_sg_rules",
+	TblSgSgRules:     "tbl_sg_sg_rules",
 }
 
 var tableID2IntegrityChecks = map[TableID]func() []IntegrityChecker{
@@ -83,6 +87,10 @@ var tableID2IntegrityChecks = map[TableID]func() []IntegrityChecker{
 	},
 	TblCidrSgRules: func() (ret []IntegrityChecker) {
 		ret = append(ret, IntegrityChecker4CidrSgRules())
+		return ret
+	},
+	TblSgSgRules: func() (ret []IntegrityChecker) {
+		ret = append(ret, IntegrityChecker4SgSgRules())
 		return ret
 	},
 }

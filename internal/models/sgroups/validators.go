@@ -218,6 +218,15 @@ func (o CidrSgRuleIdenity) Validate() error {
 	)
 }
 
+// Validate implements ruleID.
+func (o SgSgRuleIdentity) Validate() error {
+	return oz.ValidateStruct(&o,
+		oz.Field(&o.Transport),
+		oz.Field(&o.Traffic),
+		oz.Field(&o.SgLocal, oz.Required),
+		oz.Field(&o.Sg, oz.Required))
+}
+
 // Validate validate of FQDNRule
 func (o FQDNRule) Validate() error {
 	return oz.ValidateStruct(&o,

@@ -148,6 +148,26 @@ func cidrSgRule2proto(src model.CidrSgRule) (*sg.CidrSgRule, error) {
 	return ret, nil
 }
 
+func sgSgRule2proto(src model.SgSgRule) (*sg.SgSgRule, error) {
+	ret := &sg.SgSgRule{
+		Sg:      src.ID.Sg,
+		SgLocal: src.ID.SgLocal,
+		Logs:    src.Logs,
+		Trace:   src.Trace,
+	}
+	var e error
+	if ret.Traffic, e = traffic2proto(src.ID.Traffic); e != nil {
+		return nil, e
+	}
+	if ret.Transport, e = netTranport2proto(src.ID.Transport); e != nil {
+		return nil, e
+	}
+	if ret.Ports, e = sgAccPorts2proto(src.Ports); e != nil {
+		return nil, e
+	}
+	return ret, nil
+}
+
 func (srv *sgService) GetRules(ctx context.Context, req *sg.GetRulesReq) (resp *sg.RulesResp, err error) {
 	defer func() {
 		err = correctError(err)

@@ -91,6 +91,11 @@ func (rd sGroupsMemDbReader) ListCidrSgRules(ctx context.Context, consume func(m
 	return memDbListObjects(rd.reader, scope, TblCidrSgRules, consume)
 }
 
+// ListSgSgRules impl Reader
+func (rd sGroupsMemDbReader) ListSgSgRules(_ context.Context, consume func(model.SgSgRule) error, scope Scope) error {
+	return memDbListObjects(rd.reader, scope, TblSgSgRules, consume)
+}
+
 // ListSGRules impl Reader
 func (rd sGroupsMemDbReader) Close() error {
 	return nil
