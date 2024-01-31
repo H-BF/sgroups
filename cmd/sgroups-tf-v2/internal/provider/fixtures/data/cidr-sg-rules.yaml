@@ -38,7 +38,7 @@ cases:
       items = {
         "tcp:cidr(10.0.0.0/24)sg(group1)ingress" = {
           traffic = "ingress"
-          proto   = "tcp"
+          transport   = "tcp"
           sg_name = "group1"
           cidr    = "10.0.0.0/24"
           ports = [
@@ -52,7 +52,7 @@ cases:
 
         "udp:cidr(20.0.0.0/24)sg(group2)egress" = {
           traffic = "egress"
-          proto   = "udp"
+          transport   = "udp"
           sg_name = "group2"
           cidr    = "20.0.0.0/24"
           ports = [
@@ -101,7 +101,7 @@ cases:
       items = {
         "tcp:cidr(10.0.0.0/24)sg(group1)ingress" = {
           traffic = "ingress"
-          proto   = "tcp"
+          transport   = "tcp"
           sg_name = "group1"
           cidr    = "10.0.0.0/24"
           ports = [
