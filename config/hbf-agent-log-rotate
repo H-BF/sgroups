@@ -1,0 +1,13 @@
+/var/log/hbf-agent-output.log {
+    daily
+    rotate 2
+    compress
+    copytruncate
+}
+
+/var/log/hbf-agent-error.log {
+    daily
+    rotate 2
+    compress
+    copytruncate
+}

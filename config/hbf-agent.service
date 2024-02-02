@@ -1,0 +1,19 @@
+[Unit]
+Description=hbf
+
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+StandardOutput=append:/var/log/hbf-agent-output.log
+StandardError=append:/var/log/hbf-agent-error.log
+
+ExecStart=/opt/swarm/sbin/to-nft -config /opt/swarm/etc/to-nft/config.yaml
+ExecStopPost=/opt/swarm/etc/to-nft/flush.sh
+
+Restart=always
+StartLimitInterval=0
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

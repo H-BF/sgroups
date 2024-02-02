@@ -1,0 +1,104 @@
+name: release
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+rc[0-9]+'
+
+jobs:
+  create-release:
+    runs-on: ubuntu-20.04
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+
+      - name: Build binaries
+        run: |
+            make sg-service
+            make to-nft
+            make sgroups-tf-v2
+            make .install-goose
+            sudo apt-get install ruby-dev build-essential && sudo gem i fpm -f
+
+      - name: Build sgroups deb & rpm packages
+        run: |
+            export STRIPPED_VERSION="${VERSION#v}"
+            for PACKAGE_TYPE in deb rpm
+            do
+              fpm \
+              -s dir \
+              -t "${PACKAGE_TYPE}" \
+              --architecture "${ARCH}" \
+              --name "${PACKAGE}" \
+              --license "Apache Software License 2.0" \
+              --maintainer "${MAINTAINER}" \
+              --description "${DESCRIPTION}" \
+              --version "${STRIPPED_VERSION}" \
+              bin/${PACKAGE}=/opt/swarm/sbin/${PACKAGE} \
+              ${CONFIG_PATH}/sgroups-config.yml=/opt/swarm/etc/${PACKAGE}/config.yaml
+            done
+            mv *.deb bin/${PACKAGE}-${STRIPPED_VERSION}-any.deb
+            mv *.rpm bin/${PACKAGE}-${STRIPPED_VERSION}-any.rpm
+        env:
+          PACKAGE: sgroups
+          ARCH: all
+          MAINTAINER: Evgeny Grigoriev
+          VERSION: ${{  github.ref_name }}
+          CONFIG_PATH: config
+          DESCRIPTION: "HBF-server."
+
+      - name: Build to-nft deb & rpm packages
+        run: |
+          export STRIPPED_VERSION="${VERSION#v}"
+          for PACKAGE_TYPE in deb rpm
+          do
+            fpm \
+            -s dir \
+            -t "${PACKAGE_TYPE}" \
+            --name "${PACKAGE}" \
+            --architecture "${ARCH}" \
+            --license "Apache Software License 2.0" \
+            --maintainer "${MAINTAINER}" \
+            --description "${DESCRIPTION}" \
+            --after-install ${CONFIG_PATH}/after-install.sh \
+            --after-remove ${CONFIG_PATH}/after-remove.sh \
+            --version "${STRIPPED_VERSION}" \
+            bin/${PACKAGE}=/opt/swarm/sbin/${PACKAGE} \
+            ${CONFIG_PATH}/flush.sh=/opt/swarm/etc/${PACKAGE}/flush.sh \
+            ${CONFIG_PATH}/hbf-agent-log-rotate=/opt/swarm/etc/${PACKAGE}/hbf-agent-log \
+            ${CONFIG_PATH}/hbf-agent.service=/opt/swarm/etc/${PACKAGE}/hbf-agent.service
+          done
+          mv *.deb bin/${PACKAGE}-${STRIPPED_VERSION}-any.deb
+          mv *.rpm bin/${PACKAGE}-${STRIPPED_VERSION}-any.rpm
+        env:
+          PACKAGE: to-nft
+          ARCH: all
+          MAINTAINER: Evgeny Grigoriev
+          VERSION: ${{  github.ref_name }}
+          CONFIG_PATH: config
+          DESCRIPTION: "HBF-agent."
+
+      - name: Prepare sha256 checksum's
+        run: |
+          cd bin
+          for FILE in *
+          do
+            sha256sum "${FILE}" > "${FILE}_sha256sum"
+          done
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          path: "bin/*"
+
+      - uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          draft: True
+          artifacts: "bin/*"

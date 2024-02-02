@@ -1,0 +1,17 @@
+logger:
+    # log level
+    level: DEBUG
+
+metrics:
+    # enable api metrics
+    enable: true
+
+healthcheck:
+    # enables|disables health check handler
+    enable: true
+
+server:
+    # server endpoint
+    endpoint: tcp://0.0.0.0:9650
+    # graceful shutdown period
+    graceful-shutdown: 30s
