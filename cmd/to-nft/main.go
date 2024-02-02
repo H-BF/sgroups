@@ -97,16 +97,8 @@ func main() { //nolint:gocyclo
 		logger.Fatal(ctx, errors.WithMessage(err, "setup telemetry server"))
 	}
 
-	fqdnStrategy := FqdnStrategy.MustValue(ctx)
-	useDNS := fqdnStrategy.Eq(FqdnRulesStartegyDNS) || fqdnStrategy.Eq(FqdnRulesStartegyCombine)
-
-	var dnsResolver DomainAddressQuerier
-	if useDNS {
-		dnsResolver, err = NewDomainAddressQuerier(ctx)
-		if err != nil {
-			logger.Fatal(ctx, errors.WithMessage(err, "setup DNS resolver"))
-		}
-		dnsResolver = NewDomainAddressQuerierCache(dnsResolver)
+	if err = SetupDnsResolver(ctx); err != nil {
+		logger.Fatal(ctx, errors.WithMessage(err, "setup DNS resolver"))
 	}
 
 	if exitOnSuccess := ExitOnSuccess.MustValue(ctx); exitOnSuccess {
@@ -124,21 +116,13 @@ func main() { //nolint:gocyclo
 			NetlinkError{}, jobs.DomainAddresses{}),
 	)
 
-	if useDNS {
-		go func() {
-			r := jobs.FqdnRefresher{
-				Resolver:  dnsResolver,
-				AgentSubj: AgentSubject(),
-			}
-			r.Run(ctx)
-		}()
-	}
+	go (&jobs.DnsRefresher{}).Run(ctx)
 
 	gracefulDuration := AppGracefulShutdown.MustValue(ctx)
 	errc := make(chan error, 1)
 	go func() {
 		defer close(errc)
-		errc <- runNftJob(ctx, dnsResolver)
+		errc <- runNftJob(ctx)
 	}()
 	var jobErr error
 	select {
@@ -187,7 +171,7 @@ func agentMetricsObserver(ev observer.EventType) {
 	}
 }
 
-func runNftJob(ctx context.Context, resolver DomainAddressQuerier) (err error) {
+func runNftJob(ctx context.Context) (err error) {
 	const waitBeforeRestart = 10 * time.Second
 
 	ctx1 := logger.ToContext(ctx,
@@ -198,7 +182,7 @@ func runNftJob(ctx context.Context, resolver DomainAddressQuerier) (err error) {
 	defer logger.Infof(ctx1, "exit")
 	for {
 		var jb mainJob
-		if err = jb.init(ctx1, resolver); err != nil {
+		if err = jb.init(ctx1); err != nil {
 			break
 		}
 
@@ -251,7 +235,6 @@ func makeNftprocessor(ctx context.Context, sgClient SGClient, netNs string) (nft
 
 type mainJob struct {
 	appSubject              observer.Subject
-	dnsResolver             DomainAddressQuerier
 	netNs                   string
 	SyncStatusCheckInterval time.Duration
 	SyncStatusUsePush       bool
@@ -273,13 +256,12 @@ func (m *mainJob) cleanup() {
 	}
 }
 
-func (m *mainJob) init(ctx context.Context, dnsResolver DomainAddressQuerier) (err error) {
+func (m *mainJob) init(ctx context.Context) (err error) {
 	defer func() {
 		if err != nil {
 			m.cleanup()
 		}
 	}()
-	m.dnsResolver = dnsResolver
 	m.appSubject = AgentSubject()
 	m.netNs, err = NetNS.Value(ctx)
 	if err != nil && !errors.Is(err, config.ErrNotFound) {
@@ -304,7 +286,6 @@ func (m *mainJob) run(ctx context.Context) error {
 	defer m.cleanup()
 	jb := jobs.NewNftApplierJob(m.nftProcessor, *m.sgClient,
 		jobs.WithAgentSubject{Subject: m.appSubject},
-		jobs.WithDnsResolver{DnsRes: m.dnsResolver},
 		jobs.WithNetNS(m.netNs),
 	)
 	defer jb.Close()

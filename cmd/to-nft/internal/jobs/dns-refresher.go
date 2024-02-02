@@ -38,14 +38,12 @@ type (
 		observer.EventType
 	}
 
-	// FqdnRefresher -
-	FqdnRefresher struct {
-		AgentSubj observer.Subject
-		Resolver  internal.DomainAddressQuerier
-	}
+	// DnsRefresher -
+	DnsRefresher struct{}
 )
 
-func (rf *FqdnRefresher) Run(ctx context.Context) {
+// Run -
+func (rf *DnsRefresher) Run(ctx context.Context) {
 	type fqdn2timer = struct {
 		sync.Mutex
 		dict.RBDict[Ask2ResolveDomainAddresses, *time.Timer]
@@ -60,8 +58,9 @@ func (rf *FqdnRefresher) Run(ctx context.Context) {
 	obs := observer.NewObserver(func(ev observer.EventType) {
 		_ = que.Put(ev)
 	}, false, Ask2ResolveDomainAddresses{})
-	defer rf.AgentSubj.ObserversDetach(obs)
-	rf.AgentSubj.ObserversAttach(obs)
+	agentSubj := internal.AgentSubject()
+	defer agentSubj.ObserversDetach(obs)
+	agentSubj.ObserversAttach(obs)
 
 	log := logger.FromContext(ctx).Named("dns")
 	log.Info("start")
@@ -84,7 +83,7 @@ func (rf *FqdnRefresher) Run(ctx context.Context) {
 				} else {
 					log1.Debug("resolved")
 				}
-				rf.AgentSubj.Notify(ev)
+				agentSubj.Notify(ev)
 			case Ask2ResolveDomainAddresses:
 				activeQueries.Lock()
 				if activeQueries.At(ev) == nil {
@@ -112,17 +111,18 @@ func (rf *FqdnRefresher) Run(ctx context.Context) {
 	}
 }
 
-func (rf *FqdnRefresher) resolve(ctx context.Context, ask Ask2ResolveDomainAddresses) DomainAddresses {
+func (rf *DnsRefresher) resolve(ctx context.Context, ask Ask2ResolveDomainAddresses) DomainAddresses {
 	ret := DomainAddresses{
 		IpVersion: ask.IpVersion,
 		FQDN:      ask.FQDN,
 	}
+	resolver := internal.GetDnsResolver()
 	domain := ask.FQDN.String()
 	switch ask.IpVersion {
 	case iplib.IP4Version:
-		ret.DnsAnswer = rf.Resolver.A(ctx, domain)
+		ret.DnsAnswer = resolver.A(ctx, domain)
 	case iplib.IP6Version:
-		ret.DnsAnswer = rf.Resolver.AAAA(ctx, domain)
+		ret.DnsAnswer = resolver.AAAA(ctx, domain)
 	default:
 		panic(
 			fmt.Errorf("FqdnRefresher: passed unsupported IP version: %v'", ask.IpVersion),

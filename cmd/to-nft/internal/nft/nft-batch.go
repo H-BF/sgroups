@@ -63,11 +63,11 @@ type (
 	}
 
 	batch struct {
-		log        logger.TypeOfLogger
-		txProvider TxProvider
-		baseRules  BaseRules
-		data       cases.LocalData
-
+		log          logger.TypeOfLogger
+		txProvider   TxProvider
+		baseRules    BaseRules
+		data         cases.LocalData
+		dnsResolver  internal.DomainAddressQuerier
 		fqdnStrategy internal.FqdnRulesStrategy
 		table        *nftLib.Table
 		ruleDetails  di.HDict[string, *ruleDetails]
@@ -157,7 +157,6 @@ func (bt *batch) execute(ctx context.Context) error {
 		it  jobItem
 		tx  *Tx
 	)
-	bt.fqdnStrategy = internal.FqdnStrategy.MustValue(ctx)
 	defer func() {
 		if tx != nil {
 			_ = tx.Close()
@@ -445,11 +444,11 @@ func (bt *batch) addFQDNNetSets() {
 		})
 	}
 
-	bt.data.SG2FQDNRules.Resolved.A.Iterate(func(domain model.FQDN, a internal.DomainAddresses) bool {
+	bt.data.ResolvedFQDN.A.Iterate(func(domain model.FQDN, a internal.DomainAddresses) bool {
 		f(iplib.IP4Version, domain, a)
 		return true
 	})
-	bt.data.SG2FQDNRules.Resolved.AAAA.Iterate(func(domain model.FQDN, a internal.DomainAddresses) bool {
+	bt.data.ResolvedFQDN.AAAA.Iterate(func(domain model.FQDN, a internal.DomainAddresses) bool {
 		f(iplib.IP6Version, domain, a)
 		return true
 	})

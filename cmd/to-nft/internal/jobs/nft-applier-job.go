@@ -27,8 +27,6 @@ func NewNftApplierJob(proc nft.NfTablesProcessor, client internal.SGClient, opts
 		switch t := o.(type) {
 		case WithAgentSubject:
 			ret.agentSubject = t.Subject
-		case WithDnsResolver:
-			ret.dnsResolver = t.DnsRes
 		case WithNetNS:
 			ret.netNS = string(t)
 		}
@@ -52,7 +50,6 @@ type NftApplierJob struct {
 	client       internal.SGClient
 	nftProcessor nft.NfTablesProcessor
 	agentSubject observer.Subject
-	dnsResolver  internal.DomainAddressQuerier
 	que          *queue.FIFO
 	syncStatus   *model.SyncStatus
 	netConf      *host.NetConf
@@ -162,7 +159,7 @@ func (jb *NftApplierJob) doApply(ctx context.Context) error {
 	log := logger.FromContext(ctx)
 	localDataLoader := cases.LocalDataLoader{
 		Logger: log,
-		DnsRes: jb.dnsResolver,
+		DnsRes: internal.GetDnsResolver(),
 	}
 
 	localData, err := localDataLoader.Load(ctx, jb.client, *jb.netConf)
@@ -178,6 +175,14 @@ func (jb *NftApplierJob) doApply(ctx context.Context) error {
 		}
 	}
 
+	fqdnStrategy := internal.FqdnStrategy.MustValue(ctx)
+	if !fqdnStrategy.Eq(internal.FqdnRulesStartegyNDPI) {
+		resolved := new(cases.ResolvedFQDN)
+		resolver := internal.GetDnsResolver()
+		resolved.Resolve(ctx, localData.SG2FQDNRules.FQDNs.Keys(), resolver)
+		localData.ResolvedFQDN = resolved
+	}
+
 	var appliedRules nft.AppliedRules
 	if appliedRules, err = jb.nftProcessor.ApplyConf(ctx, localData); err != nil {
 		return err
@@ -189,24 +194,26 @@ func (jb *NftApplierJob) doApply(ctx context.Context) error {
 	}
 	jb.agentSubject.Notify(ev)
 
-	reqs := make([]observer.EventType, 0,
-		appliedRules.LocalData.SG2FQDNRules.Resolved.A.Len()+
-			appliedRules.LocalData.SG2FQDNRules.Resolved.AAAA.Len())
+	if !fqdnStrategy.Eq(internal.FqdnRulesStartegyNDPI) {
+		reqs := make([]observer.EventType, 0,
+			appliedRules.LocalData.ResolvedFQDN.A.Len()+
+				appliedRules.LocalData.ResolvedFQDN.AAAA.Len())
 
-	sources := sli(appliedRules.LocalData.SG2FQDNRules.Resolved.A,
-		appliedRules.LocalData.SG2FQDNRules.Resolved.AAAA)
-	for i, ipV := range sli(iplib.IP4Version, iplib.IP6Version) {
-		sources[i].Iterate(func(domain model.FQDN, addr internal.DomainAddresses) bool {
-			ev := Ask2ResolveDomainAddresses{
-				IpVersion: ipV,
-				FQDN:      domain,
-				TTL:       addr.TTL,
-			}
-			reqs = append(reqs, ev)
-			return true
-		})
+		sources := sli(appliedRules.LocalData.ResolvedFQDN.A,
+			appliedRules.LocalData.ResolvedFQDN.AAAA)
+		for i, ipV := range sli(iplib.IP4Version, iplib.IP6Version) {
+			sources[i].Iterate(func(domain model.FQDN, addr internal.DomainAddresses) bool {
+				ev := Ask2ResolveDomainAddresses{
+					IpVersion: ipV,
+					FQDN:      domain,
+					TTL:       addr.TTL,
+				}
+				reqs = append(reqs, ev)
+				return true
+			})
+		}
+		jb.agentSubject.Notify(reqs...)
 	}
-	jb.agentSubject.Notify(reqs...)
 	return nil
 }
 
