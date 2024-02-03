@@ -38,8 +38,7 @@ type daqcKey struct {
 
 type daqcVal struct {
 	sync.Once
-	addr        DomainAddresses
-	validBefore time.Time
+	addr DomainAddresses
 }
 
 type daqcDict = dict.HDict[daqcKey, *daqcVal]
@@ -94,7 +93,7 @@ func (c *domainAddressQuerierCacheWrappee) doAsk(ctx context.Context, ipV uint8,
 	key := c.makeKey(ipV, domain)
 	c.Lock()
 	v := cache.At(key)
-	if v == nil || time.Now().After(v.validBefore) {
+	if v == nil || (!v.addr.At.Equal(time.Time{}) && time.Since(v.addr.At) >= v.addr.TTL) {
 		v = new(daqcVal)
 		cache.Put(key, v)
 	}
@@ -110,18 +109,9 @@ func (c *domainAddressQuerierCacheWrappee) doAsk(ctx context.Context, ipV uint8,
 		c.Lock()
 		defer c.Unlock()
 		v.addr = a
-		if v.addr.Err != nil {
+		if v.addr.Err != nil || len(v.addr.IPs) == 0 {
 			cache.Del(key)
-		} else {
-			v.validBefore = time.Now().Add(v.addr.TTL)
 		}
 	})
-	ret := v.addr
-	if ret.Err == nil {
-		ret.TTL = time.Until(v.validBefore)
-		if ret.TTL < 0 {
-			ret.TTL = 0
-		}
-	}
-	return ret
+	return v.addr
 }

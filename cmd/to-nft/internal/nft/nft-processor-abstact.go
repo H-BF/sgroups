@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net"
 	"sync"
-	"time"
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
 	"github.com/H-BF/sgroups/internal/config"
@@ -38,7 +37,6 @@ type (
 	// UpdateFqdnNetsets - is kind of Patch
 	UpdateFqdnNetsets struct {
 		IPVersion int
-		TTL       time.Duration
 		FQDN      model.FQDN
 		Addresses []net.IP
 	}
@@ -139,10 +137,8 @@ func (ns UpdateFqdnNetsets) Apply(ctx context.Context, rules *AppliedRules) erro
 	if err = tx.SetAddElements(set.Set, elements); err != nil {
 		panic(err)
 	}
-	if err = tx.FlushAndClose(); err != nil {
-		return err
-	}
-	return nil
+	err = tx.FlushAndClose()
+	return err
 }
 
 func (WithNetNS) isNfTablesProcessorOpt() {}

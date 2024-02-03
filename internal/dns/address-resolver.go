@@ -33,6 +33,7 @@ type (
 
 	// AddrAnswer -
 	AddrAnswer struct {
+		At        time.Time
 		Domain    string
 		Addresses []Address
 		Error     error
@@ -40,7 +41,7 @@ type (
 
 	// Address -
 	Address struct {
-		TTL uint32
+		TTL uint32 //time to live in seconds
 		IP  net.IP
 	}
 
@@ -61,6 +62,7 @@ func (queryAddress[AddrT]) Ask(ctx context.Context, domain string, opts ...Optio
 	const api = "dns-address-resolver"
 
 	ret.Domain = domain
+	ret.At = time.Now()
 	defer func() {
 		ret.Error = errors.WithMessage(ret.Error, api)
 	}()
@@ -99,6 +101,7 @@ func (queryAddress[AddrT]) Ask(ctx context.Context, domain string, opts ...Optio
 					net.JoinHostPort(v, strconv.Itoa(int(h.port))),
 					fmt.Sprintf("%s:%v", dns.Fqdn(v), h.port))
 				var r retType
+				ret.At = time.Now()
 				if r.m, _, r.e = c.ExchangeContext(ctx, msg, n); r.e != nil {
 					errs = append(errs, errors.WithMessagef(r.e, "use-ns(%s)", v))
 				}

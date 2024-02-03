@@ -25,6 +25,7 @@ type (
 
 	// ResolvedFQDN -
 	ResolvedFQDN struct {
+		sync.RWMutex
 		A    dict.RBDict[model.FQDN, internal.DomainAddresses]
 		AAAA dict.RBDict[model.FQDN, internal.DomainAddresses]
 	}
@@ -94,19 +95,30 @@ func (rules SG2FQDNRules) RulesForSG(sgName string) []model.FQDNRule {
 	return ret
 }
 
+// UpdA -
+func (r *ResolvedFQDN) UpdA(domain model.FQDN, addr internal.DomainAddresses) {
+	r.Lock()
+	defer r.Unlock()
+	r.A.Put(domain, addr)
+}
+
+// UpdAAA -
+func (r *ResolvedFQDN) UpdAAA(domain model.FQDN, addr internal.DomainAddresses) {
+	r.Lock()
+	defer r.Unlock()
+	r.AAAA.Put(domain, addr)
+}
+
 // Resolve -
 func (r *ResolvedFQDN) Resolve(ctx context.Context, domains []model.FQDN, dnsRes internal.DomainAddressQuerier) {
 	const parallelism = 7
 
-	var mx sync.Mutex
 	_ = parallel.ExecAbstract(len(domains), parallelism, func(i int) error {
 		domain := domains[i].String()
 		addrA := dnsRes.A(ctx, domain)
+		r.UpdA(domains[i], addrA)
 		//addrAAAA := ld.DnsRes.AAAA(ctx, domain)
-		mx.Lock()
-		r.A.Put(domains[i], addrA)
-		//r.AAAA.Put(domains[i], addrAAAA)
-		mx.Unlock()
+		//r.UpdAAA(domains[i], addrAAAA)
 		return nil
 	})
 }

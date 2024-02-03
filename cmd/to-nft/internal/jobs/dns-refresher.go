@@ -21,9 +21,9 @@ type (
 
 	// Ask2ResolveDomainAddresses -
 	Ask2ResolveDomainAddresses struct {
-		IpVersion int
-		FQDN      model.FQDN
-		TTL       time.Duration
+		IpVersion   int
+		FQDN        model.FQDN
+		ValidBefore time.Time
 
 		observer.EventType
 	}
@@ -33,7 +33,6 @@ type (
 		IpVersion int
 		FQDN      model.FQDN
 		DnsAnswer internal.DomainAddresses
-		At        time.Time
 
 		observer.EventType
 	}
@@ -87,7 +86,7 @@ func (rf *DnsRefresher) Run(ctx context.Context) {
 			case Ask2ResolveDomainAddresses:
 				activeQueries.Lock()
 				if activeQueries.At(ev) == nil {
-					ttl := ev.TTL
+					ttl := time.Since(ev.ValidBefore)
 					if ttl < time.Minute {
 						ttl = time.Minute
 					}
@@ -128,7 +127,6 @@ func (rf *DnsRefresher) resolve(ctx context.Context, ask Ask2ResolveDomainAddres
 			fmt.Errorf("FqdnRefresher: passed unsupported IP version: %v'", ask.IpVersion),
 		)
 	}
-	ret.At = time.Now().Local()
 	return ret
 }
 
