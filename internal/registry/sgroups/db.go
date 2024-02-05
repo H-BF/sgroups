@@ -57,7 +57,7 @@ var tableID2string = map[TableID]string{
 	TblSgIcmpRules:   "tbl_sg_icmp_rule",
 	TblSgSgIcmpRules: "tbl_sg_sg_icmp_rule",
 	TblCidrSgRules:   "tbl_cidr_sg_rules",
-	TblSgSgRules:     "tbl_sg_sg_rules",
+	TblSgSgRules:     "tbl_ie_sg_sg_rule",
 }
 
 var tableID2IntegrityChecks = map[TableID]func() []IntegrityChecker{
