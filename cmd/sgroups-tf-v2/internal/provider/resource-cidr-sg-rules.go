@@ -47,25 +47,25 @@ type (
 	}
 
 	cidrRuleKey struct {
-		proto   string
-		cidr    string
-		sgName  string
-		traffic string
+		transport string
+		cidr      string
+		sgName    string
+		traffic   string
 	}
 )
 
 func (k cidrRuleKey) String() string {
 	return fmt.Sprintf("%s:cidr(%s)sg(%s)%s",
-		strings.ToLower(k.proto), k.cidr, k.sgName,
+		strings.ToLower(k.transport), k.cidr, k.sgName,
 		strings.ToLower(k.traffic))
 }
 
 func (item cidrRule) Key() *cidrRuleKey {
 	return &cidrRuleKey{
-		proto:   item.Transport.ValueString(),
-		cidr:    item.Cidr.ValueString(),
-		sgName:  item.SgName.ValueString(),
-		traffic: item.Traffic.ValueString(),
+		transport: item.Transport.ValueString(),
+		cidr:      item.Cidr.ValueString(),
+		sgName:    item.SgName.ValueString(),
+		traffic:   item.Traffic.ValueString(),
 	}
 }
 

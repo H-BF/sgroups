@@ -45,24 +45,24 @@ type (
 	}
 
 	sgSgRuleKey struct {
-		proto  string
-		sgFrom string
-		sgTo   string
+		transport string
+		sgFrom    string
+		sgTo      string
 	}
 )
 
 // String -
 func (k sgSgRuleKey) String() string {
 	return fmt.Sprintf("%s:sg(%s)sg(%s)",
-		strings.ToLower(k.proto), k.sgFrom, k.sgTo)
+		strings.ToLower(k.transport), k.sgFrom, k.sgTo)
 }
 
 // Key -
 func (item sgSgRule) Key() *sgSgRuleKey {
 	return &sgSgRuleKey{
-		proto:  item.Transport.ValueString(),
-		sgFrom: item.SgFrom.ValueString(),
-		sgTo:   item.SgTo.ValueString(),
+		transport: item.Transport.ValueString(),
+		sgFrom:    item.SgFrom.ValueString(),
+		sgTo:      item.SgTo.ValueString(),
 	}
 }
 
