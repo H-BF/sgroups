@@ -102,23 +102,34 @@ func (r *ResolvedFQDN) UpdA(domain model.FQDN, addr internal.DomainAddresses) {
 	r.A.Put(domain, addr)
 }
 
-// UpdAAA -
-func (r *ResolvedFQDN) UpdAAA(domain model.FQDN, addr internal.DomainAddresses) {
+// UpdAAAA -
+func (r *ResolvedFQDN) UpdAAAA(domain model.FQDN, addr internal.DomainAddresses) {
 	r.Lock()
 	defer r.Unlock()
 	r.AAAA.Put(domain, addr)
 }
 
 // Resolve -
-func (r *ResolvedFQDN) Resolve(ctx context.Context, domains []model.FQDN, dnsRes internal.DomainAddressQuerier) {
+func (r *ResolvedFQDN) Resolve(ctx context.Context, rules SG2FQDNRules, dnsRes internal.DomainAddressQuerier) {
 	const parallelism = 7
 
-	_ = parallel.ExecAbstract(len(domains), parallelism, func(i int) error {
-		domain := domains[i].String()
-		addrA := dnsRes.A(ctx, domain)
-		r.UpdA(domains[i], addrA)
-		//addrAAAA := ld.DnsRes.AAAA(ctx, domain)
-		//r.UpdAAA(domains[i], addrAAAA)
+	type item = struct {
+		domain model.FQDN
+		up     func(model.FQDN, internal.DomainAddresses)
+		re     func(context.Context, string) internal.DomainAddresses
+	}
+	var items []item
+	rules.FQDNs.Iterate(func(k model.FQDN) bool {
+		items = append(items,
+			item{domain: k, up: r.UpdA, re: dnsRes.A},
+			//item{domain: k, up: r.UpdAAAA, re: dnsRes.AAAA},
+		)
+		return true
+	})
+	_ = parallel.ExecAbstract(len(items), parallelism, func(i int) error {
+		item := items[i]
+		res := item.re(ctx, item.domain.String())
+		item.up(item.domain, res)
 		return nil
 	})
 }

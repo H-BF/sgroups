@@ -186,7 +186,7 @@ func (jb *NftApplierJob) doApply(ctx context.Context) error {
 		resolved := new(cases.ResolvedFQDN)
 		resolver := internal.GetDnsResolver()
 		localData.ResolvedFQDN = resolved
-		resolved.Resolve(ctx, localData.SG2FQDNRules.FQDNs.Keys(), resolver)
+		resolved.Resolve(ctx, localData.SG2FQDNRules, resolver)
 	}
 
 	var appliedRules nft.AppliedRules
