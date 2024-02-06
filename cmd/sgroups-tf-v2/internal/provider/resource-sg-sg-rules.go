@@ -41,6 +41,7 @@ type (
 		SgTo      types.String `tfsdk:"sg_to"`
 		Ports     types.List   `tfsdk:"ports"`
 		Logs      types.Bool   `tfsdk:"logs"`
+		// TODO: add Trace param
 	}
 
 	sgSgRuleKey struct {

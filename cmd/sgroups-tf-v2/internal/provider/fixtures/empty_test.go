@@ -38,6 +38,7 @@ func Test_ExtractKey(t *testing.T) {
 		sgRule     domain.SGRule
 		sgIcmpRule domain.SgSgIcmpRule
 		cidrRule   domain.CidrSgRule
+		ieSgSgRule domain.SgSgRule
 	)
 	network.Name = "123"
 	require.Equal(t, network.Name, extractKey(network))
@@ -74,4 +75,12 @@ func Test_ExtractKey(t *testing.T) {
 	}
 
 	require.Equal(t, "tcp:cidr(192.168.1.0/24)sg(sg1)ingress", extractKey(cidrRule))
+
+	ieSgSgRule.ID = domain.SgSgRuleIdentity{
+		Transport: domain.TCP,
+		Traffic:   domain.INGRESS,
+		SgLocal:   "local-sg-example",
+		Sg:        "external-sg-example",
+	}
+	require.Equal(t, "tcp:sg(local-sg-example)sg(external-sg-example)ingress", extractKey(ieSgSgRule))
 }

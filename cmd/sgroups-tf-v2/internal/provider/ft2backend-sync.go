@@ -28,6 +28,7 @@ type (
 	tfSgSgIcmpRules2Backend struct{}
 	tfSgFqdnRules2Backend   struct{}
 	tfCidrSgRules2Backend   struct{}
+	tfIESgSgRules2Backend   struct{}
 )
 
 var (
@@ -37,6 +38,7 @@ var (
 	_ tf2backend[sgSgIcmpRule] = (*tfSgSgIcmpRules2Backend)(nil)
 	_ tf2backend[sgFqdnRule]   = (*tfSgFqdnRules2Backend)(nil)
 	_ tf2backend[cidrRule]     = (*tfCidrSgRules2Backend)(nil)
+	_ tf2backend[ieSgSgRule]   = (*tfIESgSgRules2Backend)(nil)
 
 	_ = tfNetworks2Backend.sync
 	_ = tfSg2Backend.sync
@@ -179,15 +181,7 @@ func (tfSgSgRules2Backend) sync(ctx context.Context, items NamedResources[sgSgRu
 	var diags diag.Diagnostics
 	for _, features := range items.Items {
 		var accPorts []AccessPorts
-		diags.Append(features.Ports.ElementsAs(ctx, &accPorts, false)...)
-		if diags.HasError() {
-			return diags
-		}
-		// this conversion necessary to validate string with ports
-		if _, err := toModelPorts(accPorts); err != nil {
-			diags.AddError("ports conv", err.Error())
-			return diags
-		}
+		diags.Append(accPortsRangeFromTF(ctx, features.Ports, &accPorts)...)
 		protoValue, ok := common.Networks_NetIP_Transport_value[strings.ToUpper(
 			features.Transport.ValueString(),
 		)]
@@ -202,7 +196,7 @@ func (tfSgSgRules2Backend) sync(ctx context.Context, items NamedResources[sgSgRu
 			SgTo:      features.SgTo.ValueString(),
 			Transport: common.Networks_NetIP_Transport(protoValue),
 			Logs:      features.Logs.ValueBool(),
-			Ports:     portsToProto(accPorts),
+			Ports:     accPortsRangeToProto(accPorts),
 		})
 	}
 	req := protos.SyncReq{
@@ -254,15 +248,7 @@ func (tfSgFqdnRules2Backend) sync(ctx context.Context, items NamedResources[sgFq
 	var diags diag.Diagnostics
 	for _, features := range items.Items {
 		var accPorts []AccessPorts
-		diags.Append(features.Ports.ElementsAs(ctx, &accPorts, false)...)
-		if diags.HasError() {
-			return diags
-		}
-		// this conversion necessary to validate string with ports
-		if _, err := toModelPorts(accPorts); err != nil {
-			diags.AddError("ports conv", err.Error())
-			return diags
-		}
+		diags.Append(accPortsRangeFromTF(ctx, features.Ports, &accPorts)...)
 		transportValue, ok := common.Networks_NetIP_Transport_value[strings.ToUpper(
 			features.Transport.ValueString(),
 		)]
@@ -282,7 +268,7 @@ func (tfSgFqdnRules2Backend) sync(ctx context.Context, items NamedResources[sgFq
 			FQDN:      features.Fqdn.ValueString(),
 			Transport: common.Networks_NetIP_Transport(transportValue),
 			Logs:      features.Logs.ValueBool(),
-			Ports:     portsToProto(accPorts),
+			Ports:     accPortsRangeToProto(accPorts),
 			Protocols: protocols,
 		})
 	}
@@ -305,15 +291,7 @@ func (tfCidrSgRules2Backend) sync(ctx context.Context, items NamedResources[cidr
 	var diags diag.Diagnostics
 	for _, features := range items.Items {
 		var accPorts []AccessPorts
-		diags.Append(features.Ports.ElementsAs(ctx, &accPorts, false)...)
-		if diags.HasError() {
-			return diags
-		}
-		// this conversion necessary to validate string with ports
-		if _, err := toModelPorts(accPorts); err != nil {
-			diags.AddError("ports conv", err.Error())
-			return diags
-		}
+		diags.Append(accPortsRangeFromTF(ctx, features.Ports, &accPorts)...)
 		protoValue, ok := common.Networks_NetIP_Transport_value[strings.ToUpper(
 			features.Transport.ValueString(),
 		)]
@@ -338,7 +316,7 @@ func (tfCidrSgRules2Backend) sync(ctx context.Context, items NamedResources[cidr
 			CIDR:      features.Cidr.ValueString(),
 			SG:        features.SgName.ValueString(),
 			Traffic:   common.Traffic(trafficValue),
-			Ports:     portsToProto(accPorts),
+			Ports:     accPortsRangeToProto(accPorts),
 			Logs:      features.Logs.ValueBool(),
 			Trace:     features.Trace.ValueBool(),
 		})
@@ -353,6 +331,53 @@ func (tfCidrSgRules2Backend) sync(ctx context.Context, items NamedResources[cidr
 		diags.AddError(
 			fmt.Sprintf("%s(cidr-sg-rules)", op), err.Error(),
 		)
+	}
+	return diags
+}
+
+func (tfIESgSgRules2Backend) sync(ctx context.Context, items NamedResources[ieSgSgRule], client *sgAPI.Client, op protos.SyncReq_SyncOp) diag.Diagnostics {
+	var syncObj protos.SyncSgSgRules
+	var diags diag.Diagnostics
+	for _, features := range items.Items {
+		var accPorts []AccessPorts
+		diags.Append(accPortsRangeFromTF(ctx, features.Ports, &accPorts)...)
+		protoValue, ok := common.Networks_NetIP_Transport_value[strings.ToUpper(
+			features.Transport.ValueString(),
+		)]
+		if !ok {
+			diags.AddError(
+				"proto conv",
+				fmt.Sprintf("no proto conv for value(%s)", features.Transport.ValueString()))
+			return diags
+		}
+		caser := cases.Title(language.AmericanEnglish).String
+		trafficValue, ok := common.Traffic_value[caser(
+			features.Traffic.ValueString(),
+		)]
+		if !ok {
+			diags.AddError(
+				"traffic conv",
+				fmt.Sprintf("no traffic conv for value(%s)", features.Traffic.ValueString()))
+			return diags
+		}
+		syncObj.Rules = append(syncObj.Rules, &protos.SgSgRule{
+			Transport: common.Networks_NetIP_Transport(protoValue),
+			Sg:        features.Sg.ValueString(),
+			SgLocal:   features.SgLocal.ValueString(),
+			Traffic:   common.Traffic(trafficValue),
+			Ports:     accPortsRangeToProto(accPorts),
+			Logs:      features.Logs.ValueBool(),
+			Trace:     features.Trace.ValueBool(),
+		})
+	}
+	req := protos.SyncReq{
+		SyncOp: op,
+		Subject: &protos.SyncReq_SgSgRules{
+			SgSgRules: &syncObj,
+		},
+	}
+	if _, err := client.Sync(ctx, &req); err != nil {
+		diags.AddError(fmt.Sprintf("%s(ie-sg-sg-rules)", op), err.Error())
 	}
 	return diags
 }

@@ -1,0 +1,164 @@
+initial-backend:
+  networks: 
+  - |
+    {
+      "name": "net1",
+      "network": {
+        "CIDR": "10.10.10.0/24"
+      }
+    }
+  - |
+    {
+      "name": "net2",
+      "network": {
+        "CIDR": "10.10.20.0/24"
+      }
+    }
+  - |
+    {
+      "name": "net3",
+      "network": {
+        "CIDR": "10.10.30.0/24"
+      }
+    }
+  - |
+    {
+      "name": "net4",
+      "network": {
+        "CIDR": "10.10.40.0/24"
+      }
+    }
+  - |
+    {
+      "name": "net5",
+      "network": {
+        "CIDR": "10.10.50.0/24"
+      }
+    }
+  sec-groups:
+  - |
+    {
+      "defaultAction": "ACCEPT",
+      "logs": false,
+      "name": "group1",
+      "networks": ["net1"],
+      "trace": false
+    }
+  - |
+    {
+      "defaultAction": "DROP",
+      "logs": true,
+      "name": "group2",
+      "networks": ["net2"],
+      "trace": true
+    }
+  - |
+    {
+      "defaultAction": "ACCEPT",
+      "logs": false,
+      "name": "group3",
+      "networks": ["net3", "net5"],
+      "trace": false
+    }
+  - |
+    {
+      "defaultAction": "DROP",
+      "logs": true,
+      "name": "group4",
+      "networks": ["net4"],
+      "trace": true
+    }
+cases:
+- name: "add new IE Sg2Sg rules"
+  tf-config: |
+    resource "sgroups_ie_rules" "rules-set" {
+      items = {
+        "tcp:sg(group1)sg(group2):ingress" = {
+            transport = "tcp"
+            sg_local = "group1"
+            sg = "group2"
+            traffic = "ingress"
+            ports = [
+              {
+                d = "80,443"
+                s = "1000-2000"
+              }
+            ]
+            logs = true
+            trace = true
+        }
+      }
+    }
+  expected-backend:
+    ie-sg-sg-rules:
+    - |
+      {
+        "logs": true,
+        "ports": [
+          {
+            "d": "80,443",
+            "s": "1000-2000"
+          }
+        ],
+        "SgLocal": "group1",
+        "Sg": "group2",
+        "trace": true,
+        "traffic": "Ingress",
+        "transport": "TCP"
+      }
+- name: "add another rule with empty list for ports"
+  tf-config: |
+    resource "sgroups_ie_rules" "rules-set" {
+      items = {
+        "tcp:sg(group1)sg(group2):ingress" = {
+            transport = "tcp"
+            sg_local = "group1"
+            sg = "group2"
+            traffic = "ingress"
+            ports = [
+              {
+                d = "80,443"
+                s = "1000-2000"
+              }
+            ]
+            logs = true
+            trace = true
+        }
+        "udp:sg(group3)sg(group4):egress" = {
+          transport = "udp"
+          sg_local = "group3"
+          sg = "group4"
+          traffic = "egress"
+          ports = []
+          logs = true
+          trace = true
+        }
+      }
+    }
+  expected-backend:
+    ie-sg-sg-rules:
+    - |
+      {
+        "logs": true,
+        "ports": [
+          {
+            "d": "80,443",
+            "s": "1000-2000"
+          }
+        ],
+        "SgLocal": "group1",
+        "Sg": "group2",
+        "trace": true,
+        "traffic": "Ingress",
+        "transport": "TCP"
+      }
+    - |
+      {
+        "logs": true,
+        "ports": [],
+        "SgLocal": "group3",
+        "Sg": "group4",
+        "trace": true,
+        "traffic": "Egress",
+        "transport": "UDP"
+      }
