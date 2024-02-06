@@ -12,7 +12,6 @@ import (
 	"github.com/H-BF/sgroups/internal/queue"
 
 	"github.com/H-BF/corlib/logger"
-	"github.com/H-BF/corlib/pkg/jsonview"
 	"github.com/H-BF/corlib/pkg/patterns/observer"
 	"github.com/c-robinson/iplib"
 )
@@ -80,20 +79,21 @@ func (rf *DnsRefresher) Run(ctx context.Context) {
 				if e := ev.DnsAnswer.Err; e != nil {
 					log1.Error(e)
 				} else {
-					log1.Debug("resolved")
+					log1.Debugf("resolved; TTL: %s", ev.DnsAnswer.TTL.Round(time.Second))
 				}
 				agentSubj.Notify(ev)
 			case Ask2ResolveDomainAddresses:
 				activeQueries.Lock()
 				if activeQueries.At(ev) == nil {
-					ttl := time.Since(ev.ValidBefore)
+					now := time.Now()
+					ttl := ev.ValidBefore.Sub(now)
 					if ttl < time.Minute {
 						ttl = time.Minute
 					}
 					log.Debugw("ask-to-resolve",
 						"ip-v", ev.IpVersion,
 						"domain", ev.FQDN.String(),
-						"after", jsonview.Stringer(ttl),
+						"after", ttl.Round(time.Second),
 					)
 					newTimer := time.AfterFunc(ttl, func() {
 						activeQueries.Lock()

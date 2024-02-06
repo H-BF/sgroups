@@ -182,10 +182,11 @@ func (jb *NftApplierJob) doApply(ctx context.Context) error {
 	}
 
 	fqdnStrategy := internal.FqdnStrategy.MustValue(ctx)
-	if !fqdnStrategy.Eq(internal.FqdnRulesStartegyNDPI) {
+	if !fqdnStrategy.Eq(internal.FqdnRulesStartegyNDPI) && localData.SG2FQDNRules.FQDNs.Len() > 0 {
 		resolved := new(cases.ResolvedFQDN)
 		resolver := internal.GetDnsResolver()
 		localData.ResolvedFQDN = resolved
+		log.Debug("resolve FQDN(s)")
 		resolved.Resolve(ctx, localData.SG2FQDNRules, resolver)
 	}
 
