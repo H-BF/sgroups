@@ -83,8 +83,8 @@ func (tfc Traffic) Validate() error {
 func (sgRuleKey SGRuleIdentity) Validate() error {
 	return oz.ValidateStruct(&sgRuleKey,
 		oz.Field(&sgRuleKey.Transport),
-		oz.Field(&sgRuleKey.SgFrom, oz.Required),
-		oz.Field(&sgRuleKey.SgTo, oz.Required),
+		oz.Field(&sgRuleKey.SgFrom, oz.Required, oz.Match(reCName)),
+		oz.Field(&sgRuleKey.SgTo, oz.Required, oz.Match(reCName)),
 	)
 }
 
@@ -92,7 +92,7 @@ func (sgRuleKey SGRuleIdentity) Validate() error {
 func (o FQDNRuleIdentity) Validate() error {
 	return oz.ValidateStruct(&o,
 		oz.Field(&o.Transport),
-		oz.Field(&o.SgFrom, oz.Required),
+		oz.Field(&o.SgFrom, oz.Required, oz.Match(reCName)),
 		oz.Field(&o.FqdnTo),
 	)
 }
@@ -192,8 +192,7 @@ func (o SgSgIcmpRule) Validate() error {
 	return oz.ValidateStruct(&o,
 		oz.Field(&o.SgFrom, oz.Required.Error(msg),
 			oz.Match(reCName)),
-		oz.Field(&o.SgTo, oz.Required.Error(msg),
-			oz.Match(reCName)),
+		oz.Field(&o.SgTo, oz.Required.Error(msg)),
 		oz.Field(&o.Icmp),
 	)
 }
@@ -203,7 +202,7 @@ func (o CidrSgRuleIdenity) Validate() error {
 	return oz.ValidateStruct(&o,
 		oz.Field(&o.Transport),
 		oz.Field(&o.Traffic),
-		oz.Field(&o.SG, oz.Required),
+		oz.Field(&o.SG, oz.Required, oz.Match(reCName)),
 		oz.Field(&o.CIDR, oz.By(func(_ interface{}) error {
 			switch len(o.CIDR.IP) {
 			case net.IPv4len, net.IPv6len:
@@ -223,8 +222,8 @@ func (o SgSgRuleIdentity) Validate() error {
 	return oz.ValidateStruct(&o,
 		oz.Field(&o.Transport),
 		oz.Field(&o.Traffic),
-		oz.Field(&o.SgLocal, oz.Required),
-		oz.Field(&o.Sg, oz.Required))
+		oz.Field(&o.SgLocal, oz.Required, oz.Match(reCName)),
+		oz.Field(&o.Sg, oz.Required, oz.Match(reCName)))
 }
 
 // Validate validate of FQDNRule

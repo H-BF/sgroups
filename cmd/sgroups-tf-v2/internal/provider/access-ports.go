@@ -58,13 +58,17 @@ func accPortsRangeToProto(data []AccessPorts) []*protos.AccPorts {
 	return ret
 }
 
+// TODO:           ------ bad signature -----;
+// accPortsRangeFromTF(ctx context.Context, tfValue types.List, dst *[]AccessPorts) (diags diag.Diagnostics)
+// --> change to -->
+// accPortsRangeFromTF(ctx context.Context, tfValue types.List) ([]AccessPorts, diags diag.Diagnostics)
 func accPortsRangeFromTF(ctx context.Context, tfValue types.List, dst *[]AccessPorts) (diags diag.Diagnostics) {
 	diags.Append(tfValue.ElementsAs(ctx, dst, false)...)
 	if diags.HasError() {
 		return diags
 	}
 	// this conversion necessary to validate string with ports
-	if _, err := toModelPorts(*dst); err != nil {
+	if _, err := toModelPorts(*dst); err != nil { // TODO: эта проверка вообще лишняя
 		diags.AddError("ports conv", err.Error())
 		return diags
 	}

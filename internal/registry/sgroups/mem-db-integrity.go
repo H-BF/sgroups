@@ -396,7 +396,7 @@ func IntegrityChecker4CidrSgRules() IntegrityChecker { //nolint:gocyclo
 	}
 }
 
-func IntegrityChecker4SgSgRules() IntegrityChecker {
+func IntegrityChecker4SgSgRules() IntegrityChecker { //TODO: все экспортируемые функции нуждаются в комментарии
 	const api = "Integrity-of-SgSgRules"
 
 	return func(reader MemDbReader) error {

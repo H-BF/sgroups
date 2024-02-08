@@ -111,7 +111,7 @@ func SG(names ...string) Scope {
 	return ret
 }
 
-func SGLocal(one string, other ...string) Scope {
+func SGLocal(one string, other ...string) Scope { //TODO: +комментарий
 	ret := scopedSGLocal{
 		one: {},
 	}
@@ -187,7 +187,7 @@ func PKScopedCidrSgRules(rules ...model.CidrSgRule) Scope {
 	return ret
 }
 
-func PKScopedSgSgRules(rules ...model.SgSgRule) Scope {
+func PKScopedSgSgRules(rules ...model.SgSgRule) Scope { //TODO: +комментарий
 	ret := scopedSgSgRuleIdentity{}
 	for _, r := range rules {
 		ret[r.ID.IdentityHash()] = r.ID

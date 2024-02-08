@@ -1,6 +1,8 @@
 -- +goose Up
 -- +goose StatementBegin
 --------------------------------------- TABLES ---------------------------------------
+
+--TODO: on update cascade ---> on update restrict
 drop table if exists sgroups.tbl_ie_sg_sg_rule cascade;
 create table sgroups.tbl_ie_sg_sg_rule
 (
