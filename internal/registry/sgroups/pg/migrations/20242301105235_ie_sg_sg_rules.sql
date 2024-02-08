@@ -2,7 +2,6 @@
 -- +goose StatementBegin
 --------------------------------------- TABLES ---------------------------------------
 
---TODO: on update cascade ---> on update restrict
 drop table if exists sgroups.tbl_ie_sg_sg_rule cascade;
 create table sgroups.tbl_ie_sg_sg_rule
 (
@@ -19,12 +18,12 @@ create table sgroups.tbl_ie_sg_sg_rule
     constraint fk_ie_sg_sg_rule__sg_local
         foreign key (sg_local) references sgroups.tbl_sg (id)
             on delete cascade
-            on update cascade
+            on update restrict
             deferrable initially deferred,
     constraint fk_ie_sg_sg_rule__sg
         foreign key (sg) references sgroups.tbl_sg (id)
             on delete cascade
-            on update cascade
+            on update restrict
             deferrable initially deferred,
     constraint "S_ports_dont_intersect"
         check (

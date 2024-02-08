@@ -181,7 +181,11 @@ func (tfSgSgRules2Backend) sync(ctx context.Context, items NamedResources[sgSgRu
 	var diags diag.Diagnostics
 	for _, features := range items.Items {
 		var accPorts []AccessPorts
-		diags.Append(accPortsRangeFromTF(ctx, features.Ports, &accPorts)...)
+		accPorts, d := accPortsRangeFromTF(ctx, features.Ports)
+		if d.HasError() {
+			diags.Append()
+			return diags
+		}
 		protoValue, ok := common.Networks_NetIP_Transport_value[strings.ToUpper(
 			features.Transport.ValueString(),
 		)]
@@ -248,7 +252,11 @@ func (tfSgFqdnRules2Backend) sync(ctx context.Context, items NamedResources[sgFq
 	var diags diag.Diagnostics
 	for _, features := range items.Items {
 		var accPorts []AccessPorts
-		diags.Append(accPortsRangeFromTF(ctx, features.Ports, &accPorts)...)
+		accPorts, d := accPortsRangeFromTF(ctx, features.Ports)
+		if d.HasError() {
+			diags.Append()
+			return diags
+		}
 		transportValue, ok := common.Networks_NetIP_Transport_value[strings.ToUpper(
 			features.Transport.ValueString(),
 		)]
@@ -291,7 +299,11 @@ func (tfCidrSgRules2Backend) sync(ctx context.Context, items NamedResources[cidr
 	var diags diag.Diagnostics
 	for _, features := range items.Items {
 		var accPorts []AccessPorts
-		diags.Append(accPortsRangeFromTF(ctx, features.Ports, &accPorts)...)
+		accPorts, d := accPortsRangeFromTF(ctx, features.Ports)
+		if d.HasError() {
+			diags.Append()
+			return diags
+		}
 		protoValue, ok := common.Networks_NetIP_Transport_value[strings.ToUpper(
 			features.Transport.ValueString(),
 		)]
@@ -340,7 +352,11 @@ func (tfIESgSgRules2Backend) sync(ctx context.Context, items NamedResources[ieSg
 	var diags diag.Diagnostics
 	for _, features := range items.Items {
 		var accPorts []AccessPorts
-		diags.Append(accPortsRangeFromTF(ctx, features.Ports, &accPorts)...)
+		accPorts, d := accPortsRangeFromTF(ctx, features.Ports)
+		if d.HasError() {
+			diags.Append()
+			return diags
+		}
 		protoValue, ok := common.Networks_NetIP_Transport_value[strings.ToUpper(
 			features.Transport.ValueString(),
 		)]

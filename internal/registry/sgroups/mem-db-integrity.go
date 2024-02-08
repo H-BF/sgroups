@@ -175,6 +175,7 @@ func IntegrityChecker4Networks2() IntegrityChecker { //nolint:gocyclo
 }
 */
 
+// IntegrityChecker4Networks -
 func IntegrityChecker4Networks() IntegrityChecker { //nolint:gocyclo
 	const api = "Integrity-of-Networks"
 
@@ -396,7 +397,8 @@ func IntegrityChecker4CidrSgRules() IntegrityChecker { //nolint:gocyclo
 	}
 }
 
-func IntegrityChecker4SgSgRules() IntegrityChecker { //TODO: все экспортируемые функции нуждаются в комментарии
+// IntegrityChecker4SgSgRules - checks existence of referred SGs
+func IntegrityChecker4SgSgRules() IntegrityChecker {
 	const api = "Integrity-of-SgSgRules"
 
 	return func(reader MemDbReader) error {

@@ -55,7 +55,7 @@ type (
 
 // String -
 func (k ieSgSgRuleKey) String() string {
-	return fmt.Sprintf("%s:sg(%s)sg(%s):%s", //TODO: "%s:sg(%s)sg(%s):%s" --> "%s:sg-local(%s)sg(%s):%s"
+	return fmt.Sprintf("%s:sg-local(%s)sg(%s):%s",
 		k.transport, k.sgLocal, k.sg, k.traffic)
 }
 
@@ -79,11 +79,11 @@ func (i ieSgSgRule) Attributes() map[string]schema.Attribute {
 			},
 		},
 		"sg_local": schema.StringAttribute{
-			Description: "Security Group name", //TODO: коммент не информативен
+			Description: "Security Group name of dst/src group when ingress/egress traffic chosen",
 			Required:    true,
 		},
 		"sg": schema.StringAttribute{
-			Description: "Security Group name", //TODO: коммент не информативен
+			Description: "Security Group name of opposite group to sg_local",
 			Required:    true,
 		},
 		"traffic": schema.StringAttribute{

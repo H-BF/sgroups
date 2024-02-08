@@ -73,7 +73,7 @@ cases:
     tf-config: |
       resource "sgroups_ie_rules" "rules-set" {
         items = {
-          "tcp:sg(group1)sg(group2):ingress" = {
+          "tcp:sg-local(group1)sg(group2):ingress" = {
             transport = "tcp"
             sg_local = "group1"
             sg = "group2"
@@ -87,7 +87,7 @@ cases:
             logs = true
             trace = true
           }
-          "udp:sg(group3)sg(group4):egress" = {
+          "udp:sg-local(group3)sg(group4):egress" = {
             transport = "udp"
             sg_local = "group3"
             sg = "group4"
@@ -139,7 +139,7 @@ cases:
     tf-config: |
       resource "sgroups_ie_rules" "rules-set" {
         items = {
-          "tcp:sg(group1)sg(group2):ingress" = {
+          "tcp:sg-local(group1)sg(group2):ingress" = {
             transport = "tcp"
             sg_local = "group1"
             sg = "group2"

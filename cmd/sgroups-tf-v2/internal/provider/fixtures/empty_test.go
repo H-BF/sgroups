@@ -82,5 +82,5 @@ func Test_ExtractKey(t *testing.T) {
 		SgLocal:   "local-sg-example",
 		Sg:        "external-sg-example",
 	}
-	require.Equal(t, "tcp:sg(local-sg-example)sg(external-sg-example)ingress", extractKey(ieSgSgRule))
+	require.Equal(t, "tcp:sg-local(local-sg-example)sg(external-sg-example)ingress", extractKey(ieSgSgRule))
 }

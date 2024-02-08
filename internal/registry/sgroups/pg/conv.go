@@ -430,7 +430,8 @@ func (o *SgSgRule) FromModel(m sgm.SgSgRule) error {
 	return nil
 }
 
-func (o SgSgRule) ToModel() (ret sgm.SgSgRule, err error) { //TODO: +коммент
+// ToModel -
+func (o SgSgRule) ToModel() (ret sgm.SgSgRule, err error) {
 	if ret.ID.Transport, err = o.Proto.ToModel(); err != nil {
 		return ret, err
 	}

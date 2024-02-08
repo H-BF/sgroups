@@ -111,7 +111,8 @@ func SG(names ...string) Scope {
 	return ret
 }
 
-func SGLocal(one string, other ...string) Scope { //TODO: +комментарий
+// SGLocal makes local security group name(s) scope
+func SGLocal(one string, other ...string) Scope {
 	ret := scopedSGLocal{
 		one: {},
 	}
@@ -158,7 +159,7 @@ func PKScopeOfFQDNRules(others ...model.FQDNRule) Scope {
 	return ret
 }
 
-// PKScopeOfSgIcmpRules makes SG:ICMP prinary rule scope
+// PKScopeOfSgIcmpRules makes SG:ICMP primary rule scope
 func PKScopeOfSgIcmpRules(rules ...model.SgIcmpRule) Scope {
 	ret := scopedSgIcmpIdentity{}
 	for _, r := range rules {
@@ -168,7 +169,7 @@ func PKScopeOfSgIcmpRules(rules ...model.SgIcmpRule) Scope {
 	return ret
 }
 
-// PKScopeOfSgSgIcmpRules makes SG-SG:ICMP prinary rule scope
+// PKScopeOfSgSgIcmpRules makes SG-SG:ICMP primary rule scope
 func PKScopeOfSgSgIcmpRules(rules ...model.SgSgIcmpRule) Scope {
 	ret := scopedSgSgIcmpIdentity{}
 	for _, r := range rules {
@@ -178,7 +179,7 @@ func PKScopeOfSgSgIcmpRules(rules ...model.SgSgIcmpRule) Scope {
 	return ret
 }
 
-// PKScopedCidrSgRules makes PROTO:CIDR:SG:TRAFFIC prinary rule scope
+// PKScopedCidrSgRules makes PROTO:CIDR:SG:TRAFFIC primary rule scope
 func PKScopedCidrSgRules(rules ...model.CidrSgRule) Scope {
 	ret := scopedCidrSgRuleIdentity{}
 	for _, r := range rules {
@@ -187,7 +188,8 @@ func PKScopedCidrSgRules(rules ...model.CidrSgRule) Scope {
 	return ret
 }
 
-func PKScopedSgSgRules(rules ...model.SgSgRule) Scope { //TODO: +комментарий
+// PKScopedSgSgRules makes PROTO:SG-SG:TRAFFIC primary rule scope
+func PKScopedSgSgRules(rules ...model.SgSgRule) Scope {
 	ret := scopedSgSgRuleIdentity{}
 	for _, r := range rules {
 		ret[r.ID.IdentityHash()] = r.ID

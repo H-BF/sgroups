@@ -481,6 +481,6 @@ func (o SgSgRuleIdentity) IsEq(other SgSgRuleIdentity) bool {
 
 // String implements ruleID.
 func (o SgSgRuleIdentity) String() string {
-	return fmt.Sprintf("%s:sg(%s)sg(%s)%s", //TODO: "%s:sg(%s)sg(%s)%s" --> "%s:sg-local(%s)sg(%s)%s"
+	return fmt.Sprintf("%s:sg-local(%s)sg(%s)%s",
 		o.Transport, o.SgLocal, o.Sg, o.Traffic)
 }
