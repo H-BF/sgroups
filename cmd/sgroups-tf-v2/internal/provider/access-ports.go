@@ -60,13 +60,15 @@ func accPortsRangeToProto(data []AccessPorts) []*protos.AccPorts {
 
 func accPortsRangeFromTF(ctx context.Context, tfValue types.List) (ret []AccessPorts, diags diag.Diagnostics) {
 	diags.Append(tfValue.ElementsAs(ctx, &ret, false)...)
-	if diags.HasError() {
-		return ret, diags
-	}
+	//if diags.HasError() {
+	//	return ret, diags
+	//}
 	// this conversion necessary to validate string with ports
+	/*//TODO: whether it`s really necessary?
 	if _, err := toModelPorts(ret); err != nil {
 		diags.AddError("ports conv", err.Error())
 		return ret, diags
 	}
+	*/
 	return ret, diags
 }
