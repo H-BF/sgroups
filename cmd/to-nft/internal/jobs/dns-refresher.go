@@ -12,6 +12,7 @@ import (
 	"github.com/H-BF/sgroups/internal/queue"
 
 	"github.com/H-BF/corlib/logger"
+	"github.com/H-BF/corlib/pkg/jsonview"
 	"github.com/H-BF/corlib/pkg/patterns/observer"
 	"github.com/c-robinson/iplib"
 )
@@ -51,6 +52,11 @@ func (rf *DnsRefresher) Run(ctx context.Context) {
 		_ = v.Stop()
 		return true
 	})
+	const semaphoreCap = 7
+	sema := make(chan struct{}, semaphoreCap)
+	for i := 0; i < semaphoreCap; i++ {
+		sema <- struct{}{}
+	}
 	que := queue.NewFIFO()
 	defer que.Close()
 	obs := observer.NewObserver(func(ev observer.EventType) {
@@ -60,7 +66,7 @@ func (rf *DnsRefresher) Run(ctx context.Context) {
 	defer agentSubj.ObserversDetach(obs)
 	agentSubj.ObserversAttach(obs)
 
-	log := logger.FromContext(ctx).Named("dns")
+	log := logger.FromContext(ctx).Named("dns").Named("refresher")
 	log.Info("start")
 	defer log.Info("stop")
 	for events := que.Reader(); ; {
@@ -77,9 +83,11 @@ func (rf *DnsRefresher) Run(ctx context.Context) {
 			case DomainAddresses:
 				log1 := log.WithField("domain", ev.FQDN).WithField("ip-v", ev.IpVersion)
 				if e := ev.DnsAnswer.Err; e != nil {
-					log1.Error(e)
+					log1.Errorw("resolved", "error", jsonview.Stringer(e))
 				} else {
-					log1.Debugf("resolved; TTL: %s", ev.DnsAnswer.TTL.Round(time.Second))
+					log1.Debugw("resolved",
+						"TTL", jsonview.Stringer(ev.DnsAnswer.TTL.Round(time.Second)),
+						"IP(s)", ev.DnsAnswer.IPs)
 				}
 				agentSubj.Notify(ev)
 			case Ask2ResolveDomainAddresses:
@@ -92,15 +100,22 @@ func (rf *DnsRefresher) Run(ctx context.Context) {
 					}
 					log.Debugw("ask-to-resolve",
 						"ip-v", ev.IpVersion,
-						"domain", ev.FQDN.String(),
-						"after", ttl.Round(time.Second),
+						"domain", jsonview.Stringer(ev.FQDN),
+						"after", jsonview.Stringer(ttl.Round(time.Second)),
 					)
 					newTimer := time.AfterFunc(ttl, func() {
+						select {
+						case <-ctx.Done():
+						case <-sema:
+							defer func() {
+								sema <- struct{}{}
+							}()
+							ret := rf.resolve(ctx, ev)
+							que.Put(ret)
+						}
 						activeQueries.Lock()
 						activeQueries.Del(ev)
 						activeQueries.Unlock()
-						ret := rf.resolve(ctx, ev)
-						que.Put(ret)
 					})
 					activeQueries.Put(ev, newTimer)
 				}
