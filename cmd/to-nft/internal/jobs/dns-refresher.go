@@ -38,46 +38,66 @@ type (
 	}
 
 	// DnsRefresher -
-	DnsRefresher struct{}
+	DnsRefresher struct {
+		obs       observer.Observer
+		agentSubj observer.Subject
+		queue     *queue.FIFO
+		sema      chan struct{}
+	}
 )
 
+// NewDnsRefresher -
+func NewDnsRefresher() *DnsRefresher {
+	const semaphoreCap = 8
+
+	ret := DnsRefresher{
+		agentSubj: internal.AgentSubject(),
+		sema:      make(chan struct{}, semaphoreCap),
+		queue:     queue.NewFIFO(),
+	}
+	for i := 0; i < cap(ret.sema); i++ {
+		ret.sema <- struct{}{}
+	}
+	que := ret.queue
+	ret.obs = observer.NewObserver(func(ev observer.EventType) {
+		_ = que.Put(ev)
+	}, false, Ask2ResolveDomainAddresses{})
+	ret.agentSubj.ObserversAttach(ret.obs)
+	return &ret
+}
+
+// Close -
+func (rf *DnsRefresher) Close() error {
+	rf.agentSubj.ObserversDetach(rf.obs)
+	_ = rf.obs.Close()
+	_ = rf.queue.Close()
+	return nil
+}
+
 // Run -
-func (rf *DnsRefresher) Run(ctx context.Context) {
+func (rf *DnsRefresher) Run(ctx context.Context) (err error) {
 	type fqdn2timer = struct {
 		sync.Mutex
 		dict.RBDict[Ask2ResolveDomainAddresses, *time.Timer]
 	}
+
+	log := logger.FromContext(ctx).Named("dns").Named("refresher")
+	log.Info("start")
+	defer log.Info("stop")
 	var activeQueries fqdn2timer
 	defer activeQueries.Iterate(func(_ Ask2ResolveDomainAddresses, v *time.Timer) bool {
 		_ = v.Stop()
 		return true
 	})
-	const semaphoreCap = 7
-	sema := make(chan struct{}, semaphoreCap)
-	for i := 0; i < semaphoreCap; i++ {
-		sema <- struct{}{}
-	}
-	que := queue.NewFIFO()
-	defer que.Close()
-	obs := observer.NewObserver(func(ev observer.EventType) {
-		_ = que.Put(ev)
-	}, false, Ask2ResolveDomainAddresses{})
-	agentSubj := internal.AgentSubject()
-	defer agentSubj.ObserversDetach(obs)
-	agentSubj.ObserversAttach(obs)
-
-	log := logger.FromContext(ctx).Named("dns").Named("refresher")
-	log.Info("start")
-	defer log.Info("stop")
-	for events := que.Reader(); ; {
+	for events := rf.queue.Reader(); ; {
 		select {
 		case <-ctx.Done():
 			log.Info("will exit cause parent context has canceled")
-			return
+			return ctx.Err()
 		case raw, ok := <-events:
 			if !ok {
 				log.Infof("will exit cause it has closed")
-				return
+				return nil
 			}
 			switch ev := raw.(type) {
 			case DomainAddresses:
@@ -89,7 +109,7 @@ func (rf *DnsRefresher) Run(ctx context.Context) {
 						"TTL", jsonview.Stringer(ev.DnsAnswer.TTL.Round(time.Second)),
 						"IP(s)", ev.DnsAnswer.IPs)
 				}
-				agentSubj.Notify(ev)
+				rf.agentSubj.Notify(ev)
 			case Ask2ResolveDomainAddresses:
 				activeQueries.Lock()
 				if activeQueries.At(ev) == nil {
@@ -106,12 +126,12 @@ func (rf *DnsRefresher) Run(ctx context.Context) {
 					newTimer := time.AfterFunc(ttl, func() {
 						select {
 						case <-ctx.Done():
-						case <-sema:
+						case <-rf.sema:
 							defer func() {
-								sema <- struct{}{}
+								rf.sema <- struct{}{}
 							}()
 							ret := rf.resolve(ctx, ev)
-							que.Put(ret)
+							rf.queue.Put(ret)
 						}
 						activeQueries.Lock()
 						activeQueries.Del(ev)

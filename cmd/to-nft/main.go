@@ -116,8 +116,6 @@ func main() { //nolint:gocyclo
 			NetlinkError{}, jobs.DomainAddresses{}),
 	)
 
-	go (&jobs.DnsRefresher{}).Run(ctx)
-
 	gracefulDuration := AppGracefulShutdown.MustValue(ctx)
 	errc := make(chan error, 1)
 	go func() {
@@ -299,6 +297,8 @@ func (m *mainJob) run(ctx context.Context) error {
 		CheckInterval: m.SyncStatusCheckInterval,
 		UsePushModel:  m.SyncStatusUsePush,
 	}
+	dnsRf := jobs.NewDnsRefresher()
+	defer dnsRf.Close()
 	ctx1, cancel := context.WithCancel(ctx)
 	defer cancel()
 	ff := []func() error{
@@ -311,9 +311,13 @@ func (m *mainJob) run(ctx context.Context) error {
 		func() error {
 			return ste.Run(ctx1)
 		},
+		func() error {
+			return dnsRf.Run(ctx)
+		},
 	}
-	errs := make([]error, len(ff))
-	_ = parallel.ExecAbstract(len(ff), 2, func(i int) error {
+	n := len(ff)
+	errs := make([]error, n)
+	_ = parallel.ExecAbstract(n, int32(n-1), func(i int) error {
 		if e := ff[i](); e != nil {
 			cancel()
 			if !errors.Is(e, context.Canceled) {
