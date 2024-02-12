@@ -43,6 +43,8 @@ type (
 		agentSubj observer.Subject
 		queue     *queue.FIFO
 		sema      chan struct{}
+		close     chan struct{}
+		closeOnce sync.Once
 	}
 )
 
@@ -53,6 +55,7 @@ func NewDnsRefresher() *DnsRefresher {
 	ret := DnsRefresher{
 		agentSubj: internal.AgentSubject(),
 		sema:      make(chan struct{}, semaphoreCap),
+		close:     make(chan struct{}),
 		queue:     queue.NewFIFO(),
 	}
 	for i := 0; i < cap(ret.sema); i++ {
@@ -68,9 +71,12 @@ func NewDnsRefresher() *DnsRefresher {
 
 // Close -
 func (rf *DnsRefresher) Close() error {
-	rf.agentSubj.ObserversDetach(rf.obs)
-	_ = rf.obs.Close()
-	_ = rf.queue.Close()
+	rf.closeOnce.Do(func() {
+		close(rf.close)
+		rf.agentSubj.ObserversDetach(rf.obs)
+		_ = rf.obs.Close()
+		_ = rf.queue.Close()
+	})
 	return nil
 }
 
@@ -85,10 +91,15 @@ func (rf *DnsRefresher) Run(ctx context.Context) (err error) {
 	log.Info("start")
 	defer log.Info("stop")
 	var activeQueries fqdn2timer
-	defer activeQueries.Iterate(func(_ Ask2ResolveDomainAddresses, v *time.Timer) bool {
-		_ = v.Stop()
-		return true
-	})
+
+	defer func() {
+		activeQueries.Lock()
+		activeQueries.Iterate(func(_ Ask2ResolveDomainAddresses, v *time.Timer) bool {
+			_ = v.Stop()
+			return true
+		})
+		activeQueries.Unlock()
+	}()
 	for events := rf.queue.Reader(); ; {
 		select {
 		case <-ctx.Done():
@@ -126,6 +137,7 @@ func (rf *DnsRefresher) Run(ctx context.Context) (err error) {
 					newTimer := time.AfterFunc(ttl, func() {
 						select {
 						case <-ctx.Done():
+						case <-rf.close:
 						case <-rf.sema:
 							defer func() {
 								rf.sema <- struct{}{}

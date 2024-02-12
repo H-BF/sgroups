@@ -43,7 +43,7 @@ func Test_QueryA(t *testing.T) {
 		"domain2.org": mkA("1.1.1.2"),
 		"domain3.org": mkA("1.1.1.3"),
 		"domain4.org": mkA("1.1.1.4"),
-		"domain5.org": nil,
+		"domain5.org": mkA(""),
 	}
 
 	started := make(chan struct{})
@@ -102,8 +102,8 @@ func Test_QueryA(t *testing.T) {
 	_ = parallel.ExecAbstract(len(domains), 10, func(i int) error {
 		ans[i] = QueryA.Ask(ctx, domains[i],
 			//WithDialDuration(time.Hour),
-			WithReadDuration(5*time.Second),
-			WithWriteDuration(5*time.Second),
+			WithReadDuration(time.Second),
+			WithWriteDuration(time.Second),
 			UsePort(nsAddr.Port),
 			UseTCP{},
 			WithNameservers{nsAddr.IP.String()},

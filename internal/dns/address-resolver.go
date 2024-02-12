@@ -88,48 +88,45 @@ func (queryAddress[AddrT]) Ask(ctx context.Context, domain string, opts ...Optio
 	}
 	for {
 		var errs []error
-		nn := int(-1)
-		linq.From(nss).
-			Where(func(_ any) bool {
-				return nn <= 0 || !haveCancelledOrDeadline(errs[nn-1])
-			}).
-			Select(func(i any) any {
-				nn++
-				v := i.(string)
-				msg := h.makeMsq(q)
-				n := tern(net.ParseIP(v) != nil,
-					net.JoinHostPort(v, strconv.Itoa(int(h.port))),
-					fmt.Sprintf("%s:%v", dns.Fqdn(v), h.port))
-				var r retType
+		for i := range nss {
+			msg := h.makeMsq(q)
+			ns := nss[i]
+			ep := tern(net.ParseIP(ns) != nil,
+				net.JoinHostPort(ns, strconv.Itoa(int(h.port))),
+				fmt.Sprintf("%s:%v", ns, h.port))
+			ret.At = time.Now()
+			var r retType
+			r.m, _, r.e = c.ExchangeContext(ctx, msg, ep)
+			if r.e == nil && r.m.Rcode != dns.RcodeSuccess {
+				r.e = errors.Errorf("ret-code(%v)", r.m.Rcode)
+			}
+			if r.e == nil {
 				ret.At = time.Now()
-				if r.m, _, r.e = c.ExchangeContext(ctx, msg, n); r.e != nil {
-					errs = append(errs, errors.WithMessagef(r.e, "use-ns(%s)", v))
-				}
-				return r
-			}).
-			Where(func(i any) bool {
-				v := i.(retType)
-				return v.e == nil && v.m.Rcode == dns.RcodeSuccess &&
-					len(v.m.Answer) > 0
-			}).
-			Take(1).
-			SelectMany(func(i any) linq.Query {
-				rrs := i.(retType).m.Answer
-				return linq.From(AddrT{}.rr2addr(rrs))
-			}).ToSlice(&ret.Addresses)
-
-		if len(ret.Addresses) != 0 || len(errs) == 0 {
-			break
+				ret.Addresses = AddrT{}.rr2addr(r.m.Answer)
+				return ret
+			}
+			errs = append(errs, errors.WithMessagef(r.e, "use-ns(%s)", ns))
+			if haveCancelledOrDeadline(r.e) {
+				ret.Error = multierr.Combine(errs...)
+				return ret
+			}
 		}
 		nxt := h.backoff.NextBackOff()
 		if nxt == bkf.Stop {
 			ret.Error = multierr.Combine(errs...)
-		} else {
+		} else if nxt > 100*time.Millisecond {
 			select {
 			case <-time.After(nxt):
 				continue
 			case <-ctx.Done():
 				ret.Error = multierr.Combine(append(errs, ctx.Err())...)
+			}
+		} else {
+			select {
+			case <-ctx.Done():
+				ret.Error = multierr.Combine(append(errs, ctx.Err())...)
+			default:
+				continue
 			}
 		}
 		break
