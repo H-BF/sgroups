@@ -113,7 +113,7 @@ func (item sgSgIcmpRule) Attributes() map[string]schema.Attribute {
 			Default:     booldefault.StaticBool(false),
 		},
 		"trace": schema.BoolAttribute{
-			Description: "toggle logging on every rule in security group",
+			Description: "toggle tracing on every rule in security group",
 			Optional:    true,
 			Computed:    true,
 			Default:     booldefault.StaticBool(false),

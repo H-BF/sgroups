@@ -22,7 +22,7 @@ import (
 
 func NewIESgSgRulesResource() resource.Resource {
 	d := Description{
-		ResourceDescription: "mapped 'proto:sg(local_sg)sg(external_sg)traffic' -> 'SG-SG-<IN|E>GRESS' rule resource",
+		ResourceDescription: "mapped 'proto:sg-local(local_sg)sg(external_sg)traffic' -> 'SG-SG-<IN|E>GRESS' rule resource",
 		ItemsDescription:    "<IN|E>GRESS SG -> SG rules",
 	}
 	return &ieSgSgRulesResource{
@@ -55,7 +55,7 @@ type (
 
 // String -
 func (k ieSgSgRuleKey) String() string {
-	return fmt.Sprintf("%s:sg-local(%s)sg(%s):%s",
+	return fmt.Sprintf("%s:sg-local(%s)sg(%s)%s",
 		k.transport, k.sgLocal, k.sg, k.traffic)
 }
 
@@ -129,9 +129,11 @@ func (item ieSgSgRule) IsDiffer(ctx context.Context, other ieSgSgRule) bool {
 	itemModelPorts, _ = toModelPorts(itemAccPorts)
 	otherModelPorts, _ = toModelPorts(otherAccPorts)
 	return !(strings.EqualFold(item.Transport.ValueString(), other.Transport.ValueString()) &&
+		item.Traffic.Equal(other.Traffic) &&
 		item.SgLocal.Equal(other.SgLocal) &&
 		item.Sg.Equal(other.Sg) &&
 		item.Logs.Equal(other.Logs) &&
+		item.Trace.Equal(other.Trace) &&
 		model.AreRulePortsEq(itemModelPorts, otherModelPorts))
 }
 

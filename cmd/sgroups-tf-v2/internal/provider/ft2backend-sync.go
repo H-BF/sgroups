@@ -183,7 +183,7 @@ func (tfSgSgRules2Backend) sync(ctx context.Context, items NamedResources[sgSgRu
 		var accPorts []AccessPorts
 		accPorts, d := accPortsRangeFromTF(ctx, features.Ports)
 		if d.HasError() {
-			diags.Append()
+			diags.Append(d...)
 			return diags
 		}
 		protoValue, ok := common.Networks_NetIP_Transport_value[strings.ToUpper(
@@ -254,7 +254,7 @@ func (tfSgFqdnRules2Backend) sync(ctx context.Context, items NamedResources[sgFq
 		var accPorts []AccessPorts
 		accPorts, d := accPortsRangeFromTF(ctx, features.Ports)
 		if d.HasError() {
-			diags.Append()
+			diags.Append(d...)
 			return diags
 		}
 		transportValue, ok := common.Networks_NetIP_Transport_value[strings.ToUpper(
@@ -301,7 +301,7 @@ func (tfCidrSgRules2Backend) sync(ctx context.Context, items NamedResources[cidr
 		var accPorts []AccessPorts
 		accPorts, d := accPortsRangeFromTF(ctx, features.Ports)
 		if d.HasError() {
-			diags.Append()
+			diags.Append(d...)
 			return diags
 		}
 		protoValue, ok := common.Networks_NetIP_Transport_value[strings.ToUpper(
@@ -354,7 +354,7 @@ func (tfIESgSgRules2Backend) sync(ctx context.Context, items NamedResources[ieSg
 		var accPorts []AccessPorts
 		accPorts, d := accPortsRangeFromTF(ctx, features.Ports)
 		if d.HasError() {
-			diags.Append()
+			diags.Append(d...)
 			return diags
 		}
 		protoValue, ok := common.Networks_NetIP_Transport_value[strings.ToUpper(
