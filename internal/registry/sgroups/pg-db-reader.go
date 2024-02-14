@@ -444,6 +444,12 @@ func (rd *pgDbReader) ListSgSgRules(ctx context.Context, consume func(model.SgSg
 	})
 }
 
+// ListIESgSgIcmpRules impl Reader interface
+func (rd *pgDbReader) ListIESgSgIcmpRules(ctx context.Context, consume func(rule model.IESgSgIcmpRule) error, scope Scope) error {
+	_, _, _ = ctx, consume, scope
+	panic("implement me")
+}
+
 // GetSyncStatus impl Reader interface
 func (rd *pgDbReader) GetSyncStatus(ctx context.Context) (*model.SyncStatus, error) {
 	const api = "PG/GetSyncStatus"

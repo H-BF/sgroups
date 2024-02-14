@@ -19,6 +19,7 @@ type (
 		ListSgSgIcmpRules(ctx context.Context, consume func(model.SgSgIcmpRule) error, scope Scope) error
 		ListCidrSgRules(ctx context.Context, consume func(model.CidrSgRule) error, scope Scope) error
 		ListSgSgRules(ctx context.Context, consume func(model.SgSgRule) error, scope Scope) error
+		ListIESgSgIcmpRules(ctx context.Context, consume func(rule model.IESgSgIcmpRule) error, scope Scope) error
 		GetSyncStatus(ctx context.Context) (*model.SyncStatus, error)
 	}
 
@@ -38,6 +39,7 @@ type (
 		SyncSgSgIcmpRules(ctx context.Context, rules []model.SgSgIcmpRule, scope Scope, opts ...Option) error
 		SyncCidrSgRules(ctx context.Context, rules []model.CidrSgRule, scope Scope, opts ...Option) error
 		SyncSgSgRules(ctx context.Context, rules []model.SgSgRule, scope Scope, opts ...Option) error
+		SyncIESgSgIcmpRules(ctx context.Context, rules []model.IESgSgIcmpRule, scope Scope, opts ...Option) error
 		Commit() error
 		Abort()
 	}

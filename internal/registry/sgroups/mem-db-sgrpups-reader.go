@@ -96,6 +96,11 @@ func (rd sGroupsMemDbReader) ListSgSgRules(_ context.Context, consume func(model
 	return memDbListObjects(rd.reader, scope, TblSgSgRules, consume)
 }
 
+// ListIESgSgIcmpRules impl Reader interface
+func (rd sGroupsMemDbReader) ListIESgSgIcmpRules(_ context.Context, consume func(rule model.IESgSgIcmpRule) error, scope Scope) error {
+	return memDbListObjects(rd.reader, scope, TblIESgSgIcmpRules, consume)
+}
+
 // ListSGRules impl Reader
 func (rd sGroupsMemDbReader) Close() error {
 	return nil

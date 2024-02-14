@@ -59,7 +59,7 @@ func Proto2ModelFQDNRule(src *sg.FqdnRule) (model.FQDNRule, error) {
 func Proto2MOdelSgIcmpRule(src *sg.SgIcmpRule) (model.SgIcmpRule, error) {
 	const api = "proto2model-SgIcmpRule-conv"
 	var ret model.SgIcmpRule
-	err := prtoto2SgIcmpRule{SgIcmpRule: &ret}.from(src)
+	err := proto2SgIcmpRule{SgIcmpRule: &ret}.from(src)
 	return ret, errors.WithMessage(err, api)
 }
 
@@ -67,7 +67,7 @@ func Proto2MOdelSgIcmpRule(src *sg.SgIcmpRule) (model.SgIcmpRule, error) {
 func Proto2MOdelSgSgIcmpRule(src *sg.SgSgIcmpRule) (model.SgSgIcmpRule, error) {
 	const api = "proto2model-SgSgIcmpRule-conv"
 	var ret model.SgSgIcmpRule
-	err := prtoto2SgSgIcmpRule{SgSgIcmpRule: &ret}.from(src)
+	err := proto2SgSgIcmpRule{SgSgIcmpRule: &ret}.from(src)
 	return ret, errors.WithMessage(err, api)
 }
 
@@ -83,5 +83,12 @@ func Proto2ModelCidrSgRule(src *sg.CidrSgRule) (model.CidrSgRule, error) {
 func Proto2ModelSgSgRule(src *sg.SgSgRule) (ret model.SgSgRule, err error) {
 	const api = "proto2model-SgSgRule-conv"
 	err = sgSgRule{SgSgRule: &ret}.from(src)
+	return ret, errors.WithMessage(err, api)
+}
+
+// Proto2ModelIESgSgIcmpRule conv IESgSgIcmpRule (proto --> model)
+func Proto2ModelIESgSgIcmpRule(src *sg.IESgSgIcmpRule) (ret model.IESgSgIcmpRule, err error) {
+	const api = "proto2model-IESgSgIcmpRule-conv"
+	err = proto2IESgSgIcmpRule{IESgSgIcmpRule: &ret}.from(src)
 	return ret, errors.WithMessage(err, api)
 }

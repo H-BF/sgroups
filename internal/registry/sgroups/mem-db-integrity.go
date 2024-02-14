@@ -430,3 +430,38 @@ func IntegrityChecker4SgSgRules() IntegrityChecker {
 		return nil
 	}
 }
+
+func IntegrityChecker4IESgSgIcmpRules() IntegrityChecker {
+	const api = "Integrity-of-IESgSgIcmpRules"
+
+	return func(reader MemDbReader) error {
+		it, e := reader.Get(TblIESgSgIcmpRules, indexID)
+		if isInvalidTableErr(e) {
+			return nil
+		}
+		if e != nil {
+			return errors.WithMessage(e, api)
+		}
+		for x := it.Next(); x != nil; x = it.Next() { // validate SG refs
+			rule := x.(*model.IESgSgIcmpRule)
+			sgLocal := rule.ID().SgLocal
+			secGroup, e1 := reader.First(TblSecGroups, indexID, sgLocal)
+			if e1 != nil {
+				return errors.WithMessagef(e1, "%s: find ref to SgLocal '%s'", api, sgLocal)
+			}
+			if secGroup == nil {
+				return errors.Errorf("%s: not found ref to SgLocal '%s'", api, sgLocal)
+			}
+
+			sg := rule.ID().Sg
+			secGroup, e1 = reader.First(TblSecGroups, indexID, sg)
+			if e1 != nil {
+				return errors.WithMessagef(e1, "%s: find ref to Sg '%s'", api, sg)
+			}
+			if secGroup == nil {
+				return errors.Errorf("%s: not found ref to Sg '%s'", api, sg)
+			}
+		}
+		return nil
+	}
+}

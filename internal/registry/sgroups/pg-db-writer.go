@@ -335,6 +335,12 @@ func (wr *pgDbWriter) SyncSgSgRules(ctx context.Context, rules []model.SgSgRule,
 	return err
 }
 
+// SyncIESgSgIcmpRules impl Writer interface
+func (wr *pgDbWriter) SyncIESgSgIcmpRules(ctx context.Context, rules []model.IESgSgIcmpRule, scope Scope, opts ...Option) error {
+	_, _, _, _ = ctx, rules, scope, opts
+	panic("implement me")
+}
+
 // Commit impl Writer interface
 func (wr *pgDbWriter) Commit() error {
 	return wr.commit()
