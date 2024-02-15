@@ -15,7 +15,7 @@ type (
 		protos.Network | protos.SecGroup |
 			protos.Rule | protos.FqdnRule |
 			protos.SgIcmpRule | protos.SgSgIcmpRule |
-			protos.CidrSgRule | protos.SgSgRule
+			protos.CidrSgRule | protos.SgSgRule | protos.IESgSgIcmpRule
 	}
 
 	// BackendRcList -
@@ -23,14 +23,15 @@ type (
 
 	// BackendState -
 	BackendState struct {
-		Networks      BackendRcList[protos.Network]      `yaml:"networks"`
-		SecGroups     BackendRcList[protos.SecGroup]     `yaml:"sec-groups"`
-		SgSgRules     BackendRcList[protos.Rule]         `yaml:"sg-sg-rules"`
-		SgFqdnRules   BackendRcList[protos.FqdnRule]     `yaml:"sg-fqdn-rules"`
-		SgIcmpRules   BackendRcList[protos.SgIcmpRule]   `yaml:"sg-icmp-rules"`
-		SgSgIcmpRules BackendRcList[protos.SgSgIcmpRule] `yaml:"sg-sg-icmp-rules"`
-		CidrSgRules   BackendRcList[protos.CidrSgRule]   `yaml:"cidr-sg-rules"`
-		IESgSgRules   BackendRcList[protos.SgSgRule]     `yaml:"ie-sg-sg-rules"`
+		Networks        BackendRcList[protos.Network]        `yaml:"networks"`
+		SecGroups       BackendRcList[protos.SecGroup]       `yaml:"sec-groups"`
+		SgSgRules       BackendRcList[protos.Rule]           `yaml:"sg-sg-rules"`
+		SgFqdnRules     BackendRcList[protos.FqdnRule]       `yaml:"sg-fqdn-rules"`
+		SgIcmpRules     BackendRcList[protos.SgIcmpRule]     `yaml:"sg-icmp-rules"`
+		SgSgIcmpRules   BackendRcList[protos.SgSgIcmpRule]   `yaml:"sg-sg-icmp-rules"`
+		CidrSgRules     BackendRcList[protos.CidrSgRule]     `yaml:"cidr-sg-rules"`
+		IESgSgRules     BackendRcList[protos.SgSgRule]       `yaml:"ie-sg-sg-rules"`
+		IESgSgIcmpRules BackendRcList[protos.IESgSgIcmpRule] `yaml:"ie-sg-sg-icmp-rules"`
 	}
 )
 

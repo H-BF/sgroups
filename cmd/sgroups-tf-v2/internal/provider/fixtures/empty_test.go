@@ -32,13 +32,14 @@ func Test_Load_AccTests(t *testing.T) {
 
 func Test_ExtractKey(t *testing.T) {
 	var (
-		network    domain.Network
-		sg         domain.SecurityGroup
-		fqdnRule   domain.FQDNRule
-		sgRule     domain.SGRule
-		sgIcmpRule domain.SgSgIcmpRule
-		cidrRule   domain.CidrSgRule
-		ieSgSgRule domain.SgSgRule
+		network        domain.Network
+		sg             domain.SecurityGroup
+		fqdnRule       domain.FQDNRule
+		sgRule         domain.SGRule
+		sgIcmpRule     domain.SgSgIcmpRule
+		cidrRule       domain.CidrSgRule
+		ieSgSgRule     domain.SgSgRule
+		ieSgSgIcmpRule domain.IESgSgIcmpRule
 	)
 	network.Name = "123"
 	require.Equal(t, network.Name, extractKey(network))
@@ -83,4 +84,15 @@ func Test_ExtractKey(t *testing.T) {
 		Sg:        "external-sg-example",
 	}
 	require.Equal(t, "tcp:sg-local(local-sg-example)sg(external-sg-example)ingress", extractKey(ieSgSgRule))
+
+	ieSgSgIcmpRule = domain.IESgSgIcmpRule{
+		Traffic: domain.INGRESS,
+		SgLocal: "local-sg-example",
+		Sg:      "external-sg-example",
+		Icmp: domain.ICMP{
+			IPv: domain.IPv4,
+		},
+	}
+
+	require.Equal(t, "icmp4:sg-local(local-sg-example)sg(external-sg-example)ingress", extractKey(ieSgSgIcmpRule))
 }

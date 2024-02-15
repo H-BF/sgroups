@@ -22,23 +22,25 @@ type tf2backend[T SingleResource[T]] interface {
 }
 
 type (
-	tfNetworks2Backend      struct{}
-	tfSg2Backend            struct{}
-	tfSgSgRules2Backend     struct{}
-	tfSgSgIcmpRules2Backend struct{}
-	tfSgFqdnRules2Backend   struct{}
-	tfCidrSgRules2Backend   struct{}
-	tfIESgSgRules2Backend   struct{}
+	tfNetworks2Backend        struct{}
+	tfSg2Backend              struct{}
+	tfSgSgRules2Backend       struct{}
+	tfSgSgIcmpRules2Backend   struct{}
+	tfSgFqdnRules2Backend     struct{}
+	tfCidrSgRules2Backend     struct{}
+	tfIESgSgRules2Backend     struct{}
+	tfIESgSgIcmpRules2Backend struct{}
 )
 
 var (
-	_ tf2backend[networkItem]  = (*tfNetworks2Backend)(nil)
-	_ tf2backend[sgItem]       = (*tfSg2Backend)(nil)
-	_ tf2backend[sgSgRule]     = (*tfSgSgRules2Backend)(nil)
-	_ tf2backend[sgSgIcmpRule] = (*tfSgSgIcmpRules2Backend)(nil)
-	_ tf2backend[sgFqdnRule]   = (*tfSgFqdnRules2Backend)(nil)
-	_ tf2backend[cidrRule]     = (*tfCidrSgRules2Backend)(nil)
-	_ tf2backend[ieSgSgRule]   = (*tfIESgSgRules2Backend)(nil)
+	_ tf2backend[networkItem]    = (*tfNetworks2Backend)(nil)
+	_ tf2backend[sgItem]         = (*tfSg2Backend)(nil)
+	_ tf2backend[sgSgRule]       = (*tfSgSgRules2Backend)(nil)
+	_ tf2backend[sgSgIcmpRule]   = (*tfSgSgIcmpRules2Backend)(nil)
+	_ tf2backend[sgFqdnRule]     = (*tfSgFqdnRules2Backend)(nil)
+	_ tf2backend[cidrRule]       = (*tfCidrSgRules2Backend)(nil)
+	_ tf2backend[ieSgSgRule]     = (*tfIESgSgRules2Backend)(nil)
+	_ tf2backend[ieSgSgIcmpRule] = (*tfIESgSgIcmpRules2Backend)(nil)
 
 	_ = tfNetworks2Backend.sync
 	_ = tfSg2Backend.sync
@@ -394,6 +396,46 @@ func (tfIESgSgRules2Backend) sync(ctx context.Context, items NamedResources[ieSg
 	}
 	if _, err := client.Sync(ctx, &req); err != nil {
 		diags.AddError(fmt.Sprintf("%s(ie-sg-sg-rules)", op), err.Error())
+	}
+	return diags
+}
+
+func (tfIESgSgIcmpRules2Backend) sync(ctx context.Context, items NamedResources[ieSgSgIcmpRule], client *sgAPI.Client, op protos.SyncReq_SyncOp) diag.Diagnostics {
+	var syncObj protos.SyncIESgSgIcmpRules
+	var diags diag.Diagnostics
+	for _, features := range items.Items {
+		caser := cases.Title(language.AmericanEnglish).String
+		trafficValue, ok := common.Traffic_value[caser(
+			features.Traffic.ValueString(),
+		)]
+		if !ok {
+			diags.AddError(
+				"traffic conv",
+				fmt.Sprintf("no traffic conv for value(%s)", features.Traffic.ValueString()))
+			return diags
+		}
+		syncObj.Rules = append(syncObj.Rules, &protos.IESgSgIcmpRule{
+			Sg:      features.Sg.ValueString(),
+			SgLocal: features.SgLocal.ValueString(),
+			Traffic: common.Traffic(trafficValue),
+			ICMP:    features.icmp2Proto(ctx, &diags),
+			Logs:    features.Logs.ValueBool(),
+			Trace:   features.Trace.ValueBool(),
+		})
+		if diags.HasError() {
+			return diags
+		}
+	}
+	req := protos.SyncReq{
+		SyncOp: op,
+		Subject: &protos.SyncReq_IeSgSgIcmpRules{
+			IeSgSgIcmpRules: &syncObj,
+		},
+	}
+	if _, err := client.Sync(ctx, &req); err != nil {
+		diags.AddError(
+			fmt.Sprintf("%s(ie-sg-sg-icmp-rules)", op), err.Error(),
+		)
 	}
 	return diags
 }
