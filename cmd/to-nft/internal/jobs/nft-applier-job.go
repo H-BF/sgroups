@@ -68,27 +68,33 @@ func (jb *NftApplierJob) Close() error {
 }
 
 // Run -
-func (jb *NftApplierJob) Run(ctx context.Context) error {
-	que := jb.que.Reader()
-	for {
-		var raw any
+func (jb *NftApplierJob) Run(ctx context.Context) (err error) {
+	log := logger.FromContext(ctx).Named("nft-applier-proc")
+	log.Info("start")
+	defer log.Info("stop")
+	for que := jb.que.Reader(); ; {
 		select {
-		case raw = <-que:
 		case <-ctx.Done():
+			log.Info("will exit cause it has canceled")
 			return ctx.Err()
-		}
-		switch o := raw.(type) {
-		case internal.SyncStatusValue:
-			jb.handleSyncStatus(ctx, o)
-		case internal.NetlinkUpdates:
-			jb.handleNetlinkEvent(ctx, o)
-		case applyConfigEvent:
-			logger.Info(ctx, o)
-			if err := jb.doApply(ctx); err != nil {
-				return err
+		case raw, ok := <-que:
+			if !ok {
+				log.Info("will exit cause it has closed")
+				return nil
 			}
-		case DomainAddresses:
-			if err := jb.handleDomainAddressesEvent(ctx, o); err != nil {
+			switch o := raw.(type) {
+			case internal.SyncStatusValue:
+				jb.handleSyncStatus(ctx, o)
+			case internal.NetlinkUpdates:
+				jb.handleNetlinkEvent(ctx, o)
+			case applyConfigEvent:
+				logger.Info(ctx, o)
+				err = jb.doApply(ctx)
+			case DomainAddresses:
+				err = jb.handleDomainAddressesEvent(ctx, o)
+			}
+			if err != nil {
+				log.Error(err)
 				return err
 			}
 		}
@@ -182,12 +188,13 @@ func (jb *NftApplierJob) doApply(ctx context.Context) error {
 	}
 
 	fqdnStrategy := internal.FqdnStrategy.MustValue(ctx)
-	if !fqdnStrategy.Eq(internal.FqdnRulesStartegyNDPI) && localData.SG2FQDNRules.FQDNs.Len() > 0 {
-		resolved := new(cases.ResolvedFQDN)
-		resolver := internal.GetDnsResolver()
-		localData.ResolvedFQDN = resolved
-		log.Debug("resolve FQDN(s)")
-		resolved.Resolve(ctx, localData.SG2FQDNRules, resolver)
+	if !fqdnStrategy.Eq(internal.FqdnRulesStartegyNDPI) {
+		localData.ResolvedFQDN = new(cases.ResolvedFQDN)
+		if localData.SG2FQDNRules.FQDNs.Len() > 0 {
+			resolver := internal.GetDnsResolver()
+			log.Debug("resolve FQDN(s)")
+			localData.ResolvedFQDN.Resolve(ctx, localData.SG2FQDNRules, resolver)
+		}
 	}
 
 	var appliedRules nft.AppliedRules

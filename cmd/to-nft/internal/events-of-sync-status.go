@@ -2,6 +2,7 @@ package internal
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	sgAPI "github.com/H-BF/protos/pkg/api/sgroups"
@@ -43,7 +44,7 @@ func (ss *SyncStatusEventSource) Run(ctx context.Context) error {
 	if ss.CheckInterval < time.Second {
 		panic("'SyncStatus/CheckInterval' is less than 1s")
 	}
-	log := logger.FromContext(ctx).Named("sync-db-status")
+	log := logger.FromContext(ctx).Named("db-status-watcher")
 	mode := "pull"
 	if ss.UsePushModel {
 		mode = "push"
@@ -58,12 +59,20 @@ func (ss *SyncStatusEventSource) Run(ctx context.Context) error {
 	return ss.pull(ctx, tc, log)
 }
 
-func (ss *SyncStatusEventSource) push(ctx context.Context, tc *time.Ticker, log logger.TypeOfLogger) error {
-	var syncStatus atomic.Value[model.SyncStatus]
+func (ss *SyncStatusEventSource) push(ctx context.Context, tc *time.Ticker, log logger.TypeOfLogger) (err error) {
+	var (
+		stream     sgAPI.SecGroupService_SyncStatusesClient
+		resp       *sgAPI.SyncStatusResp
+		syncStatus atomic.Value[model.SyncStatus]
+		wg         sync.WaitGroup
+		closeCh    = make(chan struct{})
+	)
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		for {
 			select {
-			case <-ctx.Done():
+			case <-closeCh:
 				return
 			case <-tc.C:
 				syncStatus.Clear(func(t model.SyncStatus) {
@@ -74,65 +83,46 @@ func (ss *SyncStatusEventSource) push(ctx context.Context, tc *time.Ticker, log 
 			}
 		}
 	}()
-
-	const reconnectTimeut = 10 * time.Second
-	var (
-		stream sgAPI.SecGroupService_SyncStatusesClient
-		err    error
-		resp   *sgAPI.SyncStatusResp
-	)
-	HcSyncStatus.Set(true)
-loop:
-	for req := new(emptypb.Empty); ; {
+	defer func() {
+		close(closeCh)
 		if err != nil {
-			HcSyncStatus.Set(false)
-			stream = nil
-			if e := errors.Cause(err); status.Code(e) != codes.Canceled {
-				log.Error(err, "; it will reconnect after ", reconnectTimeut)
-				ss.AgentSubj.Notify(SyncStatusError{error: err})
-			}
-			select {
-			case <-ctx.Done():
-				err = ctx.Err()
-				break loop
-			case <-time.After(reconnectTimeut):
-			}
+			log.Errorf("will exit cause %v", err)
+			ss.AgentSubj.Notify(SyncStatusError{error: err})
 		}
-		if stream == nil {
-			stream, err = ss.SGClient.SyncStatuses(ctx, req)
-			if err == nil {
-				log.Debug("connected")
-			}
-		}
-		if err == nil {
-			resp, err = stream.Recv()
-		}
-		if err == nil {
-			HcSyncStatus.Set(true)
-			syncStatus.Store(model.SyncStatus{
-				UpdatedAt: resp.GetUpdatedAt().AsTime(),
-			}, nil)
-		}
+		wg.Wait()
+	}()
+	if stream, err = ss.SGClient.SyncStatuses(ctx, new(emptypb.Empty)); err != nil {
+		return err
 	}
-	return err
+	log.Debug("connected")
+	for {
+		if resp, err = stream.Recv(); err != nil {
+			return err
+		}
+		syncStatus.Store(model.SyncStatus{
+			UpdatedAt: resp.GetUpdatedAt().AsTime(),
+		}, nil)
+	}
 }
 
-func (ss *SyncStatusEventSource) pull(ctx context.Context, tc *time.Ticker, log logger.TypeOfLogger) error {
-	HcSyncStatus.Set(true)
+func (ss *SyncStatusEventSource) pull(ctx context.Context, tc *time.Ticker, log logger.TypeOfLogger) (err error) {
+	defer func() {
+		if err != nil {
+			log.Errorf("will exit cause %v", err)
+			ss.AgentSubj.Notify(SyncStatusError{error: err})
+		}
+	}()
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-tc.C:
 			st, e := ss.getSyncStatus(ctx)
-			if e == nil && st != nil {
-				HcSyncStatus.Set(true)
-				ss.AgentSubj.Notify(SyncStatusValue{SyncStatus: *st})
+			if e != nil {
+				return e
 			}
-			if e = errors.Cause(e); e != nil && status.Code(e) != codes.Canceled {
-				HcSyncStatus.Set(false)
-				log.Error(e)
-				ss.AgentSubj.Notify(SyncStatusError{error: e})
+			if st != nil {
+				ss.AgentSubj.Notify(SyncStatusValue{SyncStatus: *st})
 			}
 		}
 	}

@@ -33,15 +33,17 @@ type NetlinkEventSource struct {
 
 // Run -
 func (w *NetlinkEventSource) Run(ctx context.Context) error {
-	log := logger.FromContext(ctx).Named("net-conf")
+	log := logger.FromContext(ctx).Named("net-conf-watcher")
 	log.Info("start")
 	defer log.Info("stop")
 	for stream := w.Stream(); ; {
 		select {
 		case <-ctx.Done():
+			log.Info("will exit cause it has canceled")
 			return ctx.Err()
 		case msgs, ok := <-stream:
 			if !ok {
+				log.Info("will exit cause it has closed")
 				return nil
 			}
 			var ev NetlinkUpdates
@@ -52,7 +54,7 @@ func (w *NetlinkEventSource) Run(ctx context.Context) error {
 				case nl.LinkUpdateMsg:
 					ev.Updates = append(ev.Updates, t)
 				case nl.ErrMsg:
-					log.Error(t)
+					log.Errorf("will exit casue %v", t)
 					w.AgentSubj.Notify(NetlinkError{ErrMsg: t})
 					return t
 				}

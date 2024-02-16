@@ -50,7 +50,7 @@ type (
 
 // NewDnsRefresher -
 func NewDnsRefresher() *DnsRefresher {
-	const semaphoreCap = 8
+	const semaphoreCap = 4
 
 	ret := DnsRefresher{
 		agentSubj: internal.AgentSubject(),
@@ -103,7 +103,7 @@ func (rf *DnsRefresher) Run(ctx context.Context) (err error) {
 	for events := rf.queue.Reader(); ; {
 		select {
 		case <-ctx.Done():
-			log.Info("will exit cause parent context has canceled")
+			log.Info("will exit cause it has canceled")
 			return ctx.Err()
 		case raw, ok := <-events:
 			if !ok {
@@ -112,7 +112,7 @@ func (rf *DnsRefresher) Run(ctx context.Context) (err error) {
 			}
 			switch ev := raw.(type) {
 			case DomainAddresses:
-				log1 := log.WithField("domain", ev.FQDN).WithField("ip-v", ev.IpVersion)
+				log1 := log.WithField("domain", ev.FQDN).WithField("IPv", ev.IpVersion)
 				if e := ev.DnsAnswer.Err; e != nil {
 					log1.Errorw("resolved", "error", jsonview.Stringer(e))
 				} else {
@@ -130,7 +130,7 @@ func (rf *DnsRefresher) Run(ctx context.Context) (err error) {
 						ttl = time.Minute
 					}
 					log.Debugw("ask-to-resolve",
-						"ip-v", ev.IpVersion,
+						"IPv", ev.IpVersion,
 						"domain", jsonview.Stringer(ev.FQDN),
 						"after", jsonview.Stringer(ttl.Round(time.Second)),
 					)

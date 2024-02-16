@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"os"
+	"sync"
 	"time"
 
 	. "github.com/H-BF/sgroups/cmd/to-nft/internal" //nolint:revive
@@ -42,7 +43,7 @@ func main() { //nolint:gocyclo
 		config.WithAcceptEnvironment{EnvPrefix: "NFT"},
 		config.WithSourceFile{FileName: ConfigFile},
 		config.WithDefValue{Key: ExitOnSuccess, Val: false},
-		config.WithDefValue{Key: ContinueOnFailure, Val: false},
+		config.WithDefValue{Key: ContinueOnFailure, Val: true},
 		//config.WithDefValue{Key: BaseRulesOutNets, Val: `["192.168.1.0/24","192.168.2.0/24"]`},
 		config.WithDefValue{Key: FqdnStrategy, Val: FqdnRulesStartegyDNS},
 		config.WithDefValue{Key: AppLoggerLevel, Val: "DEBUG"},
@@ -183,17 +184,14 @@ func runNftJob(ctx context.Context) (err error) {
 		if err = jb.init(ctx1); err != nil {
 			break
 		}
-
-		HcMainJob.Set(true)
 		if err = jb.run(ctx1); err == nil {
 			break
 		}
-		HcMainJob.Set(false)
 		if !jb.continueOnFailure {
+			logger.Info(ctx1, "will exit casue 'ContinueOnFailure' policy is off")
 			break
 		}
-		logger.Errorf(ctx1, "%v", err)
-		logger.Infof(ctx1, "will retry after '%s'", waitBeforeRestart)
+		logger.Infof(ctx1, "will retry after %s", waitBeforeRestart)
 		select {
 		case <-time.After(waitBeforeRestart):
 		case <-ctx.Done():
@@ -282,11 +280,11 @@ func (m *mainJob) init(ctx context.Context) (err error) {
 
 func (m *mainJob) run(ctx context.Context) error {
 	defer m.cleanup()
-	jb := jobs.NewNftApplierJob(m.nftProcessor, *m.sgClient,
+	nftApplier := jobs.NewNftApplierJob(m.nftProcessor, *m.sgClient,
 		jobs.WithAgentSubject{Subject: m.appSubject},
 		jobs.WithNetNS(m.netNs),
 	)
-	defer jb.Close()
+	//defer jb.Close()
 	nle := NetlinkEventSource{
 		AgentSubj:      m.appSubject,
 		NetlinkWatcher: m.nlWatcher,
@@ -298,33 +296,49 @@ func (m *mainJob) run(ctx context.Context) error {
 		UsePushModel:  m.SyncStatusUsePush,
 	}
 	dnsRf := jobs.NewDnsRefresher()
-	defer dnsRf.Close()
+	//defer dnsRf.Close()
 	ctx1, cancel := context.WithCancel(ctx)
-	defer cancel()
-	ff := []func() error{
+	//defer cancel()
+	ff := [...]func() error{
 		func() error {
-			return jb.Run(ctx1)
+			HcNftApplier.Set(true)
+			defer HcNftApplier.Set(false)
+			return nftApplier.Run(ctx1)
 		},
 		func() error {
+			HcNetConfWatcher.Set(true)
+			defer HcNetConfWatcher.Set(false)
 			return nle.Run(ctx1)
 		},
 		func() error {
+			HcSyncStatus.Set(true)
+			defer HcSyncStatus.Set(false)
 			return ste.Run(ctx1)
 		},
 		func() error {
-			return dnsRf.Run(ctx)
+			HcDnsRefresher.Set(true)
+			defer HcDnsRefresher.Set(false)
+			return dnsRf.Run(ctx1)
 		},
 	}
+	fnClose := func() {
+		_ = dnsRf.Close()
+		_ = nle.Close()
+		_ = nftApplier.Close()
+		cancel()
+	}
+	var closeOnce sync.Once
 	n := len(ff)
 	errs := make([]error, n)
 	_ = parallel.ExecAbstract(n, int32(n-1), func(i int) error {
-		if e := ff[i](); e != nil {
-			cancel()
-			if !errors.Is(e, context.Canceled) {
-				errs[i] = e
-			}
-		}
+		errs[i] = ff[i]()
+		closeOnce.Do(fnClose)
 		return nil
 	})
+	select {
+	case <-ctx.Done():
+		return nil
+	default:
+	}
 	return multierr.Combine(errs...)
 }

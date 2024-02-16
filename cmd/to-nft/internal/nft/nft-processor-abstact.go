@@ -88,7 +88,7 @@ func (UpdateFqdnNetsets) isAppliedRulesPatch() {}
 
 // String impl Stringer interface
 func (p UpdateFqdnNetsets) String() string {
-	return fmt.Sprintf("patch/fqdn-netset(ip-v: %v; domain: '%s'; addrs: %s)",
+	return fmt.Sprintf("patch/fqdn-netset(IPv: %v; domain: '%s'; addrs: %s)",
 		p.IPVersion, p.FQDN, slice2stringer(p.Addresses...))
 }
 
