@@ -179,42 +179,45 @@ func (jb *NftApplierJob) doApply(ctx context.Context) error {
 		return err
 	}
 	log.Debug("local data are loaded")
+	var dontApply bool
 	if data := nft.LastAppliedRules(jb.netNS); data != nil {
-		eq := data.LocalData.IsEq(localData)
-		if eq {
+		dontApply = data.LocalData.IsEq(localData)
+		if dontApply {
 			log.Debug("local data did not change since last load; new rules will not geneate")
-			return nil
 		}
 	}
 
 	fqdnStrategy := internal.FqdnStrategy.MustValue(ctx)
-	if !fqdnStrategy.Eq(internal.FqdnRulesStartegyNDPI) {
-		localData.ResolvedFQDN = new(cases.ResolvedFQDN)
-		if localData.SG2FQDNRules.FQDNs.Len() > 0 {
-			resolver := internal.GetDnsResolver()
-			log.Debug("resolve FQDN(s)")
-			localData.ResolvedFQDN.Resolve(ctx, localData.SG2FQDNRules, resolver)
+	if !dontApply {
+		if !fqdnStrategy.Eq(internal.FqdnRulesStartegyNDPI) {
+			localData.ResolvedFQDN = new(cases.ResolvedFQDN)
+			if localData.SG2FQDNRules.FQDNs.Len() > 0 {
+				resolver := internal.GetDnsResolver()
+				log.Debug("resolve FQDN(s)")
+				localData.ResolvedFQDN.Resolve(ctx, localData.SG2FQDNRules, resolver)
+			}
 		}
-	}
 
-	var appliedRules nft.AppliedRules
-	if appliedRules, err = jb.nftProcessor.ApplyConf(ctx, localData); err != nil {
-		return err
+		var appliedRules nft.AppliedRules
+		if appliedRules, err = jb.nftProcessor.ApplyConf(ctx, localData); err != nil {
+			return err
+		}
+		nft.LastAppliedRulesUpd(jb.netNS, &appliedRules)
+		ev := AppliedConfEvent{
+			NetConf:      jb.netConf.Clone(),
+			AppliedRules: appliedRules,
+		}
+		jb.agentSubject.Notify(ev)
 	}
-	nft.LastAppliedRulesUpd(jb.netNS, &appliedRules)
-	ev := AppliedConfEvent{
-		NetConf:      jb.netConf.Clone(),
-		AppliedRules: appliedRules,
-	}
-	jb.agentSubject.Notify(ev)
 
 	if !fqdnStrategy.Eq(internal.FqdnRulesStartegyNDPI) {
+		applied := nft.LastAppliedRules(jb.netNS)
 		reqs := make([]observer.EventType, 0,
-			appliedRules.LocalData.ResolvedFQDN.A.Len()+
-				appliedRules.LocalData.ResolvedFQDN.AAAA.Len())
+			applied.LocalData.ResolvedFQDN.A.Len()+
+				applied.LocalData.ResolvedFQDN.AAAA.Len())
 
-		sources := sli(appliedRules.LocalData.ResolvedFQDN.A,
-			appliedRules.LocalData.ResolvedFQDN.AAAA)
+		sources := sli(applied.LocalData.ResolvedFQDN.A,
+			applied.LocalData.ResolvedFQDN.AAAA)
 		for i, ipV := range sli(iplib.IP4Version, iplib.IP6Version) {
 			sources[i].Iterate(func(domain model.FQDN, addr internal.DomainAddresses) bool {
 				ev := Ask2ResolveDomainAddresses{

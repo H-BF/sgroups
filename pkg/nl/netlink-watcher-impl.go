@@ -244,8 +244,8 @@ func (w *netlinkWatcherImpl) Stream() <-chan []WatcherMsg {
 // Close impl 'NetlinkWatcher'
 func (w *netlinkWatcherImpl) Close() error {
 	w.onceClose.Do(func() {
-		w.onceRun.Do(func() {})
 		close(w.chClose)
+		w.onceRun.Do(func() {})
 		if w.stream != nil {
 			<-w.stream
 		}
