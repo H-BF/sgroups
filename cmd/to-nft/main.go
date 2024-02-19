@@ -44,6 +44,7 @@ func main() { //nolint:gocyclo
 		config.WithSourceFile{FileName: ConfigFile},
 		config.WithDefValue{Key: ExitOnSuccess, Val: false},
 		config.WithDefValue{Key: ContinueOnFailure, Val: true},
+		config.WithDefValue{Key: ContinueAfterTimeout, Val: "10s"},
 		//config.WithDefValue{Key: BaseRulesOutNets, Val: `["192.168.1.0/24","192.168.2.0/24"]`},
 		config.WithDefValue{Key: FqdnStrategy, Val: FqdnRulesStartegyDNS},
 		config.WithDefValue{Key: AppLoggerLevel, Val: "DEBUG"},
@@ -171,7 +172,10 @@ func agentMetricsObserver(ev observer.EventType) {
 }
 
 func runNftJob(ctx context.Context) (err error) {
-	const waitBeforeRestart = 10 * time.Second
+	var waitBeforeRestart time.Duration
+	if waitBeforeRestart, err = ContinueAfterTimeout.Value(ctx); err != nil {
+		return err
+	}
 
 	ctx1 := logger.ToContext(ctx,
 		logger.FromContext(ctx).Named("main"),
@@ -192,10 +196,12 @@ func runNftJob(ctx context.Context) (err error) {
 			break
 		}
 		logger.Infof(ctx1, "will retry after %s", waitBeforeRestart)
-		select {
-		case <-time.After(waitBeforeRestart):
-		case <-ctx.Done():
-			return nil
+		if waitBeforeRestart >= time.Second {
+			select {
+			case <-time.After(waitBeforeRestart):
+			case <-ctx.Done():
+				return nil
+			}
 		}
 	}
 	return err
