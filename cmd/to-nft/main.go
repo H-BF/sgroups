@@ -192,7 +192,7 @@ func runNftJob(ctx context.Context) (err error) {
 			break
 		}
 		if !jb.continueOnFailure {
-			logger.Info(ctx1, "will exit casue 'ContinueOnFailure' policy is off")
+			logger.Info(ctx1, "will exit cause 'ContinueOnFailure' policy is off")
 			break
 		}
 		logger.Infof(ctx1, "will retry after %s", waitBeforeRestart)

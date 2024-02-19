@@ -54,7 +54,7 @@ func (w *NetlinkEventSource) Run(ctx context.Context) error {
 				case nl.LinkUpdateMsg:
 					ev.Updates = append(ev.Updates, t)
 				case nl.ErrMsg:
-					log.Errorf("will exit casue %v", t)
+					log.Errorf("will exit cause %v", t)
 					w.AgentSubj.Notify(NetlinkError{ErrMsg: t})
 					return t
 				}

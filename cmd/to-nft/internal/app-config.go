@@ -63,7 +63,7 @@ const (
 	ContinueOnFailure config.ValueT[bool] = "continue-on-failure"
 
 	// ContinueAfterTimeout (default = '10s' )
-	//
+	// if 'continue-on-failure'=true then we use this value to do timeout befor restart
 	ContinueAfterTimeout config.ValueT[time.Duration] = "continue-after-timeout"
 
 	// AppLoggerLevel log level [optional]
@@ -119,7 +119,7 @@ const (
 	HealthcheckEnable config.ValueT[bool] = "telemetry/healthcheck/enable"
 	// UserAgent
 	UserAgent config.ValueT[string] = "telemetry/useragent"
-	// ProfileEnable avaliable at /debug/pprof/index
+	// ProfileEnable available at /debug/pprof/index
 	ProfileEnable config.ValueT[bool] = "telemetry/profile/enable"
 )
 
