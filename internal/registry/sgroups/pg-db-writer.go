@@ -337,8 +337,40 @@ func (wr *pgDbWriter) SyncSgSgRules(ctx context.Context, rules []model.SgSgRule,
 
 // SyncIESgSgIcmpRules impl Writer interface
 func (wr *pgDbWriter) SyncIESgSgIcmpRules(ctx context.Context, rules []model.IESgSgIcmpRule, scope Scope, opts ...Option) error {
-	_, _, _, _ = ctx, rules, scope, opts
-	panic("implement me")
+	const api = "PG/SyncIESgSgIcmpRules"
+
+	var err error
+	var affected int64
+	defer func() {
+		err = errors.WithMessage(err, api)
+	}()
+	var tx pgx.Tx
+	if tx, err = wr.tx(); err != nil {
+		return err
+	}
+	snc := pg.SyncerOfIESgSgIcmpRules{C: tx.Conn()}
+	snc.Upd, snc.Ins, snc.Del = wr.opts2flags(opts)
+	if err = snc.AddData(ctx, rules...); err != nil {
+		return err
+	}
+	switch v := scope.(type) {
+	case scopedIESgSgIcmpRuleIdentity:
+		ids := make([]model.IESgSgIcmpRuleID, 0, len(v))
+		for _, id := range v {
+			ids = append(ids, id)
+		}
+		if err = snc.AddToFilter(ctx, ids...); err != nil {
+			return err
+		}
+	case noScope:
+	default:
+		return ErrUnexpectedScope
+	}
+	affected, err = snc.Sync(ctx)
+	if err == nil && affected > 0 {
+		atomic.AddInt64(wr.affectedRows, affected)
+	}
+	return err
 }
 
 // Commit impl Writer interface
