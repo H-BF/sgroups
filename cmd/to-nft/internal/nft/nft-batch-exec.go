@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"github.com/H-BF/corlib/logger"
+	"github.com/H-BF/sgroups/cmd/to-nft/internal"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
 )
 
@@ -31,9 +32,11 @@ type (
 // Exec -
 func (exc *BatchPerformer) Exec(ctx context.Context, data cases.LocalData, opts ...BatchOpt) error {
 	b := &batch{
-		log:        logger.FromContext(ctx),
-		txProvider: exc.Tx,
-		data:       data,
+		log:          logger.FromContext(ctx),
+		txProvider:   exc.Tx,
+		data:         data,
+		dnsResolver:  internal.GetDnsResolver(),
+		fqdnStrategy: internal.FqdnStrategy.MustValue(ctx),
 	}
 	for _, o := range opts {
 		o.apply(b)

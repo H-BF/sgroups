@@ -27,8 +27,6 @@ func NewNftApplierJob(proc nft.NfTablesProcessor, client internal.SGClient, opts
 		switch t := o.(type) {
 		case WithAgentSubject:
 			ret.agentSubject = t.Subject
-		case WithDnsResolver:
-			ret.dnsResolver = t.DnsRes
 		case WithNetNS:
 			ret.netNS = string(t)
 		}
@@ -52,7 +50,6 @@ type NftApplierJob struct {
 	client       internal.SGClient
 	nftProcessor nft.NfTablesProcessor
 	agentSubject observer.Subject
-	dnsResolver  internal.DomainAddressQuerier
 	que          *queue.FIFO
 	syncStatus   *model.SyncStatus
 	netConf      *host.NetConf
@@ -71,50 +68,35 @@ func (jb *NftApplierJob) Close() error {
 }
 
 // Run -
-func (jb *NftApplierJob) Run(ctx context.Context) error {
-	que := jb.que.Reader()
-	for {
-		var raw any
+func (jb *NftApplierJob) Run(ctx context.Context) (err error) {
+	log := logger.FromContext(ctx).Named("nft-applier-proc")
+	log.Info("start")
+	defer log.Info("stop")
+	for que := jb.que.Reader(); ; {
 		select {
-		case raw = <-que:
 		case <-ctx.Done():
+			log.Info("will exit cause it has canceled")
 			return ctx.Err()
-		}
-		switch o := raw.(type) {
-		case internal.SyncStatusValue:
-			jb.handleSyncStatus(ctx, o)
-		case internal.NetlinkUpdates:
-			jb.handleNetlinkEvent(ctx, o)
-		case applyConfigEvent:
-			logger.Info(ctx, o)
-			if err := jb.doApply(ctx); err != nil {
+		case raw, ok := <-que:
+			if !ok {
+				log.Info("will exit cause it has closed")
+				return nil
+			}
+			switch o := raw.(type) {
+			case internal.SyncStatusValue:
+				jb.handleSyncStatus(ctx, o)
+			case internal.NetlinkUpdates:
+				jb.handleNetlinkEvent(ctx, o)
+			case applyConfigEvent:
+				logger.Info(ctx, o)
+				err = jb.doApply(ctx)
+			case DomainAddresses:
+				err = jb.handleDomainAddressesEvent(ctx, o)
+			}
+			if err != nil {
+				log.Error(err)
 				return err
 			}
-		case DomainAddresses:
-			appliedRules := nft.LastAppliedRules(jb.netNS)
-			if appliedRules == nil {
-				break
-			}
-			if o.DnsAnswer.Err == nil {
-				p := nft.UpdateFqdnNetsets{
-					IPVersion: o.IpVersion,
-					TTL:       o.DnsAnswer.TTL,
-					FQDN:      o.FQDN,
-					Addresses: o.DnsAnswer.IPs,
-				}
-				if err := nft.PatchAppliedRules(ctx, appliedRules, p); err != nil {
-					if errors.Is(err, nft.ErrPatchNotApplicable) {
-						break
-					}
-					return err
-				}
-			}
-			ev := Ask2ResolveDomainAddresses{
-				IpVersion: o.IpVersion,
-				FQDN:      o.FQDN,
-				TTL:       o.DnsAnswer.TTL,
-			}
-			jb.agentSubject.Notify(ev)
 		}
 	}
 }
@@ -154,6 +136,33 @@ func (jb *NftApplierJob) handleNetlinkEvent(_ context.Context, ev internal.Netli
 	}
 }
 
+func (jb *NftApplierJob) handleDomainAddressesEvent(ctx context.Context, o DomainAddresses) error {
+	appliedRules := nft.LastAppliedRules(jb.netNS)
+	if appliedRules == nil {
+		return nil
+	}
+	ev := Ask2ResolveDomainAddresses{
+		IpVersion: o.IpVersion,
+		FQDN:      o.FQDN,
+	}
+	if o.DnsAnswer.Err == nil {
+		ev.ValidBefore = o.DnsAnswer.At.Add(o.DnsAnswer.TTL)
+		p := nft.UpdateFqdnNetsets{
+			IPVersion: o.IpVersion,
+			FQDN:      o.FQDN,
+			Addresses: o.DnsAnswer.IPs,
+		}
+		if err := nft.PatchAppliedRules(ctx, appliedRules, p); err != nil {
+			if errors.Is(err, nft.ErrPatchNotApplicable) {
+				return nil
+			}
+			return err
+		}
+	}
+	jb.agentSubject.Notify(ev)
+	return nil
+}
+
 func (jb *NftApplierJob) doApply(ctx context.Context) error {
 	if jb.netConf == nil || jb.syncStatus == nil {
 		return nil
@@ -162,7 +171,7 @@ func (jb *NftApplierJob) doApply(ctx context.Context) error {
 	log := logger.FromContext(ctx)
 	localDataLoader := cases.LocalDataLoader{
 		Logger: log,
-		DnsRes: jb.dnsResolver,
+		DnsRes: internal.GetDnsResolver(),
 	}
 
 	localData, err := localDataLoader.Load(ctx, jb.client, *jb.netConf)
@@ -170,43 +179,58 @@ func (jb *NftApplierJob) doApply(ctx context.Context) error {
 		return err
 	}
 	log.Debug("local data are loaded")
+	var dontApply bool
 	if data := nft.LastAppliedRules(jb.netNS); data != nil {
-		eq := data.LocalData.IsEq(localData)
-		if eq {
+		dontApply = data.LocalData.IsEq(localData)
+		if dontApply {
 			log.Debug("local data did not change since last load; new rules will not geneate")
-			return nil
 		}
 	}
 
-	var appliedRules nft.AppliedRules
-	if appliedRules, err = jb.nftProcessor.ApplyConf(ctx, localData); err != nil {
-		return err
-	}
-	nft.LastAppliedRulesUpd(jb.netNS, &appliedRules)
-	ev := AppliedConfEvent{
-		NetConf:      jb.netConf.Clone(),
-		AppliedRules: appliedRules,
-	}
-	jb.agentSubject.Notify(ev)
-
-	reqs := make([]observer.EventType, 0,
-		appliedRules.LocalData.SG2FQDNRules.Resolved.A.Len()+
-			appliedRules.LocalData.SG2FQDNRules.Resolved.AAAA.Len())
-
-	sources := sli(appliedRules.LocalData.SG2FQDNRules.Resolved.A,
-		appliedRules.LocalData.SG2FQDNRules.Resolved.AAAA)
-	for i, ipV := range sli(iplib.IP4Version, iplib.IP6Version) {
-		sources[i].Iterate(func(domain model.FQDN, addr internal.DomainAddresses) bool {
-			ev := Ask2ResolveDomainAddresses{
-				IpVersion: ipV,
-				FQDN:      domain,
-				TTL:       addr.TTL,
+	fqdnStrategy := internal.FqdnStrategy.MustValue(ctx)
+	if !dontApply {
+		if !fqdnStrategy.Eq(internal.FqdnRulesStartegyNDPI) {
+			localData.ResolvedFQDN = new(cases.ResolvedFQDN)
+			if localData.SG2FQDNRules.FQDNs.Len() > 0 {
+				resolver := internal.GetDnsResolver()
+				log.Debug("resolve FQDN(s)")
+				localData.ResolvedFQDN.Resolve(ctx, localData.SG2FQDNRules, resolver)
 			}
-			reqs = append(reqs, ev)
-			return true
-		})
+		}
+
+		var appliedRules nft.AppliedRules
+		if appliedRules, err = jb.nftProcessor.ApplyConf(ctx, localData); err != nil {
+			return err
+		}
+		nft.LastAppliedRulesUpd(jb.netNS, &appliedRules)
+		ev := AppliedConfEvent{
+			NetConf:      jb.netConf.Clone(),
+			AppliedRules: appliedRules,
+		}
+		jb.agentSubject.Notify(ev)
 	}
-	jb.agentSubject.Notify(reqs...)
+
+	if !fqdnStrategy.Eq(internal.FqdnRulesStartegyNDPI) {
+		applied := nft.LastAppliedRules(jb.netNS)
+		reqs := make([]observer.EventType, 0,
+			applied.LocalData.ResolvedFQDN.A.Len()+
+				applied.LocalData.ResolvedFQDN.AAAA.Len())
+
+		sources := sli(applied.LocalData.ResolvedFQDN.A,
+			applied.LocalData.ResolvedFQDN.AAAA)
+		for i, ipV := range sli(iplib.IP4Version, iplib.IP6Version) {
+			sources[i].Iterate(func(domain model.FQDN, addr internal.DomainAddresses) bool {
+				ev := Ask2ResolveDomainAddresses{
+					IpVersion:   ipV,
+					FQDN:        domain,
+					ValidBefore: addr.At.Add(addr.TTL),
+				}
+				reqs = append(reqs, ev)
+				return true
+			})
+		}
+		jb.agentSubject.Notify(reqs...)
+	}
 	return nil
 }
 
