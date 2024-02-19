@@ -48,6 +48,8 @@ telemetry:
     enable: true
   healthcheck:
     enable: true
+  profile:
+    enable: true
 */
 
 const (
@@ -55,8 +57,14 @@ const (
 	// ExitOnSuccess do exit when we succeeded to apply netfilter config; def-val=false
 	ExitOnSuccess config.ValueT[bool] = "exit-on-success"
 
-	// ContinueOnFailure -
+	// ContinueOnFailure (default = true)
+	// when 'true' it means if something fails it internally restarts all workloads after some tomeout
+	// when 'false' if something fails the app exits with code 1
 	ContinueOnFailure config.ValueT[bool] = "continue-on-failure"
+
+	// ContinueAfterTimeout (default = '10s' )
+	// if 'continue-on-failure'=true then we use this value to do timeout befor restart
+	ContinueAfterTimeout config.ValueT[time.Duration] = "continue-after-timeout"
 
 	// AppLoggerLevel log level [optional]
 	AppLoggerLevel config.ValueT[string] = "logger/level"
@@ -111,6 +119,8 @@ const (
 	HealthcheckEnable config.ValueT[bool] = "telemetry/healthcheck/enable"
 	// UserAgent
 	UserAgent config.ValueT[string] = "telemetry/useragent"
+	// ProfileEnable available at /debug/pprof/index
+	ProfileEnable config.ValueT[bool] = "telemetry/profile/enable"
 )
 
 type FqdnRulesStrategy string

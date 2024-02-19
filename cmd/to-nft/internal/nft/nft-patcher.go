@@ -25,7 +25,7 @@ func PatchAppliedRules(ctx context.Context, rules *AppliedRules, p Patch) (err e
 	}()
 
 	for bk := MakeBatchBackoff(); ; {
-		err = p.Appply(ctx, rules)
+		err = p.Apply(ctx, rules)
 		if err == nil || errors.Is(err, ErrPatchNotApplicable) {
 			break
 		}

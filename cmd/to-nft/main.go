@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"os"
+	"sync"
 	"time"
 
 	. "github.com/H-BF/sgroups/cmd/to-nft/internal" //nolint:revive
@@ -42,7 +43,8 @@ func main() { //nolint:gocyclo
 		config.WithAcceptEnvironment{EnvPrefix: "NFT"},
 		config.WithSourceFile{FileName: ConfigFile},
 		config.WithDefValue{Key: ExitOnSuccess, Val: false},
-		config.WithDefValue{Key: ContinueOnFailure, Val: false},
+		config.WithDefValue{Key: ContinueOnFailure, Val: true},
+		config.WithDefValue{Key: ContinueAfterTimeout, Val: "10s"},
 		//config.WithDefValue{Key: BaseRulesOutNets, Val: `["192.168.1.0/24","192.168.2.0/24"]`},
 		config.WithDefValue{Key: FqdnStrategy, Val: FqdnRulesStartegyDNS},
 		config.WithDefValue{Key: AppLoggerLevel, Val: "DEBUG"},
@@ -67,6 +69,7 @@ func main() { //nolint:gocyclo
 		config.WithDefValue{Key: MetricsEnable, Val: true},
 		config.WithDefValue{Key: HealthcheckEnable, Val: true},
 		config.WithDefValue{Key: UserAgent, Val: ""},
+		config.WithDefValue{Key: ProfileEnable, Val: true},
 	)
 	if err != nil {
 		logger.Fatal(ctx, err)
@@ -96,15 +99,8 @@ func main() { //nolint:gocyclo
 		logger.Fatal(ctx, errors.WithMessage(err, "setup telemetry server"))
 	}
 
-	fqdnStrategy := FqdnStrategy.MustValue(ctx)
-	useDNS := fqdnStrategy.Eq(FqdnRulesStartegyDNS) || fqdnStrategy.Eq(FqdnRulesStartegyCombine)
-
-	var dnsResolver DomainAddressQuerier
-	if useDNS {
-		dnsResolver, err = NewDomainAddressQuerier(ctx)
-		if err != nil {
-			logger.Fatal(ctx, errors.WithMessage(err, "setup DNS resolver"))
-		}
+	if err = SetupDnsResolver(ctx); err != nil {
+		logger.Fatal(ctx, errors.WithMessage(err, "setup DNS resolver"))
 	}
 
 	if exitOnSuccess := ExitOnSuccess.MustValue(ctx); exitOnSuccess {
@@ -122,21 +118,11 @@ func main() { //nolint:gocyclo
 			NetlinkError{}, jobs.DomainAddresses{}),
 	)
 
-	if useDNS {
-		go func() {
-			r := jobs.FqdnRefresher{
-				Resolver:  dnsResolver,
-				AgentSubj: AgentSubject(),
-			}
-			r.Run(ctx)
-		}()
-	}
-
 	gracefulDuration := AppGracefulShutdown.MustValue(ctx)
 	errc := make(chan error, 1)
 	go func() {
 		defer close(errc)
-		errc <- runNftJob(ctx, dnsResolver)
+		errc <- runNftJob(ctx)
 	}()
 	var jobErr error
 	select {
@@ -185,8 +171,11 @@ func agentMetricsObserver(ev observer.EventType) {
 	}
 }
 
-func runNftJob(ctx context.Context, resolver DomainAddressQuerier) (err error) {
-	const waitBeforeRestart = 10 * time.Second
+func runNftJob(ctx context.Context) (err error) {
+	var waitBeforeRestart time.Duration
+	if waitBeforeRestart, err = ContinueAfterTimeout.Value(ctx); err != nil {
+		return err
+	}
 
 	ctx1 := logger.ToContext(ctx,
 		logger.FromContext(ctx).Named("main"),
@@ -196,24 +185,23 @@ func runNftJob(ctx context.Context, resolver DomainAddressQuerier) (err error) {
 	defer logger.Infof(ctx1, "exit")
 	for {
 		var jb mainJob
-		if err = jb.init(ctx1, resolver); err != nil {
+		if err = jb.init(ctx1); err != nil {
 			break
 		}
-
-		HcMainJob.Set(true)
 		if err = jb.run(ctx1); err == nil {
 			break
 		}
-		HcMainJob.Set(false)
 		if !jb.continueOnFailure {
+			logger.Info(ctx1, "will exit cause 'ContinueOnFailure' policy is off")
 			break
 		}
-		logger.Errorf(ctx1, "%v", err)
-		logger.Infof(ctx1, "will retry after '%s'", waitBeforeRestart)
-		select {
-		case <-time.After(waitBeforeRestart):
-		case <-ctx.Done():
-			return nil
+		logger.Infof(ctx1, "will retry after %s", waitBeforeRestart)
+		if waitBeforeRestart >= time.Second {
+			select {
+			case <-time.After(waitBeforeRestart):
+			case <-ctx.Done():
+				return nil
+			}
 		}
 	}
 	return err
@@ -249,7 +237,6 @@ func makeNftprocessor(ctx context.Context, sgClient SGClient, netNs string) (nft
 
 type mainJob struct {
 	appSubject              observer.Subject
-	dnsResolver             DomainAddressQuerier
 	netNs                   string
 	SyncStatusCheckInterval time.Duration
 	SyncStatusUsePush       bool
@@ -271,13 +258,12 @@ func (m *mainJob) cleanup() {
 	}
 }
 
-func (m *mainJob) init(ctx context.Context, dnsResolver DomainAddressQuerier) (err error) {
+func (m *mainJob) init(ctx context.Context) (err error) {
 	defer func() {
 		if err != nil {
 			m.cleanup()
 		}
 	}()
-	m.dnsResolver = dnsResolver
 	m.appSubject = AgentSubject()
 	m.netNs, err = NetNS.Value(ctx)
 	if err != nil && !errors.Is(err, config.ErrNotFound) {
@@ -300,12 +286,11 @@ func (m *mainJob) init(ctx context.Context, dnsResolver DomainAddressQuerier) (e
 
 func (m *mainJob) run(ctx context.Context) error {
 	defer m.cleanup()
-	jb := jobs.NewNftApplierJob(m.nftProcessor, *m.sgClient,
+	nftApplier := jobs.NewNftApplierJob(m.nftProcessor, *m.sgClient,
 		jobs.WithAgentSubject{Subject: m.appSubject},
-		jobs.WithDnsResolver{DnsRes: m.dnsResolver},
 		jobs.WithNetNS(m.netNs),
 	)
-	defer jb.Close()
+	//defer jb.Close()
 	nle := NetlinkEventSource{
 		AgentSubj:      m.appSubject,
 		NetlinkWatcher: m.nlWatcher,
@@ -316,28 +301,50 @@ func (m *mainJob) run(ctx context.Context) error {
 		CheckInterval: m.SyncStatusCheckInterval,
 		UsePushModel:  m.SyncStatusUsePush,
 	}
+	dnsRf := jobs.NewDnsRefresher()
+	//defer dnsRf.Close()
 	ctx1, cancel := context.WithCancel(ctx)
-	defer cancel()
-	ff := []func() error{
+	//defer cancel()
+	ff := [...]func() error{
 		func() error {
-			return jb.Run(ctx1)
+			HcNftApplier.Set(true)
+			defer HcNftApplier.Set(false)
+			return nftApplier.Run(ctx1)
 		},
 		func() error {
+			HcNetConfWatcher.Set(true)
+			defer HcNetConfWatcher.Set(false)
 			return nle.Run(ctx1)
 		},
 		func() error {
+			HcSyncStatus.Set(true)
+			defer HcSyncStatus.Set(false)
 			return ste.Run(ctx1)
 		},
+		func() error {
+			HcDnsRefresher.Set(true)
+			defer HcDnsRefresher.Set(false)
+			return dnsRf.Run(ctx1)
+		},
 	}
-	errs := make([]error, len(ff))
-	_ = parallel.ExecAbstract(len(ff), 2, func(i int) error {
-		if e := ff[i](); e != nil {
-			cancel()
-			if !errors.Is(e, context.Canceled) {
-				errs[i] = e
-			}
-		}
+	fnClose := func() {
+		_ = dnsRf.Close()
+		_ = nle.Close()
+		_ = nftApplier.Close()
+		cancel()
+	}
+	var closeOnce sync.Once
+	n := len(ff)
+	errs := make([]error, n)
+	_ = parallel.ExecAbstract(n, int32(n-1), func(i int) error {
+		errs[i] = ff[i]()
+		closeOnce.Do(fnClose)
 		return nil
 	})
+	select {
+	case <-ctx.Done():
+		return nil
+	default:
+	}
 	return multierr.Combine(errs...)
 }

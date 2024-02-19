@@ -12,24 +12,32 @@ const (
 	// HcSyncStatus -
 	HcSyncStatus hcIndicator = 1 << iota
 
-	// HcMainJob -
-	HcMainJob
+	// HcNetConfWatcher -
+	HcNetConfWatcher
+
+	// HcDnsRefresher -
+	HcDnsRefresher
+
+	// HcNftApplier -
+	HcNftApplier
 )
 
-var (
-	hcIndicators uint8
-	chMX         sync.Mutex
-)
+var hcIndicators struct {
+	sync.Mutex
+	val uint8
+}
 
 // Set -
 func (i hcIndicator) Set(val bool) {
-	const healthy = uint8(HcSyncStatus | HcMainJob)
-	chMX.Lock()
-	defer chMX.Unlock()
+	const healthy = uint8(
+		HcSyncStatus | HcNetConfWatcher | HcDnsRefresher | HcNftApplier,
+	)
+	hcIndicators.Lock()
+	defer hcIndicators.Unlock()
 	if val {
-		hcIndicators |= uint8(i)
+		hcIndicators.val |= uint8(i)
 	} else {
-		hcIndicators &= ^uint8(i)
+		hcIndicators.val &= ^uint8(i)
 	}
-	app.SetHealthState(healthy == hcIndicators)
+	app.SetHealthState(healthy == hcIndicators.val)
 }

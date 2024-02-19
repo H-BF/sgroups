@@ -22,6 +22,8 @@ type (
 		SgSgIcmpRules SgSgIcmpRules
 		CidrSgRules   CidrSgRules
 		Networks      SGsNetworks
+
+		ResolvedFQDN *ResolvedFQDN
 	}
 
 	// LocalDataLoader
@@ -93,8 +95,7 @@ func (loader LocalDataLoader) Load(ctx context.Context, client SGClient, ncnf ho
 	}
 
 	log.Debugw("loading SG-FQDN rules...")
-	res.SG2FQDNRules, err = FQDNRulesLoader{SGSrv: client, DnsRes: loader.DnsRes}.Load(ctx, res.LocalSGs)
-	if err != nil {
+	if err = res.SG2FQDNRules.Load(ctx, client, res.LocalSGs); err != nil {
 		return res, err
 	}
 

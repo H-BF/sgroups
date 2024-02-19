@@ -17,6 +17,7 @@ import (
 
 // DomainAddresses -
 type DomainAddresses struct {
+	At  time.Time
 	TTL time.Duration
 	IPs []net.IP
 	Err error
@@ -174,21 +175,22 @@ func (r domainResolver) AAAA(ctx context.Context, domain string) (ret DomainAddr
 }
 
 func (aa *DomainAddresses) fromDnsAnswer(o dns.AddrAnswer) {
-	*aa = DomainAddresses{}
-	if o.Error != nil {
-		aa.Err = o.Error
-		return
+	*aa = DomainAddresses{
+		Err: o.Error,
+		At:  o.At,
 	}
-	linq.From(o.Addresses).
-		Select(func(i any) any {
-			return i.(dns.Address).IP
-		}).ToSlice(&aa.IPs)
-	minTTL, _ := linq.From(o.Addresses).
-		Select(func(i any) any {
-			return i.(dns.Address).TTL
-		}).
-		Where(func(i any) bool {
-			return i.(uint32) > 0
-		}).Min().(uint32)
-	aa.TTL = time.Duration(minTTL) * time.Second
+	if o.Error == nil {
+		linq.From(o.Addresses).
+			Select(func(i any) any {
+				return i.(dns.Address).IP
+			}).ToSlice(&aa.IPs)
+		minTTL, _ := linq.From(o.Addresses).
+			Select(func(i any) any {
+				return i.(dns.Address).TTL
+			}).
+			Where(func(i any) bool {
+				return i.(uint32) > 0
+			}).Min().(uint32)
+		aa.TTL = time.Duration(minTTL) * time.Second
+	}
 }
