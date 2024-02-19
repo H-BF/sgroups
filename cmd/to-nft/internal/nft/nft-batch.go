@@ -748,7 +748,7 @@ func (bt *batch) populateInOutSgIeSgRules(dir direction, sg *cases.SG) {
 		for _, rule := range rules {
 			rule := rule
 			addrSetName := nameUtils{}.nameOfNetSet(
-				ipV, tern(isIN, rule.ID.Sg, rule.ID.SgLocal),
+				ipV, tern(isIN, rule.ID.SgLocal, rule.ID.Sg),
 			)
 			detailsName := nameUtils{}.nameSgIeSgRuleDetails(rule)
 			details := bt.ruleDetails.At(detailsName)
@@ -765,22 +765,13 @@ func (bt *batch) populateInOutSgIeSgRules(dir direction, sg *cases.SG) {
 					}
 					bt.log.Debugf("add '%s' rule for accports(%s) into '%s'/'%s'",
 						rule.ID, ports, bt.table.Name, targetSGchName)
+
 					rb := beginRule().metaNFTRACE(details.trace)
-					if isIN {
-						rb = ports.S(
-							ports.D(
-								rb.saddr(ipV).inSet(addrSet).
-									protoIP(rule.ID.Transport),
-							),
-						)
-					} else {
-						rb = ports.D(
-							ports.S(
-								rb.daddr(ipV).inSet(addrSet).
-									protoIP(rule.ID.Transport),
-							),
-						)
-					}
+					sd := tern(isIN, sli(ports.S, ports.D), sli(ports.D, ports.S))
+					rb = sd[0](sd[1](
+						tern(isIN, rb.saddr, rb.daddr)(ipV).inSet(addrSet).
+							protoIP(rule.ID.Transport),
+					)).counter()
 					if details.logs {
 						rb = rb.dlogs(nfte.LogFlagsIPOpt)
 					}
@@ -790,7 +781,6 @@ func (bt *batch) populateInOutSgIeSgRules(dir direction, sg *cases.SG) {
 			}
 		}
 	}
-
 }
 
 func (bt *batch) populateInOutCidrSgRules(dir direction, sg *cases.SG) {
