@@ -6,7 +6,6 @@ package nl
 import (
 	"fmt"
 	"reflect"
-	"runtime"
 	"sync"
 	"time"
 
@@ -245,10 +244,11 @@ func (w *netlinkWatcherImpl) Stream() <-chan []WatcherMsg {
 // Close impl 'NetlinkWatcher'
 func (w *netlinkWatcherImpl) Close() error {
 	w.onceClose.Do(func() {
-		runtime.SetFinalizer(w, func(o *netlinkWatcherImpl) {
-			close(o.chErrors)
-		})
 		close(w.chClose)
+		w.onceRun.Do(func() {})
+		if w.stream != nil {
+			<-w.stream
+		}
 		if w.netns != nil {
 			_ = w.netns.Close()
 		}

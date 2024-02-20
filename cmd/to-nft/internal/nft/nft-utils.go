@@ -106,6 +106,10 @@ func (nameUtils) nameCidrSgRuleDetails(rule *model.CidrSgRule) string {
 	return rule.ID.String()
 }
 
+func (nameUtils) nameSgIeSgRuleDetails(rule *model.SgSgRule) string {
+	return rule.ID.String()
+}
+
 func (setsUtils) nets2SetElements(nets []net.IPNet, ipV int) []nftLib.SetElement {
 	const (
 		b32  = 32

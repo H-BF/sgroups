@@ -6,7 +6,6 @@ import (
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/host"
-	"github.com/H-BF/sgroups/internal/dict"
 
 	"github.com/H-BF/corlib/logger"
 	"github.com/pkg/errors"
@@ -21,7 +20,10 @@ type (
 		SgIcmpRules   SgIcmpRules
 		SgSgIcmpRules SgSgIcmpRules
 		CidrSgRules   CidrSgRules
+		SgIeSgRules   SgIeSgRules
 		Networks      SGsNetworks
+
+		ResolvedFQDN *ResolvedFQDN
 	}
 
 	// LocalDataLoader
@@ -31,12 +33,25 @@ type (
 	}
 )
 
-// IsEq checks wether this object is equal the other one
-func (ld *LocalData) IsEq(other LocalData) bool {
-	eq := ld.LocalSGs.IsEq(other.LocalSGs)
-	if eq {
-		eq = ld.SG2SGRules.IsEq(other.SG2SGRules)
+// AllSGs -
+func (ld *LocalData) AllSGs() (ret SGs) {
+	src := [...]SGs{
+		ld.LocalSGs, ld.SG2SGRules.SGs, ld.SgIcmpRules.SGs,
+		ld.SgIcmpRules.SGs, ld.SgSgIcmpRules.SGs, ld.SgIeSgRules.SGs,
 	}
+	for _, s := range src {
+		s.Iterate(func(k SgName, v *SG) bool {
+			ret.Put(k, v)
+			return true
+		})
+	}
+	return ret
+}
+
+// IsEq checks wether this object is equal the other one
+// here we compare only rules and networks
+func (ld *LocalData) IsEq(other LocalData) bool {
+	eq := ld.SG2SGRules.IsEq(other.SG2SGRules)
 	if eq {
 		eq = ld.SG2FQDNRules.IsEq(other.SG2FQDNRules)
 	}
@@ -48,6 +63,9 @@ func (ld *LocalData) IsEq(other LocalData) bool {
 	}
 	if eq {
 		eq = ld.CidrSgRules.IsEq(other.CidrSgRules)
+	}
+	if eq {
+		eq = ld.SgIeSgRules.IsEq(other.SgIeSgRules)
 	}
 	if eq {
 		eq = ld.Networks.IsEq(other.Networks)
@@ -93,8 +111,7 @@ func (loader LocalDataLoader) Load(ctx context.Context, client SGClient, ncnf ho
 	}
 
 	log.Debugw("loading SG-FQDN rules...")
-	res.SG2FQDNRules, err = FQDNRulesLoader{SGSrv: client, DnsRes: loader.DnsRes}.Load(ctx, res.LocalSGs)
-	if err != nil {
+	if err = res.SG2FQDNRules.Load(ctx, client, res.LocalSGs); err != nil {
 		return res, err
 	}
 
@@ -103,17 +120,12 @@ func (loader LocalDataLoader) Load(ctx context.Context, client SGClient, ncnf ho
 		return res, err
 	}
 
-	var allSgNames []string
-	{
-		var set dict.HSet[string]
-		set.PutMany(res.LocalSGs.Keys()...)
-		set.PutMany(res.SG2SGRules.SGs.Keys()...)
-		set.PutMany(res.SG2FQDNRules.SGs.Keys()...)
-		set.PutMany(res.SgIcmpRules.SGs.Keys()...)
-		set.PutMany(res.SgSgIcmpRules.SGs.Keys()...)
-		set.PutMany(res.CidrSgRules.SGs.Keys()...)
-		allSgNames = set.Values()
+	log.Debugw("loading SG-INGRESS/EGRESS-SG rules...")
+	if err = res.SgIeSgRules.Load(ctx, client, res.LocalSGs); err != nil {
+		return res, err
 	}
+
+	allSgNames := res.AllSGs().Names()
 	log.Debugw("loading networks...")
 	err = res.Networks.LoadFromSGNames(ctx, client, allSgNames)
 

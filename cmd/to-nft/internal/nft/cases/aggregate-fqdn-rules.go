@@ -2,7 +2,6 @@ package cases
 
 import (
 	"context"
-	"strings"
 	"sync"
 
 	"github.com/H-BF/corlib/pkg/parallel"
@@ -21,19 +20,12 @@ type (
 	SG2FQDNRules struct {
 		SGs   SGs
 		Rules []model.FQDNRule
-
-		Resolved *ResolvedFQDN
-	}
-
-	// FQDNRulesLoader -
-	FQDNRulesLoader struct {
-		SGSrv  SGClient
-		DnsRes internal.DomainAddressQuerier
+		FQDNs dict.RBSet[model.FQDN]
 	}
 
 	// ResolvedFQDN -
 	ResolvedFQDN struct {
-		sync.Mutex
+		sync.RWMutex
 		A    dict.RBDict[model.FQDN, internal.DomainAddresses]
 		AAAA dict.RBDict[model.FQDN, internal.DomainAddresses]
 	}
@@ -59,7 +51,8 @@ func (rules *SG2FQDNRules) IsEq(other SG2FQDNRules) bool {
 	return eq
 }
 
-func (ld FQDNRulesLoader) Load(ctx context.Context, sgs SGs) (rr SG2FQDNRules, err error) {
+// Load -
+func (rules *SG2FQDNRules) Load(ctx context.Context, SGSrv SGClient, sgs SGs) (err error) {
 	const api = "FQDNRules/Load"
 
 	defer func() {
@@ -71,58 +64,25 @@ func (ld FQDNRulesLoader) Load(ctx context.Context, sgs SGs) (rr SG2FQDNRules, e
 		req.SgFrom = append(req.SgFrom, sgName)
 		return true
 	})
-	rr.Resolved = new(ResolvedFQDN)
 	if len(req.SgFrom) > 0 {
 		var resp *sgAPI.FqdnRulesResp
-		if resp, err = ld.SGSrv.FindFqdnRules(ctx, &req); err != nil {
-			return rr, err
+		if resp, err = SGSrv.FindFqdnRules(ctx, &req); err != nil {
+			return err
 		}
-		rules := resp.GetRules()
-		for _, r := range rules {
+		rr := resp.GetRules()
+		for _, r := range rr {
 			var m model.FQDNRule
 			if m, err = conv.Proto2ModelFQDNRule(r); err != nil {
-				return rr, err
+				return err
 			}
 			if sg := sgs.At(m.ID.SgFrom); sg != nil {
-				rr.Rules = append(rr.Rules, m)
-				_ = rr.SGs.Insert(sg.Name, sg)
+				rules.Rules = append(rules.Rules, m)
+				rules.FQDNs.Insert(m.ID.FqdnTo)
+				_ = rules.SGs.Insert(sg.Name, sg)
 			}
 		}
-		ld.resolveDomainAddresses(ctx, &rr)
 	}
-	return rr, err
-}
-
-func (ld FQDNRulesLoader) resolveDomainAddresses(ctx context.Context, rr *SG2FQDNRules) {
-	const parallelism = 8
-
-	var domains []model.FQDN
-	linq.From(rr.Rules).
-		DistinctBy(func(i any) any {
-			return strings.ToLower(i.(model.FQDNRule).ID.FqdnTo.String())
-		}).
-		Select(func(i any) any {
-			return i.(model.FQDNRule).ID.FqdnTo
-		}).ToSlice(&domains)
-
-	resolved := rr.Resolved
-	if ld.DnsRes == nil {
-		for i := range domains {
-			resolved.A.Put(domains[i], internal.DomainAddresses{})
-			//resolved.AAAA.Put(domains[i], internal.DomainAddresses{})
-		}
-	} else {
-		_ = parallel.ExecAbstract(len(domains), parallelism, func(i int) error {
-			domain := domains[i].String()
-			addrA := ld.DnsRes.A(ctx, domain)
-			//addrAAAA := ld.DnsRes.AAAA(ctx, domain)
-			resolved.Lock()
-			resolved.A.Put(domains[i], addrA)
-			//resolved.AAAA.Put(domains[i], addrAAAA)
-			resolved.Unlock()
-			return nil
-		})
-	}
+	return err
 }
 
 // SelectForSG -
@@ -133,4 +93,43 @@ func (rules SG2FQDNRules) RulesForSG(sgName string) []model.FQDNRule {
 			return i.(model.FQDNRule).ID.SgFrom == sgName
 		}).ToSlice(&ret)
 	return ret
+}
+
+// UpdA -
+func (r *ResolvedFQDN) UpdA(domain model.FQDN, addr internal.DomainAddresses) {
+	r.Lock()
+	defer r.Unlock()
+	r.A.Put(domain, addr)
+}
+
+// UpdAAAA -
+func (r *ResolvedFQDN) UpdAAAA(domain model.FQDN, addr internal.DomainAddresses) {
+	r.Lock()
+	defer r.Unlock()
+	r.AAAA.Put(domain, addr)
+}
+
+// Resolve -
+func (r *ResolvedFQDN) Resolve(ctx context.Context, rules SG2FQDNRules, dnsRes internal.DomainAddressQuerier) {
+	const parallelism = 7
+
+	type item = struct {
+		domain model.FQDN
+		up     func(model.FQDN, internal.DomainAddresses)
+		re     func(context.Context, string) internal.DomainAddresses
+	}
+	var items []item
+	rules.FQDNs.Iterate(func(k model.FQDN) bool {
+		items = append(items,
+			item{domain: k, up: r.UpdA, re: dnsRes.A},
+			//item{domain: k, up: r.UpdAAAA, re: dnsRes.AAAA},
+		)
+		return true
+	})
+	_ = parallel.ExecAbstract(len(items), parallelism, func(i int) error {
+		item := items[i]
+		res := item.re(ctx, item.domain.String())
+		item.up(item.domain, res)
+		return nil
+	})
 }

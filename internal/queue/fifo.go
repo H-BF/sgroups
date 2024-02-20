@@ -2,6 +2,7 @@ package queue
 
 import (
 	"container/list"
+	"runtime"
 	"sync"
 	"time"
 )
@@ -35,47 +36,42 @@ func (que *FIFO) Reader() <-chan any {
 }
 
 // Put -
-func (que *FIFO) Put(v ...any) bool {
+func (que *FIFO) Put(v ...any) (ok bool) {
 	que.cv.L.Lock()
-	ok := que.data != nil
 	defer func() {
 		que.cv.L.Unlock()
 		if ok && len(v) > 0 {
 			que.cv.Broadcast()
 		}
 	}()
-	if ok {
+	if que.data != nil {
 		for i := range v {
 			que.data.PushBack(v[i])
 		}
+		ok = true
 	}
 	return ok
 }
 
 // Close -
 func (que *FIFO) Close() error {
-	var doClose bool
 	stopped := que.stopped
 	cv := que.cv
 	cl := que.close
 	que.closeOnce.Do(func() {
-		const waitBeforeBroadcast = 10 * time.Millisecond
-		doClose = true
+		const waitBeforeBroadcast = 100 * time.Millisecond
 		close(cl)
-		for {
+		cv.L.Lock()
+		que.data = nil
+		cv.L.Unlock()
+		for cv.Broadcast(); ; cv.Broadcast() {
 			select {
 			case <-stopped:
 				return
 			case <-time.After(waitBeforeBroadcast):
-				cv.Broadcast()
 			}
 		}
 	})
-	if doClose {
-		cv.L.Lock()
-		que.data = nil
-		cv.L.Unlock()
-	}
 	return nil
 }
 
@@ -84,15 +80,20 @@ func (que *FIFO) run() {
 		close(que.ch)
 		close(que.stopped)
 	}()
-	for {
-		v, ok := que.fetch()
-		if !ok {
-			return
-		}
-		select {
-		case <-que.close:
-			return
-		case que.ch <- v:
+	for closed := false; !closed; {
+		if v, ok := que.fetch(); !ok {
+			select {
+			case <-que.close:
+				closed = true
+			default:
+				runtime.Gosched()
+			}
+		} else {
+			select {
+			case <-que.close:
+				closed = true
+			case que.ch <- v:
+			}
 		}
 	}
 }
@@ -100,18 +101,19 @@ func (que *FIFO) run() {
 func (que *FIFO) fetch() (v any, ok bool) {
 	que.cv.L.Lock()
 	defer que.cv.L.Unlock()
-	if que.data == nil {
-		return v, ok
+	data := que.data
+	if data == nil {
+		return v, false
 	}
-	hasData := que.data.Len() != 0
+	hasData := data.Len() != 0
 	if !hasData {
 		que.cv.Wait()
-		hasData = que.data != nil && que.data.Len() != 0
+		hasData = data.Len() != 0
 	}
 	if hasData {
-		o := que.data.Front()
+		o := data.Front()
 		v, ok = o.Value, true
-		que.data.Remove(o)
+		data.Remove(o)
 	}
 	return v, ok
 }

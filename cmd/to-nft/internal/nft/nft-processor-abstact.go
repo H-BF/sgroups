@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
-	"time"
 
-	"github.com/H-BF/sgroups/cmd/to-nft/internal"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
 	"github.com/H-BF/sgroups/internal/config"
 	"github.com/H-BF/sgroups/internal/dict"
@@ -32,14 +30,13 @@ type (
 	// Patch -
 	Patch interface {
 		String() string
-		Appply(context.Context, *AppliedRules) error
+		Apply(context.Context, *AppliedRules) error
 		isAppliedRulesPatch()
 	}
 
 	// UpdateFqdnNetsets - is kind of Patch
 	UpdateFqdnNetsets struct {
 		IPVersion int
-		TTL       time.Duration
 		FQDN      model.FQDN
 		Addresses []net.IP
 	}
@@ -91,7 +88,7 @@ func (UpdateFqdnNetsets) isAppliedRulesPatch() {}
 
 // String impl Stringer interface
 func (p UpdateFqdnNetsets) String() string {
-	return fmt.Sprintf("patch/fqdn-netset(ip-v: %v; domain: '%s'; addrs: %s)",
+	return fmt.Sprintf("patch/fqdn-netset(IPv: %v; domain: '%s'; addrs: %s)",
 		p.IPVersion, p.FQDN, slice2stringer(p.Addresses...))
 }
 
@@ -107,13 +104,13 @@ func (ns UpdateFqdnNetsets) NetSet() []net.IPNet {
 	return ret
 }
 
-// Appply -
-func (ns UpdateFqdnNetsets) Appply(ctx context.Context, rules *AppliedRules) error {
+// Apply -
+func (ns UpdateFqdnNetsets) Apply(ctx context.Context, rules *AppliedRules) error {
 	const api = "apply"
 
 	if !isIn(ns.IPVersion, sli(iplib.IP4Version, iplib.IP6Version)) {
 		return errors.WithMessagef(ErrPatchNotApplicable,
-			"%s/%s failed cause it has bad IPv", ns, api)
+			"%s/%s failed cause it has bad IPv(%v)", ns, api, ns.IPVersion)
 	}
 	tx, err := NewTx(rules.NetNS)
 	if err != nil {
@@ -140,22 +137,9 @@ func (ns UpdateFqdnNetsets) Appply(ctx context.Context, rules *AppliedRules) err
 	if err = tx.SetAddElements(set.Set, elements); err != nil {
 		panic(err)
 	}
-	if err = tx.FlushAndClose(); err != nil {
-		return err
-	}
-	data := rules.LocalData.SG2FQDNRules.Resolved
-	src := tern(ns.IPVersion == iplib.IP4Version,
-		&data.A, &data.AAAA)
-	data.Lock()
-	defer data.Unlock()
-	src.Put(ns.FQDN, internal.DomainAddresses{
-		TTL: ns.TTL,
-		IPs: ns.Addresses,
-	})
-	return nil
+	err = tx.FlushAndClose()
+	return err
 }
-
-//DNS resolver
 
 func (WithNetNS) isNfTablesProcessorOpt() {}
 func (BaseRules) isNfTablesProcessorOpt() {}
