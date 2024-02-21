@@ -748,7 +748,7 @@ func (bt *batch) populateInOutSgIeSgRules(dir direction, sg *cases.SG) {
 		ipV := ipV
 		for _, rule := range rules {
 			rule := rule
-			addrSetName := nameUtils{}.nameOfNetSet(ipV, rule.ID.SgLocal)
+			addrSetName := nameUtils{}.nameOfNetSet(ipV, rule.ID.Sg)
 			//addrSetName := nameUtils{}.nameOfNetSet(
 			//	ipV, tern(isIN, rule.ID.SgLocal, rule.ID.Sg),
 			//)
