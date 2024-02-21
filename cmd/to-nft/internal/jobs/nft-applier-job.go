@@ -2,6 +2,8 @@ package jobs
 
 import (
 	"context"
+	"fmt"
+	"sync"
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/host"
@@ -20,119 +22,173 @@ func NewNftApplierJob(proc nft.NfTablesProcessor, client internal.SGClient, opts
 	ret := &NftApplierJob{
 		nftProcessor: proc,
 		client:       client,
-		agentSubject: internal.AgentSubject(),
 		que:          queue.NewFIFO(),
 	}
+	ret.trigger2Apply.sgn = make(chan struct{}, 1)
 	for _, o := range opts {
 		switch t := o.(type) {
-		case WithAgentSubject:
-			ret.agentSubject = t.Subject
+		case WithSubject:
+			ret.Subject = t.Subject
 		case WithNetNS:
 			ret.netNS = string(t)
 		}
 	}
-	ret.Observer = observer.NewObserver(
-		ret.incomingEvents,
-		false,
-		applyConfigEvent{},
-		internal.NetlinkUpdates{},
-		internal.SyncStatusValue{},
-		DomainAddresses{},
-	)
-	ret.agentSubject.ObserversAttach(ret)
+	if ret.Subject == nil {
+		ret.Subject = observer.NewSubject()
+	}
 	return ret
 }
 
 // NftApplierJob -
 type NftApplierJob struct {
-	observer.Observer
-	netNS        string
-	client       internal.SGClient
-	nftProcessor nft.NfTablesProcessor
-	agentSubject observer.Subject
-	que          *queue.FIFO
-	syncStatus   *model.SyncStatus
-	netConf      *host.NetConf
+	Subject       observer.Subject
+	netNS         string
+	client        internal.SGClient
+	nftProcessor  nft.NfTablesProcessor
+	que           *queue.FIFO
+	stopped       chan struct{}
+	onceRun       sync.Once
+	onceClose     sync.Once
+	trigger2Apply struct {
+		sync.Mutex
+		sgn            chan struct{}
+		dbSyncChanged  bool
+		netConfChanged bool
+		syncStatus     *model.SyncStatus
+		netConf        *host.NetConf
+	}
 }
 
-type applyConfigEvent struct {
-	observer.TextMessageEvent
+// MakeObserver -
+func (jb *NftApplierJob) MakeObserver() observer.Observer {
+	return observer.NewObserver(
+		jb.incomingEvents,
+		false,
+		internal.NetlinkUpdates{},
+		internal.SyncStatusValue{},
+		DomainAddresses{},
+	)
 }
 
 // Close -
 func (jb *NftApplierJob) Close() error {
-	jb.agentSubject.ObserversDetach(jb)
-	_ = jb.Observer.Close()
-	_ = jb.que.Close()
+	jb.onceClose.Do(func() {
+		_ = jb.que.Close()
+		jb.onceRun.Do(func() {})
+		if jb.stopped != nil {
+			<-jb.stopped
+		}
+	})
 	return nil
 }
 
 // Run -
 func (jb *NftApplierJob) Run(ctx context.Context) (err error) {
-	log := logger.FromContext(ctx).Named("nft-applier-proc")
+	const job = "nft-applier-proc"
+
+	var neverRun bool
+	jb.onceRun.Do(func() { neverRun = true })
+	if !neverRun {
+		return fmt.Errorf("%s: it has been run or closed yet", job)
+	}
+
+	jb.stopped = make(chan struct{})
+	log := logger.FromContext(ctx).Named(job)
 	log.Info("start")
-	defer log.Info("stop")
+	defer func() {
+		defer log.Info("stop")
+		close(jb.stopped)
+	}()
 	for que := jb.que.Reader(); ; {
 		select {
 		case <-ctx.Done():
 			log.Info("will exit cause it has canceled")
 			return ctx.Err()
+		case <-jb.trigger2Apply.sgn:
+			tr := &jb.trigger2Apply
+			tr.Lock()
+			if tr.netConfChanged {
+				log.Info("net conf has changed")
+				tr.netConfChanged = false
+			}
+			if tr.dbSyncChanged {
+				log.Info("ruleset repo has changed")
+				tr.dbSyncChanged = false
+			}
+			if tr.netConf == nil || tr.syncStatus == nil {
+				tr.Unlock()
+			} else {
+				cnf := *tr.netConf
+				tr.Unlock()
+				err = jb.doApply(ctx, cnf)
+			}
 		case raw, ok := <-que:
 			if !ok {
 				log.Info("will exit cause it has closed")
 				return nil
 			}
 			switch o := raw.(type) {
-			case internal.SyncStatusValue:
-				jb.handleSyncStatus(ctx, o)
-			case internal.NetlinkUpdates:
-				jb.handleNetlinkEvent(ctx, o)
-			case applyConfigEvent:
-				logger.Info(ctx, o)
-				err = jb.doApply(ctx)
 			case DomainAddresses:
 				err = jb.handleDomainAddressesEvent(ctx, o)
 			}
-			if err != nil {
-				log.Error(err)
-				return err
-			}
+		}
+		if err != nil {
+			log.Error(err)
+			return err
 		}
 	}
 }
 
+// incomingEvents -
 func (jb *NftApplierJob) incomingEvents(ev observer.EventType) { //async recv
-	_ = jb.que.Put(ev)
+	switch o := ev.(type) {
+	case internal.NetlinkUpdates:
+		jb.handleNetlinkEvent(o)
+	case internal.SyncStatusValue:
+		jb.handleSyncStatus(o)
+	case DomainAddresses:
+		_ = jb.que.Put(o)
+	}
 }
 
-func (jb *NftApplierJob) handleSyncStatus(_ context.Context, ev internal.SyncStatusValue) { //sync recv
-	if apply := jb.syncStatus == nil; !apply {
-		apply = ev.UpdatedAt.After(jb.syncStatus.UpdatedAt)
+func (jb *NftApplierJob) handleSyncStatus(ev internal.SyncStatusValue) { //sync recv
+	tr := &jb.trigger2Apply
+	tr.Lock()
+	defer tr.Unlock()
+	if apply := tr.syncStatus == nil; !apply {
+		apply = ev.UpdatedAt.After(tr.syncStatus.UpdatedAt)
 		if !apply {
 			return
 		}
 	}
-	jb.syncStatus = &ev.SyncStatus
-	jb.agentSubject.Notify(applyConfigEvent{
-		TextMessageEvent: observer.NewTextEvent("rulesets repo has changed"),
-	})
+	tr.syncStatus = &ev.SyncStatus
+	tr.dbSyncChanged = true
+	select {
+	case tr.sgn <- struct{}{}:
+	default:
+	}
 }
 
-func (jb *NftApplierJob) handleNetlinkEvent(_ context.Context, ev internal.NetlinkUpdates) { //sync recv
+func (jb *NftApplierJob) handleNetlinkEvent(ev internal.NetlinkUpdates) { //sync recv
+	tr := &jb.trigger2Apply
+	tr.Lock()
+	defer tr.Unlock()
 	var cnf host.NetConf
-	if jb.netConf != nil {
-		cnf = jb.netConf.Clone()
+	if tr.netConf != nil {
+		cnf = tr.netConf.Clone()
 	}
 	cnf.UpdFromWatcher(ev.Updates...)
-	apply := jb.netConf == nil
+	apply := tr.netConf == nil
 	if !apply {
-		apply = !jb.netConf.IPAdresses.Eq(cnf.IPAdresses)
+		apply = !tr.netConf.IPAdresses.Eq(cnf.IPAdresses)
 	}
-	jb.netConf = &cnf
+	tr.netConf = &cnf
 	if apply {
-		jb.agentSubject.Notify(applyConfigEvent{
-			TextMessageEvent: observer.NewTextEvent("net conf has changed"),
-		})
+		tr.netConfChanged = true
+		select {
+		case tr.sgn <- struct{}{}:
+		default:
+		}
 	}
 }
 
@@ -159,22 +215,18 @@ func (jb *NftApplierJob) handleDomainAddressesEvent(ctx context.Context, o Domai
 			return err
 		}
 	}
-	jb.agentSubject.Notify(ev)
+	jb.Subject.Notify(ev)
 	return nil
 }
 
-func (jb *NftApplierJob) doApply(ctx context.Context) error {
-	if jb.netConf == nil || jb.syncStatus == nil {
-		return nil
-	}
-
+func (jb *NftApplierJob) doApply(ctx context.Context, nc host.NetConf) error {
 	log := logger.FromContext(ctx)
 	localDataLoader := cases.LocalDataLoader{
 		Logger: log,
 		DnsRes: internal.GetDnsResolver(),
 	}
 
-	localData, err := localDataLoader.Load(ctx, jb.client, *jb.netConf)
+	localData, err := localDataLoader.Load(ctx, jb.client, nc)
 	if err != nil {
 		return err
 	}
@@ -183,7 +235,7 @@ func (jb *NftApplierJob) doApply(ctx context.Context) error {
 	if data := nft.LastAppliedRules(jb.netNS); data != nil {
 		dontApply = data.LocalData.IsEq(localData)
 		if dontApply {
-			log.Debug("local data did not change since last load; new rules will not geneate")
+			log.Debug("local data did not change since last load; new rules will not generate")
 		}
 	}
 
@@ -197,17 +249,16 @@ func (jb *NftApplierJob) doApply(ctx context.Context) error {
 				localData.ResolvedFQDN.Resolve(ctx, localData.SG2FQDNRules, resolver)
 			}
 		}
-
 		var appliedRules nft.AppliedRules
 		if appliedRules, err = jb.nftProcessor.ApplyConf(ctx, localData); err != nil {
 			return err
 		}
 		nft.LastAppliedRulesUpd(jb.netNS, &appliedRules)
 		ev := AppliedConfEvent{
-			NetConf:      jb.netConf.Clone(),
+			NetConf:      nc,
 			AppliedRules: appliedRules,
 		}
-		jb.agentSubject.Notify(ev)
+		jb.Subject.Notify(ev)
 	}
 
 	if !fqdnStrategy.Eq(internal.FqdnRulesStartegyNDPI) {
@@ -229,7 +280,7 @@ func (jb *NftApplierJob) doApply(ctx context.Context) error {
 				return true
 			})
 		}
-		jb.agentSubject.Notify(reqs...)
+		jb.Subject.Notify(reqs...)
 	}
 	return nil
 }

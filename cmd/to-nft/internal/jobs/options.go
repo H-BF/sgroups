@@ -9,13 +9,13 @@ type Option interface {
 	isOption()
 }
 
-// WithAgentSubject -
-type WithAgentSubject struct {
+// WithSubject -
+type WithSubject struct {
 	observer.Subject
 }
 
 // WithNetNS -
 type WithNetNS string
 
-func (WithAgentSubject) isOption() {}
-func (WithNetNS) isOption()        {}
+func (WithSubject) isOption() {}
+func (WithNetNS) isOption()   {}
