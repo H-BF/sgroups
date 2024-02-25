@@ -42,83 +42,39 @@ func NewNetlinkWatcher(opts ...WatcherOption) (NetlinkWatcher, error) {
 		return nil, errors.New("nothing to watch")
 	}
 	ret := &netlinkWatcherImpl{
-		id:       id,
-		chClose:  make(chan struct{}),
-		chErrors: make(chan error),
-		linger:   age,
+		id:             id,
+		lingerDuration: age,
+		sco:            sco,
+		chClose:        make(chan struct{}),
+		chErrors:       make(chan error, 100),
+		stream:         make(chan []WatcherMsg),
 	}
-	var err error
-	defer func() {
+	if len(ns) > 0 {
+		nsh, err := netns.GetFromName(ns)
 		if err != nil {
 			close(ret.chClose)
 			close(ret.chErrors)
-			if ret.netns != nil {
-				_ = ret.netns.Close()
-			}
-		}
-	}()
-
-	if len(ns) > 0 {
-		var nsh netns.NsHandle
-		if nsh, err = netns.GetFromName(ns); err != nil {
+			close(ret.stream)
 			return nil, errors.WithMessagef(err, "accessing netns '%s'", ns)
 		}
 		ret.netns = &nsh
-	}
-
-	ret.sel = []reflect.SelectCase{{
-		Dir:  reflect.SelectRecv,
-		Chan: reflect.ValueOf(ret.chClose),
-	}, {
-		Dir:  reflect.SelectRecv,
-		Chan: reflect.ValueOf(ret.chErrors),
-	}}
-	if sco&IgnoreLinks == 0 {
-		o := netlink.LinkSubscribeOptions{
-			ListExisting:  true,
-			ErrorCallback: ret.onGotError,
-			Namespace:     ret.netns,
-		}
-		ch := make(chan netlink.LinkUpdate)
-		if err = netlink.LinkSubscribeWithOptions(ch, ret.chClose, o); err != nil {
-			close(ch)
-			return nil, err
-		}
-		ret.sel = append(ret.sel, reflect.SelectCase{
-			Dir:  reflect.SelectRecv,
-			Chan: reflect.ValueOf(ch),
-		})
-	}
-	if sco&IgnoreAddress == 0 {
-		o := netlink.AddrSubscribeOptions{
-			ListExisting:  true,
-			ErrorCallback: ret.onGotError,
-			Namespace:     ret.netns,
-		}
-		ch := make(chan netlink.AddrUpdate)
-		if err = netlink.AddrSubscribeWithOptions(ch, ret.chClose, o); err != nil {
-			close(ch)
-			return nil, err
-		}
-		ret.sel = append(ret.sel, reflect.SelectCase{
-			Dir:  reflect.SelectRecv,
-			Chan: reflect.ValueOf(ch),
-		})
 	}
 	return ret, nil
 }
 
 type (
 	netlinkWatcherImpl struct {
-		id        WatcherID
-		chErrors  chan error
-		chClose   chan struct{}
-		stream    chan []WatcherMsg
-		linger    time.Duration
-		onceRun   sync.Once
-		onceClose sync.Once
-		sel       []reflect.SelectCase
-		netns     *netns.NsHandle
+		id             WatcherID
+		sco            scopeOfUpdates
+		chErrors       chan error
+		chClose        chan struct{}
+		stopped        chan struct{}
+		stream         chan []WatcherMsg
+		lingerDuration time.Duration
+		onceRun        sync.Once
+		onceClose      sync.Once
+		netns          *netns.NsHandle
+		linger         *time.Timer
 	}
 
 	// WatcherOption ...
@@ -162,53 +118,49 @@ var _ NetlinkWatcher = (*netlinkWatcherImpl)(nil)
 
 // Stream impl 'NetlinkWatcher'
 func (w *netlinkWatcherImpl) Stream() <-chan []WatcherMsg {
+	const minLingerDuration = 333 * time.Millisecond
+
 	w.onceRun.Do(func() {
-		w.stream = make(chan []WatcherMsg)
-		go func() {
-			age := w.linger
-			if age < time.Second {
-				age = time.Second
-			}
-			var packet []WatcherMsg
-			var t *time.Timer
-			accumulate := func(m WatcherMsg) {
-				if t == nil {
-					t = time.NewTimer(age)
+		var packet []WatcherMsg
+		accumulate := func(m WatcherMsg) {
+			if w.lingerDuration < minLingerDuration {
+				w.send(m)
+			} else {
+				if w.linger == nil {
+					w.linger = time.NewTimer(w.lingerDuration)
 				}
 				packet = append(packet, m)
 			}
-			send := func(msgs []WatcherMsg) {
-				if len(msgs) > 0 {
-					select {
-					case <-w.chClose:
-					case w.stream <- msgs:
-					}
-				}
+		}
+		w.stopped = make(chan struct{})
+		go func() {
+			defer close(w.stopped)
+			sel0, err := w.prepare(w.sco)
+			if err != nil {
+				w.send(ErrMsg{
+					WID: w.id,
+					Err: err,
+				})
+				return
 			}
-			defer func() {
-				if t != nil {
-					_ = t.Stop()
-				}
-				close(w.stream)
-			}()
 			for {
-				sel := w.sel
-				if t != nil {
+				sel := sel0
+				if w.linger != nil {
 					sel = append(sel, reflect.SelectCase{
-						Chan: reflect.ValueOf(t.C),
+						Chan: reflect.ValueOf(w.linger.C),
 						Dir:  reflect.SelectRecv,
 					})
 				}
 				chosen, recv, ok := reflect.Select(sel)
 				if chosen == 0 { //we are closed then do exit
-					break
+					return
 				}
 				if !ok { //it is stopped unexpectedly
-					send([]WatcherMsg{ErrMsg{
+					w.send(ErrMsg{
 						WID: w.id,
 						Err: ErrUnexpectedlyStopped,
-					}})
-					break
+					})
+					return
 				}
 				switch v := recv.Interface().(type) {
 				case netlink.AddrUpdate:
@@ -230,8 +182,8 @@ func (w *netlinkWatcherImpl) Stream() <-chan []WatcherMsg {
 						Err: v,
 					})
 				case time.Time:
-					send(packet)
-					t, packet = nil, nil
+					w.send(packet...)
+					w.linger, packet = nil, packet[:0]
 				default:
 					panic(fmt.Sprintf("got unexpected type '%T'", v))
 				}
@@ -246,12 +198,16 @@ func (w *netlinkWatcherImpl) Close() error {
 	w.onceClose.Do(func() {
 		close(w.chClose)
 		w.onceRun.Do(func() {})
-		if w.stream != nil {
-			<-w.stream
+		if w.stopped != nil {
+			<-w.stopped
+		}
+		if w.linger != nil {
+			_ = w.linger.Stop()
 		}
 		if w.netns != nil {
 			_ = w.netns.Close()
 		}
+		close(w.stream)
 	})
 	return nil
 }
@@ -260,6 +216,63 @@ func (w *netlinkWatcherImpl) onGotError(e error) {
 	select {
 	case <-w.chClose:
 	case w.chErrors <- e:
+	}
+}
+
+func (w *netlinkWatcherImpl) prepare(sco scopeOfUpdates) (sel []reflect.SelectCase, err error) {
+	const recvCap = 1000
+	sel = append(sel,
+		reflect.SelectCase{
+			Dir:  reflect.SelectRecv,
+			Chan: reflect.ValueOf(w.chClose),
+		},
+		reflect.SelectCase{
+			Dir:  reflect.SelectRecv,
+			Chan: reflect.ValueOf(w.chErrors),
+		},
+	)
+	if sco&IgnoreLinks == 0 {
+		o := netlink.LinkSubscribeOptions{
+			ListExisting:  true,
+			ErrorCallback: w.onGotError,
+			Namespace:     w.netns,
+		}
+		recvCh := make(chan netlink.LinkUpdate, recvCap)
+		if err = netlink.LinkSubscribeWithOptions(recvCh, w.chClose, o); err != nil {
+			close(recvCh)
+			return nil, err
+		}
+		sel = append(sel, reflect.SelectCase{
+			Dir:  reflect.SelectRecv,
+			Chan: reflect.ValueOf(recvCh),
+		})
+	}
+	if sco&IgnoreAddress == 0 {
+		o := netlink.AddrSubscribeOptions{
+			ListExisting:  true,
+			ErrorCallback: w.onGotError,
+			Namespace:     w.netns,
+			//ReceiveBufferSize: 65536,
+		}
+		recvCh := make(chan netlink.AddrUpdate, recvCap)
+		if err = netlink.AddrSubscribeWithOptions(recvCh, w.chClose, o); err != nil {
+			close(recvCh)
+			return nil, err
+		}
+		sel = append(sel, reflect.SelectCase{
+			Dir:  reflect.SelectRecv,
+			Chan: reflect.ValueOf(recvCh),
+		})
+	}
+	return sel, err
+}
+
+func (w *netlinkWatcherImpl) send(msgs ...WatcherMsg) {
+	if len(msgs) > 0 {
+		select {
+		case <-w.chClose:
+		case w.stream <- msgs:
+		}
 	}
 }
 

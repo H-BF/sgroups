@@ -211,6 +211,7 @@ func runNftJob(ctx context.Context) (err error) {
 
 func makeNetlinkWatcher(ctx context.Context, netNs string) (nl.NetlinkWatcher, error) {
 	opts := []nl.WatcherOption{
+		nl.IgnoreLinks,
 		nl.WithLinger{
 			Linger: NetlinkWatcherLinger.MustValue(ctx),
 		},

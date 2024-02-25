@@ -196,17 +196,12 @@ func (conf NetConf) Clone() NetConf {
 // LocalIPs get effective local unique IP lists
 func (conf NetConf) LocalIPs() (IPv4 []net.IP, IPv6 []net.IP) {
 	conf.IPAdresses.Iterate(func(_ IPAdressesMapKey, a *IpAddr) bool {
-		a.Links.Iterate(func(lid LinkID) bool {
-			if _, ok := conf.IpDevs.Get(lid); ok {
-				switch len(a.IP) {
-				case net.IPv4len:
-					IPv4 = append(IPv4, a.IP)
-				case net.IPv6len:
-					IPv6 = append(IPv6, a.IP)
-				}
-			}
-			return true
-		})
+		switch len(a.IP) {
+		case net.IPv4len:
+			IPv4 = append(IPv4, a.IP)
+		case net.IPv6len:
+			IPv6 = append(IPv6, a.IP)
+		}
 		return true
 	})
 	type iplist = []net.IP
