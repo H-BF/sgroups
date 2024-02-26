@@ -2,7 +2,6 @@ package sgroups
 
 import (
 	"context"
-	"errors"
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
@@ -26,33 +25,36 @@ func (srv *sgService) GetSgSubnets(ctx context.Context, req *sg.GetSgSubnetsReq)
 	if len(sgName) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "SG name is not provided by request")
 	}
+	var gr *model.SecurityGroup
 	err = reader.ListSecurityGroups(ctx, func(group model.SecurityGroup) error {
-		resp = new(sg.GetSgSubnetsResp)
-		if len(group.Networks) > 0 {
-			e := reader.ListNetworks(ctx, func(n model.Network) error {
-				resp.Networks = append(resp.Networks,
-					&sg.Network{
-						Name: n.Name,
-						Network: &common.Networks_NetIP{
-							CIDR: n.Net.String(),
-						},
-					})
-				return nil
-			}, registry.NetworkNames(group.Networks...))
-			if e != nil {
-				return e
-			}
-		}
-		return errSuccess
+		gr = &group
+		return nil
 	}, registry.SG(sgName))
-	if errors.Is(err, errSuccess) {
-		if len(resp.Networks) == 0 {
-			return nil, status.Errorf(codes.NotFound, "no any subnet found for SG '%s'", sgName)
-		}
-		return resp, nil
+	if err != nil {
+		return nil, err
 	}
-	if err == nil {
+	if gr == nil {
 		return nil, status.Errorf(codes.NotFound, "SG '%s' is not found", sgName)
 	}
-	return nil, status.Errorf(codes.Internal, "reason: %s", err.Error())
+	resp = new(sg.GetSgSubnetsResp)
+	if len(gr.Networks) > 0 {
+		err = reader.ListNetworks(ctx, func(n model.Network) error {
+			resp.Networks = append(resp.Networks,
+				&sg.Network{
+					Name: n.Name,
+					Network: &common.Networks_NetIP{
+						CIDR: n.Net.String(),
+					},
+				})
+			return nil
+		}, registry.NetworkNames(gr.Networks...))
+		if err != nil {
+			return nil, err
+		}
+	}
+	if len(resp.GetNetworks()) == 0 {
+		return nil, status.Errorf(codes.NotFound, "no any subnet found for SG '%s'", sgName)
+	}
+	return resp, nil
+
 }

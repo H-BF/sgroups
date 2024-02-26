@@ -39,8 +39,6 @@ var (
 	//SecGroupSwaggerUtil ...
 	SecGroupSwaggerUtil sgPkg.SwaggerUtil[sg.SecGroupServiceServer]
 
-	errSuccess = errors.New("success")
-
 	errServiceIsClosing = status.Error(codes.Unavailable,
 		"'sgroups' service is about to be closed")
 )

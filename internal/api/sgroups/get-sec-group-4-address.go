@@ -10,7 +10,6 @@ import (
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 
 	sg "github.com/H-BF/protos/pkg/api/sgroups"
-	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -47,22 +46,26 @@ func (srv *sgService) GetSecGroupForAddress(ctx context.Context, req *sg.GetSecG
 	var nwName string
 	err = reader.ListNetworks(ctx, func(n model.Network) error {
 		nwName = n.Name
-		return reader.ListSecurityGroups(ctx, func(g model.SecurityGroup) error {
-			var e error
-			if resp, e = sg2proto(g); e != nil {
-				return e
-			}
-			return errSuccess
-		}, registry.NetworkNames(nwName))
+		return nil
 	}, registry.IPs(ip, true))
-	if errors.Is(err, errSuccess) {
-		return resp, nil
+	if err != nil {
+		return nil, err
 	}
-	if err == nil {
-		if len(nwName) == 0 {
-			return nil, status.Error(codes.NotFound, "not found any subnet")
+	if len(nwName) == 0 {
+		return nil, status.Errorf(codes.NotFound, "not found SG cause no any subnet for IP(%s)", queryAddress)
+	}
+	err = reader.ListSecurityGroups(ctx, func(g model.SecurityGroup) error {
+		var e error
+		if resp, e = sg2proto(g); e != nil {
+			return e
 		}
-		return nil, status.Error(codes.NotFound, "not found any SG")
+		return nil
+	}, registry.NetworkNames(nwName))
+	if err != nil {
+		return nil, err
 	}
-	return nil, status.Errorf(codes.Internal, "reason: %s", err.Error())
+	if resp == nil {
+		return nil, status.Errorf(codes.NotFound, "not found SG for IP(%s)", queryAddress)
+	}
+	return resp, nil
 }

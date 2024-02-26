@@ -222,7 +222,7 @@ func (jb *NftApplierJob) handleDomainAddressesEvent(ctx context.Context, o Domai
 }
 
 func (jb *NftApplierJob) doApply(ctx context.Context) error {
-	const maxLoadDuration = 3 * time.Minute
+	const maxLoadDuration = time.Minute
 
 	log := logger.FromContext(ctx)
 	localDataLoader := cases.LocalDataLoader{
