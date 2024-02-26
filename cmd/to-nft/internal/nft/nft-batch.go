@@ -398,6 +398,7 @@ func (bt *batch) addSGNetSets() {
 			isV6 := i > 0
 			ipV := tern(isV6, iplib.IP6Version, iplib.IP4Version)
 			if elements := (setsUtils{}).nets2SetElements(nets, ipV); len(elements) > 0 {
+				nets := nets
 				bt.addJob("add-sg-net-set", func(tx *Tx) error {
 					nameOfSet := nameUtils{}.nameOfNetSet(ipV, sgName)
 					netSet := &nftLib.Set{
@@ -747,9 +748,10 @@ func (bt *batch) populateInOutSgIeSgRules(dir direction, sg *cases.SG) {
 		ipV := ipV
 		for _, rule := range rules {
 			rule := rule
-			addrSetName := nameUtils{}.nameOfNetSet(
-				ipV, tern(isIN, rule.ID.SgLocal, rule.ID.Sg),
-			)
+			addrSetName := nameUtils{}.nameOfNetSet(ipV, rule.ID.Sg)
+			//addrSetName := nameUtils{}.nameOfNetSet(
+			//	ipV, tern(isIN, rule.ID.SgLocal, rule.ID.Sg),
+			//)
 			detailsName := nameUtils{}.nameSgIeSgRuleDetails(rule)
 			details := bt.ruleDetails.At(detailsName)
 			if details == nil {
