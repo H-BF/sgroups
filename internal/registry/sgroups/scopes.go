@@ -199,6 +199,7 @@ func PKScopedSgSgRules(rules ...model.SgSgRule) Scope {
 	return ret
 }
 
+// PKScopedIESgSgRules - primary rule scope
 func PKScopedIESgSgRules(rules ...model.IESgSgIcmpRule) Scope {
 	ret := scopedIESgSgIcmpRuleIdentity{}
 	for _, r := range rules {

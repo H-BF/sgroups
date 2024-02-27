@@ -431,6 +431,7 @@ func IntegrityChecker4SgSgRules() IntegrityChecker {
 	}
 }
 
+// IntegrityChecker4IESgSgIcmpRules - checks existence of referred SGs
 func IntegrityChecker4IESgSgIcmpRules() IntegrityChecker {
 	const api = "Integrity-of-IESgSgIcmpRules"
 
@@ -444,7 +445,8 @@ func IntegrityChecker4IESgSgIcmpRules() IntegrityChecker {
 		}
 		for x := it.Next(); x != nil; x = it.Next() { // validate SG refs
 			rule := x.(*model.IESgSgIcmpRule)
-			sgLocal := rule.ID().SgLocal
+			id := rule.ID()
+			sgLocal := id.SgLocal
 			secGroup, e1 := reader.First(TblSecGroups, indexID, sgLocal)
 			if e1 != nil {
 				return errors.WithMessagef(e1, "%s: find ref to SgLocal '%s'", api, sgLocal)
@@ -453,7 +455,7 @@ func IntegrityChecker4IESgSgIcmpRules() IntegrityChecker {
 				return errors.Errorf("%s: not found ref to SgLocal '%s'", api, sgLocal)
 			}
 
-			sg := rule.ID().Sg
+			sg := id.Sg
 			secGroup, e1 = reader.First(TblSecGroups, indexID, sg)
 			if e1 != nil {
 				return errors.WithMessagef(e1, "%s: find ref to Sg '%s'", api, sg)

@@ -15,12 +15,12 @@ create table sgroups.tbl_ie_sg_sg_icmp_rule (
     constraint ie_sg_sg_icmp_rule_identity
         unique (ip_v, sg_local, sg, traffic),
     constraint fk_ie_sg_sg_icmp_rule__sg_local
-        foreign key (sg_local) references sgroups.tbl_sg (id)
+       foreign key (sg_local) references sgroups.tbl_sg (id)
             on delete cascade
             on update restrict
             deferrable initially deferred,
     constraint fk_ie_sg_sg_icmp_rule__sg
-        foreign key (sg) references sgroups.tbl_sg (id)
+       foreign key (sg) references sgroups.tbl_sg (id)
             on delete cascade
             on update restrict
             deferrable initially deferred
@@ -28,15 +28,14 @@ create table sgroups.tbl_ie_sg_sg_icmp_rule (
 
 drop view if exists sgroups.vu_ie_sg_sg_icmp_rule cascade;
 create or replace view sgroups.vu_ie_sg_sg_icmp_rule as
-select
-    ip_v,
-    types,
-    (select "name" from sgroups.tbl_sg where id = R.sg_local) as sg_local,
-    (select "name" from sgroups.tbl_sg where id = R.sg) as sg,
-    traffic,
-    logs,
-    trace
-from sgroups.tbl_ie_sg_sg_icmp_rule as R;
+select ip_v,
+       types,
+       (select "name" from sgroups.tbl_sg where id = R.sg_local) as sg_local,
+       (select "name" from sgroups.tbl_sg where id = R.sg) as sg,
+       traffic,
+       logs,
+       trace
+  from sgroups.tbl_ie_sg_sg_icmp_rule as R;
 
 --------------------------------------- READERS ---------------------------------------
 drop function if exists sgroups.list_ie_sg_sg_icmp_rules(sgroups.cname[], sgroups.cname[]) cascade;
@@ -60,9 +59,9 @@ begin
                         r.traffic,
                         r.logs,
                         r.trace
-                    from sgroups.vu_ie_sg_sg_icmp_rule as r
-                    where( sglocals is null or r.sg_local = any(sglocals) )
-                     and ( sgs is null or r.sg = any(sgs) );
+                   from sgroups.vu_ie_sg_sg_icmp_rule as r
+                  where ( sglocals is null or r.sg_local = any(sglocals) )
+                    and ( sgs is null or r.sg = any(sgs) );
 end;
 $$ language plpgsql immutable;
 
@@ -101,7 +100,7 @@ begin
            and sg_local = sgLocalID
            and sg = sgID
            and traffic = (d).traffic
-        returning id into ret;
+     returning id into ret;
     elseif op = 'upd' then
         update sgroups.tbl_ie_sg_sg_icmp_rule
            set types = (d).types,
@@ -111,24 +110,24 @@ begin
            and sg_local = sgLocalID
            and sg = sgID
            and traffic = (d).traffic
-        returning id into ret;
+     returning id into ret;
     elseif op = 'ups' then
         insert into sgroups.tbl_ie_sg_sg_icmp_rule (ip_v, types, sg_local, sg, traffic, logs, trace)
                     values ((d).ip_v, (d).types, sgLocalID, sgID, (d).traffic, (d).logs, (d).trace)
             on conflict
                 on constraint ie_sg_sg_icmp_rule_identity
                     do update
-                        set types = (d).types,
-                            logs  = (d).logs,
-                            trace = (d).trace
-        returning id into ret;
+                          set types = (d).types,
+                              logs  = (d).logs,
+                              trace = (d).trace
+     returning id into ret;
     elseif op = 'ins' then
         insert into sgroups.tbl_ie_sg_sg_icmp_rule (ip_v, types, sg_local, sg, traffic, logs, trace)
                     values ((d).ip_v, (d).types, sgLocalID, sgID, (d).traffic, (d).logs, (d).trace)
             on conflict
                 on constraint ie_sg_sg_icmp_rule_identity
                     do nothing
-        returning id into ret;
+     returning id into ret;
     end if;
     return ret is not null;
 end;
