@@ -46,7 +46,7 @@ func NewNetlinkWatcher(opts ...WatcherOption) (NetlinkWatcher, error) {
 		lingerDuration: age,
 		sco:            sco,
 		chClose:        make(chan struct{}),
-		chErrors:       make(chan error, 100),
+		chErrors:       make(chan error, 100), //nolint:gomnd
 		stream:         make(chan []WatcherMsg),
 	}
 	if len(ns) > 0 {

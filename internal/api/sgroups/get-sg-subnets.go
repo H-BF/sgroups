@@ -56,5 +56,4 @@ func (srv *sgService) GetSgSubnets(ctx context.Context, req *sg.GetSgSubnetsReq)
 		return nil, status.Errorf(codes.NotFound, "no any subnet found for SG '%s'", sgName)
 	}
 	return resp, nil
-
 }
