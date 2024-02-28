@@ -69,26 +69,28 @@ initial-backend:
       "trace": true
     }
 cases:
-- name: "create new any rule set"
+- name: "add new IE Sg2Sg rules"
   tf-config: |
-    resource "sgroups_rules" "sg-sg-rules-set-1" {
+    resource "sgroups_ie_rules" "rules-set" {
       items = {
-        "tcp:sg(group1)sg(group2)" = {
-          transport = "tcp"
-          sg_from = "group1"
-          sg_to = "group2"
-          ports = [
-            {
-              d = "80,443"
-              s = "1000-2000"
-            }
-          ]
-          logs = true
+        "tcp:sg-local(group1)sg(group2):ingress" = {
+            transport = "tcp"
+            sg_local = "group1"
+            sg = "group2"
+            traffic = "ingress"
+            ports = [
+              {
+                d = "80,443"
+                s = "1000-2000"
+              }
+            ]
+            logs = true
+            trace = true
         }
       }
     }
   expected-backend:
-    sg-sg-rules:
+    ie-sg-sg-rules:
     - |
       {
         "logs": true,
@@ -98,55 +100,65 @@ cases:
             "s": "1000-2000"
           }
         ],
-        "sgFrom": "group1",
-        "sgTo": "group2",
+        "SgLocal": "group1",
+        "Sg": "group2",
+        "trace": true,
+        "traffic": "Ingress",
         "transport": "TCP"
       }
 - name: "add another rule with empty list for ports"
   tf-config: |
-    resource "sgroups_rules" "sg-sg-rules-set-1" {
+    resource "sgroups_ie_rules" "rules-set" {
       items = {
-        "tcp:sg(group1)sg(group2)" = {
-          transport = "tcp"
-          sg_from = "group1"
-          sg_to = "group2"
-          ports = [
-            {
-              d = "22,80,443"
-              s = "3000-4000"
-            }
-          ]
-          logs = false
+        "tcp:sg-local(group1)sg(group2):ingress" = {
+            transport = "tcp"
+            sg_local = "group1"
+            sg = "group2"
+            traffic = "ingress"
+            ports = [
+              {
+                d = "80,443"
+                s = "1000-2000"
+              }
+            ]
+            logs = true
+            trace = true
         }
-        "udp:sg(group3)sg(group4)" = {
+        "udp:sg-local(group3)sg(group4):egress" = {
           transport = "udp"
-          sg_from = "group3"
-          sg_to = "group4"
+          sg_local = "group3"
+          sg = "group4"
+          traffic = "egress"
           ports = []
           logs = true
+          trace = true
         }
       }
     }
   expected-backend:
-    sg-sg-rules:
+    ie-sg-sg-rules:
     - |
       {
-        "logs": false,
+        "logs": true,
         "ports": [
           {
-            "d": "22,80,443",
-            "s": "3000-4000"
+            "d": "80,443",
+            "s": "1000-2000"
           }
         ],
-        "sgFrom": "group1",
-        "sgTo": "group2",
+        "SgLocal": "group1",
+        "Sg": "group2",
+        "trace": true,
+        "traffic": "Ingress",
         "transport": "TCP"
       }
     - |
       {
         "logs": true,
         "ports": [],
-        "sgFrom": "group3",
-        "sgTo": "group4",
+        "SgLocal": "group3",
+        "Sg": "group4",
+        "trace": true,
+        "traffic": "Egress",
         "transport": "UDP"
       }

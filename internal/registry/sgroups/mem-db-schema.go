@@ -22,6 +22,7 @@ var tableID2MemDbSchemaInit = map[TableID]MemDbSchemaInit{
 	TblSgIcmpRules:   memSgIcmpRulesSchema,
 	TblSgSgIcmpRules: memSgSgIcmpRulesSchema,
 	TblCidrSgRules:   memCidrSgRulesSchema,
+	TblSgSgRules:     memSgSgRulesSchema,
 }
 
 func memDbNetworksSchema(schema *MemDbSchema) {
@@ -122,7 +123,7 @@ func memCidrSgRulesSchema(schema *MemDbSchema) {
 	schema.Tables[tbl] = &MemDbTableSchema{
 		Name: tbl,
 		Indexes: map[string]*MemDbIndexSchema{
-			indexID: {
+			indexID: { //nolint:dupl
 				Name:   indexID,
 				Unique: true,
 				Indexer: SingleObjectIndexer[model.CidrSgRuleIdenity]{
@@ -168,6 +169,38 @@ func memCidrSgRulesSchema(schema *MemDbSchema) {
 						b := bytes.NewBuffer(nil)
 						_, _ = fmt.Fprintf(b, "%s\x00", sg)
 						return b.Len() > 0, b.Bytes(), nil
+					},
+				},
+			},
+		},
+	}
+}
+
+func memSgSgRulesSchema(schema *MemDbSchema) {
+	tbl := TblSgSgRules.String()
+	schema.Tables[tbl] = &MemDbTableSchema{
+		Name: tbl,
+		Indexes: map[string]*MemDbIndexSchema{
+			indexID: { //nolint:dupl
+				Name:   indexID,
+				Unique: true,
+				Indexer: SingleObjectIndexer[model.SgSgRuleIdentity]{
+					accessor: func(a any) model.SgSgRuleIdentity {
+						switch v := a.(type) {
+						case *model.SgSgRule:
+							return v.ID
+						case model.SgSgRuleIdentity:
+							return v
+						default:
+							panic(
+								errors.Errorf("unsupported type argument %T", a),
+							)
+						}
+					},
+					fromObjectDelegate: func(t model.SgSgRuleIdentity) (bool, []byte, error) {
+						b := bytes.NewBuffer(nil)
+						_, e := fmt.Fprintf(b, "%s\x00", t)
+						return e == nil, b.Bytes(), e
 					},
 				},
 			},

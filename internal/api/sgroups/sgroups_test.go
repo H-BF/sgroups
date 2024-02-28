@@ -4,9 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"google.golang.org/grpc"
-	"google.golang.org/protobuf/types/known/emptypb"
-
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 
@@ -187,11 +184,38 @@ func (sui *sGroupServiceTests) newRule(from, to *api.SecGroup, tr common.Network
 	}
 }
 
+func (sui *sGroupServiceTests) newSgSgRule(
+	sgLocal, sg *api.SecGroup,
+	transport common.Networks_NetIP_Transport,
+	traffic common.Traffic,
+	ports ...*api.AccPorts) *api.SgSgRule {
+	return &api.SgSgRule{
+		Transport: transport,
+		Sg:        sg.Name,
+		SgLocal:   sgLocal.Name,
+		Traffic:   traffic,
+		Ports:     ports,
+	}
+}
+
 func (sui *sGroupServiceTests) syncRules(rules []*api.Rule, op api.SyncReq_SyncOp) {
 	req := api.SyncReq{
 		SyncOp: op,
 		Subject: &api.SyncReq_SgRules{
 			SgRules: &api.SyncSGRules{
+				Rules: rules,
+			},
+		},
+	}
+	_, err := sui.srv.Sync(sui.ctx, &req)
+	sui.Require().NoError(err)
+}
+
+func (sui *sGroupServiceTests) syncSgSgRules(rules []*api.SgSgRule, op api.SyncReq_SyncOp) {
+	req := api.SyncReq{
+		SyncOp: op,
+		Subject: &api.SyncReq_SgSgRules{
+			SgSgRules: &api.SyncSgSgRules{
 				Rules: rules,
 			},
 		},
@@ -208,6 +232,22 @@ func (sui *sGroupServiceTests) rule2Id(rules ...*api.Rule) []model.SGRuleIdentit
 		id.SgTo = r.SgTo
 		err := (networkTransport{&id.Transport}).
 			from(r.GetTransport())
+		sui.Require().NoError(err)
+		ret = append(ret, id)
+	}
+	return ret
+}
+
+func (sui *sGroupServiceTests) sgSgRule2Id(rules ...*api.SgSgRule) []model.SgSgRuleIdentity {
+	var ret []model.SgSgRuleIdentity
+	for _, r := range rules {
+		var id model.SgSgRuleIdentity
+		id.SgLocal = r.GetSgLocal()
+		id.Sg = r.GetSg()
+		err := (networkTransport{&id.Transport}).
+			from(r.GetTransport())
+		sui.Require().NoError(err)
+		err = (traffic{&id.Traffic}).from(r.GetTraffic())
 		sui.Require().NoError(err)
 		ret = append(ret, id)
 	}
@@ -250,6 +290,51 @@ func (sui *sGroupServiceTests) Test_Sync_Rules() {
 	sui.syncSGs([]*api.SecGroup{sg1}, api.SyncReq_Delete)
 	r = sui.reader()
 	err = r.ListSGRules(sui.ctx, func(_ model.SGRule) error {
+		cn++
+		return nil
+	}, registry.NoScope)
+	sui.Require().NoError(err)
+	sui.Require().Equal(0, cn)
+}
+
+func (sui *sGroupServiceTests) Test_Sync_SgSgRules() {
+	sg1 := sui.newSG("sg1")
+	sg2 := sui.newSG("sg2")
+	sg3 := sui.newSG("sg3")
+	sg4 := sui.newSG("sg4")
+	sui.syncSGs([]*api.SecGroup{sg1, sg2, sg3, sg4}, api.SyncReq_FullSync)
+
+	rule1 := sui.newSgSgRule(sg1, sg2, common.Networks_NetIP_TCP, common.Traffic_Egress, sui.newPorts("100-200", "80"))
+	rule2 := sui.newSgSgRule(sg3, sg4, common.Networks_NetIP_UDP, common.Traffic_Ingress, sui.newPorts("100-200", "80"))
+
+	sui.syncSgSgRules([]*api.SgSgRule{rule1, rule2}, api.SyncReq_FullSync)
+	r := sui.reader()
+	m := make(map[string]bool)
+	err := r.ListSgSgRules(sui.ctx, func(rule model.SgSgRule) error {
+		m[rule.ID.IdentityHash()] = true
+		return nil
+	}, registry.NoScope)
+	sui.Require().NoError(err)
+	ids := sui.sgSgRule2Id(rule1, rule2)
+	for _, x := range ids {
+		ok := m[x.IdentityHash()]
+		sui.Require().Truef(ok, "required rule '%s'", x)
+	}
+
+	sui.syncSgSgRules([]*api.SgSgRule{rule1, rule2}, api.SyncReq_Delete)
+	r = sui.reader()
+	var cn int
+	err = r.ListSgSgRules(sui.ctx, func(_ model.SgSgRule) error {
+		cn++
+		return nil
+	}, registry.NoScope)
+	sui.Require().NoError(err)
+	sui.Require().Equal(0, cn)
+
+	sui.syncSgSgRules([]*api.SgSgRule{rule1, rule2}, api.SyncReq_FullSync)
+	sui.syncSGs([]*api.SecGroup{sg1, sg3}, api.SyncReq_Delete)
+	r = sui.reader()
+	err = r.ListSgSgRules(sui.ctx, func(_ model.SgSgRule) error {
 		cn++
 		return nil
 	}, registry.NoScope)
@@ -431,66 +516,4 @@ func (sui *sGroupServiceTests) Test_FindRules() {
 		}
 		sui.Require().Equal(0, len(t.exp))
 	}
-}
-
-func (sui *sGroupServiceTests) Test_SyncStatuses() {
-	stream := makeSyncStatusesStream()
-	chE := make(chan error, 1)
-	go func() {
-		chE <- sui.srv.SyncStatuses(&emptypb.Empty{}, stream)
-	}()
-
-	makeUpdate := func(networkName string) {
-		nw1 := sui.newNetwork(networkName, "10.10.10.0/24")
-		sui.syncNetworks([]*api.Network{nw1}, api.SyncReq_FullSync)
-	}
-
-	var resp1, resp2 *api.SyncStatusResp
-
-	makeUpdate("net1")
-	resp1 = <-stream.out
-	sui.Require().NotNil(resp1)
-
-	makeUpdate("net2")
-	resp2 = <-stream.out
-	sui.Require().NotNil(resp2)
-
-	stream.Cancel()
-
-	sui.Require().Less(resp1.UpdatedAt.AsTime(), resp2.UpdatedAt.AsTime())
-	err := <-chE
-	sui.Require().NoError(err)
-}
-
-type syncStatusesStream struct {
-	grpc.ServerStream
-	ctx    context.Context
-	out    chan *api.SyncStatusResp
-	cancel context.CancelFunc
-}
-
-func makeSyncStatusesStream() *syncStatusesStream {
-	ctx, cancel := context.WithCancel(context.Background())
-	return &syncStatusesStream{
-		out:    make(chan *api.SyncStatusResp),
-		ctx:    ctx,
-		cancel: cancel,
-	}
-}
-
-func (s *syncStatusesStream) Context() context.Context {
-	return s.ctx
-}
-
-func (s *syncStatusesStream) Send(resp *api.SyncStatusResp) error {
-	select {
-	case s.out <- resp:
-		return nil
-	case <-s.ctx.Done():
-		return s.ctx.Err()
-	}
-}
-
-func (s *syncStatusesStream) Cancel() {
-	s.cancel()
 }

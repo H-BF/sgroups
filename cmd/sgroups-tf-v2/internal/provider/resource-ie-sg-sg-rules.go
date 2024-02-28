@@ -5,11 +5,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/H-BF/sgroups/cmd/sgroups-tf-v2/internal/validators"
+	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
-	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -21,55 +20,56 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func NewCidrRulesResource() resource.Resource {
+func NewIESgSgRulesResource() resource.Resource {
 	d := Description{
-		ResourceDescription: "mapped 'proto:cidr(CIDR)sg(SG_NAME)traffic' -> 'CIDR-SG' rule resource",
-		ItemsDescription:    "CIDR-SG rules",
+		ResourceDescription: "mapped 'proto:sg(local_sg)sg(external_sg)traffic' -> 'SG-SG-<IN|E>GRESS' rule resource",
+		ItemsDescription:    "<IN|E>GRESS SG -> SG rules",
 	}
-	return &cidrRulesResource{
-		suffix:      "_cidr_rules",
+	return &ieSgSgRulesResource{
+		suffix:      "_ie_rules",
 		description: d,
-		readState:   readCidrRules,
+		readState:   readIESgSgRules,
 	}
 }
 
 type (
-	cidrRulesResource = CollectionResource[cidrRule, tfCidrSgRules2Backend]
+	ieSgSgRulesResource = CollectionResource[ieSgSgRule, tfIESgSgRules2Backend]
 
-	cidrRule struct {
+	ieSgSgRule struct {
 		Transport types.String `tfsdk:"transport"`
-		Cidr      types.String `tfsdk:"cidr"`
-		SgName    types.String `tfsdk:"sg_name"`
 		Traffic   types.String `tfsdk:"traffic"`
+		SgLocal   types.String `tfsdk:"sg_local"`
+		Sg        types.String `tfsdk:"sg"`
 		Ports     types.List   `tfsdk:"ports"`
 		Logs      types.Bool   `tfsdk:"logs"`
 		Trace     types.Bool   `tfsdk:"trace"`
 	}
 
-	cidrRuleKey struct {
+	ieSgSgRuleKey struct {
 		transport string
-		cidr      string
-		sgName    string
+		sgLocal   string
+		sg        string
 		traffic   string
 	}
 )
 
-func (k cidrRuleKey) String() string {
-	return fmt.Sprintf("%s:cidr(%s)sg(%s)%s",
-		strings.ToLower(k.transport), k.cidr, k.sgName,
-		strings.ToLower(k.traffic))
+// String -
+func (k ieSgSgRuleKey) String() string {
+	return fmt.Sprintf("%s:sg-local(%s)sg(%s):%s",
+		k.transport, k.sgLocal, k.sg, k.traffic)
 }
 
-func (item cidrRule) Key() *cidrRuleKey {
-	return &cidrRuleKey{
+// Key -
+func (item ieSgSgRule) Key() *ieSgSgRuleKey {
+	return &ieSgSgRuleKey{
 		transport: item.Transport.ValueString(),
-		cidr:      item.Cidr.ValueString(),
-		sgName:    item.SgName.ValueString(),
+		sgLocal:   item.SgLocal.ValueString(),
+		sg:        item.Sg.ValueString(),
 		traffic:   item.Traffic.ValueString(),
 	}
 }
 
-func (item cidrRule) Attributes() map[string]schema.Attribute {
+func (i ieSgSgRule) Attributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"transport": schema.StringAttribute{
 			Description: "IP-L4 proto <tcp|udp>",
@@ -78,15 +78,12 @@ func (item cidrRule) Attributes() map[string]schema.Attribute {
 				stringvalidator.OneOf("tcp", "udp"),
 			},
 		},
-		"cidr": schema.StringAttribute{
-			Description: "IP subnet",
+		"sg_local": schema.StringAttribute{
+			Description: "Security Group name of dst/src group when ingress/egress traffic chosen",
 			Required:    true,
-			Validators: []validator.String{
-				validators.IsCIDR(),
-			},
 		},
-		"sg_name": schema.StringAttribute{
-			Description: "Security Group name",
+		"sg": schema.StringAttribute{
+			Description: "Security Group name of opposite group to sg_local",
 			Required:    true,
 		},
 		"traffic": schema.StringAttribute{
@@ -119,7 +116,7 @@ func (item cidrRule) Attributes() map[string]schema.Attribute {
 	}
 }
 
-func (item cidrRule) IsDiffer(ctx context.Context, other cidrRule) bool {
+func (item ieSgSgRule) IsDiffer(ctx context.Context, other ieSgSgRule) bool { //nolint:dupl
 	var (
 		itemModelPorts, otherModelPorts []model.SGRulePorts
 		itemAccPorts, otherAccPorts     []AccessPorts
@@ -131,40 +128,42 @@ func (item cidrRule) IsDiffer(ctx context.Context, other cidrRule) bool {
 	// `toModelPorts` can not be failed because its validate then created
 	itemModelPorts, _ = toModelPorts(itemAccPorts)
 	otherModelPorts, _ = toModelPorts(otherAccPorts)
-
-	return !(item.Transport.Equal(other.Transport) &&
-		item.Cidr.Equal(other.Cidr) &&
-		item.SgName.Equal(other.SgName) &&
-		item.Traffic.Equal(other.Traffic) &&
+	return !(strings.EqualFold(item.Transport.ValueString(), other.Transport.ValueString()) &&
+		item.SgLocal.Equal(other.SgLocal) &&
+		item.Sg.Equal(other.Sg) &&
 		item.Logs.Equal(other.Logs) &&
-		item.Trace.Equal(other.Trace) &&
 		model.AreRulePortsEq(itemModelPorts, otherModelPorts))
 }
 
-func readCidrRules(ctx context.Context, state NamedResources[cidrRule], client *sgAPI.Client) (NamedResources[cidrRule], diag.Diagnostics) {
+func readIESgSgRules(ctx context.Context, state NamedResources[ieSgSgRule], client *sgAPI.Client) (NamedResources[ieSgSgRule], diag.Diagnostics) {
 	var diags diag.Diagnostics
-	newState := NewNamedResources[cidrRule]()
-	var resp *protos.CidrSgRulesResp
+	newState := NewNamedResources[ieSgSgRule]()
+	var resp *protos.SgSgRulesResp
 	var err error
 	if len(state.Items) > 0 {
-		var req protos.FindCidrSgRulesReq
+		var req protos.FindSgSgRulesReq
 		linq.From(state.Items).
 			SelectT(func(i linq.KeyValue) string {
-				return i.Value.(cidrRule).SgName.ValueString()
+				return i.Value.(ieSgSgRule).SgLocal.ValueString()
+			}).Distinct().ToSlice(&req.SgLocal)
+		linq.From(state.Items).
+			SelectT(func(i linq.KeyValue) string {
+				return i.Value.(ieSgSgRule).Sg.ValueString()
 			}).Distinct().ToSlice(&req.Sg)
-		if resp, err = client.FindCidrSgRules(ctx, &req); err != nil {
-			diags.AddError("read cidr-sg rules", err.Error())
+		if resp, err = client.FindSgSgRules(ctx, &req); err != nil {
+			diags.AddError("read ie-sg-sg rules", err.Error())
 			return newState, diags
 		}
 	}
+
 	for _, rule := range resp.GetRules() {
-		it := cidrRule{
+		it := ieSgSgRule{
 			Transport: types.StringValue(strings.ToLower(rule.Transport.String())),
-			Cidr:      types.StringValue(rule.GetCIDR()),
-			SgName:    types.StringValue(rule.GetSG()),
 			Traffic:   types.StringValue(strings.ToLower(rule.GetTraffic().String())),
+			SgLocal:   types.StringValue(rule.GetSgLocal()),
+			Sg:        types.StringValue(rule.GetSg()),
 		}
-		k := it.Key().String()           //nolint:dupl
+		k := it.Key().String()
 		if _, ok := state.Items[k]; ok { //nolint:dupl
 			accPorts := []AccessPorts{}
 			for _, p := range rule.GetPorts() {

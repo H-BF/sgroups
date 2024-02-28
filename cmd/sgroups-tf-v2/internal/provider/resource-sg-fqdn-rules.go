@@ -47,9 +47,9 @@ type (
 	}
 
 	sgFqdnRuleKey struct {
-		proto  string
-		sgFrom string
-		fqdnTo string
+		transport string
+		sgFrom    string
+		fqdnTo    string
 	}
 )
 
@@ -63,7 +63,7 @@ func (k *sgFqdnRuleKey) FromString(s string) error {
 	if len(sm) < 4 { //nolint:gomnd
 		return errors.Errorf("bad sg-fqdn rule key (%s)", s)
 	}
-	k.proto = sm[1]
+	k.transport = sm[1]
 	k.sgFrom = sm[2]
 	k.fqdnTo = sm[3]
 	return nil
@@ -72,16 +72,16 @@ func (k *sgFqdnRuleKey) FromString(s string) error {
 // String -
 func (k sgFqdnRuleKey) String() string {
 	return fmt.Sprintf("%s:sg(%s)fqdn(%s)",
-		strings.ToLower(k.proto), k.sgFrom,
+		strings.ToLower(k.transport), k.sgFrom,
 		strings.ToLower(k.fqdnTo))
 }
 
 // Key -
 func (item sgFqdnRule) Key() *sgFqdnRuleKey {
 	return &sgFqdnRuleKey{
-		proto:  item.Transport.ValueString(),
-		sgFrom: item.SgFrom.ValueString(),
-		fqdnTo: item.Fqdn.ValueString(),
+		transport: item.Transport.ValueString(),
+		sgFrom:    item.SgFrom.ValueString(),
+		fqdnTo:    item.Fqdn.ValueString(),
 	}
 }
 

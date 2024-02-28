@@ -191,7 +191,7 @@ func TestValidate_SGRule(t *testing.T) {
 		fail bool
 	}
 	cases := []item{
-		{r(sg(" sg1"), sg("sg2"), TCP), false},
+		{r(sg("sg1"), sg("sg2"), TCP), false},
 		{r(sg("sg1", ""), sg("sg2"), TCP, rp("", "")), true},
 		{r(sg("sg1", ""), sg("sg2"), TCP, rp("10", "10")), false},
 		{r(sg("", ""), sg("sg2", ""), TCP, rp("10", "10")), true},

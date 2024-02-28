@@ -37,7 +37,7 @@ cases:
     resource "sgroups_fqdn_rules" "sg-fqdn-rules-set-1" {
       items = {
         "tcp:sg(group1)fqdn(front.example.org)" = {
-          proto = "tcp"
+          transport = "tcp"
           sg_from = "group1"
           fqdn = "front.example.org"
           protocols = [
@@ -53,7 +53,7 @@ cases:
           logs = true
         }
         "udp:sg(group2)fqdn(store.example.org)" = {
-          proto = "udp"
+          transport = "udp"
           sg_from = "group2"
           fqdn = "store.example.org"
           ports = [
@@ -103,7 +103,7 @@ cases:
     resource "sgroups_fqdn_rules" "sg-fqdn-rules-set-1" {
       items = {
         "tcp:sg(group1)fqdn(front.example.org)" = {
-          proto = "tcp"
+          transport = "tcp"
           sg_from = "group1"
           fqdn = "front.example.org"
           protocols = [
@@ -157,7 +157,7 @@ cases:
     resource "sgroups_fqdn_rules" "sg-fqdn-rules-set-1" {
       items = {
         "tcp:sg(group1)fqdn(front.example.org)" = {
-          proto = "tcp"
+          transport = "tcp"
           sg_from = "group1"
           fqdn = "front.example.org"
           ports = [

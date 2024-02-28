@@ -74,7 +74,7 @@ cases:
     resource "sgroups_rules" "sg-sg-rules-set-1" {
       items = {
         "tcp:sg(group1)sg(group2)" = {
-          proto = "tcp"
+          transport = "tcp"
           sg_from = "group1"
           sg_to = "group2"
           ports = [
@@ -86,7 +86,7 @@ cases:
           logs = true
         }
         "udp:sg(group3)sg(group4)" = {
-          proto = "udp"
+          transport = "udp"
           sg_from = "group3"
           sg_to = "group4"
           ports = [
@@ -132,7 +132,7 @@ cases:
     resource "sgroups_rules" "sg-sg-rules-set-1" {
       items = {
         "tcp:sg(group1)sg(group2)" = {
-          proto = "tcp"
+          transport = "tcp"
           sg_from = "group1"
           sg_to = "group2"
           ports = [

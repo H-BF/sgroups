@@ -15,7 +15,7 @@ type (
 		protos.Network | protos.SecGroup |
 			protos.Rule | protos.FqdnRule |
 			protos.SgIcmpRule | protos.SgSgIcmpRule |
-			protos.CidrSgRule
+			protos.CidrSgRule | protos.SgSgRule
 	}
 
 	// BackendRcList -
@@ -30,6 +30,7 @@ type (
 		SgIcmpRules   BackendRcList[protos.SgIcmpRule]   `yaml:"sg-icmp-rules"`
 		SgSgIcmpRules BackendRcList[protos.SgSgIcmpRule] `yaml:"sg-sg-icmp-rules"`
 		CidrSgRules   BackendRcList[protos.CidrSgRule]   `yaml:"cidr-sg-rules"`
+		IESgSgRules   BackendRcList[protos.SgSgRule]     `yaml:"ie-sg-sg-rules"`
 	}
 )
 

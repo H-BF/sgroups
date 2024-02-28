@@ -377,7 +377,7 @@ func (o Traffic) ToModel() (ret sgm.Traffic, err error) {
 }
 
 // FromModel -
-func (o *CidrSgRule) FromModel(m sgm.CidrSgRule) error {
+func (o *CidrSgRule) FromModel(m sgm.CidrSgRule) error { //nolint:dupl
 	if err := o.Proto.FromModel(m.ID.Transport); err != nil {
 		return err
 	}
@@ -410,6 +410,42 @@ func (o CidrSgRule) ToModel() (ret sgm.CidrSgRule, err error) {
 	ret.Logs = o.Logs
 	ret.Trace = o.Trace
 	return ret, nil
+}
+
+// FromModel -
+func (o *SgSgRule) FromModel(m sgm.SgSgRule) error { //nolint:dupl
+	if err := o.Proto.FromModel(m.ID.Transport); err != nil {
+		return err
+	}
+	o.SgLocal = m.ID.SgLocal
+	o.Sg = m.ID.Sg
+	if err := o.Traffic.FromModel(m.ID.Traffic); err != nil {
+		return err
+	}
+	if err := o.Ports.FromModel(m.Ports); err != nil {
+		return err
+	}
+	o.Logs = m.Logs
+	o.Trace = m.Trace
+	return nil
+}
+
+// ToModel -
+func (o SgSgRule) ToModel() (ret sgm.SgSgRule, err error) {
+	if ret.ID.Transport, err = o.Proto.ToModel(); err != nil {
+		return ret, err
+	}
+	ret.ID.SgLocal = o.SgLocal
+	ret.ID.Sg = o.Sg
+	if ret.ID.Traffic, err = o.Traffic.ToModel(); err != nil {
+		return ret, err
+	}
+	if ret.Ports, err = o.Ports.ToModel(); err != nil {
+		return ret, err
+	}
+	ret.Logs = o.Logs
+	ret.Trace = o.Trace
+	return ret, err
 }
 
 const (

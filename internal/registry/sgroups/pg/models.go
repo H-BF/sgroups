@@ -126,6 +126,17 @@ type (
 		Logs    bool             `db:"logs"`
 		Trace   bool             `db:"trace"`
 	}
+
+	// SgSgRule -
+	SgSgRule struct {
+		Proto   Proto            `db:"proto"`
+		SgLocal string           `db:"sg_local"`
+		Sg      string           `db:"sg"`
+		Traffic Traffic          `db:"traffic"`
+		Ports   SgRulePortsArray `db:"ports"`
+		Logs    bool             `db:"logs"`
+		Trace   bool             `db:"trace"`
+	}
 )
 
 // Load -

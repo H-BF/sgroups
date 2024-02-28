@@ -1,9 +1,12 @@
 package provider
 
 import (
+	"context"
+
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -47,10 +50,25 @@ func (p AccessPorts) toProto() *protos.AccPorts {
 	}
 }
 
-func portsToProto(data []AccessPorts) []*protos.AccPorts {
+func accPortsRangeToProto(data []AccessPorts) []*protos.AccPorts {
 	var ret []*protos.AccPorts
 	for _, port := range data {
 		ret = append(ret, port.toProto())
 	}
 	return ret
+}
+
+func accPortsRangeFromTF(ctx context.Context, tfValue types.List) (ret []AccessPorts, diags diag.Diagnostics) {
+	diags.Append(tfValue.ElementsAs(ctx, &ret, false)...)
+	//if diags.HasError() {
+	//	return ret, diags
+	//}
+	// this conversion necessary to validate string with ports
+	/*//TODO: whether it`s really necessary?
+	if _, err := toModelPorts(ret); err != nil {
+		diags.AddError("ports conv", err.Error())
+		return ret, diags
+	}
+	*/
+	return ret, diags
 }
