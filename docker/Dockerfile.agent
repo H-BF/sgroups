@@ -1,0 +1,16 @@
+FROM golang:1.20-alpine3.17 as builder
+WORKDIR /src
+COPY . .
+RUN apk upgrade && \
+    apk add make && \
+    make to-nft platform=linux/amd64
+
+FROM alpine:3.17
+RUN addgroup -g 101 app && \
+    adduser -H -u 101 -G app -s /bin/sh -D app && \
+    apk update && apk upgrade
+WORKDIR /app/
+COPY --from=builder --chown=app:app /src/bin/ /app/bin/
+USER app
+
+ENTRYPOINT ["/app/bin/to-nft"]
