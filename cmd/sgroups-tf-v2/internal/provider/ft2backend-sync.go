@@ -48,6 +48,7 @@ var (
 	_ = tfSgSgIcmpRules2Backend.sync
 	_ = tfSgFqdnRules2Backend.sync
 	_ = tfCidrSgRules2Backend.sync
+	_ = tfIESgSgRules2Backend.sync
 )
 
 func (tfNetworks2Backend) sync(ctx context.Context, items NamedResources[networkItem], client *sgAPI.Client, op protos.SyncReq_SyncOp) diag.Diagnostics {
@@ -296,7 +297,7 @@ func (tfSgFqdnRules2Backend) sync(ctx context.Context, items NamedResources[sgFq
 	return diags
 }
 
-func (tfCidrSgRules2Backend) sync(ctx context.Context, items NamedResources[cidrRule], client *sgAPI.Client, op protos.SyncReq_SyncOp) diag.Diagnostics {
+func (tfCidrSgRules2Backend) sync(ctx context.Context, items NamedResources[cidrRule], client *sgAPI.Client, op protos.SyncReq_SyncOp) diag.Diagnostics { //nolint:dupl
 	var syncCidrRules protos.SyncCidrSgRules
 	var diags diag.Diagnostics
 	for _, features := range items.Items {
@@ -349,7 +350,7 @@ func (tfCidrSgRules2Backend) sync(ctx context.Context, items NamedResources[cidr
 	return diags
 }
 
-func (tfIESgSgRules2Backend) sync(ctx context.Context, items NamedResources[ieSgSgRule], client *sgAPI.Client, op protos.SyncReq_SyncOp) diag.Diagnostics {
+func (tfIESgSgRules2Backend) sync(ctx context.Context, items NamedResources[ieSgSgRule], client *sgAPI.Client, op protos.SyncReq_SyncOp) diag.Diagnostics { //nolint:dupl
 	var syncObj protos.SyncSgSgRules
 	var diags diag.Diagnostics
 	for _, features := range items.Items {

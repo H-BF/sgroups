@@ -66,7 +66,7 @@ func (item sgSgRule) Key() *sgSgRuleKey {
 	}
 }
 
-func (item sgSgRule) IsDiffer(ctx context.Context, other sgSgRule) bool {
+func (item sgSgRule) IsDiffer(ctx context.Context, other sgSgRule) bool { //nolint:dupl
 	var (
 		itemModelPorts, otherModelPorts []model.SGRulePorts
 		itemAccPorts, otherAccPorts     []AccessPorts

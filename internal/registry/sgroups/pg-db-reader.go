@@ -128,7 +128,7 @@ func (rd *pgDbReader) ListSecurityGroups(ctx context.Context, consume func(model
 	})
 }
 
-func (rd *pgDbReader) argsForListSGRules(scope Scope) ([]any, error) {
+func (rd *pgDbReader) argsForListSGRules(scope Scope) ([]any, error) { //nolint:dupl
 	var badScope bool
 	var fromSg []string
 	var toSg []string
@@ -382,7 +382,7 @@ func (rd *pgDbReader) ListCidrSgRules(ctx context.Context, consume func(model.Ci
 	})
 }
 
-func (rd *pgDbReader) argsForRulesWithSgLocalAndSg(scope Scope) ([]any, error) {
+func (rd *pgDbReader) argsForRulesWithSgLocalAndSg(scope Scope) ([]any, error) { //nolint:dupl
 	var badScope bool
 	var sgLocals []string
 	var sgs []string

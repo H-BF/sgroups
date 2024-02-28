@@ -402,7 +402,7 @@ func (o Traffic) ToModel() (ret sgm.Traffic, err error) {
 }
 
 // FromModel -
-func (o *CidrSgRule) FromModel(m sgm.CidrSgRule) error {
+func (o *CidrSgRule) FromModel(m sgm.CidrSgRule) error { //nolint:dupl
 	if err := o.Proto.FromModel(m.ID.Transport); err != nil {
 		return err
 	}
@@ -438,7 +438,7 @@ func (o CidrSgRule) ToModel() (ret sgm.CidrSgRule, err error) {
 }
 
 // FromModel -
-func (o *SgSgRule) FromModel(m sgm.SgSgRule) error {
+func (o *SgSgRule) FromModel(m sgm.SgSgRule) error { //nolint:dupl
 	if err := o.Proto.FromModel(m.ID.Transport); err != nil {
 		return err
 	}

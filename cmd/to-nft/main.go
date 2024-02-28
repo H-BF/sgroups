@@ -107,15 +107,17 @@ func main() { //nolint:gocyclo
 		o := observer.NewObserver(exitOnSuccessHanler,
 			true,
 			jobs.AppliedConfEvent{},
-			SyncStatusError{},
 		)
 		AgentSubject().ObserversAttach(o)
 	}
 
 	AgentSubject().ObserversAttach(
-		observer.NewObserver(agentMetricsObserver, true,
-			jobs.AppliedConfEvent{}, SyncStatusError{},
-			NetlinkError{}, jobs.DomainAddresses{}),
+		observer.NewObserver(agentMetricsObserver,
+			false,
+			jobs.AppliedConfEvent{},
+			SyncStatusError{},
+			NetlinkError{},
+			jobs.DomainAddresses{}),
 	)
 
 	gracefulDuration := AppGracefulShutdown.MustValue(ctx)
@@ -148,10 +150,10 @@ func main() { //nolint:gocyclo
 
 func exitOnSuccessHanler(ev observer.EventType) {
 	switch ev.(type) {
-	case SyncStatusError:
-		os.Exit(1)
+	case jobs.AppliedConfEvent:
+		os.Exit(0)
 	}
-	os.Exit(0)
+	os.Exit(1)
 }
 
 func agentMetricsObserver(ev observer.EventType) {
@@ -209,6 +211,7 @@ func runNftJob(ctx context.Context) (err error) {
 
 func makeNetlinkWatcher(ctx context.Context, netNs string) (nl.NetlinkWatcher, error) {
 	opts := []nl.WatcherOption{
+		nl.IgnoreLinks,
 		nl.WithLinger{
 			Linger: NetlinkWatcherLinger.MustValue(ctx),
 		},
@@ -236,7 +239,6 @@ func makeNftprocessor(ctx context.Context, sgClient SGClient, netNs string) (nft
 }
 
 type mainJob struct {
-	appSubject              observer.Subject
 	netNs                   string
 	SyncStatusCheckInterval time.Duration
 	SyncStatusUsePush       bool
@@ -264,7 +266,6 @@ func (m *mainJob) init(ctx context.Context) (err error) {
 			m.cleanup()
 		}
 	}()
-	m.appSubject = AgentSubject()
 	m.netNs, err = NetNS.Value(ctx)
 	if err != nil && !errors.Is(err, config.ErrNotFound) {
 		return err
@@ -286,25 +287,29 @@ func (m *mainJob) init(ctx context.Context) (err error) {
 
 func (m *mainJob) run(ctx context.Context) error {
 	defer m.cleanup()
+	subject := NewTiedSubj(AgentSubject())
 	nftApplier := jobs.NewNftApplierJob(m.nftProcessor, *m.sgClient,
-		jobs.WithAgentSubject{Subject: m.appSubject},
+		jobs.WithSubject{Subject: subject},
 		jobs.WithNetNS(m.netNs),
 	)
-	//defer jb.Close()
 	nle := NetlinkEventSource{
-		AgentSubj:      m.appSubject,
+		Subject:        subject,
 		NetlinkWatcher: m.nlWatcher,
 	}
 	ste := SyncStatusEventSource{
-		AgentSubj:     m.appSubject,
+		Subject:       subject,
 		SGClient:      *m.sgClient,
 		CheckInterval: m.SyncStatusCheckInterval,
 		UsePushModel:  m.SyncStatusUsePush,
 	}
-	dnsRf := jobs.NewDnsRefresher()
-	//defer dnsRf.Close()
+	dnsRf := jobs.NewDnsRefresher(subject)
+
 	ctx1, cancel := context.WithCancel(ctx)
-	//defer cancel()
+	observers := [...]observer.Observer{
+		nftApplier.MakeObserver(), dnsRf.MakeObserver(ctx1),
+	}
+	subject.ObserversAttach(observers[:]...)
+
 	ff := [...]func() error{
 		func() error {
 			HcNftApplier.Set(true)
@@ -328,6 +333,10 @@ func (m *mainJob) run(ctx context.Context) error {
 		},
 	}
 	fnClose := func() {
+		subject.DetachAllObservers()
+		for _, o := range observers {
+			_ = o.Close()
+		}
 		_ = dnsRf.Close()
 		_ = nle.Close()
 		_ = nftApplier.Close()

@@ -36,7 +36,7 @@ else
 endif
 
 .PHONY: install-linter
-install-linter: ##install linter tool
+install-linter: 
 ifeq ($(filter $(GOLANGCI_CUR_VERSION), $(GOLANGCI_LATEST_VERSION)),)
 	$(info Installing GOLANGCI-LINT $(GOLANGCI_LATEST_VERSION)...)
 	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOBIN) $(GOLANGCI_LATEST_VERSION)
@@ -117,17 +117,7 @@ endif
 	$(GO) build -ldflags="$(LDFLAGS)" -o $(OUT) $(CURDIR)/cmd/$(APP) &&\
 	echo -=OK=- 
 
-.PHONY: sgroups-tf	
-sgroups-tf: | go-deps ##build SGroups Terraform provider
-sgroups-tf: APP=sgroups-tf
-sgroups-tf: OUT=$(CURDIR)/bin/terraform-provider-sgroups
-sgroups-tf:
-	@echo build \"$(APP)\" for OS/ARCH=\"$(os)/$(arch)\" ... && \
-	echo into \"$(OUT)\" && \
-	env GOOS=$(os) GOARCH=$(arch) CGO_ENABLED=0 \
-	$(GO) build -ldflags="$(LDFLAGS)" -o $(OUT) $(CURDIR)/cmd/$(APP) &&\
-	echo -=OK=- 
-
+ 
 .PHONY: sgroups-tf-v2	
 sgroups-tf-v2: | go-deps ##build SGroups Terraform provider V2 
 sgroups-tf-v2: APP=sgroups-tf-v2

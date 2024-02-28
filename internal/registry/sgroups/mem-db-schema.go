@@ -156,7 +156,7 @@ func memCidrSgRulesSchema(schema *MemDbSchema) {
 	schema.Tables[tbl] = &MemDbTableSchema{
 		Name: tbl,
 		Indexes: map[string]*MemDbIndexSchema{
-			indexID: {
+			indexID: { //nolint:dupl
 				Name:   indexID,
 				Unique: true,
 				Indexer: SingleObjectIndexer[model.CidrSgRuleIdenity]{
@@ -214,7 +214,7 @@ func memSgSgRulesSchema(schema *MemDbSchema) {
 	schema.Tables[tbl] = &MemDbTableSchema{
 		Name: tbl,
 		Indexes: map[string]*MemDbIndexSchema{
-			indexID: {
+			indexID: { //nolint:dupl
 				Name:   indexID,
 				Unique: true,
 				Indexer: SingleObjectIndexer[model.SgSgRuleIdentity]{

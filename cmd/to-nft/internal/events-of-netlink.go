@@ -2,6 +2,8 @@ package internal
 
 import (
 	"context"
+	"fmt"
+	"sync"
 
 	"github.com/H-BF/sgroups/pkg/nl"
 
@@ -27,16 +29,50 @@ type ( // events from netlink
 
 // NetlinkEventSource -
 type NetlinkEventSource struct {
-	AgentSubj observer.Subject
+	Subject observer.Subject
 	nl.NetlinkWatcher
+
+	runOnce   sync.Once
+	closeOnce sync.Once
+	stopped   chan struct{}
+}
+
+// Close -
+func (w *NetlinkEventSource) Close() error {
+	w.closeOnce.Do(func() {
+		w.runOnce.Do(func() {})
+		w.NetlinkWatcher.Close()
+		if w.stopped != nil {
+			<-w.stopped
+		}
+	})
+	return nil
 }
 
 // Run -
 func (w *NetlinkEventSource) Run(ctx context.Context) error {
-	log := logger.FromContext(ctx).Named("net-conf-watcher")
+	const job = "net-conf-watcher"
+
+	var neverRun bool
+	w.runOnce.Do(func() {
+		neverRun = true
+	})
+	log := logger.FromContext(ctx).Named(job)
+	if !neverRun {
+		return fmt.Errorf("%s: it has been run or closed yet", job)
+	}
+	w.stopped = make(chan struct{})
 	log.Info("start")
-	defer log.Info("stop")
-	for stream := w.Stream(); ; {
+	defer func() {
+		log.Info("stop")
+		close(w.stopped)
+	}()
+	stream := w.Stream()
+	if stream == nil {
+		log.Info("will exit cause it has closed")
+		return nil
+	}
+	for {
 		select {
 		case <-ctx.Done():
 			log.Info("will exit cause it has canceled")
@@ -55,12 +91,12 @@ func (w *NetlinkEventSource) Run(ctx context.Context) error {
 					ev.Updates = append(ev.Updates, t)
 				case nl.ErrMsg:
 					log.Errorf("will exit cause %v", t)
-					w.AgentSubj.Notify(NetlinkError{ErrMsg: t})
+					w.Subject.Notify(NetlinkError{ErrMsg: t})
 					return t
 				}
 			}
 			if len(ev.Updates) > 0 {
-				w.AgentSubj.Notify(ev)
+				w.Subject.Notify(ev)
 			}
 		}
 	}
