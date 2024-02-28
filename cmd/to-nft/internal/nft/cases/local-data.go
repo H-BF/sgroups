@@ -3,9 +3,10 @@ package cases
 import (
 	"context"
 	"net"
+	"time"
 
-	"github.com/H-BF/sgroups/cmd/to-nft/internal"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/host"
+	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
 	"github.com/H-BF/corlib/logger"
 	"github.com/pkg/errors"
@@ -24,12 +25,13 @@ type (
 		Networks      SGsNetworks
 
 		ResolvedFQDN *ResolvedFQDN
+		SyncStatus   model.SyncStatus
 	}
 
 	// LocalDataLoader
 	LocalDataLoader struct {
-		Logger logger.TypeOfLogger
-		DnsRes internal.DomainAddressQuerier // optional
+		SyncStatus      model.SyncStatus
+		MaxLoadDiration time.Duration
 	}
 )
 
@@ -74,7 +76,7 @@ func (ld *LocalData) IsEq(other LocalData) bool {
 }
 
 // Load -
-func (loader LocalDataLoader) Load(ctx context.Context, client SGClient, ncnf host.NetConf) (res LocalData, err error) {
+func (loader *LocalDataLoader) Load(ctx context.Context, client SGClient, ncnf host.NetConf) (res LocalData, err error) {
 	defer func() {
 		err = errors.WithMessage(err, "LocalData/Load")
 	}()
@@ -84,16 +86,26 @@ func (loader LocalDataLoader) Load(ctx context.Context, client SGClient, ncnf ho
 		v4, v6 := ncnf.LocalIPs()
 		locIPs = append(append(locIPs, v4...), v6...)
 	}
+	res.SyncStatus = loader.SyncStatus
+	log := logger.FromContext(ctx)
 	if len(locIPs) == 0 {
-		return res, err
+		return res, errors.New("no any host IP is provided")
+	}
+	if loader.MaxLoadDiration > 0 {
+		ctx1, cancel := context.WithTimeout(ctx, loader.MaxLoadDiration)
+		defer cancel()
+		ctx = ctx1
 	}
 
-	log := loader.Logger
 	log.Debugf("loading local SG(s) from host local IP(s) %s ...", locIPs)
 	if err = res.LocalSGs.LoadFromIPs(ctx, client, locIPs); err != nil {
 		return res, err
 	}
 	log.Debugf("found local SG(s) %s", res.LocalSGs.Names())
+	if res.LocalSGs.Len() == 0 {
+		log.Warn("no any rule will search cause no any local SG is found")
+		return res, err
+	}
 
 	log.Debugw("loading SG-SG rules...")
 	if err = res.SG2SGRules.Load(ctx, client, res.LocalSGs); err != nil {

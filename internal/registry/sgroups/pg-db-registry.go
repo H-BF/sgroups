@@ -27,7 +27,7 @@ func NewRegistryFromPG(ctx context.Context, dbURL url.URL) (r Registry, err erro
 		return nil, err
 	}
 	//TODO: Add TLS config
-	conf.MaxConns = 20                        //TODO: move into options
+	//conf.MaxConns = 20                        //TODO: move into options
 	conf.HealthCheckPeriod = 30 * time.Second //TODO: move into options
 	conf.AfterConnect = func(ctx context.Context, c *pgx.Conn) error {
 		return pg.RegisterSGroupsTypesOntoPGX(ctx, c)

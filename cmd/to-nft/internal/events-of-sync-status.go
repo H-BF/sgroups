@@ -33,7 +33,7 @@ type (
 
 // SyncStatusEventSource -
 type SyncStatusEventSource struct {
-	AgentSubj     observer.Subject
+	Subject       observer.Subject
 	SGClient      SGClient
 	CheckInterval time.Duration
 	UsePushModel  bool
@@ -76,7 +76,7 @@ func (ss *SyncStatusEventSource) push(ctx context.Context, tc *time.Ticker, log 
 				return
 			case <-tc.C:
 				syncStatus.Clear(func(t model.SyncStatus) {
-					ss.AgentSubj.Notify(SyncStatusValue{
+					ss.Subject.Notify(SyncStatusValue{
 						SyncStatus: t,
 					})
 				})
@@ -87,7 +87,7 @@ func (ss *SyncStatusEventSource) push(ctx context.Context, tc *time.Ticker, log 
 		close(closeCh)
 		if err != nil {
 			log.Errorf("will exit cause %v", err)
-			ss.AgentSubj.Notify(SyncStatusError{error: err})
+			ss.Subject.Notify(SyncStatusError{error: err})
 		}
 		wg.Wait()
 	}()
@@ -109,7 +109,7 @@ func (ss *SyncStatusEventSource) pull(ctx context.Context, tc *time.Ticker, log 
 	defer func() {
 		if err != nil {
 			log.Errorf("will exit cause %v", err)
-			ss.AgentSubj.Notify(SyncStatusError{error: err})
+			ss.Subject.Notify(SyncStatusError{error: err})
 		}
 	}()
 	for {
@@ -122,7 +122,7 @@ func (ss *SyncStatusEventSource) pull(ctx context.Context, tc *time.Ticker, log 
 				return e
 			}
 			if st != nil {
-				ss.AgentSubj.Notify(SyncStatusValue{SyncStatus: *st})
+				ss.Subject.Notify(SyncStatusValue{SyncStatus: *st})
 			}
 		}
 	}
