@@ -116,7 +116,7 @@ func (i ieSgSgRule) Attributes() map[string]schema.Attribute {
 	}
 }
 
-func (item ieSgSgRule) IsDiffer(ctx context.Context, other ieSgSgRule) bool {
+func (item ieSgSgRule) IsDiffer(ctx context.Context, other ieSgSgRule) bool { //nolint:dupl
 	var (
 		itemModelPorts, otherModelPorts []model.SGRulePorts
 		itemAccPorts, otherAccPorts     []AccessPorts
@@ -164,7 +164,7 @@ func readIESgSgRules(ctx context.Context, state NamedResources[ieSgSgRule], clie
 			Sg:        types.StringValue(rule.GetSg()),
 		}
 		k := it.Key().String()
-		if _, ok := state.Items[k]; ok {
+		if _, ok := state.Items[k]; ok { //nolint:dupl
 			accPorts := []AccessPorts{}
 			for _, p := range rule.GetPorts() {
 				accPorts = append(accPorts, AccessPorts{

@@ -164,8 +164,8 @@ func readCidrRules(ctx context.Context, state NamedResources[cidrRule], client *
 			SgName:    types.StringValue(rule.GetSG()),
 			Traffic:   types.StringValue(strings.ToLower(rule.GetTraffic().String())),
 		}
-		k := it.Key().String()
-		if _, ok := state.Items[k]; ok {
+		k := it.Key().String()           //nolint:dupl
+		if _, ok := state.Items[k]; ok { //nolint:dupl
 			accPorts := []AccessPorts{}
 			for _, p := range rule.GetPorts() {
 				accPorts = append(accPorts, AccessPorts{

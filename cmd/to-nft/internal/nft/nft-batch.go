@@ -507,7 +507,7 @@ func (bt *batch) initSG2FQDNRulesDetails() {
 	}
 }
 
-func (bt *batch) initCidrSgRulesDetails() {
+func (bt *batch) initCidrSgRulesDetails() { //nolint:dupl
 	bt.data.CidrSgRules.Rules.Iterate(func(_ model.CidrSgRuleIdenity, r *model.CidrSgRule) bool {
 		item := ruleDetails{
 			accports: setsUtils{}.makeAccPorts(r.Ports),
@@ -525,7 +525,7 @@ func (bt *batch) initCidrSgRulesDetails() {
 	})
 }
 
-func (bt *batch) initSgIeSgRulesDetails() {
+func (bt *batch) initSgIeSgRulesDetails() { //nolint:dupl
 	bt.data.SgIeSgRules.Rules.Iterate(func(_ model.SgSgRuleIdentity, r *model.SgSgRule) bool {
 		item := ruleDetails{
 			accports: setsUtils{}.makeAccPorts(r.Ports),
@@ -749,9 +749,6 @@ func (bt *batch) populateInOutSgIeSgRules(dir direction, sg *cases.SG) {
 		for _, rule := range rules {
 			rule := rule
 			addrSetName := nameUtils{}.nameOfNetSet(ipV, rule.ID.Sg)
-			//addrSetName := nameUtils{}.nameOfNetSet(
-			//	ipV, tern(isIN, rule.ID.SgLocal, rule.ID.Sg),
-			//)
 			detailsName := nameUtils{}.nameSgIeSgRuleDetails(rule)
 			details := bt.ruleDetails.At(detailsName)
 			if details == nil {

@@ -281,7 +281,7 @@ func (wr sGroupsMemDbWriter) SyncSgSgIcmpRules(ctx context.Context, //nolint:dup
 }
 
 // SyncCidrSgRules impl Writer interface
-func (wr *sGroupsMemDbWriter) SyncCidrSgRules(ctx context.Context, rules []model.CidrSgRule, scope Scope, opts ...Option) error {
+func (wr *sGroupsMemDbWriter) SyncCidrSgRules(ctx context.Context, rules []model.CidrSgRule, scope Scope, opts ...Option) error { //nolint:dupl
 	const api = "mem-db/SyncCidrSgRules"
 
 	tblID := TblCidrSgRules
@@ -323,7 +323,7 @@ func (wr *sGroupsMemDbWriter) SyncCidrSgRules(ctx context.Context, rules []model
 }
 
 // SyncSgSgRules impl Writer interface
-func (wr *sGroupsMemDbWriter) SyncSgSgRules(ctx context.Context, rules []model.SgSgRule, scope Scope, opts ...Option) error {
+func (wr *sGroupsMemDbWriter) SyncSgSgRules(ctx context.Context, rules []model.SgSgRule, scope Scope, opts ...Option) error { //nolint:dupl
 	const api = "mem-db/SyncSgSgRules"
 
 	tblID := TblSgSgRules

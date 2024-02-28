@@ -121,7 +121,7 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
 			syncField{Name: "trace", PgTy: "bool", Notnull: true},
 		)
-	case *sgm.CidrSgRule:
+	case *sgm.CidrSgRule: //nolint:dupl
 		o.mutatorFn = "sgroups.sync_cidr_sg_rule"
 		o.tableDst = syncTable{
 			Name: "sgroups.vu_cidr_sg_rule",
@@ -134,7 +134,7 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
 			syncField{Name: "trace", PgTy: "bool", Notnull: true},
 		)
-	case *sgm.SgSgRule:
+	case *sgm.SgSgRule: //nolint:dupl
 		o.mutatorFn = "sgroups.sync_ie_sg_sg_rule"
 		o.tableDst = syncTable{
 			Name: "sgroups.vu_ie_sg_sg_rule",
@@ -182,7 +182,7 @@ func (o *syncObj[T, tFlt]) enureDataTable(ctx context.Context) error {
 }
 
 // AddToFilter -
-func (o *syncObj[T, tFlt]) AddToFilter(ctx context.Context, data ...tFlt) error {
+func (o *syncObj[T, tFlt]) AddToFilter(ctx context.Context, data ...tFlt) error { //nolint:gocyclo
 	o.ensureConstructed.Do(o.construct)
 	var raw RawRowsData
 	if err := o.enureFilterTable(ctx); err != nil {
@@ -244,7 +244,7 @@ func (o *syncObj[T, tFlt]) AddToFilter(ctx context.Context, data ...tFlt) error 
 }
 
 // AddData -
-func (o *syncObj[T, tFlt]) AddData(ctx context.Context, data ...T) error {
+func (o *syncObj[T, tFlt]) AddData(ctx context.Context, data ...T) error { //nolint:gocyclo
 	o.ensureConstructed.Do(o.construct)
 	if err := o.enureDataTable(ctx); err != nil {
 		return err
