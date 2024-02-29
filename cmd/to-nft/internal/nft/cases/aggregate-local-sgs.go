@@ -43,7 +43,12 @@ type (
 
 	// SGsNetworks Secuurity Group Networks dictionary indexed by Name from SG
 	SGsNetworks struct {
-		dict.HDict[string, []model.Network]
+		dict.HDict[SgName, *Networks]
+	}
+
+	// Networks - network indexed by its name dictionary
+	Networks struct {
+		dict.HDict[string, Network]
 	}
 )
 
@@ -145,37 +150,89 @@ func (loc *SGs) IsEq(other SGs) bool {
 }
 
 // IsEq -
+func (nws *Networks) IsEq(other Networks) bool {
+	return nws.Eq(&other, func(vL, vR model.Network) bool {
+		return vL.IsEq(vR)
+	})
+}
+
+// IsEq -
 func (sgsNws *SGsNetworks) IsEq(other SGsNetworks) bool {
-	eq := sgsNws.Len() == other.Len()
-	if eq {
-		var x, y dict.HDict[string, *model.Network]
-		eq = sgsNws.Eq(&other, func(vL, vR []model.Network) bool {
-			if len(vL) == len(vR) {
-				x.Clear()
-				y.Clear()
-				for i := range vL {
-					_ = x.Insert(vL[i].Name, &vL[i])
-				}
-				for i := range vR {
-					_ = y.Insert(vR[i].Name, &vR[i])
-				}
-				return x.Eq(&y, func(nwL, nwR *model.Network) bool {
-					return nwL.IsEq(*nwR)
-				})
-			}
-			return false
-		})
+	return sgsNws.Eq(&other, func(vL, vR *Networks) bool {
+		return vL.IsEq(*vR)
+	})
+}
+
+// Add -
+func (sgsNws *SGsNetworks) Add(sg SgName, nws ...Network) {
+	if len(nws) > 0 {
+		item := sgsNws.At(sg)
+		if item == nil {
+			item = new(Networks)
+			sgsNws.Insert(sg, item)
+		}
+		for _, nw := range nws {
+			item.Insert(nw.Name, nw)
+		}
 	}
-	return eq
+}
+
+// IterateNetworks -
+func (sgsNws *SGsNetworks) IterateNetworks(f func(SgName, []Network) bool) {
+	sgsNws.Iterate(func(k string, v *Networks) bool {
+		var nws []Network
+		for _, nw := range v.Items() {
+			nws = append(nws, nw.V)
+		}
+		if len(nws) > 0 {
+			return f(k, nws)
+		}
+		return true
+	})
+}
+
+// Load -
+func (sgsNws *SGsNetworks) Load(ctx context.Context, client SGClient, localSG SGs) error {
+	const api = "SgNetworks/Load"
+	const parallelism = 8
+
+	var mx sync.Mutex
+	items := localSG.Items()
+	e := parallel.ExecAbstract(len(items), parallelism, func(i int) error {
+		sg := items[i].V
+		req := sgAPI.ListNetworksReq{
+			NeteworkNames: sg.Networks,
+		}
+		if len(req.NeteworkNames) > 0 {
+			resp, err := client.ListNetworks(ctx, &req)
+			if err != nil {
+				return err
+			}
+			protoNws := resp.GetNetworks()
+			nws := make([]model.Network, 0, len(protoNws))
+			for _, protoNw := range protoNws {
+				var m model.Network
+				if m, err = conv.Proto2ModelNetwork(protoNw); err != nil {
+					return err
+				}
+				nws = append(nws, m)
+			}
+			mx.Lock()
+			defer mx.Unlock()
+			sgsNws.Add(sg.Name, nws...)
+		}
+		return nil
+	})
+	return errors.WithMessage(e, api)
 }
 
 // LoadFromSGNames -
 func (sgsNws *SGsNetworks) LoadFromSGNames(ctx context.Context, client SGClient, sgNames []string) error {
-	const api = "SG(s)/Networks/Load"
+	const api = "SgNetworks/Load-from-sg-names"
+	const parallelism = 8
 
-	sgsNws.Clear()
 	var mx sync.Mutex
-	err := parallel.ExecAbstract(len(sgNames), 8, func(i int) error { //nolint:gomnd
+	err := parallel.ExecAbstract(len(sgNames), parallelism, func(i int) error {
 		req := sgAPI.GetSgSubnetsReq{SgName: sgNames[i]}
 		resp, e := client.GetSgSubnets(ctx, &req)
 		if e != nil {
@@ -195,7 +252,7 @@ func (sgsNws *SGsNetworks) LoadFromSGNames(ctx context.Context, client SGClient,
 		}
 		mx.Lock()
 		defer mx.Unlock()
-		sgsNws.Put(sgNames[i], nws)
+		sgsNws.Add(sgNames[i], nws...)
 		return nil
 	})
 	return errors.WithMessage(err, api)

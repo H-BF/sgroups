@@ -392,7 +392,7 @@ func (bt *batch) initBaseRules() {
 }
 
 func (bt *batch) addSGNetSets() {
-	bt.data.Networks.Iterate(func(sgName string, nws []model.Network) bool {
+	bt.data.Networks.IterateNetworks(func(sgName string, nws []model.Network) bool {
 		nwsV4, nwsV6 := cases.SeparateNetworks(nws)
 		for i, nets := range sli(nwsV4, nwsV6) {
 			isV6 := i > 0

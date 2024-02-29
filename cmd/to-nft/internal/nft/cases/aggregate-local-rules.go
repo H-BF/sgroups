@@ -13,19 +13,14 @@ import (
 
 // SG2SGRules -
 type SG2SGRules struct {
-	SGs   SGs
 	Rules dict.HDict[model.SGRuleIdentity, *model.SGRule]
 }
 
 // IsEq -
 func (rules *SG2SGRules) IsEq(other SG2SGRules) bool {
-	eq := rules.SGs.IsEq(other.SGs)
-	if eq {
-		eq = rules.Rules.Eq(&other.Rules, func(vL, vR *model.SGRule) bool {
-			return vL.IsEq(*vR)
-		})
-	}
-	return eq
+	return rules.Rules.Eq(&other.Rules, func(vL, vR *model.SGRule) bool {
+		return vL.IsEq(*vR)
+	})
 }
 
 // Load ...
@@ -36,8 +31,6 @@ func (rules *SG2SGRules) Load(ctx context.Context, client SGClient, locals SGs) 
 		err = errors.WithMessage(err, api)
 	}()
 
-	rules.Rules.Clear()
-	rules.SGs.Clear()
 	localSgNames := locals.Names()
 	if len(localSgNames) == 0 {
 		return nil
@@ -45,7 +38,6 @@ func (rules *SG2SGRules) Load(ctx context.Context, client SGClient, locals SGs) 
 	reqs := []sgAPI.FindRulesReq{
 		{SgFrom: localSgNames}, {SgTo: localSgNames},
 	}
-	var nonLocalSgs []string
 	for i := range reqs {
 		var resp *sgAPI.RulesResp
 		if resp, err = client.FindRules(ctx, &reqs[i]); err != nil {
@@ -57,16 +49,9 @@ func (rules *SG2SGRules) Load(ctx context.Context, client SGClient, locals SGs) 
 				return err
 			}
 			_ = rules.Rules.Insert(rule.ID, &rule)
-			for _, sgN := range []string{rule.ID.SgFrom, rule.ID.SgTo} {
-				if sg := locals.At(sgN); sg != nil {
-					_ = rules.SGs.Insert(sgN, sg)
-				} else {
-					nonLocalSgs = append(nonLocalSgs, sgN)
-				}
-			}
 		}
 	}
-	return rules.SGs.LoadFromNames(ctx, client, nonLocalSgs)
+	return nil
 }
 
 // AllRules -

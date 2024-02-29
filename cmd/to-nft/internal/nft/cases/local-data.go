@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/host"
+	"github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
 	"github.com/H-BF/corlib/logger"
@@ -36,18 +37,45 @@ type (
 	}
 )
 
-// AllSGs -
-func (ld *LocalData) AllSGs() (ret SGs) {
-	src := [...]SGs{
-		ld.LocalSGs, ld.SG2SGRules.SGs, ld.SgIcmpRules.SGs,
-		ld.SgIcmpRules.SGs, ld.SgSgIcmpRules.SGs, ld.SgIeSgRules.SGs,
-		ld.SgIeSgIcmpRules.SGs,
+func (ld *LocalData) allUsedSGs() []SgName {
+	var d dict.HSet[SgName]
+	ld.SG2SGRules.Rules.Iterate(func(k model.SGRuleIdentity, _ *model.SGRule) bool {
+		d.PutMany(k.SgFrom, k.SgTo)
+		return true
+	})
+	for _, r := range ld.SG2FQDNRules.Rules {
+		d.Insert(r.ID.SgFrom)
 	}
-	for _, s := range src {
-		s.Iterate(func(k SgName, v *SG) bool {
-			ret.Put(k, v)
-			return true
-		})
+	ld.SgIcmpRules.Rules.Iterate(func(k model.SgIcmpRuleID, _ *model.SgIcmpRule) bool {
+		d.Insert(k.Sg)
+		return true
+	})
+	ld.SgSgIcmpRules.Rules.Iterate(func(k model.SgSgIcmpRuleID, _ *model.SgSgIcmpRule) bool {
+		d.PutMany(k.SgFrom, k.SgTo)
+		return true
+	})
+	ld.SgIeSgIcmpRules.Rules.Iterate(func(k model.IESgSgIcmpRuleID, _ *model.IESgSgIcmpRule) bool {
+		d.PutMany(k.Sg, k.SgLocal)
+		return true
+	})
+	ld.CidrSgRules.Rules.Iterate(func(k model.CidrSgRuleIdenity, _ *model.CidrSgRule) bool {
+		d.Insert(k.SG)
+		return true
+	})
+	ld.SgIeSgRules.Rules.Iterate(func(k model.SgSgRuleIdentity, _ *model.SgSgRule) bool {
+		d.PutMany(k.Sg, k.SgLocal)
+		return true
+	})
+	return d.Values()
+}
+
+func (ld *LocalData) nonLocalSGs() []SgName {
+	all := ld.allUsedSGs()
+	ret := all[:0]
+	for _, s := range all {
+		if ld.LocalSGs.At(s) == nil {
+			ret = append(ret, s)
+		}
 	}
 	return ret
 }
@@ -112,6 +140,11 @@ func (loader *LocalDataLoader) Load(ctx context.Context, client SGClient, ncnf h
 		return res, err
 	}
 
+	log.Debugw("loading netwirks from local SG(s)...")
+	if err = res.Networks.Load(ctx, client, res.LocalSGs); err != nil {
+		return res, err
+	}
+
 	log.Debugw("loading SG-SG rules...")
 	if err = res.SG2SGRules.Load(ctx, client, res.LocalSGs); err != nil {
 		return res, err
@@ -147,9 +180,10 @@ func (loader *LocalDataLoader) Load(ctx context.Context, client SGClient, ncnf h
 		return res, err
 	}
 
-	allSgNames := res.AllSGs().Names()
-	log.Debugw("loading networks...")
-	err = res.Networks.LoadFromSGNames(ctx, client, allSgNames)
+	if nonLocalSgs := res.nonLocalSGs(); len(nonLocalSgs) > 0 {
+		log.Debugf("loading networks from non local SG(s) %s...", nonLocalSgs)
+		err = res.Networks.LoadFromSGNames(ctx, client, nonLocalSgs)
+	}
 
 	return res, err
 }

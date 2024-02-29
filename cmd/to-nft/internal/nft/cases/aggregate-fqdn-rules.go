@@ -18,7 +18,6 @@ import (
 type (
 	// SG2FQDNRules -
 	SG2FQDNRules struct {
-		SGs   SGs
 		Rules []model.FQDNRule
 		FQDNs dict.RBSet[model.FQDN]
 	}
@@ -33,22 +32,19 @@ type (
 
 // IsEq -
 func (rules *SG2FQDNRules) IsEq(other SG2FQDNRules) bool {
-	eq := rules.SGs.IsEq(other.SGs)
-	if eq {
-		var l, r dict.HDict[string, *model.FQDNRule]
-		if len(rules.Rules) == len(other.Rules) {
-			for i := range rules.Rules {
-				a := &rules.Rules[i]
-				b := &other.Rules[i]
-				l.Insert(a.ID.String(), a)
-				r.Insert(a.ID.String(), b)
-			}
+	var l, r dict.HDict[string, *model.FQDNRule]
+	if len(rules.Rules) == len(other.Rules) {
+		for i := range rules.Rules {
+			a := &rules.Rules[i]
+			b := &other.Rules[i]
+			l.Insert(a.ID.String(), a)
+			r.Insert(a.ID.String(), b)
 		}
-		eq = l.Eq(&r, func(vL, vR *model.FQDNRule) bool {
-			return vL.IsEq(*vR)
-		})
 	}
-	return eq
+	return l.Eq(&r, func(vL, vR *model.FQDNRule) bool {
+		return vL.IsEq(*vR)
+	})
+
 }
 
 // Load -
@@ -75,10 +71,9 @@ func (rules *SG2FQDNRules) Load(ctx context.Context, SGSrv SGClient, sgs SGs) (e
 			if m, err = conv.Proto2ModelFQDNRule(r); err != nil {
 				return err
 			}
-			if sg := sgs.At(m.ID.SgFrom); sg != nil {
+			if sgs.At(m.ID.SgFrom) != nil {
 				rules.Rules = append(rules.Rules, m)
 				rules.FQDNs.Insert(m.ID.FqdnTo)
-				_ = rules.SGs.Insert(sg.Name, sg)
 			}
 		}
 	}
