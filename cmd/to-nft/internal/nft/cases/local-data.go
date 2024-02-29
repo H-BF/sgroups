@@ -15,14 +15,15 @@ import (
 type (
 	// LocalData are used by agent to build Host Based Firewall rules
 	LocalData struct {
-		LocalSGs      SGs
-		SG2SGRules    SG2SGRules
-		SG2FQDNRules  SG2FQDNRules
-		SgIcmpRules   SgIcmpRules
-		SgSgIcmpRules SgSgIcmpRules
-		CidrSgRules   CidrSgRules
-		SgIeSgRules   SgIeSgRules
-		Networks      SGsNetworks
+		LocalSGs        SGs
+		SG2SGRules      SG2SGRules
+		SG2FQDNRules    SG2FQDNRules
+		SgIcmpRules     SgIcmpRules
+		SgSgIcmpRules   SgSgIcmpRules
+		SgIeSgIcmpRules SgIeSgIcmpRules
+		CidrSgRules     CidrSgRules
+		SgIeSgRules     SgIeSgRules
+		Networks        SGsNetworks
 
 		ResolvedFQDN *ResolvedFQDN
 		SyncStatus   model.SyncStatus
@@ -40,6 +41,7 @@ func (ld *LocalData) AllSGs() (ret SGs) {
 	src := [...]SGs{
 		ld.LocalSGs, ld.SG2SGRules.SGs, ld.SgIcmpRules.SGs,
 		ld.SgIcmpRules.SGs, ld.SgSgIcmpRules.SGs, ld.SgIeSgRules.SGs,
+		ld.SgIeSgIcmpRules.SGs,
 	}
 	for _, s := range src {
 		s.Iterate(func(k SgName, v *SG) bool {
@@ -62,6 +64,9 @@ func (ld *LocalData) IsEq(other LocalData) bool {
 	}
 	if eq {
 		eq = ld.SgSgIcmpRules.IsEq(other.SgSgIcmpRules)
+	}
+	if eq {
+		eq = ld.SgIeSgIcmpRules.IsEq(other.SgIeSgIcmpRules)
 	}
 	if eq {
 		eq = ld.CidrSgRules.IsEq(other.CidrSgRules)
@@ -119,6 +124,11 @@ func (loader *LocalDataLoader) Load(ctx context.Context, client SGClient, ncnf h
 
 	log.Debugw("loading SG-SG-ICMP rules...")
 	if err = res.SgSgIcmpRules.Load(ctx, client, res.LocalSGs); err != nil {
+		return res, err
+	}
+
+	log.Debugw("loading SG-SG-INGRESS/EGRESS-ICMP rules...")
+	if res.SgIeSgIcmpRules.Load(ctx, client, res.LocalSGs); err != nil {
 		return res, err
 	}
 
