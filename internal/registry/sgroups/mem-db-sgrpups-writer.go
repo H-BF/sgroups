@@ -322,6 +322,47 @@ func (wr *sGroupsMemDbWriter) SyncCidrSgRules(ctx context.Context, rules []model
 	return errors.WithMessage(err, api)
 }
 
+// SyncCidrSgIcmpRules impl Writer interface
+func (wr *sGroupsMemDbWriter) SyncCidrSgIcmpRules(ctx context.Context, rules []model.CidrSgIcmpRule, scope Scope, opts ...Option) error {
+	const api = "mem-db/SyncCidrSgIcmpRules"
+	tblID := TblCidrSgIcmpRules
+	it, err := wr.writer.Get(tblID, indexID)
+	if err != nil {
+		return errors.WithMessage(err, api)
+	}
+	var ft filterTree[model.CidrSgIcmpRule]
+	if !ft.init(scope) {
+		return errors.Errorf("bad scope")
+	}
+	it = memdb.NewFilterIterator(it, func(i interface{}) bool {
+		r := *i.(*model.CidrSgIcmpRule)
+		return !ft.invoke(r)
+	})
+	var changed bool
+	h := syncHelper[model.CidrSgIcmpRule, string]{
+		keyExtract: func(r *model.CidrSgIcmpRule) string {
+			return r.ID().String()
+		},
+		delete: func(obj *model.CidrSgIcmpRule) error {
+			e := wr.writer.Delete(tblID, obj)
+			if errors.Is(e, memdb.ErrNotFound) {
+				return nil
+			}
+			changed = changed || e == nil
+			return e
+		},
+		upsert: func(obj *model.CidrSgIcmpRule) error {
+			e := wr.writer.Upsert(tblID, obj)
+			changed = changed || e == nil
+			return e
+		},
+	}
+	if err = h.doSync(rules, it, opts...); err == nil && changed {
+		err = wr.updateSyncStatus(ctx)
+	}
+	return errors.WithMessage(err, api)
+}
+
 // SyncSgSgRules impl Writer interface
 func (wr *sGroupsMemDbWriter) SyncSgSgRules(ctx context.Context, rules []model.SgSgRule, scope Scope, opts ...Option) error { //nolint:dupl
 	const api = "mem-db/SyncSgSgRules"
@@ -500,6 +541,10 @@ func (wr sGroupsMemDbWriter) afterDeleteSGs(ctx context.Context, sgs []model.Sec
 		Or(SGLocal(names[0], names[1:]...), SG(names...)),
 		SyncOmitInsert{}, SyncOmitUpdate{})
 
+	// delete related CidrSgIcmpRule(s)
+	err8 := wr.SyncCidrSgIcmpRules(ctx, nil,
+		SG(names...), SyncOmitInsert{}, SyncOmitUpdate{})
+
 	const delRel = "delete related"
 	return multierr.Combine(
 		errors.WithMessagef(err1, "%s SGRule(s)", delRel),
@@ -509,6 +554,7 @@ func (wr sGroupsMemDbWriter) afterDeleteSGs(ctx context.Context, sgs []model.Sec
 		errors.WithMessagef(err5, "%s CidrSgRule(s)", delRel),
 		errors.WithMessagef(err6, "%s SgSgRule(s)", delRel),
 		errors.WithMessagef(err7, "%s IESgSgIcmpRule(s)", delRel),
+		errors.WithMessagef(err8, "%s CidrSgIcmpRule(s)", delRel),
 	)
 }
 

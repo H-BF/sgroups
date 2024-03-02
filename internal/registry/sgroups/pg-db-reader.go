@@ -382,6 +382,11 @@ func (rd *pgDbReader) ListCidrSgRules(ctx context.Context, consume func(model.Ci
 	})
 }
 
+// ListCidrSgIcmpRules impl Reader interface
+func (rd *pgDbReader) ListCidrSgIcmpRules(ctx context.Context, consume func(model.CidrSgIcmpRule) error, scope Scope) error {
+	panic("not impl")
+}
+
 func (rd *pgDbReader) argsForRulesWithSgLocalAndSg(scope Scope) ([]any, error) { //nolint:dupl
 	var badScope bool
 	var sgLocals []string

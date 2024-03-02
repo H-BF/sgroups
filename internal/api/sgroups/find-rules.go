@@ -191,6 +191,30 @@ func (srv *sgService) FindCidrSgRules(ctx context.Context, req *sg.FindCidrSgRul
 	return resp, err
 }
 
+func (srv *sgService) FindCidrSgIcmpRules(ctx context.Context, req *sg.FindCidrSgIcmpRulesReq) (resp *sg.CidrSgIcmpRulesResp, err error) {
+	defer func() {
+		err = correctError(err)
+	}()
+	var reader registry.Reader
+	if reader, err = srv.registryReader(ctx); err != nil {
+		return nil, err
+	}
+	defer reader.Close() //lint:nolint
+	var sc registry.Scope = registry.NoScope
+	if sgs := req.GetSg(); len(sgs) > 0 {
+		sc = registry.SG(sgs...)
+	}
+	resp = new(sg.CidrSgIcmpRulesResp)
+	err = reader.ListCidrSgIcmpRules(ctx, func(r model.CidrSgIcmpRule) error {
+		p, e := cidrSgIcmpRule2proto(r)
+		if e == nil {
+			resp.Rules = append(resp.Rules, p)
+		}
+		return errors.WithMessagef(e, "convert CidrSgIcmpRule '%s' to proto", r.ID())
+	}, sc)
+	return resp, err
+}
+
 func (srv *sgService) FindSgSgRules(ctx context.Context, req *sg.FindSgSgRulesReq) (resp *sg.SgSgRulesResp, err error) {
 	defer func() {
 		err = correctError(err)

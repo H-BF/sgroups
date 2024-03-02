@@ -297,6 +297,11 @@ func (wr *pgDbWriter) SyncCidrSgRules(ctx context.Context, rules []model.CidrSgR
 	return err
 }
 
+// SyncCidrSgIcmpRules impl Writer interface
+func (wr *pgDbWriter) SyncCidrSgIcmpRules(ctx context.Context, rules []model.CidrSgIcmpRule, scope Scope, opts ...Option) error {
+	panic("not impl")
+}
+
 // SyncSgSgRules impl Writer interface
 func (wr *pgDbWriter) SyncSgSgRules(ctx context.Context, rules []model.SgSgRule, scope Scope, opts ...Option) error { //nolint:dupl
 	const api = "PG/SyncSgSgRules"

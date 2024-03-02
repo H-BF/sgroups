@@ -175,6 +175,32 @@ func cidrSgRule2proto(src model.CidrSgRule) (*sg.CidrSgRule, error) {
 	return ret, nil
 }
 
+func cidrSgIcmpRule2proto(src model.CidrSgIcmpRule) (*sg.CidrSgIcmpRule, error) {
+	ret := &sg.CidrSgIcmpRule{
+		CIDR:  src.CIDR.String(),
+		SG:    src.SG,
+		Logs:  src.Logs,
+		Trace: src.Trace,
+	}
+	var e error
+	if ret.Traffic, e = traffic2proto(src.Traffic); e != nil {
+		return nil, e
+	}
+	switch src.Icmp.IPv {
+	case model.IPv4:
+		ret.ICMP.IPv = common.IpAddrFamily_IPv4
+	case model.IPv6:
+		ret.ICMP.IPv = common.IpAddrFamily_IPv6
+	default:
+		return nil, errors.Errorf("got unsupported IPv(%v)", src.Icmp.IPv)
+	}
+	src.Icmp.Types.Iterate(func(t uint8) bool {
+		ret.ICMP.Types = append(ret.ICMP.Types, uint32(t))
+		return true
+	})
+	return ret, nil
+}
+
 func sgSgRule2proto(src model.SgSgRule) (*sg.SgSgRule, error) {
 	ret := &sg.SgSgRule{
 		Sg:      src.ID.Sg,

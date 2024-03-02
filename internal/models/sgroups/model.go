@@ -178,6 +178,24 @@ type (
 		SgLocal string
 		Sg      string
 	}
+
+	// CidrSgIcmpRule <IN|E>GRESS:CIDR-SG:ICMP rule
+	CidrSgIcmpRule struct {
+		Traffic Traffic
+		CIDR    net.IPNet
+		SG      string
+		Icmp    ICMP
+		Logs    bool
+		Trace   bool
+	}
+
+	// CidrSgIcmpRuleID <IN|E>GRESS:CIDR-SG:ICMP rule ID
+	CidrSgIcmpRuleID struct {
+		Traffic Traffic
+		IPv     uint8
+		CIDR    net.IPNet
+		SG      string
+	}
 )
 
 var (
@@ -460,14 +478,14 @@ func (o SgSgIcmpRuleID) String() string {
 }
 
 // IsEq -
-func (r IESgSgIcmpRule) IsEq(other IESgSgIcmpRule) bool {
-	return r.Traffic == other.Traffic &&
-		r.SgLocal == other.SgLocal &&
-		r.Sg == other.Sg &&
-		r.Icmp.IPv == other.Icmp.IPv &&
-		r.Icmp.Types.Eq(&other.Icmp.Types) &&
-		r.Logs == other.Logs &&
-		r.Trace == other.Trace
+func (o IESgSgIcmpRule) IsEq(other IESgSgIcmpRule) bool {
+	return o.Traffic == other.Traffic &&
+		o.SgLocal == other.SgLocal &&
+		o.Sg == other.Sg &&
+		o.Icmp.IPv == other.Icmp.IPv &&
+		o.Icmp.Types.Eq(&other.Icmp.Types) &&
+		o.Logs == other.Logs &&
+		o.Trace == other.Trace
 }
 
 // ID -
@@ -488,6 +506,41 @@ func (o IESgSgIcmpRuleID) IdentityHash() string {
 // String -
 func (o IESgSgIcmpRuleID) String() string {
 	return fmt.Sprintf("icmp%v:sg-local(%s)sg(%s)%s", o.IPv, o.SgLocal, o.Sg, o.Traffic)
+}
+
+// IsEq -
+func (o CidrSgIcmpRule) IsEq(other CidrSgIcmpRule) bool {
+	cidrIsEq := o.CIDR.IP.Equal(other.CIDR.IP) &&
+		bytes.Equal(o.CIDR.Mask, other.CIDR.Mask)
+	icmpIsEq := o.Icmp.IPv == other.Icmp.IPv &&
+		o.Icmp.Types.Eq(&other.Icmp.Types)
+
+	return o.Traffic == other.Traffic &&
+		cidrIsEq &&
+		o.SG == other.SG &&
+		icmpIsEq &&
+		o.Logs == other.Logs &&
+		o.Trace == other.Trace
+}
+
+// ID -
+func (o CidrSgIcmpRule) ID() CidrSgIcmpRuleID {
+	return CidrSgIcmpRuleID{
+		Traffic: o.Traffic,
+		IPv:     o.Icmp.IPv,
+		CIDR:    o.CIDR,
+		SG:      o.SG,
+	}
+}
+
+// IdentityHash -
+func (o CidrSgIcmpRuleID) IdentityHash() string {
+	return o.String()
+}
+
+// String -
+func (o CidrSgIcmpRuleID) String() string {
+	return fmt.Sprintf("icmp%v:cidr(%s)sg(%s)%s", o.IPv, &o.CIDR, o.SG, o.Traffic)
 }
 
 // String -

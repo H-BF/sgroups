@@ -211,23 +211,35 @@ func (o IESgSgIcmpRule) Validate() error {
 	)
 }
 
+func cidrIsValid(v interface{}) error {
+	cidr, _ := v.(net.IPNet)
+	switch len(cidr.IP) {
+	case net.IPv4len, net.IPv6len:
+	default:
+		return errors.New("IP of net is invalid")
+	}
+	if len(cidr.Mask) != len(cidr.IP) {
+		return errors.New("net mask is invalid")
+	}
+	return nil
+}
+
+func (o CidrSgIcmpRule) Validate() error {
+	return oz.ValidateStruct(&o,
+		oz.Field(&o.Traffic),
+		oz.Field(&o.CIDR, oz.By(cidrIsValid)),
+		oz.Field(&o.SG, oz.Required.Error(sgNameRequired), oz.Match(reCName)),
+		oz.Field(&o.Icmp),
+	)
+}
+
 // Validate validate of CidrSgRuleIdenity
 func (o CidrSgRuleIdenity) Validate() error {
 	return oz.ValidateStruct(&o,
 		oz.Field(&o.Transport),
 		oz.Field(&o.Traffic),
 		oz.Field(&o.SG, oz.Required.Error(sgNameRequired), oz.Match(reCName)),
-		oz.Field(&o.CIDR, oz.By(func(_ interface{}) error {
-			switch len(o.CIDR.IP) {
-			case net.IPv4len, net.IPv6len:
-			default:
-				return errors.New("IP of net is invalid")
-			}
-			if len(o.CIDR.Mask) != len(o.CIDR.IP) {
-				return errors.New("net mask is invalid")
-			}
-			return nil
-		})),
+		oz.Field(&o.CIDR, oz.By(cidrIsValid)),
 	)
 }
 

@@ -33,6 +33,9 @@ const (
 
 	// TblIESgSgIcmpRules table [INGRESS|EGRESS]:SG-SG:ICMP<4|6> rules
 	TblIESgSgIcmpRules
+
+	// TblCidrSgIcmpRules table [INGRESS|EGRESS]:CIDR-SG:ICMP<4|6> rules
+	TblCidrSgIcmpRules
 )
 
 // SchemaName database scheme name
@@ -62,6 +65,7 @@ var tableID2string = map[TableID]string{
 	TblCidrSgRules:     "tbl_cidr_sg_rules",
 	TblSgSgRules:       "tbl_ie_sg_sg_rule",
 	TblIESgSgIcmpRules: "tbl_ie_sg_sg_icmp_rule",
+	TblCidrSgIcmpRules: "tbl_cidr_sg_icmp_rule",
 }
 
 var tableID2IntegrityChecks = map[TableID]func() []IntegrityChecker{
@@ -99,6 +103,10 @@ var tableID2IntegrityChecks = map[TableID]func() []IntegrityChecker{
 	},
 	TblIESgSgIcmpRules: func() (ret []IntegrityChecker) {
 		ret = append(ret, IntegrityChecker4IESgSgIcmpRules())
+		return ret
+	},
+	TblCidrSgIcmpRules: func() (ret []IntegrityChecker) {
+		ret = append(ret, IntegrityChecker4CidrSgIcmpRules())
 		return ret
 	},
 }

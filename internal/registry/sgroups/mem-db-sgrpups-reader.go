@@ -76,12 +76,12 @@ func (rd sGroupsMemDbReader) ListFqdnRules(_ context.Context, consume func(model
 	return memDbListObjects(rd.reader, scope, TblFqdnRules, consume)
 }
 
-// ListSgIcmpRule impl Reader
+// ListSgIcmpRules impl Reader
 func (rd sGroupsMemDbReader) ListSgIcmpRules(_ context.Context, consume func(model.SgIcmpRule) error, scope Scope) error {
 	return memDbListObjects(rd.reader, scope, TblSgIcmpRules, consume)
 }
 
-// ListSgSgIcmpRule impl Reader
+// ListSgSgIcmpRules impl Reader
 func (rd sGroupsMemDbReader) ListSgSgIcmpRules(_ context.Context, consume func(model.SgSgIcmpRule) error, scope Scope) error {
 	return memDbListObjects(rd.reader, scope, TblSgSgIcmpRules, consume)
 }
@@ -89,6 +89,11 @@ func (rd sGroupsMemDbReader) ListSgSgIcmpRules(_ context.Context, consume func(m
 // ListCidrSgRules impl Reader
 func (rd sGroupsMemDbReader) ListCidrSgRules(ctx context.Context, consume func(model.CidrSgRule) error, scope Scope) error {
 	return memDbListObjects(rd.reader, scope, TblCidrSgRules, consume)
+}
+
+// ListCidrSgIcmpRules impl Reader
+func (rd sGroupsMemDbReader) ListCidrSgIcmpRules(ctx context.Context, consume func(model.CidrSgIcmpRule) error, scope Scope) error {
+	return memDbListObjects(rd.reader, scope, TblCidrSgIcmpRules, consume)
 }
 
 // ListSgSgRules impl Reader
@@ -101,7 +106,7 @@ func (rd sGroupsMemDbReader) ListIESgSgIcmpRules(_ context.Context, consume func
 	return memDbListObjects(rd.reader, scope, TblIESgSgIcmpRules, consume)
 }
 
-// ListSGRules impl Reader
+// Close impl Reader
 func (rd sGroupsMemDbReader) Close() error {
 	return nil
 }

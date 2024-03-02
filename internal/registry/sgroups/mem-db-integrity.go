@@ -3,7 +3,7 @@ package sgroups
 import (
 	"github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
-
+	"github.com/ahmetb/go-linq/v3"
 	"github.com/pkg/errors"
 )
 
@@ -261,7 +261,7 @@ func IntegrityChecker4SgIcmpRules() IntegrityChecker {
 	}
 }
 
-// IntegrityChecker4SgIcmpRules -
+// IntegrityChecker4SgSgIcmpRules -
 func IntegrityChecker4SgSgIcmpRules() IntegrityChecker {
 	const api = "Integrity-of-SgSgIcmpRules"
 
@@ -293,54 +293,6 @@ func IntegrityChecker4SgSgIcmpRules() IntegrityChecker {
 func IntegrityChecker4CidrSgRules() IntegrityChecker { //nolint:gocyclo
 	const api = "Integrity-of-CidrSgRules"
 
-	errf := func(objs ...model.CidrSgRuleIdenity) error {
-		if len(objs) <= 1 {
-			return nil
-		}
-		return errors.Errorf("some rules %s have CIDRS with intersected segments", objs)
-	}
-	detectCidrsIntersections := func(objs []model.CidrSgRuleIdenity) error {
-		type ref struct {
-			i        int
-			interval bool
-		}
-		if len(objs) < 2 {
-			return nil
-		}
-		var refs dict.RBDict[bigInt, ref]
-		var h cidr2bigInt
-		for i := range objs {
-			r := &objs[i]
-			h.init(r.CIDR)
-			lb, rb := h.lowerBound(), h.upperBound()
-			rf := ref{i: i, interval: lb.Cmp(rb) != 0}
-			if !refs.Insert(lb, rf) {
-				x := refs.At(lb)
-				return errf(*r, objs[x.i])
-			}
-			if rf.interval && !refs.Insert(rb, rf) {
-				x := refs.At(rb)
-				return errf(*r, objs[x.i])
-			}
-		}
-		var e error
-		prevRef := -1
-		refs.Iterate(func(_ bigInt, rf ref) bool {
-			if prevRef >= 0 {
-				if prevRef != rf.i {
-					e = errf(objs[prevRef], objs[rf.i])
-				}
-				prevRef = -1
-				return e == nil
-			}
-			if rf.interval {
-				prevRef = rf.i
-			}
-			return true
-		})
-		return e
-	}
-
 	return func(reader MemDbReader) error {
 		it, e := reader.Get(TblCidrSgRules, indexSG)
 		if isInvalidTableErr(e) {
@@ -360,40 +312,57 @@ func IntegrityChecker4CidrSgRules() IntegrityChecker { //nolint:gocyclo
 			}
 		}
 
-		type groupKey struct {
-			Transport model.NetworkTransport
-			SG        string
-			Traffic   model.Traffic
-		}
 		it, e = reader.Get(TblCidrSgRules, indexProtoSgTraffic) //detects CIDRS intersections
 		if e != nil {
 			return errors.WithMessage(e, api)
 		}
-		var objs []model.CidrSgRuleIdenity
-		var prevKey groupKey
-		for x := it.Next(); x != nil; x = it.Next() {
-			r := x.(*model.CidrSgRule)
-			k := groupKey{
-				Transport: r.ID.Transport,
-				SG:        r.ID.SG,
-				Traffic:   r.ID.Traffic,
+		linqIt := tableLinqIterator{it}
+		cidrGroups := linq.
+			FromIterable(&linqIt).
+			GroupBy(groupKeyFromRule, elementSelector).
+			Iterate()
+
+		intersected := detectIntersections(cidrGroups)
+		return errors.WithMessage(errf(intersected...), api)
+	}
+}
+
+// IntegrityChecker4CidrSgIcmpRules -
+func IntegrityChecker4CidrSgIcmpRules() IntegrityChecker {
+	const api = "Integrity-of-CidrSgIcmpRules"
+
+	return func(reader MemDbReader) error {
+		it, e := reader.Get(TblCidrSgIcmpRules, indexID)
+		if isInvalidTableErr(e) {
+			return nil
+		}
+		if e != nil {
+			return errors.WithMessage(e, api)
+		}
+		for x := it.Next(); x != nil; x = it.Next() { //SG ref validate
+			r := x.(*model.CidrSgIcmpRule)
+			sg := r.ID().SG
+			i, e1 := reader.First(TblSecGroups, indexID, sg)
+			if e1 != nil {
+				return errors.WithMessagef(e1, "%s: find ref to SG '%s'", api, sg)
 			}
-		loop:
-			if len(objs) == 0 {
-				prevKey = k
-				objs = append(objs, r.ID)
-			} else if prevKey == k {
-				objs = append(objs, r.ID)
-			} else {
-				if err := detectCidrsIntersections(objs); err != nil {
-					return errors.WithMessage(err, api)
-				}
-				objs = objs[:0]
-				goto loop
+			if i == nil {
+				return errors.Errorf("%s: not found ref to SG '%s'", api, sg)
 			}
 		}
-		err := detectCidrsIntersections(objs)
-		return errors.WithMessage(err, api)
+
+		it, e = reader.Get(TblCidrSgIcmpRules, indexID) //detects CIDRS intersections
+		if e != nil {
+			return errors.WithMessage(e, api)
+		}
+		linqIt := tableLinqIterator{it}
+		cidrGroups := linq.
+			FromIterable(&linqIt).
+			GroupBy(groupKeyFromRule, elementSelector).
+			Iterate()
+
+		intersected := detectIntersections(cidrGroups)
+		return errors.WithMessage(errf(intersected...), api)
 	}
 }
 

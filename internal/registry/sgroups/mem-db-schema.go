@@ -24,6 +24,7 @@ var tableID2MemDbSchemaInit = map[TableID]MemDbSchemaInit{
 	TblCidrSgRules:     memCidrSgRulesSchema,
 	TblSgSgRules:       memSgSgRulesSchema,
 	TblIESgSgIcmpRules: memIESgSgIcmpRulesSchema,
+	TblCidrSgIcmpRules: memCidrSgIcmpRulesSchema,
 }
 
 func memDbNetworksSchema(schema *MemDbSchema) {
@@ -141,6 +142,38 @@ func memIESgSgIcmpRulesSchema(schema *MemDbSchema) {
 						}
 					},
 					fromObjectDelegate: func(t model.IESgSgIcmpRuleID) (bool, []byte, error) {
+						b := bytes.NewBuffer(nil)
+						_, e := fmt.Fprintf(b, "%s\x00", t)
+						return e == nil, b.Bytes(), e
+					},
+				},
+			},
+		},
+	}
+}
+
+func memCidrSgIcmpRulesSchema(schema *MemDbSchema) {
+	tbl := TblCidrSgIcmpRules.String()
+	schema.Tables[tbl] = &MemDbTableSchema{
+		Name: tbl,
+		Indexes: map[string]*MemDbIndexSchema{
+			indexID: {
+				Name:   indexID,
+				Unique: true,
+				Indexer: SingleObjectIndexer[model.CidrSgIcmpRuleID]{
+					accessor: func(a any) model.CidrSgIcmpRuleID {
+						switch v := a.(type) {
+						case *model.CidrSgIcmpRule:
+							return v.ID()
+						case model.CidrSgIcmpRuleID:
+							return v
+						default:
+							panic(
+								errors.Errorf("unsupported type argument %T", a),
+							)
+						}
+					},
+					fromObjectDelegate: func(t model.CidrSgIcmpRuleID) (bool, []byte, error) {
 						b := bytes.NewBuffer(nil)
 						_, e := fmt.Fprintf(b, "%s\x00", t)
 						return e == nil, b.Bytes(), e
