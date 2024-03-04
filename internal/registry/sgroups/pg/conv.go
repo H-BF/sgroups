@@ -351,6 +351,31 @@ func (o *SgSgIcmpRule) FromModel(m sgm.SgSgIcmpRule) error {
 	return o.ICMP.FromModel(m.Icmp)
 }
 
+// ToModel -
+func (o IESgSgIcmpRule) ToModel() (ret sgm.IESgSgIcmpRule, err error) {
+	ret.SgLocal = o.SgLocal
+	ret.Sg = o.Sg
+	ret.Logs = o.Logs
+	ret.Trace = o.Trace
+	if ret.Traffic, err = o.Traffic.ToModel(); err != nil {
+		return ret, err
+	}
+	ret.Icmp, err = o.ICMP.ToModel()
+	return ret, err
+}
+
+// FromModel -
+func (o *IESgSgIcmpRule) FromModel(m sgm.IESgSgIcmpRule) error {
+	o.SgLocal = m.SgLocal
+	o.Sg = m.Sg
+	o.Logs = m.Logs
+	o.Trace = m.Trace
+	if err := o.Traffic.FromModel(m.Traffic); err != nil {
+		return err
+	}
+	return o.ICMP.FromModel(m.Icmp)
+}
+
 // FromModel -
 func (o *Traffic) FromModel(m sgm.Traffic) error {
 	var e error

@@ -13,19 +13,14 @@ import (
 
 // CidrSgRules -
 type CidrSgRules struct {
-	SGs   SGs
 	Rules dict.RBDict[model.CidrSgRuleIdenity, *model.CidrSgRule]
 }
 
 // IsEq -
 func (rules *CidrSgRules) IsEq(order CidrSgRules) bool {
-	eq := rules.SGs.IsEq(order.SGs)
-	if eq {
-		eq = rules.Rules.Eq(&order.Rules, func(vL, vR *model.CidrSgRule) bool {
-			return vL.IsEq(*vR)
-		})
-	}
-	return eq
+	return rules.Rules.Eq(&order.Rules, func(vL, vR *model.CidrSgRule) bool {
+		return vL.IsEq(*vR)
+	})
 }
 
 func (rules *CidrSgRules) Load(ctx context.Context, client SGClient, locals SGs) (err error) {
@@ -35,8 +30,6 @@ func (rules *CidrSgRules) Load(ctx context.Context, client SGClient, locals SGs)
 		err = errors.WithMessage(err, api)
 	}()
 
-	rules.Rules.Clear()
-	rules.SGs.Clear()
 	req := sgAPI.FindCidrSgRulesReq{Sg: locals.Names()}
 	if len(req.Sg) == 0 {
 		return nil
@@ -51,13 +44,7 @@ func (rules *CidrSgRules) Load(ctx context.Context, client SGClient, locals SGs)
 		if rule, err = conv.Proto2ModelCidrSgRule(protoRule); err != nil {
 			return err
 		}
-		switch rule.ID.Traffic {
-		case model.EGRESS, model.INGRESS:
-			if sg := locals.At(rule.ID.SG); sg != nil {
-				rules.SGs.Insert(sg.Name, sg)
-				_ = rules.Rules.Insert(rule.ID, &rule)
-			}
-		}
+		_ = rules.Rules.Insert(rule.ID, &rule)
 	}
 	return nil
 }

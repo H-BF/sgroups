@@ -13,19 +13,14 @@ import (
 
 // SgIeSgRules -
 type SgIeSgRules struct {
-	SGs   SGs
 	Rules dict.HDict[model.SgSgRuleIdentity, *model.SgSgRule]
 }
 
 // IsEq -
 func (rules *SgIeSgRules) IsEq(other SgIeSgRules) bool {
-	eq := rules.SGs.IsEq(other.SGs)
-	if eq {
-		eq = rules.Rules.Eq(&other.Rules, func(vL, vR *model.SgSgRule) bool {
-			return vL.IsEq(*vR)
-		})
-	}
-	return eq
+	return rules.Rules.Eq(&other.Rules, func(vL, vR *model.SgSgRule) bool {
+		return vL.IsEq(*vR)
+	})
 }
 
 // GetRulesForTrafficAndSG -
@@ -47,8 +42,6 @@ func (rules *SgIeSgRules) Load(ctx context.Context, client SGClient, locals SGs)
 		err = errors.WithMessage(err, api)
 	}()
 
-	rules.Rules.Clear()
-	rules.SGs.Clear()
 	localSgNames := locals.Names()
 	if len(localSgNames) == 0 {
 		return nil
@@ -58,20 +51,12 @@ func (rules *SgIeSgRules) Load(ctx context.Context, client SGClient, locals SGs)
 	if resp, err = client.FindSgSgRules(ctx, &req); err != nil {
 		return err
 	}
-	var nonLocalSgs []string
 	for _, protoRule := range resp.GetRules() {
 		var rule model.SgSgRule
 		if rule, err = conv.Proto2ModelSgSgRule(protoRule); err != nil {
 			return err
 		}
 		_ = rules.Rules.Insert(rule.ID, &rule)
-		loc := locals.At(rule.ID.SgLocal)
-		_ = rules.SGs.Insert(loc.Name, loc)
-		if loc = locals.At(rule.ID.Sg); loc != nil {
-			_ = rules.SGs.Insert(loc.Name, loc)
-		} else {
-			nonLocalSgs = append(nonLocalSgs, rule.ID.Sg)
-		}
 	}
-	return rules.SGs.LoadFromNames(ctx, client, nonLocalSgs)
+	return nil
 }

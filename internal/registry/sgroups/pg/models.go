@@ -104,13 +104,23 @@ type (
 		Trace bool   `db:"trace"`
 	}
 
-	// SgSgImpRule -
+	// SgSgIcmpRule -
 	SgSgIcmpRule struct {
 		ICMP
 		SgFrom string `db:"sg_from"`
 		SgTo   string `db:"sg_to"`
 		Logs   bool   `db:"logs"`
 		Trace  bool   `db:"trace"`
+	}
+
+	// IESgSgIcmpRule -
+	IESgSgIcmpRule struct {
+		ICMP
+		SgLocal string  `db:"sg_local"`
+		Sg      string  `db:"sg"`
+		Traffic Traffic `db:"traffic"`
+		Logs    bool    `db:"logs"`
+		Trace   bool    `db:"trace"`
 	}
 
 	// Traffic -

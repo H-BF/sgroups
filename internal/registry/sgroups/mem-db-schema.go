@@ -14,15 +14,16 @@ func (tid TableID) memDbSchema() MemDbSchemaInit {
 }
 
 var tableID2MemDbSchemaInit = map[TableID]MemDbSchemaInit{
-	TblNetworks:      memDbNetworksSchema,
-	TblSecGroups:     memDbSecGroupsSchema,
-	TblSecRules:      memDbSgRulesSchema,
-	TblSyncStatus:    memDbSyncStatusSchema,
-	TblFqdnRules:     memDbFqdnRulesSchema,
-	TblSgIcmpRules:   memSgIcmpRulesSchema,
-	TblSgSgIcmpRules: memSgSgIcmpRulesSchema,
-	TblCidrSgRules:   memCidrSgRulesSchema,
-	TblSgSgRules:     memSgSgRulesSchema,
+	TblNetworks:        memDbNetworksSchema,
+	TblSecGroups:       memDbSecGroupsSchema,
+	TblSecRules:        memDbSgRulesSchema,
+	TblSyncStatus:      memDbSyncStatusSchema,
+	TblFqdnRules:       memDbFqdnRulesSchema,
+	TblSgIcmpRules:     memSgIcmpRulesSchema,
+	TblSgSgIcmpRules:   memSgSgIcmpRulesSchema,
+	TblCidrSgRules:     memCidrSgRulesSchema,
+	TblSgSgRules:       memSgSgRulesSchema,
+	TblIESgSgIcmpRules: memIESgSgIcmpRulesSchema,
 }
 
 func memDbNetworksSchema(schema *MemDbSchema) {
@@ -113,6 +114,38 @@ func memSgSgIcmpRulesSchema(schema *MemDbSchema) {
 				Name:    indexID,
 				Unique:  true,
 				Indexer: SgSgIcmpIdIndexer{},
+			},
+		},
+	}
+}
+
+func memIESgSgIcmpRulesSchema(schema *MemDbSchema) {
+	tbl := TblIESgSgIcmpRules.String()
+	schema.Tables[tbl] = &MemDbTableSchema{
+		Name: tbl,
+		Indexes: map[string]*MemDbIndexSchema{
+			indexID: {
+				Name:   indexID,
+				Unique: true,
+				Indexer: SingleObjectIndexer[model.IESgSgIcmpRuleID]{
+					accessor: func(a any) model.IESgSgIcmpRuleID {
+						switch v := a.(type) {
+						case *model.IESgSgIcmpRule:
+							return v.ID()
+						case model.IESgSgIcmpRuleID:
+							return v
+						default:
+							panic(
+								errors.Errorf("unsupported type argument %T", a),
+							)
+						}
+					},
+					fromObjectDelegate: func(t model.IESgSgIcmpRuleID) (bool, []byte, error) {
+						b := bytes.NewBuffer(nil)
+						_, e := fmt.Fprintf(b, "%s\x00", t)
+						return e == nil, b.Bytes(), e
+					},
+				},
 			},
 		},
 	}

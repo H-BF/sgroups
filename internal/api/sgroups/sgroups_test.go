@@ -198,6 +198,19 @@ func (sui *sGroupServiceTests) newSgSgRule(
 	}
 }
 
+func (sui *sGroupServiceTests) newIESgSgIcmpRule(
+	sgLocal, sg *api.SecGroup,
+	traffic common.Traffic,
+	ipv common.IpAddrFamily,
+) *api.IESgSgIcmpRule {
+	return &api.IESgSgIcmpRule{
+		Sg:      sg.Name,
+		SgLocal: sgLocal.Name,
+		Traffic: traffic,
+		ICMP:    &common.ICMP{IPv: ipv},
+	}
+}
+
 func (sui *sGroupServiceTests) syncRules(rules []*api.Rule, op api.SyncReq_SyncOp) {
 	req := api.SyncReq{
 		SyncOp: op,
@@ -216,6 +229,19 @@ func (sui *sGroupServiceTests) syncSgSgRules(rules []*api.SgSgRule, op api.SyncR
 		SyncOp: op,
 		Subject: &api.SyncReq_SgSgRules{
 			SgSgRules: &api.SyncSgSgRules{
+				Rules: rules,
+			},
+		},
+	}
+	_, err := sui.srv.Sync(sui.ctx, &req)
+	sui.Require().NoError(err)
+}
+
+func (sui *sGroupServiceTests) syncIESgSgIcmpRules(rules []*api.IESgSgIcmpRule, op api.SyncReq_SyncOp) {
+	req := api.SyncReq{
+		SyncOp: op,
+		Subject: &api.SyncReq_IeSgSgIcmpRules{
+			IeSgSgIcmpRules: &api.SyncIESgSgIcmpRules{
 				Rules: rules,
 			},
 		},
@@ -249,6 +275,26 @@ func (sui *sGroupServiceTests) sgSgRule2Id(rules ...*api.SgSgRule) []model.SgSgR
 		sui.Require().NoError(err)
 		err = (traffic{&id.Traffic}).from(r.GetTraffic())
 		sui.Require().NoError(err)
+		ret = append(ret, id)
+	}
+	return ret
+}
+
+func (sui *sGroupServiceTests) ieSgSgIcmpRule2Id(rules ...*api.IESgSgIcmpRule) []model.IESgSgIcmpRuleID {
+	var ret []model.IESgSgIcmpRuleID
+	for _, r := range rules {
+		var id model.IESgSgIcmpRuleID
+		id.SgLocal = r.GetSgLocal()
+		id.Sg = r.GetSg()
+		err := (traffic{&id.Traffic}).from(r.GetTraffic())
+		sui.Require().NoError(err)
+		ipv := r.GetICMP().GetIPv()
+		switch ipv {
+		case common.IpAddrFamily_IPv4:
+			id.IPv = 4
+		case common.IpAddrFamily_IPv6:
+			id.IPv = 6
+		}
 		ret = append(ret, id)
 	}
 	return ret
@@ -335,6 +381,51 @@ func (sui *sGroupServiceTests) Test_Sync_SgSgRules() {
 	sui.syncSGs([]*api.SecGroup{sg1, sg3}, api.SyncReq_Delete)
 	r = sui.reader()
 	err = r.ListSgSgRules(sui.ctx, func(_ model.SgSgRule) error {
+		cn++
+		return nil
+	}, registry.NoScope)
+	sui.Require().NoError(err)
+	sui.Require().Equal(0, cn)
+}
+
+func (sui *sGroupServiceTests) Test_Sync_IESgSgIcmpRules() {
+	sg1 := sui.newSG("sg1")
+	sg2 := sui.newSG("sg2")
+	sg3 := sui.newSG("sg3")
+	sg4 := sui.newSG("sg4")
+	sui.syncSGs([]*api.SecGroup{sg1, sg2, sg3, sg4}, api.SyncReq_FullSync)
+
+	rule1 := sui.newIESgSgIcmpRule(sg1, sg2, common.Traffic_Egress, common.IpAddrFamily_IPv4)
+	rule2 := sui.newIESgSgIcmpRule(sg3, sg4, common.Traffic_Ingress, common.IpAddrFamily_IPv6)
+
+	sui.syncIESgSgIcmpRules([]*api.IESgSgIcmpRule{rule1, rule2}, api.SyncReq_FullSync)
+	r := sui.reader()
+	m := make(map[string]bool)
+	err := r.ListIESgSgIcmpRules(sui.ctx, func(rule model.IESgSgIcmpRule) error {
+		m[rule.ID().IdentityHash()] = true
+		return nil
+	}, registry.NoScope)
+	sui.Require().NoError(err)
+	ids := sui.ieSgSgIcmpRule2Id(rule1, rule2)
+	for _, x := range ids {
+		ok := m[x.IdentityHash()]
+		sui.Require().Truef(ok, "required rule '%s'", x)
+	}
+
+	sui.syncIESgSgIcmpRules([]*api.IESgSgIcmpRule{rule1, rule2}, api.SyncReq_Delete)
+	r = sui.reader()
+	var cn int
+	err = r.ListIESgSgIcmpRules(sui.ctx, func(_ model.IESgSgIcmpRule) error {
+		cn++
+		return nil
+	}, registry.NoScope)
+	sui.Require().NoError(err)
+	sui.Require().Equal(0, cn)
+
+	sui.syncIESgSgIcmpRules([]*api.IESgSgIcmpRule{rule1, rule2}, api.SyncReq_FullSync)
+	sui.syncSGs([]*api.SecGroup{sg1, sg3}, api.SyncReq_Delete)
+	r = sui.reader()
+	err = r.ListIESgSgIcmpRules(sui.ctx, func(_ model.IESgSgIcmpRule) error {
 		cn++
 		return nil
 	}, registry.NoScope)

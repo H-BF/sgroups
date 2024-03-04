@@ -136,6 +136,36 @@ func (srv *sgService) FindSgSgIcmpRules(ctx context.Context, req *sg.FindSgSgIcm
 	return resp, nil
 }
 
+func (srv *sgService) FindIESgSgIcmpRules(ctx context.Context, req *sg.FindIESgSgIcmpRulesReq) (resp *sg.IESgSgIcmpRulesResp, err error) {
+	defer func() {
+		err = correctError(err)
+	}()
+	var reader registry.Reader
+	if reader, err = srv.registryReader(ctx); err != nil {
+		return nil, err
+	}
+	defer reader.Close() //lint:nolint
+
+	var scSgLocals, scSgs registry.Scope = registry.NoScope, registry.NoScope
+	if sgLocals := req.GetSgLocal(); len(sgLocals) > 0 {
+		scSgLocals = registry.SGLocal(sgLocals[0], sgLocals[1:]...)
+	}
+	if sgs := req.GetSg(); len(sgs) > 0 {
+		scSgs = registry.SG(sgs...)
+	}
+
+	resp = new(sg.IESgSgIcmpRulesResp)
+	err = reader.ListIESgSgIcmpRules(ctx, func(r model.IESgSgIcmpRule) error {
+		p, e := ieSgSgIcmpRule2proto(r)
+		if e == nil {
+			resp.Rules = append(resp.Rules, p)
+		}
+		return errors.WithMessagef(e, "convert IESgSgIcmpRule '%s' to proto", r.ID())
+	}, registry.And(scSgLocals, scSgs))
+
+	return resp, err
+}
+
 // FindCidrSgRules impl SecGroupServiceServer
 func (srv *sgService) FindCidrSgRules(ctx context.Context, req *sg.FindCidrSgRulesReq) (resp *sg.CidrSgRulesResp, err error) {
 	defer func() {

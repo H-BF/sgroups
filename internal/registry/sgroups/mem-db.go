@@ -79,6 +79,7 @@ func AllTables() MemDbOption {
 		TblNetworks, TblSecGroups, TblSecRules,
 		TblSyncStatus, TblFqdnRules, TblSgIcmpRules,
 		TblSgSgIcmpRules, TblCidrSgRules, TblSgSgRules,
+		TblIESgSgIcmpRules,
 	})
 }
 

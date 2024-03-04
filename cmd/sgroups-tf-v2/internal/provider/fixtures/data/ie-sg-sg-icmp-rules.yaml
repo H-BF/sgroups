@@ -1,0 +1,164 @@
+initial-backend:
+  networks:
+    - |
+      {
+        "name": "net1",
+        "network": {
+          "CIDR": "10.10.10.0/24"
+        }
+      }
+    - |
+      {
+        "name": "net2",
+        "network": {
+          "CIDR": "10.10.20.0/24"
+        }
+      }
+    - |
+      {
+        "name": "net3",
+        "network": {
+          "CIDR": "10.10.30.0/24"
+        }
+      }
+    - |
+      {
+        "name": "net4",
+        "network": {
+          "CIDR": "10.10.40.0/24"
+        }
+      }
+    - |
+      {
+        "name": "net5",
+        "network": {
+          "CIDR": "10.10.50.0/24"
+        }
+      }
+  sec-groups:
+    - |
+      {
+        "defaultAction": "ACCEPT",
+        "logs": false,
+        "name": "group1",
+        "networks": ["net1"],
+        "trace": false
+      }
+    - |
+      {
+        "defaultAction": "DROP",
+        "logs": true,
+        "name": "group2",
+        "networks": ["net2"],
+        "trace": true
+      }
+    - |
+      {
+        "defaultAction": "ACCEPT",
+        "logs": false,
+        "name": "group3",
+        "networks": ["net3", "net5"],
+        "trace": false
+      }
+    - |
+      {
+        "defaultAction": "DROP",
+        "logs": true,
+        "name": "group4",
+        "networks": ["net4"],
+        "trace": true
+      }
+cases:
+- name: "add new IE Sg2Sg ICMP rules"
+  tf-config: |
+    resource "sgroups_ie_icmp_rules" "rules-set" {
+      items = {
+        "icmp4:sg-local(group1)sg(group2)ingress" = {
+          sg_local = "group1"
+          sg = "group2"
+          traffic = "ingress"
+          type = [0, 2, 255]
+          ip_v = "IPv4"
+          logs = true
+          trace = true
+        }
+        "icmp6:sg-local(group3)sg(group4)egress" = {
+          sg_local = "group3"
+          sg = "group4"
+          traffic = "egress"
+          type = [10, 30, 54]
+          ip_v = "IPv6"
+          logs = true
+          trace = true
+        }
+      }
+    }
+  expected-backend:
+    ie-sg-sg-icmp-rules:
+    - |
+      {
+        "ICMP": {
+          "IPv": "IPv4",
+          "Types": [0,2,255]
+        },
+        "Sg": "group2",
+        "SgLocal": "group1",
+        "logs": true,
+        "trace": true,
+        "traffic": "Ingress"
+      }
+    - |
+      {
+        "ICMP": {
+          "IPv": "IPv6",
+          "Types": [10,30,54]
+        },
+        "Sg": "group4",
+        "SgLocal": "group3",
+        "logs": true,
+        "trace": true,
+        "traffic": "Egress"
+      }
+- name: "change first and delete second"
+  tf-config: |
+    resource "sgroups_ie_icmp_rules" "rules-set" {
+      items = {
+        "icmp4:sg-local(group1)sg(group2)ingress" = {
+          sg_local = "group1"
+          sg = "group2"
+          traffic = "ingress"
+          type = [1,2,3]
+          ip_v = "IPv4"
+          logs = false
+          trace = false
+        }
+      }
+    }
+  expected-backend:
+    ie-sg-sg-icmp-rules:
+    - |
+      {
+        "ICMP": {
+          "IPv": "IPv4",
+          "Types": [1,2,3]
+        },
+        "Sg": "group2",
+        "SgLocal": "group1",
+        "logs": false,
+        "trace": false,
+        "traffic": "Ingress"
+      }
+  not-expected-backend:
+    ie-sg-sg-icmp-rules:
+    - |
+      {
+        "ICMP": {
+          "IPv": "IPv6",
+          "Types": [10,30,54]
+        },
+        "Sg": "group4",
+        "SgLocal": "group3",
+        "logs": true,
+        "trace": true,
+        "traffic": "Egress"
+      }

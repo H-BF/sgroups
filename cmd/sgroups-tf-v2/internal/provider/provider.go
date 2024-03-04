@@ -116,6 +116,7 @@ func (s *sgroupsProvider) Resources(_ context.Context) []func() resource.Resourc
 		NewSgToSgIcmpRulesResource,
 		NewCidrRulesResource,
 		NewIESgSgRulesResource,
+		NewIESgSgIcmpRulesResource,
 	}
 }
 

@@ -160,6 +160,24 @@ type (
 		SgFrom string
 		SgTo   string
 	}
+
+	// IESgSgIcmpRule <IN|E>GRESS:SG-SG:ICMP rule
+	IESgSgIcmpRule struct {
+		Traffic Traffic
+		SgLocal string
+		Sg      string
+		Icmp    ICMP
+		Logs    bool
+		Trace   bool
+	}
+
+	// IESgSgIcmpRuleID <IN|E>GRESS:SG-SG:ICMP rule ID
+	IESgSgIcmpRuleID struct {
+		Traffic Traffic
+		IPv     uint8
+		SgLocal string
+		Sg      string
+	}
 )
 
 var (
@@ -439,6 +457,37 @@ func (o SgSgIcmpRuleID) IdentityHash() string {
 // String -
 func (o SgSgIcmpRuleID) String() string {
 	return fmt.Sprintf("sg(%s)sg(%s)icmp%v", o.SgFrom, o.SgTo, o.IPv)
+}
+
+// IsEq -
+func (r IESgSgIcmpRule) IsEq(other IESgSgIcmpRule) bool {
+	return r.Traffic == other.Traffic &&
+		r.SgLocal == other.SgLocal &&
+		r.Sg == other.Sg &&
+		r.Icmp.IPv == other.Icmp.IPv &&
+		r.Icmp.Types.Eq(&other.Icmp.Types) &&
+		r.Logs == other.Logs &&
+		r.Trace == other.Trace
+}
+
+// ID -
+func (o IESgSgIcmpRule) ID() IESgSgIcmpRuleID {
+	return IESgSgIcmpRuleID{
+		Traffic: o.Traffic,
+		IPv:     o.Icmp.IPv,
+		SgLocal: o.SgLocal,
+		Sg:      o.Sg,
+	}
+}
+
+// IdentityHash -
+func (o IESgSgIcmpRuleID) IdentityHash() string {
+	return o.String()
+}
+
+// String -
+func (o IESgSgIcmpRuleID) String() string {
+	return fmt.Sprintf("icmp%v:sg-local(%s)sg(%s)%s", o.IPv, o.SgLocal, o.Sg, o.Traffic)
 }
 
 // String -

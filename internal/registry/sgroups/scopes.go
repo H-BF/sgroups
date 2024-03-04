@@ -53,6 +53,8 @@ type (
 
 	scopedSgSgRuleIdentity map[string]model.SgSgRuleIdentity
 
+	scopedIESgSgIcmpRuleIdentity map[string]model.IESgSgIcmpRuleID
+
 	scopedSG      map[string]struct{}
 	scopedSGFrom  map[string]struct{}
 	scopedSGTo    map[string]struct{}
@@ -197,28 +199,40 @@ func PKScopedSgSgRules(rules ...model.SgSgRule) Scope {
 	return ret
 }
 
-func (scopedNot) privateScope()                {}
-func (scopedOr) privateScope()                 {}
-func (scopedAnd) privateScope()                {}
-func (noScope) privateScope()                  {}
-func (scopedIPs) privateScope()                {}
-func (scopedNetworks) privateScope()           {}
-func (scopedSG) privateScope()                 {}
-func (scopedSGFrom) privateScope()             {}
-func (scopedSGTo) privateScope()               {}
-func (scopedSGLocal) privateScope()            {}
-func (ScopedNetTransport) privateScope()       {}
-func (scopedSGRuleIdentity) privateScope()     {}
-func (scopedFqdnRuleIdentity) privateScope()   {}
-func (scopedSgIcmpIdentity) privateScope()     {}
-func (scopedSgSgIcmpIdentity) privateScope()   {}
-func (scopedCidrSgRuleIdentity) privateScope() {}
-func (scopedSgSgRuleIdentity) privateScope()   {}
+// PKScopedIESgSgRules - primary rule scope
+func PKScopedIESgSgRules(rules ...model.IESgSgIcmpRule) Scope {
+	ret := scopedIESgSgIcmpRuleIdentity{}
+	for _, r := range rules {
+		id := r.ID()
+		ret[id.IdentityHash()] = id
+	}
+	return ret
+}
+
+func (scopedNot) privateScope()                    {}
+func (scopedOr) privateScope()                     {}
+func (scopedAnd) privateScope()                    {}
+func (noScope) privateScope()                      {}
+func (scopedIPs) privateScope()                    {}
+func (scopedNetworks) privateScope()               {}
+func (scopedSG) privateScope()                     {}
+func (scopedSGFrom) privateScope()                 {}
+func (scopedSGTo) privateScope()                   {}
+func (scopedSGLocal) privateScope()                {}
+func (ScopedNetTransport) privateScope()           {}
+func (scopedSGRuleIdentity) privateScope()         {}
+func (scopedFqdnRuleIdentity) privateScope()       {}
+func (scopedSgIcmpIdentity) privateScope()         {}
+func (scopedSgSgIcmpIdentity) privateScope()       {}
+func (scopedCidrSgRuleIdentity) privateScope()     {}
+func (scopedSgSgRuleIdentity) privateScope()       {}
+func (scopedIESgSgIcmpRuleIdentity) privateScope() {}
 
 type filterKindArg interface {
 	model.Network | model.SecurityGroup |
 		model.SGRule | model.FQDNRule | model.SgIcmpRule |
-		model.SgSgIcmpRule | model.CidrSgRule | model.SgSgRule
+		model.SgSgIcmpRule | model.CidrSgRule | model.SgSgRule |
+		model.IESgSgIcmpRule
 }
 
 type filterTree[filterArgT filterKindArg] struct {
@@ -362,6 +376,11 @@ func (p scopedSG) inSgSgRule(rule model.SgSgRule) bool {
 	return ok
 }
 
+func (p scopedSG) inIESgSgIcmpRule(rule model.IESgSgIcmpRule) bool {
+	_, ok := p[rule.ID().Sg]
+	return ok
+}
+
 func (p scopedSG) meta() metaInfo {
 	return metaInfo{
 		reflect.TypeOf((*model.SecurityGroup)(nil)).Elem(): reflect.ValueOf(p.inSG),
@@ -371,6 +390,8 @@ func (p scopedSG) meta() metaInfo {
 		reflect.TypeOf((*model.CidrSgRule)(nil)).Elem(): reflect.ValueOf(p.inCidrSgRule),
 
 		reflect.TypeOf((*model.SgSgRule)(nil)).Elem(): reflect.ValueOf(p.inSgSgRule),
+
+		reflect.TypeOf((*model.IESgSgIcmpRule)(nil)).Elem(): reflect.ValueOf(p.inIESgSgIcmpRule),
 	}
 }
 
@@ -422,9 +443,15 @@ func (p scopedSGLocal) inSgSgRule(rule model.SgSgRule) bool {
 	return ok
 }
 
+func (p scopedSGLocal) inIESgSgIcmpRule(rule model.IESgSgIcmpRule) bool {
+	_, ok := p[rule.ID().SgLocal]
+	return ok
+}
+
 func (p scopedSGLocal) meta() metaInfo {
 	return metaInfo{
-		reflect.TypeOf(model.SgSgRule{}): reflect.ValueOf(p.inSgSgRule),
+		reflect.TypeOf(model.SgSgRule{}):       reflect.ValueOf(p.inSgSgRule),
+		reflect.TypeOf(model.IESgSgIcmpRule{}): reflect.ValueOf(p.inIESgSgIcmpRule),
 	}
 }
 
@@ -507,5 +534,17 @@ func (p scopedSgSgRuleIdentity) inSgSgRule(rule model.SgSgRule) bool {
 func (p scopedSgSgRuleIdentity) meta() metaInfo {
 	return metaInfo{
 		reflect.TypeOf(model.SgSgRule{}): reflect.ValueOf(p.inSgSgRule),
+	}
+}
+
+func (p scopedIESgSgIcmpRuleIdentity) inIESgSgIcmpRule(rule model.IESgSgIcmpRule) bool {
+	h := rule.ID().IdentityHash()
+	_, ok := p[h]
+	return ok
+}
+
+func (p scopedIESgSgIcmpRuleIdentity) meta() metaInfo {
+	return metaInfo{
+		reflect.TypeOf(model.IESgSgIcmpRule{}): reflect.ValueOf(p.inIESgSgIcmpRule),
 	}
 }

@@ -863,3 +863,135 @@ func (sui *memDbSuite) TestSgSgRules_DelSG() {
 	sui.Require().Equal(1, len(rules))
 	sui.Require().True(rules[0].IsEq(rule2))
 }
+
+func (sui *memDbSuite) newIESgSgIcmpRule(traffic model.Traffic, sgLocal, sg string, ipv uint8) model.IESgSgIcmpRule {
+	return model.IESgSgIcmpRule{
+		Traffic: traffic,
+		SgLocal: sgLocal,
+		Sg:      sg,
+		Icmp: model.ICMP{
+			IPv: ipv,
+		},
+	}
+}
+
+func (sui *memDbSuite) TestSync_IESgSgIcmpRules_FailNoSG() {
+	ctx := context.TODO()
+	rules := []model.IESgSgIcmpRule{sui.newIESgSgIcmpRule(
+		model.EGRESS,
+		"sg1",
+		"sg2",
+		model.IPv4)}
+	w := sui.regWriter()
+	err := w.SyncIESgSgIcmpRules(ctx, rules, NoScope)
+	sui.Require().NoError(err)
+	err = w.Commit()
+	sui.Require().Error(err)
+	sui.Require().Contains(err.Error(), "not found ref to SgLocal")
+}
+
+func (sui *memDbSuite) Test_IESgSgRules_List() {
+	ctx := context.TODO()
+
+	sg1 := sui.newSG("sg1")
+	sg2 := sui.newSG("sg2")
+	sg3 := sui.newSG("sg3")
+	sg4 := sui.newSG("sg4")
+	w := sui.regWriter()
+	err := w.SyncSecurityGroups(ctx, []model.SecurityGroup{sg1, sg2, sg3, sg4}, NoScope)
+	sui.Require().NoError(err)
+	err = w.Commit()
+	sui.Require().NoError(err)
+
+	rule1 := sui.newIESgSgIcmpRule(model.EGRESS, sg1.Name, sg2.Name, model.IPv4)
+	rule2 := sui.newIESgSgIcmpRule(model.INGRESS, sg3.Name, sg4.Name, model.IPv6)
+
+	w = sui.regWriter()
+	err = w.SyncIESgSgIcmpRules(ctx, []model.IESgSgIcmpRule{rule1, rule2}, NoScope)
+	sui.Require().NoError(err)
+	err = w.Commit()
+	sui.Require().NoError(err)
+
+	var allRules dict.HDict[string, model.IESgSgIcmpRule]
+	var allRules2check dict.HDict[string, model.IESgSgIcmpRule]
+	_ = allRules.Insert(rule1.ID().String(), rule1)
+	_ = allRules.Insert(rule2.ID().String(), rule2)
+	sui.Require().Equal(2, allRules.Len())
+	r := sui.regReader()
+	sgLocalScope := SGLocal(sg1.Name, sg3.Name)
+	sgScope := SG(sg2.Name, sg4.Name)
+	for _, sc := range []Scope{NoScope, sgLocalScope, sgScope, And(sgLocalScope, sgScope)} {
+		err = r.ListIESgSgIcmpRules(ctx, func(r model.IESgSgIcmpRule) error {
+			allRules2check.Insert(r.ID().String(), r)
+			return nil
+		}, sc)
+		sui.Require().NoError(err)
+		sui.Require().Equal(allRules.Len(), allRules2check.Len())
+		eq := allRules.Eq(&allRules2check, func(vL, vR model.IESgSgIcmpRule) bool {
+			return vL.IsEq(vR)
+		})
+		sui.Require().True(eq)
+		allRules2check.Clear()
+	}
+
+	expRules := []model.IESgSgIcmpRule{rule1, rule2}
+	for i, sg := range []model.SecurityGroup{sg1, sg3} {
+		var retRule *model.IESgSgIcmpRule
+		err = r.ListIESgSgIcmpRules(ctx, func(r model.IESgSgIcmpRule) error {
+			retRule = &r
+			return nil
+		}, SGLocal(sg.Name))
+		sui.Require().NoError(err)
+		sui.Require().NotNil(retRule)
+		sui.Require().True(expRules[i].IsEq(*retRule))
+	}
+	for i, sg := range []model.SecurityGroup{sg2, sg4} {
+		var retRule *model.IESgSgIcmpRule
+		err = r.ListIESgSgIcmpRules(ctx, func(r model.IESgSgIcmpRule) error {
+			retRule = &r
+			return nil
+		}, SG(sg.Name))
+		sui.Require().NoError(err)
+		sui.Require().NotNil(retRule)
+		sui.Require().True(expRules[i].IsEq(*retRule))
+	}
+}
+
+func (sui *memDbSuite) TestIESgSgIcmpRules_DelSG() {
+	ctx := context.TODO()
+
+	sg1 := sui.newSG("sg1")
+	sg2 := sui.newSG("sg2")
+	sg3 := sui.newSG("sg3")
+	sg4 := sui.newSG("sg4")
+	w := sui.regWriter()
+	err := w.SyncSecurityGroups(ctx, []model.SecurityGroup{sg1, sg2, sg3, sg4}, NoScope)
+	sui.Require().NoError(err)
+	err = w.Commit()
+	sui.Require().NoError(err)
+
+	rule1 := sui.newIESgSgIcmpRule(model.EGRESS, sg1.Name, sg2.Name, model.IPv4)
+	rule2 := sui.newIESgSgIcmpRule(model.INGRESS, sg3.Name, sg4.Name, model.IPv6)
+
+	w = sui.regWriter()
+	err = w.SyncIESgSgIcmpRules(ctx, []model.IESgSgIcmpRule{rule1, rule2}, NoScope)
+	sui.Require().NoError(err)
+	err = w.Commit()
+	sui.Require().NoError(err)
+
+	w = sui.regWriter()
+	err = w.SyncSecurityGroups(ctx, nil, SG(sg1.Name))
+	sui.Require().NoError(err)
+	err = w.Commit()
+	sui.Require().NoError(err)
+
+	r := sui.regReader()
+	var rules []model.IESgSgIcmpRule
+	err = r.ListIESgSgIcmpRules(ctx, func(r model.IESgSgIcmpRule) error {
+		rules = append(rules, r)
+		return nil
+	}, NoScope)
+	sui.Require().NoError(err)
+	sui.Require().Equal(1, len(rules))
+	sui.Require().True(rules[0].IsEq(rule2))
+}
