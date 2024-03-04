@@ -128,11 +128,27 @@ func (rb ruleBuilder) daddr(ipVer int) ruleBuilder {
 }
 
 func (rb ruleBuilder) saddr6() ruleBuilder {
-	panic("not impl")
+	rb.exprs = append(rb.ip6().exprs,
+		&Payload{
+			DestRegister: 1,
+			Base:         PayloadBaseNetworkHeader,
+			Offset:       uint32(8),  //nolint:gomnd
+			Len:          uint32(16), //nolint:gomnd
+		},
+	)
+	return rb
 }
 
 func (rb ruleBuilder) daddr6() ruleBuilder {
-	panic("not impl")
+	rb.exprs = append(rb.ip6().exprs,
+		&Payload{
+			DestRegister: 1,
+			Base:         PayloadBaseNetworkHeader,
+			Offset:       uint32(24), //nolint:gomnd
+			Len:          uint32(16), //nolint:gomnd
+		},
+	)
+	return rb
 }
 
 func (rb ruleBuilder) saddr4() ruleBuilder {
@@ -267,6 +283,18 @@ func (rb ruleBuilder) ip4() ruleBuilder {
 			Register: 1,
 			Data:     []byte{unix.NFPROTO_IPV4},
 		}, //ip
+	)
+	return rb
+}
+
+func (rb ruleBuilder) ip6() ruleBuilder {
+	rb.exprs = append(rb.exprs,
+		&Meta{Key: MetaKeyNFPROTO, Register: 1},
+		&Cmp{
+			Op:       CmpOpEq,
+			Register: 1,
+			Data:     []byte{unix.NFPROTO_IPV6},
+		}, //ip6
 	)
 	return rb
 }
