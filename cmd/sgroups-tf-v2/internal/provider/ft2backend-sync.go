@@ -49,6 +49,7 @@ var (
 	_ = tfSgFqdnRules2Backend.sync
 	_ = tfCidrSgRules2Backend.sync
 	_ = tfIESgSgRules2Backend.sync
+	_ = tfIESgSgIcmpRules2Backend.sync
 )
 
 func (tfNetworks2Backend) sync(ctx context.Context, items NamedResources[networkItem], client *sgAPI.Client, op protos.SyncReq_SyncOp) diag.Diagnostics {

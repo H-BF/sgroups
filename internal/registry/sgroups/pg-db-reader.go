@@ -445,7 +445,7 @@ func (rd *pgDbReader) ListSgSgRules(ctx context.Context, consume func(model.SgSg
 }
 
 // ListIESgSgIcmpRules impl Reader interface
-func (rd *pgDbReader) ListIESgSgIcmpRules(ctx context.Context, consume func(rule model.IESgSgIcmpRule) error, scope Scope) error {
+func (rd *pgDbReader) ListIESgSgIcmpRules(ctx context.Context, consume func(rule model.IESgSgIcmpRule) error, scope Scope) error { //nolint:dupl
 	const (
 		qry = "select ip_v, types, sg_local, sg, traffic, logs, trace from sgroups.list_ie_sg_sg_icmp_rules($1, $2)"
 	)

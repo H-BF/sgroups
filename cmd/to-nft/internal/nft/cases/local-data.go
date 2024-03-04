@@ -161,7 +161,7 @@ func (loader *LocalDataLoader) Load(ctx context.Context, client SGClient, ncnf h
 	}
 
 	log.Debugw("loading SG-SG-INGRESS/EGRESS-ICMP rules...")
-	if res.SgIeSgIcmpRules.Load(ctx, client, res.LocalSGs); err != nil {
+	if err = res.SgIeSgIcmpRules.Load(ctx, client, res.LocalSGs); err != nil {
 		return res, err
 	}
 

@@ -44,7 +44,6 @@ func (rules *SG2FQDNRules) IsEq(other SG2FQDNRules) bool {
 	return l.Eq(&r, func(vL, vR *model.FQDNRule) bool {
 		return vL.IsEq(*vR)
 	})
-
 }
 
 // Load -
