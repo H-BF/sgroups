@@ -162,7 +162,8 @@ func (bt *batch) prepare() {
 	bt.initCidrSgRulesDetails()
 	bt.initSgIeSgRulesDetails()
 	bt.initRootChains()
-	bt.initBaseRules()
+	bt.initBaseRules(dirIN)
+	bt.initBaseRules(dirOUT)
 	bt.makeInOutChains(dirIN)
 	bt.makeInOutChains(dirOUT)
 	bt.fwInOutAddDefaultRules()
@@ -304,7 +305,7 @@ func (bt *batch) initRootChains() {
 	})
 }
 
-func (bt *batch) initBaseRules() {
+func (bt *batch) initBaseRules(dir direction) {
 	const api = "init-base-rules"
 
 	var nws []model.Network
@@ -331,11 +332,17 @@ func (bt *batch) initBaseRules() {
 				if err := tx.AddSet(netSet, elems); err != nil {
 					return err
 				}
-				bt.log.Debugf("add network(s) %s into base rules", slice2stringer(nw...))
+				chnDest := tern(dirIN == dir,
+					chnIngressINPUT,
+					chnEgressPOSTROUTING,
+				)
+				bt.log.Debugf("add network(s) %s into '%s'/'%s' base rules",
+					slice2stringer(nw...), bt.table.Name, chnDest)
 				rule := beginRule()
-				tern(isIP4, rule.daddr4, rule.daddr6)().
-					inSet(netSet).accept().
-					applyRule(bt.chains.At(chnEgressPOSTROUTING), tx.Conn)
+				tern(dirIN == dir, rule.saddr, rule.daddr)(
+					tern(isIP4, iplib.IP4Version, iplib.IP6Version),
+				).inSet(netSet).accept().
+					applyRule(bt.chains.At(chnDest), tx.Conn)
 				return nil
 			})
 		}
@@ -901,7 +908,7 @@ func (bt *batch) fwInOutAddDefaultRules() {
 	for _, chName := range sli(chnIngressINPUT, chnEgressPOSTROUTING) {
 		chName := chName
 		bt.addJob("add-default-rules", func(tx *Tx) error {
-			bt.log.Debugf("add defult rules into chain '%s'/'%s'", chName, bt.table.Name)
+			bt.log.Debugf("add default rules into chain '%s'/'%s'", bt.table.Name, chName)
 			beginRule().counter().applyRule(bt.chains.At(chName), tx.Conn)
 			return nil
 		})
