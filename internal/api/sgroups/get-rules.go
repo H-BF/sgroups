@@ -181,6 +181,7 @@ func cidrSgIcmpRule2proto(src model.CidrSgIcmpRule) (*sg.CidrSgIcmpRule, error) 
 		SG:    src.SG,
 		Logs:  src.Logs,
 		Trace: src.Trace,
+		ICMP:  new(common.ICMP),
 	}
 	var e error
 	if ret.Traffic, e = traffic2proto(src.Traffic); e != nil {

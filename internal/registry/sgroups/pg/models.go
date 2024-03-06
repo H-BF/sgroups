@@ -137,6 +137,16 @@ type (
 		Trace   bool             `db:"trace"`
 	}
 
+	// CidrSgIcmpRule -
+	CidrSgIcmpRule struct {
+		ICMP
+		Traffic Traffic   `db:"traffic"`
+		CIDR    net.IPNet `db:"cidr"`
+		SG      string    `db:"sg"`
+		Logs    bool      `db:"logs"`
+		Trace   bool      `db:"trace"`
+	}
+
 	// SgSgRule -
 	SgSgRule struct {
 		Proto   Proto            `db:"proto"`

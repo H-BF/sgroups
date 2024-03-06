@@ -384,7 +384,27 @@ func (rd *pgDbReader) ListCidrSgRules(ctx context.Context, consume func(model.Ci
 
 // ListCidrSgIcmpRules impl Reader interface
 func (rd *pgDbReader) ListCidrSgIcmpRules(ctx context.Context, consume func(model.CidrSgIcmpRule) error, scope Scope) error {
-	panic("not impl")
+	const (
+		qry = "select ip_v, types, cidr, sg, traffic, logs, trace from sgroups.list_cidr_sg_icmp_rules($1)"
+	)
+	args, err := rd.argsForListCidrSgRules(scope)
+	if err != nil {
+		return err
+	}
+	return rd.doIt(ctx, func(c *pgx.Conn) error {
+		rows, e := c.Query(ctx, qry, args...)
+		if e != nil {
+			return e
+		}
+		scanner := pgx.RowToStructByName[pg.CidrSgIcmpRule]
+		return pgxIterateRowsAndClose(rows, scanner, func(rule pg.CidrSgIcmpRule) error {
+			m, e1 := rule.ToModel()
+			if e1 != nil {
+				return e1
+			}
+			return consume(m)
+		})
+	})
 }
 
 func (rd *pgDbReader) argsForRulesWithSgLocalAndSg(scope Scope) ([]any, error) { //nolint:dupl

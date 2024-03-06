@@ -36,6 +36,8 @@ type SyncerOfIESgSgIcmpRules = syncObj[sgm.IESgSgIcmpRule, sgm.IESgSgIcmpRuleID]
 // SyncerOfCidrSgRules -
 type SyncerOfCidrSgRules = syncObj[sgm.CidrSgRule, sgm.CidrSgRuleIdenity]
 
+type SyncerOfCidrSgIcmpRules = syncObj[sgm.CidrSgIcmpRule, sgm.CidrSgIcmpRuleID]
+
 // SyncerOfSgSgRules -
 type SyncerOfSgSgRules = syncObj[sgm.SgSgRule, sgm.SgSgRuleIdentity]
 
@@ -152,6 +154,19 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
 			syncField{Name: "trace", PgTy: "bool", Notnull: true},
 		)
+	case *sgm.CidrSgIcmpRule:
+		o.mutatorFn = "sgroups.sync_cidr_sg_icmp_rule"
+		o.tableDst = syncTable{
+			Name: "sgroups.vu_cidr_sg_icmp_rule",
+		}.WithFields(
+			syncField{Name: "ip_v", PgTy: "sgroups.ip_family", Notnull: true, Pk: true},
+			syncField{Name: "types", PgTy: "sgroups.icmp_types", Notnull: true},
+			syncField{Name: "cidr", PgTy: "cidr", Notnull: true, Pk: true},
+			syncField{Name: "sg", PgTy: "sgroups.cname", Notnull: true, Pk: true},
+			syncField{Name: "traffic", PgTy: "sgroups.traffic", Notnull: true, Pk: true},
+			syncField{Name: "logs", PgTy: "bool", Notnull: true},
+			syncField{Name: "trace", PgTy: "bool", Notnull: true},
+		)
 	case *sgm.SgSgRule: //nolint:dupl
 		o.mutatorFn = "sgroups.sync_ie_sg_sg_rule"
 		o.tableDst = syncTable{
@@ -254,6 +269,16 @@ func (o *syncObj[T, tFlt]) AddToFilter(ctx context.Context, data ...tFlt) error 
 				return err
 			}
 			raw = append(raw, []any{p, v.CIDR, v.SG, t})
+		case sgm.CidrSgIcmpRuleID:
+			ipv, e := ipFamilyFromModel(v.IPv)
+			if e != nil {
+				return e
+			}
+			var t Traffic
+			if err := t.FromModel(v.Traffic); err != nil {
+				return err
+			}
+			raw = append(raw, []any{ipv, v.CIDR, v.SG, t})
 		case sgm.SgSgRuleIdentity:
 			var p Proto
 			var t Traffic
@@ -322,6 +347,12 @@ func (o *syncObj[T, tFlt]) AddData(ctx context.Context, data ...T) error { //nol
 				return err
 			}
 			raw = append(raw, []any{x.Proto, x.CIDR, x.SG, x.Traffic, x.Ports, x.Logs, x.Trace})
+		case sgm.CidrSgIcmpRule:
+			var x CidrSgIcmpRule
+			if err := x.FromModel(v); err != nil {
+				return err
+			}
+			raw = append(raw, []any{x.IPv, x.Tytes, x.CIDR, x.SG, x.Traffic, x.Logs, x.Trace})
 		case sgm.SgSgRule:
 			var x SgSgRule
 			if err := x.FromModel(v); err != nil {
