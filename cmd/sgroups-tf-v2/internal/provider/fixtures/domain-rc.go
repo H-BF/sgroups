@@ -18,7 +18,8 @@ type (
 		domain.Network | domain.SecurityGroup |
 			domain.SGRule | domain.FQDNRule |
 			domain.SgIcmpRule | domain.SgSgIcmpRule |
-			domain.CidrSgRule | domain.SgSgRule | domain.IESgSgIcmpRule
+			domain.CidrSgRule | domain.CidrSgIcmpRule |
+			domain.SgSgRule | domain.IESgSgIcmpRule
 	}
 
 	// DomainRcList -
@@ -221,6 +222,16 @@ func regHelpers() {
 	regProto2domain(func(p *protos.IESgSgIcmpRule, r *domain.IESgSgIcmpRule) {
 		var e error
 		if *r, e = sgAPI.Proto2ModelIESgSgIcmpRule(p); e != nil {
+			panic(e)
+		}
+	})
+
+	// ------------------ RC CidrSgIcmpRule -------------------
+	regKeyExtractor(func(m domain.CidrSgIcmpRule) string { return m.ID().String() })
+	regIsEQ(func(l, r domain.CidrSgIcmpRule) bool { return l.IsEq(r) })
+	regProto2domain(func(p *protos.CidrSgIcmpRule, r *domain.CidrSgIcmpRule) {
+		var e error
+		if *r, e = sgAPI.Proto2ModelCidrSgIcmpRule(p); e != nil {
 			panic(e)
 		}
 	})

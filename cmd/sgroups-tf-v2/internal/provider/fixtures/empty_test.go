@@ -40,6 +40,7 @@ func Test_ExtractKey(t *testing.T) {
 		cidrRule       domain.CidrSgRule
 		ieSgSgRule     domain.SgSgRule
 		ieSgSgIcmpRule domain.IESgSgIcmpRule
+		cidrSgIcmpRule domain.CidrSgIcmpRule
 	)
 	network.Name = "123"
 	require.Equal(t, network.Name, extractKey(network))
@@ -95,4 +96,16 @@ func Test_ExtractKey(t *testing.T) {
 	}
 
 	require.Equal(t, "icmp4:sg-local(local-sg-example)sg(external-sg-example)ingress", extractKey(ieSgSgIcmpRule))
+
+	_, ipnet, _ = net.ParseCIDR("10.20.30.0/24")
+	cidrSgIcmpRule = domain.CidrSgIcmpRule{
+		Traffic: domain.EGRESS,
+		CIDR:    *ipnet,
+		SG:      "sg1",
+		Icmp: domain.ICMP{
+			IPv: domain.IPv6,
+		},
+	}
+
+	require.Equal(t, "icmp6:cidr(10.20.30.0/24)sg(sg1)egress", extractKey(cidrSgIcmpRule))
 }

@@ -30,6 +30,7 @@ type (
 	tfCidrSgRules2Backend     struct{}
 	tfIESgSgRules2Backend     struct{}
 	tfIESgSgIcmpRules2Backend struct{}
+	tfCidrSgIcmpRules2Backend struct{}
 )
 
 var (
@@ -41,6 +42,7 @@ var (
 	_ tf2backend[cidrRule]       = (*tfCidrSgRules2Backend)(nil)
 	_ tf2backend[ieSgSgRule]     = (*tfIESgSgRules2Backend)(nil)
 	_ tf2backend[ieSgSgIcmpRule] = (*tfIESgSgIcmpRules2Backend)(nil)
+	_ tf2backend[cidrSgIcmpRule] = (*tfCidrSgIcmpRules2Backend)(nil)
 
 	_ = tfNetworks2Backend.sync
 	_ = tfSg2Backend.sync
@@ -50,6 +52,7 @@ var (
 	_ = tfCidrSgRules2Backend.sync
 	_ = tfIESgSgRules2Backend.sync
 	_ = tfIESgSgIcmpRules2Backend.sync
+	_ = tfCidrSgIcmpRules2Backend.sync
 )
 
 func (tfNetworks2Backend) sync(ctx context.Context, items NamedResources[networkItem], client *sgAPI.Client, op protos.SyncReq_SyncOp) diag.Diagnostics {
@@ -346,6 +349,46 @@ func (tfCidrSgRules2Backend) sync(ctx context.Context, items NamedResources[cidr
 	if _, err := client.Sync(ctx, &req); err != nil {
 		diags.AddError(
 			fmt.Sprintf("%s(cidr-sg-rules)", op), err.Error(),
+		)
+	}
+	return diags
+}
+
+func (tfCidrSgIcmpRules2Backend) sync(ctx context.Context, items NamedResources[cidrSgIcmpRule], client *sgAPI.Client, op protos.SyncReq_SyncOp) diag.Diagnostics {
+	var syncObj protos.SyncCidrSgIcmpRules
+	var diags diag.Diagnostics
+	for _, features := range items.Items {
+		caser := cases.Title(language.AmericanEnglish).String
+		trafficValue, ok := common.Traffic_value[caser(
+			features.Traffic.ValueString(),
+		)]
+		if !ok {
+			diags.AddError(
+				"traffic conv",
+				fmt.Sprintf("no traffic conv for value(%s)", features.Traffic.ValueString()))
+			return diags
+		}
+		syncObj.Rules = append(syncObj.Rules, &protos.CidrSgIcmpRule{
+			CIDR:    features.Cidr.ValueString(),
+			SG:      features.SgName.ValueString(),
+			Traffic: common.Traffic(trafficValue),
+			ICMP:    features.icmp2Proto(ctx, &diags),
+			Logs:    features.Logs.ValueBool(),
+			Trace:   features.Trace.ValueBool(),
+		})
+		if diags.HasError() {
+			return diags
+		}
+	}
+	req := protos.SyncReq{
+		SyncOp: op,
+		Subject: &protos.SyncReq_CidrSgImcpRules{
+			CidrSgImcpRules: &syncObj,
+		},
+	}
+	if _, err := client.Sync(ctx, &req); err != nil {
+		diags.AddError(
+			fmt.Sprintf("%s(cidr-sg-icmp-rules)", op), err.Error(),
 		)
 	}
 	return diags
