@@ -14,6 +14,9 @@ type (
 	// Link is type alias
 	Link = netlink.Link
 
+	// Addr is type alias
+	Addr = netlink.Addr
+
 	// WatcherMsg abstract message def
 	WatcherMsg interface {
 		isNetlinkWatcherMsg()
