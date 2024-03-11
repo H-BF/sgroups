@@ -232,7 +232,7 @@ func val2ptr[T any](val T) *T {
 	return &val
 }
 
-func zeroEndedS(s string) string {
+func zeroEndedS(s string) string { //nolint:unused
 	const z = "\x00"
 	if n := len(s); n > 0 {
 		n1 := strings.LastIndex(s, z)

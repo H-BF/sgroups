@@ -318,21 +318,21 @@ func (rb ruleBuilder) ctState(ctStateBitMask uint32) ruleBuilder {
 	return rb
 }
 
-func (rb ruleBuilder) iifname() ruleBuilder {
+func (rb ruleBuilder) iifname() ruleBuilder { //nolint:unused
 	rb.exprs = append(rb.exprs,
 		&Meta{Key: MetaKeyIIFNAME, Register: 1},
 	)
 	return rb
 }
 
-func (rb ruleBuilder) oifname() ruleBuilder {
+func (rb ruleBuilder) oifname() ruleBuilder { //nolint:unused
 	rb.exprs = append(rb.exprs,
 		&Meta{Key: MetaKeyOIFNAME, Register: 1},
 	)
 	return rb
 }
 
-func (rb ruleBuilder) neqS(s string) ruleBuilder {
+func (rb ruleBuilder) neqS(s string) ruleBuilder { //nolint:unused
 	rb.exprs = append(rb.exprs,
 		&Cmp{
 			Register: 1,
