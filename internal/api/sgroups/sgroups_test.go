@@ -294,10 +294,10 @@ func (sui *sGroupServiceTests) rule2Id(rules ...*api.Rule) []model.SGRuleIdentit
 	return ret
 }
 
-func (sui *sGroupServiceTests) sgSgRule2Id(rules ...*api.SgSgRule) []model.SgSgRuleIdentity {
-	var ret []model.SgSgRuleIdentity
+func (sui *sGroupServiceTests) sgSgRule2Id(rules ...*api.SgSgRule) []model.IESgSgRuleIdentity {
+	var ret []model.IESgSgRuleIdentity
 	for _, r := range rules {
-		var id model.SgSgRuleIdentity
+		var id model.IESgSgRuleIdentity
 		id.SgLocal = r.GetSgLocal()
 		id.Sg = r.GetSg()
 		err := (networkTransport{&id.Transport}).
@@ -330,10 +330,10 @@ func (sui *sGroupServiceTests) ieSgSgIcmpRule2Id(rules ...*api.IESgSgIcmpRule) [
 	return ret
 }
 
-func (sui *sGroupServiceTests) cidrSgIcmpRule2Id(rules ...*api.CidrSgIcmpRule) []model.CidrSgIcmpRuleID {
-	var ret []model.CidrSgIcmpRuleID
+func (sui *sGroupServiceTests) cidrSgIcmpRule2Id(rules ...*api.CidrSgIcmpRule) []model.IECidrSgIcmpRuleID {
+	var ret []model.IECidrSgIcmpRuleID
 	for _, r := range rules {
-		var id model.CidrSgIcmpRuleID
+		var id model.IECidrSgIcmpRuleID
 		_, ipnet, err := net.ParseCIDR(r.GetCIDR())
 		sui.Require().NoError(err)
 		id.CIDR = *ipnet
@@ -408,7 +408,7 @@ func (sui *sGroupServiceTests) Test_Sync_SgSgRules() {
 	sui.syncSgSgRules([]*api.SgSgRule{rule1, rule2}, api.SyncReq_FullSync)
 	r := sui.reader()
 	m := make(map[string]bool)
-	err := r.ListSgSgRules(sui.ctx, func(rule model.SgSgRule) error {
+	err := r.ListSgSgRules(sui.ctx, func(rule model.IESgSgRule) error {
 		m[rule.ID.IdentityHash()] = true
 		return nil
 	}, registry.NoScope)
@@ -422,7 +422,7 @@ func (sui *sGroupServiceTests) Test_Sync_SgSgRules() {
 	sui.syncSgSgRules([]*api.SgSgRule{rule1, rule2}, api.SyncReq_Delete)
 	r = sui.reader()
 	var cn int
-	err = r.ListSgSgRules(sui.ctx, func(_ model.SgSgRule) error {
+	err = r.ListSgSgRules(sui.ctx, func(_ model.IESgSgRule) error {
 		cn++
 		return nil
 	}, registry.NoScope)
@@ -432,7 +432,7 @@ func (sui *sGroupServiceTests) Test_Sync_SgSgRules() {
 	sui.syncSgSgRules([]*api.SgSgRule{rule1, rule2}, api.SyncReq_FullSync)
 	sui.syncSGs([]*api.SecGroup{sg1, sg3}, api.SyncReq_Delete)
 	r = sui.reader()
-	err = r.ListSgSgRules(sui.ctx, func(_ model.SgSgRule) error {
+	err = r.ListSgSgRules(sui.ctx, func(_ model.IESgSgRule) error {
 		cn++
 		return nil
 	}, registry.NoScope)
@@ -496,7 +496,7 @@ func (sui *sGroupServiceTests) Test_Sync_CidrSgIcmpRules() {
 	sui.syncCidrSgIcmpRules([]*api.CidrSgIcmpRule{rule1, rule2}, api.SyncReq_FullSync)
 	r := sui.reader()
 	m := make(map[string]bool)
-	err := r.ListCidrSgIcmpRules(sui.ctx, func(rule model.CidrSgIcmpRule) error {
+	err := r.ListCidrSgIcmpRules(sui.ctx, func(rule model.IECidrSgIcmpRule) error {
 		m[rule.ID().IdentityHash()] = true
 		return nil
 	}, registry.NoScope)
@@ -510,7 +510,7 @@ func (sui *sGroupServiceTests) Test_Sync_CidrSgIcmpRules() {
 	sui.syncCidrSgIcmpRules([]*api.CidrSgIcmpRule{rule1, rule2}, api.SyncReq_Delete)
 	r = sui.reader()
 	var cn int
-	err = r.ListCidrSgIcmpRules(sui.ctx, func(_ model.CidrSgIcmpRule) error {
+	err = r.ListCidrSgIcmpRules(sui.ctx, func(_ model.IECidrSgIcmpRule) error {
 		cn++
 		return nil
 	}, registry.NoScope)
@@ -520,7 +520,7 @@ func (sui *sGroupServiceTests) Test_Sync_CidrSgIcmpRules() {
 	sui.syncCidrSgIcmpRules([]*api.CidrSgIcmpRule{rule1, rule2}, api.SyncReq_FullSync)
 	sui.syncSGs([]*api.SecGroup{sg1, sg2}, api.SyncReq_Delete)
 	r = sui.reader()
-	err = r.ListCidrSgIcmpRules(sui.ctx, func(_ model.CidrSgIcmpRule) error {
+	err = r.ListCidrSgIcmpRules(sui.ctx, func(_ model.IECidrSgIcmpRule) error {
 		cn++
 		return nil
 	}, registry.NoScope)

@@ -13,19 +13,19 @@ import (
 
 // SgIeSgRules -
 type SgIeSgRules struct {
-	Rules dict.HDict[model.SgSgRuleIdentity, *model.SgSgRule]
+	Rules dict.HDict[model.IESgSgRuleIdentity, *model.IESgSgRule]
 }
 
 // IsEq -
 func (rules *SgIeSgRules) IsEq(other SgIeSgRules) bool {
-	return rules.Rules.Eq(&other.Rules, func(vL, vR *model.SgSgRule) bool {
+	return rules.Rules.Eq(&other.Rules, func(vL, vR *model.IESgSgRule) bool {
 		return vL.IsEq(*vR)
 	})
 }
 
 // GetRulesForTrafficAndSG -
-func (rules *SgIeSgRules) GetRulesForTrafficAndSG(tr model.Traffic, sg string) (ret []*model.SgSgRule) {
-	rules.Rules.Iterate(func(k model.SgSgRuleIdentity, v *model.SgSgRule) bool {
+func (rules *SgIeSgRules) GetRulesForTrafficAndSG(tr model.Traffic, sg string) (ret []*model.IESgSgRule) {
+	rules.Rules.Iterate(func(k model.IESgSgRuleIdentity, v *model.IESgSgRule) bool {
 		if k.Traffic == tr && k.SgLocal == sg {
 			ret = append(ret, v)
 		}
@@ -52,7 +52,7 @@ func (rules *SgIeSgRules) Load(ctx context.Context, client SGClient, locals SGs)
 		return err
 	}
 	for _, protoRule := range resp.GetRules() {
-		var rule model.SgSgRule
+		var rule model.IESgSgRule
 		if rule, err = conv.Proto2ModelSgSgRule(protoRule); err != nil {
 			return err
 		}

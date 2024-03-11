@@ -302,7 +302,7 @@ func IntegrityChecker4CidrSgRules() IntegrityChecker { //nolint:gocyclo
 			return errors.WithMessage(e, api)
 		}
 		for x := it.Next(); x != nil; x = it.Next() { //SG ref validate
-			r := x.(*model.CidrSgRule)
+			r := x.(*model.IECidrSgRule)
 			i, e1 := reader.First(TblSecGroups, indexID, r.ID.SG)
 			if e1 != nil {
 				return errors.WithMessagef(e1, "%s: find ref to SG '%s'", api, r.ID.SG)
@@ -340,7 +340,7 @@ func IntegrityChecker4CidrSgIcmpRules() IntegrityChecker {
 			return errors.WithMessage(e, api)
 		}
 		for x := it.Next(); x != nil; x = it.Next() { //SG ref validate
-			r := x.(*model.CidrSgIcmpRule)
+			r := x.(*model.IECidrSgIcmpRule)
 			sg := r.ID().SG
 			i, e1 := reader.First(TblSecGroups, indexID, sg)
 			if e1 != nil {
@@ -379,7 +379,7 @@ func IntegrityChecker4SgSgRules() IntegrityChecker {
 			return errors.WithMessage(e, api)
 		}
 		for x := it.Next(); x != nil; x = it.Next() { // validate SG refs
-			rule := x.(*model.SgSgRule)
+			rule := x.(*model.IESgSgRule)
 			sg, e1 := reader.First(TblSecGroups, indexID, rule.ID.SgLocal)
 			if e1 != nil {
 				return errors.WithMessagef(e1, "%s: find ref to SgLocal '%s'", api, rule.ID.SgLocal)

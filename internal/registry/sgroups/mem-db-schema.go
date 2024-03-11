@@ -160,12 +160,12 @@ func memCidrSgIcmpRulesSchema(schema *MemDbSchema) {
 			indexID: {
 				Name:   indexID,
 				Unique: true,
-				Indexer: SingleObjectIndexer[model.CidrSgIcmpRuleID]{
-					accessor: func(a any) model.CidrSgIcmpRuleID {
+				Indexer: SingleObjectIndexer[model.IECidrSgIcmpRuleID]{
+					accessor: func(a any) model.IECidrSgIcmpRuleID {
 						switch v := a.(type) {
-						case *model.CidrSgIcmpRule:
+						case *model.IECidrSgIcmpRule:
 							return v.ID()
-						case model.CidrSgIcmpRuleID:
+						case model.IECidrSgIcmpRuleID:
 							return v
 						default:
 							panic(
@@ -173,7 +173,7 @@ func memCidrSgIcmpRulesSchema(schema *MemDbSchema) {
 							)
 						}
 					},
-					fromObjectDelegate: func(t model.CidrSgIcmpRuleID) (bool, []byte, error) {
+					fromObjectDelegate: func(t model.IECidrSgIcmpRuleID) (bool, []byte, error) {
 						b := bytes.NewBuffer(nil)
 						_, e := fmt.Fprintf(b, "%s\x00", t)
 						return e == nil, b.Bytes(), e
@@ -192,12 +192,12 @@ func memCidrSgRulesSchema(schema *MemDbSchema) {
 			indexID: { //nolint:dupl
 				Name:   indexID,
 				Unique: true,
-				Indexer: SingleObjectIndexer[model.CidrSgRuleIdenity]{
-					accessor: func(a any) model.CidrSgRuleIdenity {
+				Indexer: SingleObjectIndexer[model.IECidrSgRuleIdenity]{
+					accessor: func(a any) model.IECidrSgRuleIdenity {
 						switch v := a.(type) {
-						case *model.CidrSgRule:
+						case *model.IECidrSgRule:
 							return v.ID
-						case model.CidrSgRuleIdenity:
+						case model.IECidrSgRuleIdenity:
 							return v
 						default:
 							panic(
@@ -205,7 +205,7 @@ func memCidrSgRulesSchema(schema *MemDbSchema) {
 							)
 						}
 					},
-					fromObjectDelegate: func(t model.CidrSgRuleIdenity) (bool, []byte, error) {
+					fromObjectDelegate: func(t model.IECidrSgRuleIdenity) (bool, []byte, error) {
 						b := bytes.NewBuffer(nil)
 						_, e := fmt.Fprintf(b, "%s\x00", t)
 						return e == nil, b.Bytes(), e
@@ -221,9 +221,9 @@ func memCidrSgRulesSchema(schema *MemDbSchema) {
 				Indexer: SingleObjectIndexer[string]{
 					accessor: func(a any) string {
 						switch v := a.(type) {
-						case *model.CidrSgRule:
+						case *model.IECidrSgRule:
 							return v.ID.SG
-						case model.CidrSgRuleIdenity:
+						case model.IECidrSgRuleIdenity:
 							return v.SG
 						default:
 							panic(
@@ -250,12 +250,12 @@ func memSgSgRulesSchema(schema *MemDbSchema) {
 			indexID: { //nolint:dupl
 				Name:   indexID,
 				Unique: true,
-				Indexer: SingleObjectIndexer[model.SgSgRuleIdentity]{
-					accessor: func(a any) model.SgSgRuleIdentity {
+				Indexer: SingleObjectIndexer[model.IESgSgRuleIdentity]{
+					accessor: func(a any) model.IESgSgRuleIdentity {
 						switch v := a.(type) {
-						case *model.SgSgRule:
+						case *model.IESgSgRule:
 							return v.ID
-						case model.SgSgRuleIdentity:
+						case model.IESgSgRuleIdentity:
 							return v
 						default:
 							panic(
@@ -263,7 +263,7 @@ func memSgSgRulesSchema(schema *MemDbSchema) {
 							)
 						}
 					},
-					fromObjectDelegate: func(t model.SgSgRuleIdentity) (bool, []byte, error) {
+					fromObjectDelegate: func(t model.IESgSgRuleIdentity) (bool, []byte, error) {
 						b := bytes.NewBuffer(nil)
 						_, e := fmt.Fprintf(b, "%s\x00", t)
 						return e == nil, b.Bytes(), e

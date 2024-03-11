@@ -71,26 +71,26 @@ func Proto2MOdelSgSgIcmpRule(src *sg.SgSgIcmpRule) (model.SgSgIcmpRule, error) {
 	return ret, errors.WithMessage(err, api)
 }
 
-// Proto2ModelCidrSgRule conv CidrSgRule (proto --> model)
-func Proto2ModelCidrSgRule(src *sg.CidrSgRule) (model.CidrSgRule, error) {
-	const api = "proto2model-CidrSgRule-conv"
-	var ret model.CidrSgRule
-	err := cidrSgRule{CidrSgRule: &ret}.from(src)
+// Proto2ModelCidrSgRule conv IECidrSgRule (proto --> model)
+func Proto2ModelCidrSgRule(src *sg.CidrSgRule) (model.IECidrSgRule, error) {
+	const api = "proto2model-IECidrSgRule-conv"
+	var ret model.IECidrSgRule
+	err := cidrSgRule{IECidrSgRule: &ret}.from(src)
 	return ret, errors.WithMessage(err, api)
 }
 
 // Proto2ModelCidrSgIcmpRule conv CidrSgIcmpRule (proto --> model)
-func Proto2ModelCidrSgIcmpRule(src *sg.CidrSgIcmpRule) (model.CidrSgIcmpRule, error) {
+func Proto2ModelCidrSgIcmpRule(src *sg.CidrSgIcmpRule) (model.IECidrSgIcmpRule, error) {
 	const api = "proto2model-CidrSgIcmpRule-conv"
-	var ret model.CidrSgIcmpRule
-	err := proto2CidrSgIcmpRule{CidrSgIcmpRule: &ret}.from(src)
+	var ret model.IECidrSgIcmpRule
+	err := proto2CidrSgIcmpRule{IECidrSgIcmpRule: &ret}.from(src)
 	return ret, errors.WithMessage(err, api)
 }
 
-// Proto2ModelSgSgRule conv SgSgRule (proto --> model)
-func Proto2ModelSgSgRule(src *sg.SgSgRule) (ret model.SgSgRule, err error) {
-	const api = "proto2model-SgSgRule-conv"
-	err = sgSgRule{SgSgRule: &ret}.from(src)
+// Proto2ModelSgSgRule conv IESgSgRule (proto --> model)
+func Proto2ModelSgSgRule(src *sg.SgSgRule) (ret model.IESgSgRule, err error) {
+	const api = "proto2model-IESgSgRule-conv"
+	err = sgSgRule{IESgSgRule: &ret}.from(src)
 	return ret, errors.WithMessage(err, api)
 }
 

@@ -501,10 +501,10 @@ func (sui *memDbSuite) TestSyncSGRules() {
 }
 
 func (sui *memDbSuite) newCidrSgRule(proto model.NetworkTransport, cidr string, sg string,
-	traffic model.Traffic, ports ...model.SGRulePorts) model.CidrSgRule {
+	traffic model.Traffic, ports ...model.SGRulePorts) model.IECidrSgRule {
 
-	return model.CidrSgRule{
-		ID: model.CidrSgRuleIdenity{
+	return model.IECidrSgRule{
+		ID: model.IECidrSgRuleIdenity{
 			Transport: proto,
 			CIDR:      sui.newIPNet(cidr),
 			SG:        sg,
@@ -516,7 +516,7 @@ func (sui *memDbSuite) newCidrSgRule(proto model.NetworkTransport, cidr string, 
 
 func (sui *memDbSuite) TestSync_CidrSgRules_FailNoSG() {
 	ctx := context.TODO()
-	rules := []model.CidrSgRule{sui.newCidrSgRule(
+	rules := []model.IECidrSgRule{sui.newCidrSgRule(
 		model.TCP,
 		"1.1.1.1/32",
 		"sg1",
@@ -554,35 +554,35 @@ func (sui *memDbSuite) Test_CidrSgRules_List() {
 		model.INGRESS,
 	)
 	w = sui.regWriter()
-	err = w.SyncCidrSgRules(ctx, []model.CidrSgRule{rule1, rule2}, NoScope)
+	err = w.SyncCidrSgRules(ctx, []model.IECidrSgRule{rule1, rule2}, NoScope)
 	sui.Require().NoError(err)
 	err = w.Commit()
 	sui.Require().NoError(err)
 
-	var allRules dict.HDict[string, model.CidrSgRule]
-	var allRules2check dict.HDict[string, model.CidrSgRule]
+	var allRules dict.HDict[string, model.IECidrSgRule]
+	var allRules2check dict.HDict[string, model.IECidrSgRule]
 	_ = allRules.Insert(rule1.ID.String(), rule1)
 	_ = allRules.Insert(rule2.ID.String(), rule2)
 	sui.Require().Equal(2, allRules.Len())
 	r := sui.regReader()
 	for _, sc := range []Scope{NoScope, SG(sg1.Name, sg2.Name)} {
-		err = r.ListCidrSgRules(ctx, func(csr model.CidrSgRule) error {
+		err = r.ListCidrSgRules(ctx, func(csr model.IECidrSgRule) error {
 			allRules2check.Insert(csr.ID.String(), csr)
 			return nil
 		}, sc)
 		sui.Require().NoError(err)
 		sui.Require().Equal(allRules.Len(), allRules2check.Len())
-		eq := allRules.Eq(&allRules2check, func(vL, vR model.CidrSgRule) bool {
+		eq := allRules.Eq(&allRules2check, func(vL, vR model.IECidrSgRule) bool {
 			return vL.IsEq(vR)
 		})
 		sui.Require().True(eq)
 		allRules2check.Clear()
 	}
 
-	expRules := []model.CidrSgRule{rule1, rule2}
+	expRules := []model.IECidrSgRule{rule1, rule2}
 	for i, sg := range []model.SecurityGroup{sg1, sg2} {
-		var retRule *model.CidrSgRule
-		err = r.ListCidrSgRules(ctx, func(csr model.CidrSgRule) error {
+		var retRule *model.IECidrSgRule
+		err = r.ListCidrSgRules(ctx, func(csr model.IECidrSgRule) error {
 			retRule = &csr
 			return nil
 		}, SG(sg.Name))
@@ -616,7 +616,7 @@ func (sui *memDbSuite) Test_CidrSgRules_DelSG() {
 		model.INGRESS,
 	)
 	w = sui.regWriter()
-	err = w.SyncCidrSgRules(ctx, []model.CidrSgRule{rule1, rule2}, NoScope)
+	err = w.SyncCidrSgRules(ctx, []model.IECidrSgRule{rule1, rule2}, NoScope)
 	sui.Require().NoError(err)
 	err = w.Commit()
 	sui.Require().NoError(err)
@@ -628,8 +628,8 @@ func (sui *memDbSuite) Test_CidrSgRules_DelSG() {
 	sui.Require().NoError(err)
 
 	r := sui.regReader()
-	var rules []model.CidrSgRule
-	err = r.ListCidrSgRules(ctx, func(csr model.CidrSgRule) error {
+	var rules []model.IECidrSgRule
+	err = r.ListCidrSgRules(ctx, func(csr model.IECidrSgRule) error {
 		rules = append(rules, csr)
 		return nil
 	}, NoScope)
@@ -671,7 +671,7 @@ func (sui *memDbSuite) Test_CidrSgRules_IntersectCIDRS() {
 		model.EGRESS,
 	)
 	err = w.SyncCidrSgRules(ctx,
-		[]model.CidrSgRule{rule1, rule2, rule3, rule4},
+		[]model.IECidrSgRule{rule1, rule2, rule3, rule4},
 		NoScope)
 	sui.Require().NoError(err)
 	err = w.Commit()
@@ -706,15 +706,15 @@ func (sui *memDbSuite) Test_CidrSgRules_NoIntersectCIDRS() {
 		model.INGRESS,
 	)
 	err = w.SyncCidrSgRules(ctx,
-		[]model.CidrSgRule{rule1, rule2, rule3},
+		[]model.IECidrSgRule{rule1, rule2, rule3},
 		NoScope)
 	sui.Require().NoError(err)
 	err = w.Commit()
 	sui.Require().NoError(err)
 }
 
-func (sui *memDbSuite) newCidrSgIcmpRule(traffic model.Traffic, cidr, sg string, ipv uint8) model.CidrSgIcmpRule {
-	return model.CidrSgIcmpRule{
+func (sui *memDbSuite) newCidrSgIcmpRule(traffic model.Traffic, cidr, sg string, ipv uint8) model.IECidrSgIcmpRule {
+	return model.IECidrSgIcmpRule{
 		Traffic: traffic,
 		CIDR:    sui.newIPNet(cidr),
 		SG:      sg,
@@ -726,7 +726,7 @@ func (sui *memDbSuite) newCidrSgIcmpRule(traffic model.Traffic, cidr, sg string,
 
 func (sui *memDbSuite) TestSync_CidrSgIcmpRules_FailNoSG() {
 	ctx := context.TODO()
-	rules := []model.CidrSgIcmpRule{sui.newCidrSgIcmpRule(
+	rules := []model.IECidrSgIcmpRule{sui.newCidrSgIcmpRule(
 		model.EGRESS,
 		"1.1.1.1/32",
 		"sg1",
@@ -754,35 +754,35 @@ func (sui *memDbSuite) Test_CidrSgIcmpRules_List() {
 	rule2 := sui.newCidrSgIcmpRule(model.INGRESS, "1.1.1.1/32", sg2.Name, model.IPv6)
 
 	w = sui.regWriter()
-	err = w.SyncCidrSgIcmpRules(ctx, []model.CidrSgIcmpRule{rule1, rule2}, NoScope)
+	err = w.SyncCidrSgIcmpRules(ctx, []model.IECidrSgIcmpRule{rule1, rule2}, NoScope)
 	sui.Require().NoError(err)
 	err = w.Commit()
 	sui.Require().NoError(err)
 
-	var allRules dict.HDict[string, model.CidrSgIcmpRule]
-	var allRules2check dict.HDict[string, model.CidrSgIcmpRule]
+	var allRules dict.HDict[string, model.IECidrSgIcmpRule]
+	var allRules2check dict.HDict[string, model.IECidrSgIcmpRule]
 	_ = allRules.Insert(rule1.ID().String(), rule1)
 	_ = allRules.Insert(rule2.ID().String(), rule2)
 	sui.Require().Equal(2, allRules.Len())
 	r := sui.regReader()
 	for _, sc := range []Scope{NoScope, SG(sg1.Name, sg2.Name)} {
-		err = r.ListCidrSgIcmpRules(ctx, func(r model.CidrSgIcmpRule) error {
+		err = r.ListCidrSgIcmpRules(ctx, func(r model.IECidrSgIcmpRule) error {
 			allRules2check.Insert(r.ID().String(), r)
 			return nil
 		}, sc)
 		sui.Require().NoError(err)
 		sui.Require().Equal(allRules.Len(), allRules2check.Len())
-		eq := allRules.Eq(&allRules2check, func(vL, vR model.CidrSgIcmpRule) bool {
+		eq := allRules.Eq(&allRules2check, func(vL, vR model.IECidrSgIcmpRule) bool {
 			return vL.IsEq(vR)
 		})
 		sui.Require().True(eq)
 		allRules2check.Clear()
 	}
 
-	expRules := []model.CidrSgIcmpRule{rule1, rule2}
+	expRules := []model.IECidrSgIcmpRule{rule1, rule2}
 	for i, sg := range []model.SecurityGroup{sg1, sg2} {
-		var retRule *model.CidrSgIcmpRule
-		err = r.ListCidrSgIcmpRules(ctx, func(r model.CidrSgIcmpRule) error {
+		var retRule *model.IECidrSgIcmpRule
+		err = r.ListCidrSgIcmpRules(ctx, func(r model.IECidrSgIcmpRule) error {
 			retRule = &r
 			return nil
 		}, SG(sg.Name))
@@ -807,7 +807,7 @@ func (sui *memDbSuite) Test_CidrSgIcmpRules_DelSG() {
 	rule2 := sui.newCidrSgIcmpRule(model.INGRESS, "1.1.1.1/32", sg2.Name, model.IPv6)
 
 	w = sui.regWriter()
-	err = w.SyncCidrSgIcmpRules(ctx, []model.CidrSgIcmpRule{rule1, rule2}, NoScope)
+	err = w.SyncCidrSgIcmpRules(ctx, []model.IECidrSgIcmpRule{rule1, rule2}, NoScope)
 	sui.Require().NoError(err)
 	err = w.Commit()
 	sui.Require().NoError(err)
@@ -819,8 +819,8 @@ func (sui *memDbSuite) Test_CidrSgIcmpRules_DelSG() {
 	sui.Require().NoError(err)
 
 	r := sui.regReader()
-	var rules []model.CidrSgIcmpRule
-	err = r.ListCidrSgIcmpRules(ctx, func(csr model.CidrSgIcmpRule) error {
+	var rules []model.IECidrSgIcmpRule
+	err = r.ListCidrSgIcmpRules(ctx, func(csr model.IECidrSgIcmpRule) error {
 		rules = append(rules, csr)
 		return nil
 	}, NoScope)
@@ -843,7 +843,7 @@ func (sui *memDbSuite) Test_CidrSgIcmpRules_IntersectCIDRS() {
 	rule4 := sui.newCidrSgIcmpRule(model.EGRESS, "1.1.1.1/24", sg1.Name, model.IPv4)
 
 	err = w.SyncCidrSgIcmpRules(ctx,
-		[]model.CidrSgIcmpRule{rule1, rule2, rule3, rule4},
+		[]model.IECidrSgIcmpRule{rule1, rule2, rule3, rule4},
 		NoScope)
 	sui.Require().NoError(err)
 	err = w.Commit()
@@ -864,7 +864,7 @@ func (sui *memDbSuite) Test_CidrSgIcmpRules_NoIntersectCIDRS() {
 	rule3 := sui.newCidrSgIcmpRule(model.INGRESS, "1.1.1.1/24", sg1.Name, model.IPv4)
 
 	err = w.SyncCidrSgIcmpRules(ctx,
-		[]model.CidrSgIcmpRule{rule1, rule2, rule3},
+		[]model.IECidrSgIcmpRule{rule1, rule2, rule3},
 		NoScope)
 	sui.Require().NoError(err)
 	err = w.Commit()
@@ -872,10 +872,10 @@ func (sui *memDbSuite) Test_CidrSgIcmpRules_NoIntersectCIDRS() {
 }
 
 func (sui *memDbSuite) newSgSgRule(proto model.NetworkTransport, sgLocal, sg string,
-	traffic model.Traffic, ports ...model.SGRulePorts) model.SgSgRule {
+	traffic model.Traffic, ports ...model.SGRulePorts) model.IESgSgRule {
 
-	return model.SgSgRule{
-		ID: model.SgSgRuleIdentity{
+	return model.IESgSgRule{
+		ID: model.IESgSgRuleIdentity{
 			Transport: proto,
 			Traffic:   traffic,
 			SgLocal:   sgLocal,
@@ -887,7 +887,7 @@ func (sui *memDbSuite) newSgSgRule(proto model.NetworkTransport, sgLocal, sg str
 
 func (sui *memDbSuite) TestSync_SgSgRules_FailNoSG() {
 	ctx := context.TODO()
-	rules := []model.SgSgRule{sui.newSgSgRule(
+	rules := []model.IESgSgRule{sui.newSgSgRule(
 		model.TCP,
 		"sg1",
 		"sg2",
@@ -925,13 +925,13 @@ func (sui *memDbSuite) Test_SgSgRules_List() {
 		model.INGRESS)
 
 	w = sui.regWriter()
-	err = w.SyncSgSgRules(ctx, []model.SgSgRule{rule1, rule2}, NoScope)
+	err = w.SyncSgSgRules(ctx, []model.IESgSgRule{rule1, rule2}, NoScope)
 	sui.Require().NoError(err)
 	err = w.Commit()
 	sui.Require().NoError(err)
 
-	var allRules dict.HDict[string, model.SgSgRule]
-	var allRules2check dict.HDict[string, model.SgSgRule]
+	var allRules dict.HDict[string, model.IESgSgRule]
+	var allRules2check dict.HDict[string, model.IESgSgRule]
 	_ = allRules.Insert(rule1.ID.String(), rule1)
 	_ = allRules.Insert(rule2.ID.String(), rule2)
 	sui.Require().Equal(2, allRules.Len())
@@ -939,23 +939,23 @@ func (sui *memDbSuite) Test_SgSgRules_List() {
 	sgLocalScope := SGLocal(sg1.Name, sg3.Name)
 	sgScope := SG(sg2.Name, sg4.Name)
 	for _, sc := range []Scope{NoScope, sgLocalScope, sgScope, And(sgLocalScope, sgScope)} {
-		err = r.ListSgSgRules(ctx, func(r model.SgSgRule) error {
+		err = r.ListSgSgRules(ctx, func(r model.IESgSgRule) error {
 			allRules2check.Insert(r.ID.String(), r)
 			return nil
 		}, sc)
 		sui.Require().NoError(err)
 		sui.Require().Equal(allRules.Len(), allRules2check.Len())
-		eq := allRules.Eq(&allRules2check, func(vL, vR model.SgSgRule) bool {
+		eq := allRules.Eq(&allRules2check, func(vL, vR model.IESgSgRule) bool {
 			return vL.IsEq(vR)
 		})
 		sui.Require().True(eq)
 		allRules2check.Clear()
 	}
 
-	expRules := []model.SgSgRule{rule1, rule2}
+	expRules := []model.IESgSgRule{rule1, rule2}
 	for i, sg := range []model.SecurityGroup{sg1, sg3} {
-		var retRule *model.SgSgRule
-		err = r.ListSgSgRules(ctx, func(r model.SgSgRule) error {
+		var retRule *model.IESgSgRule
+		err = r.ListSgSgRules(ctx, func(r model.IESgSgRule) error {
 			retRule = &r
 			return nil
 		}, SGLocal(sg.Name))
@@ -964,8 +964,8 @@ func (sui *memDbSuite) Test_SgSgRules_List() {
 		sui.Require().True(expRules[i].IsEq(*retRule))
 	}
 	for i, sg := range []model.SecurityGroup{sg2, sg4} {
-		var retRule *model.SgSgRule
-		err = r.ListSgSgRules(ctx, func(r model.SgSgRule) error {
+		var retRule *model.IESgSgRule
+		err = r.ListSgSgRules(ctx, func(r model.IESgSgRule) error {
 			retRule = &r
 			return nil
 		}, SG(sg.Name))
@@ -1000,7 +1000,7 @@ func (sui *memDbSuite) TestSgSgRules_DelSG() {
 		model.INGRESS)
 
 	w = sui.regWriter()
-	err = w.SyncSgSgRules(ctx, []model.SgSgRule{rule1, rule2}, NoScope)
+	err = w.SyncSgSgRules(ctx, []model.IESgSgRule{rule1, rule2}, NoScope)
 	sui.Require().NoError(err)
 	err = w.Commit()
 	sui.Require().NoError(err)
@@ -1012,8 +1012,8 @@ func (sui *memDbSuite) TestSgSgRules_DelSG() {
 	sui.Require().NoError(err)
 
 	r := sui.regReader()
-	var rules []model.SgSgRule
-	err = r.ListSgSgRules(ctx, func(r model.SgSgRule) error {
+	var rules []model.IESgSgRule
+	err = r.ListSgSgRules(ctx, func(r model.IESgSgRule) error {
 		rules = append(rules, r)
 		return nil
 	}, NoScope)

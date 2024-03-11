@@ -87,17 +87,17 @@ func (rd sGroupsMemDbReader) ListSgSgIcmpRules(_ context.Context, consume func(m
 }
 
 // ListCidrSgRules impl Reader
-func (rd sGroupsMemDbReader) ListCidrSgRules(ctx context.Context, consume func(model.CidrSgRule) error, scope Scope) error {
+func (rd sGroupsMemDbReader) ListCidrSgRules(ctx context.Context, consume func(model.IECidrSgRule) error, scope Scope) error {
 	return memDbListObjects(rd.reader, scope, TblCidrSgRules, consume)
 }
 
 // ListCidrSgIcmpRules impl Reader
-func (rd sGroupsMemDbReader) ListCidrSgIcmpRules(ctx context.Context, consume func(model.CidrSgIcmpRule) error, scope Scope) error {
+func (rd sGroupsMemDbReader) ListCidrSgIcmpRules(ctx context.Context, consume func(model.IECidrSgIcmpRule) error, scope Scope) error {
 	return memDbListObjects(rd.reader, scope, TblCidrSgIcmpRules, consume)
 }
 
 // ListSgSgRules impl Reader
-func (rd sGroupsMemDbReader) ListSgSgRules(_ context.Context, consume func(model.SgSgRule) error, scope Scope) error {
+func (rd sGroupsMemDbReader) ListSgSgRules(_ context.Context, consume func(model.IESgSgRule) error, scope Scope) error {
 	return memDbListObjects(rd.reader, scope, TblSgSgRules, consume)
 }
 

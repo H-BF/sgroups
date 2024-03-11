@@ -508,7 +508,7 @@ func (bt *batch) initSG2FQDNRulesDetails() {
 }
 
 func (bt *batch) initCidrSgRulesDetails() { //nolint:dupl
-	bt.data.CidrSgRules.Rules.Iterate(func(_ model.CidrSgRuleIdenity, r *model.CidrSgRule) bool {
+	bt.data.CidrSgRules.Rules.Iterate(func(_ model.IECidrSgRuleIdenity, r *model.IECidrSgRule) bool {
 		item := ruleDetails{
 			accports: setsUtils{}.makeAccPorts(r.Ports),
 			logs:     r.Logs,
@@ -526,7 +526,7 @@ func (bt *batch) initCidrSgRulesDetails() { //nolint:dupl
 }
 
 func (bt *batch) initSgIeSgRulesDetails() { //nolint:dupl
-	bt.data.SgIeSgRules.Rules.Iterate(func(_ model.SgSgRuleIdentity, r *model.SgSgRule) bool {
+	bt.data.SgIeSgRules.Rules.Iterate(func(_ model.IESgSgRuleIdentity, r *model.IESgSgRule) bool {
 		item := ruleDetails{
 			accports: setsUtils{}.makeAccPorts(r.Ports),
 			logs:     r.Logs,

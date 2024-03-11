@@ -75,16 +75,16 @@ type (
 		FqdnTo    FQDN
 	}
 
-	// CidrSgRuleIdenity -
-	CidrSgRuleIdenity struct {
+	// IECidrSgRuleIdenity -
+	IECidrSgRuleIdenity struct {
 		Transport NetworkTransport
 		Traffic   Traffic
 		SG        string
 		CIDR      net.IPNet
 	}
 
-	// SgSgRuleIdentity -
-	SgSgRuleIdentity struct {
+	// IESgSgRuleIdentity -
+	IESgSgRuleIdentity struct {
 		Transport NetworkTransport
 		Traffic   Traffic
 		SgLocal   string
@@ -106,11 +106,11 @@ type (
 		NdpiProtocols dict.RBSet[dict.StringCiKey]
 	}
 
-	// CidrSgRule proto:CIDR:SG:[INGRESS|EGRESS] rule
-	CidrSgRule = ruleT[CidrSgRuleIdenity]
+	// IECidrSgRule proto:CIDR:SG:[INGRESS|EGRESS] rule
+	IECidrSgRule = ruleT[IECidrSgRuleIdenity]
 
-	// SgSgRule proto:SG:SG:[INGRESS|EGRESS] rule
-	SgSgRule = ruleT[SgSgRuleIdentity]
+	// IESgSgRule proto:SG:SG:[INGRESS|EGRESS] rule
+	IESgSgRule = ruleT[IESgSgRuleIdentity]
 
 	// SyncStatus succeeded sync-op status
 	SyncStatus struct {
@@ -179,8 +179,8 @@ type (
 		Sg      string
 	}
 
-	// CidrSgIcmpRule <IN|E>GRESS:CIDR-SG:ICMP rule
-	CidrSgIcmpRule struct {
+	// IECidrSgIcmpRule <IN|E>GRESS:CIDR-SG:ICMP rule
+	IECidrSgIcmpRule struct {
 		Traffic Traffic
 		CIDR    net.IPNet
 		SG      string
@@ -189,8 +189,8 @@ type (
 		Trace   bool
 	}
 
-	// CidrSgIcmpRuleID <IN|E>GRESS:CIDR-SG:ICMP rule ID
-	CidrSgIcmpRuleID struct {
+	// IECidrSgIcmpRuleID <IN|E>GRESS:CIDR-SG:ICMP rule ID
+	IECidrSgIcmpRuleID struct {
 		Traffic Traffic
 		IPv     uint8
 		CIDR    net.IPNet
@@ -199,10 +199,10 @@ type (
 )
 
 var (
-	_ ruleID[SGRuleIdentity]    = (*SGRuleIdentity)(nil)
-	_ ruleID[FQDNRuleIdentity]  = (*FQDNRuleIdentity)(nil)
-	_ ruleID[CidrSgRuleIdenity] = (*CidrSgRuleIdenity)(nil)
-	_ ruleID[SgSgRuleIdentity]  = (*SgSgRuleIdentity)(nil)
+	_ ruleID[SGRuleIdentity]      = (*SGRuleIdentity)(nil)
+	_ ruleID[FQDNRuleIdentity]    = (*FQDNRuleIdentity)(nil)
+	_ ruleID[IECidrSgRuleIdenity] = (*IECidrSgRuleIdenity)(nil)
+	_ ruleID[IESgSgRuleIdentity]  = (*IESgSgRuleIdentity)(nil)
 )
 
 // PortRangeFactory ...
@@ -437,8 +437,7 @@ func (o SgIcmpRule) IsEq(other SgIcmpRule) bool {
 	return o.Logs == other.Logs &&
 		o.Trace == other.Trace &&
 		o.Sg == other.Sg &&
-		o.Icmp.IPv == other.Icmp.IPv &&
-		o.Icmp.Types.Eq(&other.Icmp.Types)
+		o.Icmp.IsEq(other.Icmp)
 }
 
 // ID -
@@ -454,8 +453,7 @@ func (o SgSgIcmpRule) IsEq(other SgSgIcmpRule) bool {
 	return o.Logs == other.Logs &&
 		o.Trace == other.Trace &&
 		o.SgFrom == other.SgFrom &&
-		o.Icmp.IPv == other.Icmp.IPv &&
-		o.Icmp.Types.Eq(&other.Icmp.Types)
+		o.Icmp.IsEq(o.Icmp)
 }
 
 // ID -
@@ -482,8 +480,7 @@ func (o IESgSgIcmpRule) IsEq(other IESgSgIcmpRule) bool {
 	return o.Traffic == other.Traffic &&
 		o.SgLocal == other.SgLocal &&
 		o.Sg == other.Sg &&
-		o.Icmp.IPv == other.Icmp.IPv &&
-		o.Icmp.Types.Eq(&other.Icmp.Types) &&
+		o.Icmp.IsEq(other.Icmp) &&
 		o.Logs == other.Logs &&
 		o.Trace == other.Trace
 }
@@ -509,23 +506,21 @@ func (o IESgSgIcmpRuleID) String() string {
 }
 
 // IsEq -
-func (o CidrSgIcmpRule) IsEq(other CidrSgIcmpRule) bool {
+func (o IECidrSgIcmpRule) IsEq(other IECidrSgIcmpRule) bool {
 	cidrIsEq := o.CIDR.IP.Equal(other.CIDR.IP) &&
 		bytes.Equal(o.CIDR.Mask, other.CIDR.Mask)
-	icmpIsEq := o.Icmp.IPv == other.Icmp.IPv &&
-		o.Icmp.Types.Eq(&other.Icmp.Types)
 
 	return o.Traffic == other.Traffic &&
+		o.Icmp.IsEq(o.Icmp) &&
 		cidrIsEq &&
 		o.SG == other.SG &&
-		icmpIsEq &&
 		o.Logs == other.Logs &&
 		o.Trace == other.Trace
 }
 
 // ID -
-func (o CidrSgIcmpRule) ID() CidrSgIcmpRuleID {
-	return CidrSgIcmpRuleID{
+func (o IECidrSgIcmpRule) ID() IECidrSgIcmpRuleID {
+	return IECidrSgIcmpRuleID{
 		Traffic: o.Traffic,
 		IPv:     o.Icmp.IPv,
 		CIDR:    o.CIDR,
@@ -534,28 +529,28 @@ func (o CidrSgIcmpRule) ID() CidrSgIcmpRuleID {
 }
 
 // IdentityHash -
-func (o CidrSgIcmpRuleID) IdentityHash() string {
+func (o IECidrSgIcmpRuleID) IdentityHash() string {
 	return o.String()
 }
 
 // String -
-func (o CidrSgIcmpRuleID) String() string {
+func (o IECidrSgIcmpRuleID) String() string {
 	return fmt.Sprintf("icmp%v:cidr(%s)sg(%s)%s", o.IPv, &o.CIDR, o.SG, o.Traffic)
 }
 
 // String -
-func (o CidrSgRuleIdenity) String() string {
+func (o IECidrSgRuleIdenity) String() string {
 	return fmt.Sprintf("%s:cidr(%s)sg(%s)%s",
 		o.Transport, &o.CIDR, o.SG, o.Traffic)
 }
 
 // IdentityHash -
-func (o CidrSgRuleIdenity) IdentityHash() string {
+func (o IECidrSgRuleIdenity) IdentityHash() string {
 	return o.String()
 }
 
 // Cmp -
-func (o CidrSgRuleIdenity) Cmp(other CidrSgRuleIdenity) int {
+func (o IECidrSgRuleIdenity) Cmp(other IECidrSgRuleIdenity) int {
 	l, r := o.String(), other.String()
 	if l == r {
 		return 0
@@ -567,22 +562,28 @@ func (o CidrSgRuleIdenity) Cmp(other CidrSgRuleIdenity) int {
 }
 
 // IsEq -
-func (o CidrSgRuleIdenity) IsEq(other CidrSgRuleIdenity) bool {
+func (o IECidrSgRuleIdenity) IsEq(other IECidrSgRuleIdenity) bool {
 	return o.String() == other.String()
 }
 
 // IdentityHash implements ruleID.
-func (o SgSgRuleIdentity) IdentityHash() string {
+func (o IESgSgRuleIdentity) IdentityHash() string {
 	return o.String()
 }
 
 // IsEq implements ruleID.
-func (o SgSgRuleIdentity) IsEq(other SgSgRuleIdentity) bool {
+func (o IESgSgRuleIdentity) IsEq(other IESgSgRuleIdentity) bool {
 	return o.String() == other.String()
 }
 
 // String implements ruleID.
-func (o SgSgRuleIdentity) String() string {
+func (o IESgSgRuleIdentity) String() string {
 	return fmt.Sprintf("%s:sg-local(%s)sg(%s)%s",
 		o.Transport, o.SgLocal, o.Sg, o.Traffic)
+}
+
+// IsEq -
+func (o ICMP) IsEq(other ICMP) bool {
+	return o.IPv == other.IPv &&
+		o.Types.Eq(&other.Types)
 }

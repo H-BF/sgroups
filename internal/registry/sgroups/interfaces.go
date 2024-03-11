@@ -17,9 +17,9 @@ type (
 		ListFqdnRules(ctx context.Context, consume func(model.FQDNRule) error, scope Scope) error
 		ListSgIcmpRules(ctx context.Context, consume func(model.SgIcmpRule) error, scope Scope) error
 		ListSgSgIcmpRules(ctx context.Context, consume func(model.SgSgIcmpRule) error, scope Scope) error
-		ListCidrSgRules(ctx context.Context, consume func(model.CidrSgRule) error, scope Scope) error
-		ListCidrSgIcmpRules(ctx context.Context, consume func(model.CidrSgIcmpRule) error, scope Scope) error
-		ListSgSgRules(ctx context.Context, consume func(model.SgSgRule) error, scope Scope) error
+		ListCidrSgRules(ctx context.Context, consume func(model.IECidrSgRule) error, scope Scope) error
+		ListCidrSgIcmpRules(ctx context.Context, consume func(model.IECidrSgIcmpRule) error, scope Scope) error
+		ListSgSgRules(ctx context.Context, consume func(model.IESgSgRule) error, scope Scope) error
 		ListIESgSgIcmpRules(ctx context.Context, consume func(rule model.IESgSgIcmpRule) error, scope Scope) error
 		GetSyncStatus(ctx context.Context) (*model.SyncStatus, error)
 	}
@@ -38,9 +38,9 @@ type (
 		SyncFqdnRules(ctx context.Context, rules []model.FQDNRule, scope Scope, opts ...Option) error
 		SyncSgIcmpRules(ctx context.Context, rules []model.SgIcmpRule, scope Scope, opts ...Option) error
 		SyncSgSgIcmpRules(ctx context.Context, rules []model.SgSgIcmpRule, scope Scope, opts ...Option) error
-		SyncCidrSgRules(ctx context.Context, rules []model.CidrSgRule, scope Scope, opts ...Option) error
-		SyncCidrSgIcmpRules(ctx context.Context, rules []model.CidrSgIcmpRule, scope Scope, opts ...Option) error
-		SyncSgSgRules(ctx context.Context, rules []model.SgSgRule, scope Scope, opts ...Option) error
+		SyncCidrSgRules(ctx context.Context, rules []model.IECidrSgRule, scope Scope, opts ...Option) error
+		SyncCidrSgIcmpRules(ctx context.Context, rules []model.IECidrSgIcmpRule, scope Scope, opts ...Option) error
+		SyncSgSgRules(ctx context.Context, rules []model.IESgSgRule, scope Scope, opts ...Option) error
 		SyncIESgSgIcmpRules(ctx context.Context, rules []model.IESgSgIcmpRule, scope Scope, opts ...Option) error
 		Commit() error
 		Abort()

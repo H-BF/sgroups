@@ -169,9 +169,9 @@ func (idx SgSgIcmpIdIndexer) FromArgs(args ...interface{}) ([]byte, error) { //n
 func (idx ProtoSgTrafficIndexer) FromObject(obj any) (bool, []byte, error) {
 	b := bytes.NewBuffer(nil)
 	switch a := obj.(type) {
-	case model.CidrSgRuleIdenity:
+	case model.IECidrSgRuleIdenity:
 		_, _ = fmt.Fprintf(b, "%s:sg(%s)%s\x00", a.Transport, a.SG, a.Transport)
-	case *model.CidrSgRule:
+	case *model.IECidrSgRule:
 		id := a.ID
 		_, _ = fmt.Fprintf(b, "%s:sg(%s)%s\x00", id.Transport, id.SG, id.Transport)
 	default:

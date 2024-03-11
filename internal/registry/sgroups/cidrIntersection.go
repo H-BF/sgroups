@@ -27,9 +27,9 @@ type (
 
 func groupKeyFromRule(i interface{}) (ret interface{}) {
 	switch r := i.(type) {
-	case *model.CidrSgRule:
+	case *model.IECidrSgRule:
 		ret = groupKey(fmt.Sprintf("%s:sg(%s)%s", r.ID.Transport, r.ID.SG, r.ID.Traffic))
-	case *model.CidrSgIcmpRule:
+	case *model.IECidrSgIcmpRule:
 		ret = groupKey(fmt.Sprintf("icmp%v:sg(%s)%s", r.Icmp.IPv, r.SG, r.Traffic))
 	default:
 		panic(fmt.Sprintf("unsupported type for groupKey: %T", r))
@@ -39,12 +39,12 @@ func groupKeyFromRule(i interface{}) (ret interface{}) {
 
 func elementSelector(i interface{}) (ret interface{}) {
 	switch r := i.(type) {
-	case *model.CidrSgRule:
+	case *model.IECidrSgRule:
 		ret = ref{
 			id:   r.ID,
 			CIDR: r.ID.CIDR,
 		}
-	case *model.CidrSgIcmpRule:
+	case *model.IECidrSgIcmpRule:
 		ret = ref{
 			id:   r.ID(),
 			CIDR: r.CIDR,
