@@ -31,6 +31,7 @@ type ( // events from netlink
 type NetlinkEventSource struct {
 	Subject observer.Subject
 	nl.NetlinkWatcher
+	NetNS string
 
 	runOnce   sync.Once
 	closeOnce sync.Once
@@ -57,22 +58,21 @@ func (w *NetlinkEventSource) Run(ctx context.Context) error {
 	w.runOnce.Do(func() {
 		neverRun = true
 	})
-	log := logger.FromContext(ctx).Named(job)
 	if !neverRun {
 		return fmt.Errorf("%s: it has been run or closed yet", job)
 	}
+	log := logger.FromContext(ctx).Named(job)
 	w.stopped = make(chan struct{})
 	log.Info("start")
 	defer func() {
 		log.Info("stop")
 		close(w.stopped)
 	}()
-	stream := w.Stream()
-	if stream == nil {
-		log.Info("will exit cause it has closed")
-		return nil
+	if err := w.gatherLinkState(ctx); err != nil {
+		log.Errorf("will exit cause %v", err)
+		return err
 	}
-	for {
+	for stream := w.Stream(); ; {
 		select {
 		case <-ctx.Done():
 			log.Info("will exit cause it has canceled")
@@ -100,4 +100,40 @@ func (w *NetlinkEventSource) Run(ctx context.Context) error {
 			}
 		}
 	}
+}
+
+func (w *NetlinkEventSource) gatherLinkState(ctx context.Context) (err error) {
+	defer func() {
+		if err != nil {
+			w.Subject.Notify(NetlinkError{ErrMsg: nl.ErrMsg{Err: err}})
+		}
+	}()
+
+	var lister nl.LinkLister
+	if lister, err = nl.NewLinkLister(ctx, nl.WithNetnsName{Netns: w.NetNS}); err != nil {
+		return err
+	}
+	defer lister.Close() //nolint
+	var links []nl.Link
+	if links, err = lister.List(ctx); err != nil {
+		return err
+	}
+	var ret NetlinkUpdates
+	for _, lnk := range links {
+		var addrs []nl.Addr
+		if addrs, err = lister.Addrs(ctx, lnk); err != nil {
+			return err
+		}
+		for _, a := range addrs {
+			ret.Updates = append(ret.Updates,
+				nl.AddrUpdateMsg{
+					Address:   *a.IPNet,
+					LinkIndex: lnk.Attrs().Index,
+				})
+		}
+	}
+	if len(ret.Updates) > 0 {
+		w.Subject.Notify(ret)
+	}
+	return nil
 }

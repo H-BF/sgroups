@@ -31,7 +31,7 @@ func NewNetlinkWatcher(opts ...WatcherOption) (NetlinkWatcher, error) {
 			sco |= t
 		case WithLinger:
 			age = t.Linger
-		case WithNetns:
+		case WithNetnsName:
 			ns = t.Netns
 		default:
 			return nil, multierr.Append(ErrUnsupportedOption,
@@ -95,9 +95,10 @@ type (
 		Linger time.Duration
 	}
 
-	// WithNetns select net NS(by name) for watching
-	WithNetns struct {
+	// WithNetnsName select net NS(by name) for watching
+	WithNetnsName struct {
 		WatcherOption
+		linkListerOpt
 		Netns string
 	}
 
