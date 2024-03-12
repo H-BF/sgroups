@@ -191,6 +191,7 @@ func (srv *sgService) FindCidrSgRules(ctx context.Context, req *sg.FindCidrSgRul
 	return resp, err
 }
 
+// FindCidrSgIcmpRules -
 func (srv *sgService) FindCidrSgIcmpRules(ctx context.Context, req *sg.FindCidrSgIcmpRulesReq) (resp *sg.CidrSgIcmpRulesResp, err error) {
 	defer func() {
 		err = correctError(err)
@@ -210,7 +211,7 @@ func (srv *sgService) FindCidrSgIcmpRules(ctx context.Context, req *sg.FindCidrS
 		if e == nil {
 			resp.Rules = append(resp.Rules, p)
 		}
-		return errors.WithMessagef(e, "convert CidrSgIcmpRule '%s' to proto", r.ID())
+		return errors.WithMessagef(e, "convert IECidrSgIcmpRule '%s' to proto", r.ID())
 	}, sc)
 	return resp, err
 }

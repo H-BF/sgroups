@@ -79,9 +79,9 @@ func Proto2ModelCidrSgRule(src *sg.CidrSgRule) (model.IECidrSgRule, error) {
 	return ret, errors.WithMessage(err, api)
 }
 
-// Proto2ModelCidrSgIcmpRule conv CidrSgIcmpRule (proto --> model)
-func Proto2ModelCidrSgIcmpRule(src *sg.CidrSgIcmpRule) (model.IECidrSgIcmpRule, error) {
-	const api = "proto2model-CidrSgIcmpRule-conv"
+// Proto2ModelIECidrSgIcmpRule conv CidrSgIcmpRule (proto --> model)
+func Proto2ModelIECidrSgIcmpRule(src *sg.CidrSgIcmpRule) (model.IECidrSgIcmpRule, error) {
+	const api = "proto2model-IECidrSgIcmpRule-conv"
 	var ret model.IECidrSgIcmpRule
 	err := proto2CidrSgIcmpRule{IECidrSgIcmpRule: &ret}.from(src)
 	return ret, errors.WithMessage(err, api)

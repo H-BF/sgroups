@@ -325,7 +325,7 @@ func (wr *sGroupsMemDbWriter) SyncCidrSgRules(ctx context.Context, rules []model
 // SyncCidrSgIcmpRules impl Writer interface
 func (wr *sGroupsMemDbWriter) SyncCidrSgIcmpRules(ctx context.Context, rules []model.IECidrSgIcmpRule, scope Scope, opts ...Option) error {
 	const api = "mem-db/SyncCidrSgIcmpRules"
-	tblID := TblCidrSgIcmpRules
+	tblID := TblIECidrSgIcmpRules
 	it, err := wr.writer.Get(tblID, indexID)
 	if err != nil {
 		return errors.WithMessage(err, api)

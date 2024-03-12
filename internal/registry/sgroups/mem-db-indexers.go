@@ -36,9 +36,6 @@ type (
 
 	// SgSgIcmpIdIndexer -
 	SgSgIcmpIdIndexer struct{}
-
-	// ProtoSgTrafficIndexer -
-	ProtoSgTrafficIndexer struct{}
 )
 
 // FromObject impl Indexer
@@ -165,31 +162,6 @@ func (idx SgSgIcmpIdIndexer) FromArgs(args ...interface{}) ([]byte, error) { //n
 	return b.Bytes(), nil
 }
 
-// FromObject impl Indexer
-func (idx ProtoSgTrafficIndexer) FromObject(obj any) (bool, []byte, error) {
-	b := bytes.NewBuffer(nil)
-	switch a := obj.(type) {
-	case model.IECidrSgRuleIdenity:
-		_, _ = fmt.Fprintf(b, "%s:sg(%s)%s\x00", a.Transport, a.SG, a.Transport)
-	case *model.IECidrSgRule:
-		id := a.ID
-		_, _ = fmt.Fprintf(b, "%s:sg(%s)%s\x00", id.Transport, id.SG, id.Transport)
-	default:
-		return false, nil,
-			errors.Errorf("ProtoSgTrafficIndexer: unsupported data type %T", a)
-	}
-	return b.Len() > 0, b.Bytes(), nil
-}
-
-// FromArgs impl Indexer
-func (idx ProtoSgTrafficIndexer) FromArgs(args ...any) ([]byte, error) { //nolint:dupl
-	if len(args) != 1 {
-		return nil, errors.New("must provide only a single argument")
-	}
-	_, b, e := idx.FromObject(args[0])
-	return b, e
-}
-
 // FromObject -
 func (idx SingleObjectIndexer[T]) FromObject(obj any) (bool, []byte, error) {
 	if idx.accessor == nil {
@@ -215,6 +187,11 @@ func (idx SingleObjectIndexer[T]) FromArgs(args ...any) ([]byte, error) { //noli
 	}
 	_, b, e := idx.FromObject(args[0])
 	return b, e
+}
+
+func (idx SingleObjectIndexer[T]) overrideFromObjectDelegate(f func(T) (bool, []byte, error)) SingleObjectIndexer[T] {
+	idx.fromObjectDelegate = f
+	return idx
 }
 
 type bigInt struct {

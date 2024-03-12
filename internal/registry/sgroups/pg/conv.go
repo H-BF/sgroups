@@ -438,7 +438,7 @@ func (o IECidrSgRule) ToModel() (ret sgm.IECidrSgRule, err error) {
 }
 
 // FromModel -
-func (o *CidrSgIcmpRule) FromModel(m sgm.IECidrSgIcmpRule) error {
+func (o *IECidrSgIcmpRule) FromModel(m sgm.IECidrSgIcmpRule) error {
 	o.CIDR = m.CIDR
 	o.SG = m.SG
 	o.Logs = m.Logs
@@ -450,7 +450,7 @@ func (o *CidrSgIcmpRule) FromModel(m sgm.IECidrSgIcmpRule) error {
 }
 
 // ToModel -
-func (o CidrSgIcmpRule) ToModel() (ret sgm.IECidrSgIcmpRule, err error) {
+func (o IECidrSgIcmpRule) ToModel() (ret sgm.IECidrSgIcmpRule, err error) {
 	ret.CIDR = o.CIDR
 	ret.SG = o.SG
 	ret.Logs = o.Logs

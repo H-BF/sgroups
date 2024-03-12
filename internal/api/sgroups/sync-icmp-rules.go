@@ -181,7 +181,7 @@ var syncIESgSgIcmpRule = syncAlg[model.IESgSgIcmpRule, *sg.IESgSgIcmpRule]{
 	},
 }.process
 
-var syncCidrSgIcmpRule = syncAlg[model.IECidrSgIcmpRule, *sg.CidrSgIcmpRule]{
+var syncIECidrSgIcmpRule = syncAlg[model.IECidrSgIcmpRule, *sg.CidrSgIcmpRule]{
 	makePrimaryKeyScope: func(r []model.IECidrSgIcmpRule) registry.Scope {
 		return registry.PKScopedCidrSgIcmpRules(r...)
 	},

@@ -59,7 +59,7 @@ func (srv *sgService) Sync(ctx context.Context, req *sg.SyncReq) (ret *emptypb.E
 		err = syncIESgSgIcmpRule(ctx, wr.SyncIESgSgIcmpRules, rules, ops)
 	case *sg.SyncReq_CidrSgImcpRules:
 		rules := sbj.CidrSgImcpRules.GetRules()
-		err = syncCidrSgIcmpRule(ctx, wr.SyncCidrSgIcmpRules, rules, ops)
+		err = syncIECidrSgIcmpRule(ctx, wr.SyncCidrSgIcmpRules, rules, ops)
 	default:
 		err = status.Errorf(
 			codes.InvalidArgument, "sync unsupported subject type %T", sbj,

@@ -137,8 +137,8 @@ type (
 		Trace   bool             `db:"trace"`
 	}
 
-	// CidrSgIcmpRule -
-	CidrSgIcmpRule struct {
+	// IECidrSgIcmpRule -
+	IECidrSgIcmpRule struct {
 		ICMP
 		Traffic Traffic   `db:"traffic"`
 		CIDR    net.IPNet `db:"cidr"`

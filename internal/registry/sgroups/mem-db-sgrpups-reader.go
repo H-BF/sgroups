@@ -93,7 +93,7 @@ func (rd sGroupsMemDbReader) ListCidrSgRules(ctx context.Context, consume func(m
 
 // ListCidrSgIcmpRules impl Reader
 func (rd sGroupsMemDbReader) ListCidrSgIcmpRules(ctx context.Context, consume func(model.IECidrSgIcmpRule) error, scope Scope) error {
-	return memDbListObjects(rd.reader, scope, TblCidrSgIcmpRules, consume)
+	return memDbListObjects(rd.reader, scope, TblIECidrSgIcmpRules, consume)
 }
 
 // ListSgSgRules impl Reader

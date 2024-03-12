@@ -36,6 +36,7 @@ type SyncerOfIESgSgIcmpRules = syncObj[sgm.IESgSgIcmpRule, sgm.IESgSgIcmpRuleID]
 // SyncerOfCidrSgRules -
 type SyncerOfCidrSgRules = syncObj[sgm.IECidrSgRule, sgm.IECidrSgRuleIdenity]
 
+// SyncerOfCidrSgIcmpRules -
 type SyncerOfCidrSgIcmpRules = syncObj[sgm.IECidrSgIcmpRule, sgm.IECidrSgIcmpRuleID]
 
 // SyncerOfSgSgRules -
@@ -348,7 +349,7 @@ func (o *syncObj[T, tFlt]) AddData(ctx context.Context, data ...T) error { //nol
 			}
 			raw = append(raw, []any{x.Proto, x.CIDR, x.SG, x.Traffic, x.Ports, x.Logs, x.Trace})
 		case sgm.IECidrSgIcmpRule:
-			var x CidrSgIcmpRule
+			var x IECidrSgIcmpRule
 			if err := x.FromModel(v); err != nil {
 				return err
 			}

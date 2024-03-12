@@ -396,8 +396,8 @@ func (rd *pgDbReader) ListCidrSgIcmpRules(ctx context.Context, consume func(mode
 		if e != nil {
 			return e
 		}
-		scanner := pgx.RowToStructByName[pg.CidrSgIcmpRule]
-		return pgxIterateRowsAndClose(rows, scanner, func(rule pg.CidrSgIcmpRule) error {
+		scanner := pgx.RowToStructByName[pg.IECidrSgIcmpRule]
+		return pgxIterateRowsAndClose(rows, scanner, func(rule pg.IECidrSgIcmpRule) error {
 			m, e1 := rule.ToModel()
 			if e1 != nil {
 				return e1

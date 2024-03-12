@@ -231,7 +231,7 @@ func regHelpers() {
 	regIsEQ(func(l, r domain.IECidrSgIcmpRule) bool { return l.IsEq(r) })
 	regProto2domain(func(p *protos.CidrSgIcmpRule, r *domain.IECidrSgIcmpRule) {
 		var e error
-		if *r, e = sgAPI.Proto2ModelCidrSgIcmpRule(p); e != nil {
+		if *r, e = sgAPI.Proto2ModelIECidrSgIcmpRule(p); e != nil {
 			panic(e)
 		}
 	})
