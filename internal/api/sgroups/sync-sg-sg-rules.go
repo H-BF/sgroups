@@ -4,6 +4,8 @@ import (
 	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
+
+	"github.com/pkg/errors"
 )
 
 type (
@@ -38,6 +40,16 @@ func (r sgSgRule) from(src *sg.SgSgRule) error {
 	}
 	r.Logs = src.GetLogs()
 	r.Trace = src.GetTrace()
+	switch src.GetAction() {
+	case sg.DefaultAction_DEFAULT:
+		r.Action = model.DEFAULT
+	case sg.DefaultAction_DROP:
+		r.Action = model.DROP
+	case sg.DefaultAction_ACCEPT:
+		r.Action = model.ACCEPT
+	default:
+		return errors.Errorf("unsupported action ('%s')", src.GetAction())
+	}
 	e = ((*rulePorts)(&r.Ports)).from(src.GetPorts())
 	return e
 }

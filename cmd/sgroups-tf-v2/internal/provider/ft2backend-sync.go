@@ -100,7 +100,7 @@ func (tfSg2Backend) sync(ctx context.Context, items NamedResources[sgItem], clie
 				return diags
 			}
 			da := item.DefaultAction.ValueString()
-			sg.DefaultAction = protos.SecGroup_DefaultAction(protos.SecGroup_DefaultAction_value[da])
+			sg.DefaultAction = protos.DefaultAction(protos.DefaultAction_value[da])
 			sg.Trace = item.Trace.ValueBool()
 			sg.Logs = item.Logs.ValueBool()
 		}

@@ -55,15 +55,15 @@ func SGroupsRcSG() *schema.Resource {
 				Type:        schema.TypeBool,
 			},
 			RcLabelDefaultAction: {
-				Default:     sgroupsAPI.SecGroup_DROP.String(),
+				Default:     sgroupsAPI.DefaultAction_DROP.String(),
 				Optional:    true,
 				Description: "set default action on SG",
 				Type:        schema.TypeString,
 				ValidateDiagFunc: func(i interface{}, _ cty.Path) diag.Diagnostics {
 					s := i.(string)
-					ok := sgroupsAPI.SecGroup_ACCEPT.String() == s ||
-						sgroupsAPI.SecGroup_DROP.String() == s ||
-						sgroupsAPI.SecGroup_DEFAULT.String() == s
+					ok := sgroupsAPI.DefaultAction_ACCEPT.String() == s ||
+						sgroupsAPI.DefaultAction_DROP.String() == s ||
+						sgroupsAPI.DefaultAction_DEFAULT.String() == s
 					if ok {
 						return nil
 					}

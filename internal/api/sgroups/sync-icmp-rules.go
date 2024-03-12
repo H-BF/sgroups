@@ -51,6 +51,16 @@ func (r proto2SgIcmpRule) from(src *sg.SgIcmpRule) error {
 		}
 		r.Icmp.Types.Put(uint8(n))
 	}
+	switch src.GetAction() {
+	case sg.DefaultAction_DEFAULT:
+		r.Action = model.DEFAULT
+	case sg.DefaultAction_DROP:
+		r.Action = model.DROP
+	case sg.DefaultAction_ACCEPT:
+		r.Action = model.ACCEPT
+	default:
+		return errors.Errorf("unsupported action ('%s')", src.GetAction())
+	}
 	return nil
 }
 
@@ -75,6 +85,16 @@ func (r proto2SgSgIcmpRule) from(src *sg.SgSgIcmpRule) error {
 			return errors.Errorf("ICMP type(s) must be in [0-255] but we got (%v)", n)
 		}
 		r.Icmp.Types.Put(uint8(n))
+	}
+	switch src.GetAction() {
+	case sg.DefaultAction_DEFAULT:
+		r.Action = model.DEFAULT
+	case sg.DefaultAction_DROP:
+		r.Action = model.DROP
+	case sg.DefaultAction_ACCEPT:
+		r.Action = model.ACCEPT
+	default:
+		return errors.Errorf("unsupported action ('%s')", src.GetAction())
 	}
 	return nil
 }
@@ -106,6 +126,16 @@ func (r proto2IESgSgIcmpRule) from(src *sg.IESgSgIcmpRule) error {
 			return errors.Errorf("ICMP type(s) must be in [0-255] but we got (%v)", n)
 		}
 		r.Icmp.Types.Put(uint8(n))
+	}
+	switch src.GetAction() {
+	case sg.DefaultAction_DEFAULT:
+		r.Action = model.DEFAULT
+	case sg.DefaultAction_DROP:
+		r.Action = model.DROP
+	case sg.DefaultAction_ACCEPT:
+		r.Action = model.ACCEPT
+	default:
+		return errors.Errorf("unsupported action ('%s')", src.GetAction())
 	}
 	return nil
 }
@@ -145,6 +175,16 @@ func (r proto2CidrSgIcmpRule) from(src *sg.CidrSgIcmpRule) error {
 			return errors.Errorf("ICMP type(s) must be in [0-255] but we got (%v)", n)
 		}
 		r.Icmp.Types.Put(uint8(n))
+	}
+	switch src.GetAction() {
+	case sg.DefaultAction_DEFAULT:
+		r.Action = model.DEFAULT
+	case sg.DefaultAction_DROP:
+		r.Action = model.DROP
+	case sg.DefaultAction_ACCEPT:
+		r.Action = model.ACCEPT
+	default:
+		return errors.Errorf("unsupported action ('%s')", src.GetAction())
 	}
 	return nil
 }

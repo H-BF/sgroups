@@ -60,6 +60,9 @@ func sgRule2proto(src model.SGRule) (*sg.Rule, error) {
 	ret.SgFrom = src.ID.SgFrom
 	ret.SgTo = src.ID.SgTo
 	var e error
+	if ret.Action, e = sgDefaultAction2proto(src.Action); e != nil {
+		return &ret, e
+	}
 	ret.Ports, e = sgAccPorts2proto(src.Ports)
 	return &ret, e
 }
@@ -79,6 +82,9 @@ func sgFqdnRule2proto(src model.FQDNRule) (*sg.FqdnRule, error) {
 	ret.SgFrom = src.ID.SgFrom
 	ret.FQDN = src.ID.FqdnTo.String()
 	var e error
+	if ret.Action, e = sgDefaultAction2proto(src.Action); e != nil {
+		return &ret, e
+	}
 	ret.Ports, e = sgAccPorts2proto(src.Ports)
 	return &ret, e
 }
@@ -102,7 +108,9 @@ func sgIcmpRule2proto(src model.SgIcmpRule) (*sg.SgIcmpRule, error) {
 		ret.ICMP.Types = append(ret.ICMP.Types, uint32(t))
 		return true
 	})
-	return &ret, nil
+	var e error
+	ret.Action, e = sgDefaultAction2proto(src.Action)
+	return &ret, e
 }
 
 func sgSgIcmpRule2proto(src model.SgSgIcmpRule) (*sg.SgSgIcmpRule, error) {
@@ -125,7 +133,9 @@ func sgSgIcmpRule2proto(src model.SgSgIcmpRule) (*sg.SgSgIcmpRule, error) {
 		ret.ICMP.Types = append(ret.ICMP.Types, uint32(t))
 		return true
 	})
-	return &ret, nil
+	var e error
+	ret.Action, e = sgDefaultAction2proto(src.Action)
+	return &ret, e
 }
 
 func ieSgSgIcmpRule2proto(src model.IESgSgIcmpRule) (*sg.IESgSgIcmpRule, error) {
@@ -152,7 +162,8 @@ func ieSgSgIcmpRule2proto(src model.IESgSgIcmpRule) (*sg.IESgSgIcmpRule, error) 
 		ret.ICMP.Types = append(ret.ICMP.Types, uint32(t))
 		return true
 	})
-	return ret, nil
+	ret.Action, e = sgDefaultAction2proto(src.Action)
+	return ret, e
 }
 
 func cidrSgRule2proto(src model.CidrSgRule) (*sg.CidrSgRule, error) {
@@ -172,7 +183,8 @@ func cidrSgRule2proto(src model.CidrSgRule) (*sg.CidrSgRule, error) {
 	if ret.Ports, e = sgAccPorts2proto(src.Ports); e != nil {
 		return nil, e
 	}
-	return ret, nil
+	ret.Action, e = sgDefaultAction2proto(src.Action)
+	return ret, e
 }
 
 func cidrSgIcmpRule2proto(src model.CidrSgIcmpRule) (*sg.CidrSgIcmpRule, error) {
@@ -199,7 +211,8 @@ func cidrSgIcmpRule2proto(src model.CidrSgIcmpRule) (*sg.CidrSgIcmpRule, error) 
 		ret.ICMP.Types = append(ret.ICMP.Types, uint32(t))
 		return true
 	})
-	return ret, nil
+	ret.Action, e = sgDefaultAction2proto(src.Action)
+	return ret, e
 }
 
 func sgSgRule2proto(src model.SgSgRule) (*sg.SgSgRule, error) {
@@ -219,7 +232,8 @@ func sgSgRule2proto(src model.SgSgRule) (*sg.SgSgRule, error) {
 	if ret.Ports, e = sgAccPorts2proto(src.Ports); e != nil {
 		return nil, e
 	}
-	return ret, nil
+	ret.Action, e = sgDefaultAction2proto(src.Action)
+	return ret, e
 }
 
 func (srv *sgService) GetRules(ctx context.Context, req *sg.GetRulesReq) (resp *sg.RulesResp, err error) {

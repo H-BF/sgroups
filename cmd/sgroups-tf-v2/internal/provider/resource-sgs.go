@@ -69,12 +69,12 @@ func (item sgItem) Attributes() map[string]schema.Attribute {
 			Description: "Default action on security group",
 			Optional:    true,
 			Computed:    true,
-			Default:     stringdefault.StaticString(protos.SecGroup_DROP.String()),
+			Default:     stringdefault.StaticString(protos.DefaultAction_DROP.String()),
 			Validators: []validator.String{
 				stringvalidator.OneOf(
-					protos.SecGroup_ACCEPT.String(),
-					protos.SecGroup_DROP.String(),
-					protos.SecGroup_DEFAULT.String()),
+					protos.DefaultAction_ACCEPT.String(),
+					protos.DefaultAction_DROP.String(),
+					protos.DefaultAction_DEFAULT.String()),
 			},
 		},
 		"networks": schema.SetAttribute{

@@ -168,7 +168,7 @@ func (rd *pgDbReader) argsForListSGRules(scope Scope) ([]any, error) { //nolint:
 // ListSGRules impl Reader interface
 func (rd *pgDbReader) ListSGRules(ctx context.Context, consume func(model.SGRule) error, scope Scope) error { //nolint:dupl
 	const (
-		qry = "select sg_from, sg_to, proto, ports, logs from sgroups.list_sg_rule($1, $2)"
+		qry = "select sg_from, sg_to, proto, ports, logs, action from sgroups.list_sg_rule($1, $2)"
 	)
 	args, err := rd.argsForListSGRules(scope)
 	if err != nil {
@@ -212,7 +212,7 @@ func (rd *pgDbReader) argsForListFQDNRules(scope Scope) ([]any, error) {
 // ListFqdnRules impl Reader interface
 func (rd *pgDbReader) ListFqdnRules(ctx context.Context, consume func(model.FQDNRule) error, scope Scope) error { //nolint:dupl
 	const (
-		qry = "select sg_from, fqdn_to, proto, ports, logs, ndpi_protocols from sgroups.list_fqdn_rule($1)"
+		qry = "select sg_from, fqdn_to, proto, ports, logs, ndpi_protocols, action from sgroups.list_fqdn_rule($1)"
 	)
 	args, err := rd.argsForListFQDNRules(scope)
 	if err != nil {
@@ -255,7 +255,7 @@ func (rd *pgDbReader) argsForListSgIcmpRules(scope Scope) ([]any, error) {
 // ListSgIcmpRule impl Reader
 func (rd *pgDbReader) ListSgIcmpRules(ctx context.Context, consume func(model.SgIcmpRule) error, scope Scope) error { //nolint:dupl
 	const (
-		qry = "select ip_v, types, sg, logs, trace from sgroups.list_sg_icmp_rule($1)"
+		qry = "select ip_v, types, sg, logs, trace, action from sgroups.list_sg_icmp_rule($1)"
 	)
 	args, err := rd.argsForListSgIcmpRules(scope)
 	if err != nil {
@@ -317,7 +317,7 @@ func (rd *pgDbReader) argsForListSgSgIcmpRules(scope Scope) ([]any, error) {
 // ListSgSgIcmpRules impl Reader
 func (rd *pgDbReader) ListSgSgIcmpRules(ctx context.Context, consume func(model.SgSgIcmpRule) error, scope Scope) error { //nolint:dupl
 	const (
-		qry = "select ip_v, types, sg_from, sg_to, logs, trace from sgroups.list_sg_sg_icmp_rule($1, $2)"
+		qry = "select ip_v, types, sg_from, sg_to, logs, trace, action from sgroups.list_sg_sg_icmp_rule($1, $2)"
 	)
 	args, err := rd.argsForListSgSgIcmpRules(scope)
 	if err != nil {
@@ -360,7 +360,7 @@ func (rd *pgDbReader) argsForListCidrSgRules(scope Scope) ([]any, error) {
 // ListCidrSgRules impl Reader
 func (rd *pgDbReader) ListCidrSgRules(ctx context.Context, consume func(model.CidrSgRule) error, scope Scope) error { //nolint:dupl
 	const (
-		qry = "select proto, cidr, sg, traffic, ports, logs, trace from sgroups.list_cidr_sg_rule($1)"
+		qry = "select proto, cidr, sg, traffic, ports, logs, trace, action from sgroups.list_cidr_sg_rule($1)"
 	)
 	args, err := rd.argsForListCidrSgRules(scope)
 	if err != nil {
@@ -385,7 +385,7 @@ func (rd *pgDbReader) ListCidrSgRules(ctx context.Context, consume func(model.Ci
 // ListCidrSgIcmpRules impl Reader interface
 func (rd *pgDbReader) ListCidrSgIcmpRules(ctx context.Context, consume func(model.CidrSgIcmpRule) error, scope Scope) error {
 	const (
-		qry = "select ip_v, types, cidr, sg, traffic, logs, trace from sgroups.list_cidr_sg_icmp_rules($1)"
+		qry = "select ip_v, types, cidr, sg, traffic, logs, trace, action from sgroups.list_cidr_sg_icmp_rules($1)"
 	)
 	args, err := rd.argsForListCidrSgRules(scope)
 	if err != nil {
@@ -447,7 +447,7 @@ func (rd *pgDbReader) argsForRulesWithSgLocalAndSg(scope Scope) ([]any, error) {
 // ListSgSgRules impl Reader
 func (rd *pgDbReader) ListSgSgRules(ctx context.Context, consume func(model.SgSgRule) error, scope Scope) error { //nolint:dupl
 	const (
-		qry = "select proto, sg_local, sg, traffic, ports, logs, trace from sgroups.list_ie_sg_sg_rules($1, $2)"
+		qry = "select proto, sg_local, sg, traffic, ports, logs, trace, action from sgroups.list_ie_sg_sg_rules($1, $2)"
 	)
 	args, err := rd.argsForRulesWithSgLocalAndSg(scope)
 	if err != nil {
@@ -472,7 +472,7 @@ func (rd *pgDbReader) ListSgSgRules(ctx context.Context, consume func(model.SgSg
 // ListIESgSgIcmpRules impl Reader interface
 func (rd *pgDbReader) ListIESgSgIcmpRules(ctx context.Context, consume func(rule model.IESgSgIcmpRule) error, scope Scope) error { //nolint:dupl
 	const (
-		qry = "select ip_v, types, sg_local, sg, traffic, logs, trace from sgroups.list_ie_sg_sg_icmp_rules($1, $2)"
+		qry = "select ip_v, types, sg_local, sg, traffic, logs, trace, action from sgroups.list_ie_sg_sg_icmp_rules($1, $2)"
 	)
 	args, err := rd.argsForRulesWithSgLocalAndSg(scope)
 	if err != nil {

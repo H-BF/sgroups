@@ -40,7 +40,7 @@ select ip_v,
 from sgroups.tbl_cidr_sg_icmp_rule as R;
 
 --------------------------------------- READERS ---------------------------------------
-drop function if exists sgroups.list_cidr_sg_icmp_rules(sgroups.cname[], sgroups.cname[]) cascade;
+drop function if exists sgroups.list_cidr_sg_icmp_rules(sgroups.cname[]) cascade;
 create or replace function sgroups.list_cidr_sg_icmp_rules (
     sgs sgroups.cname[] default null
 ) returns table ( ip_v sgroups.ip_family,

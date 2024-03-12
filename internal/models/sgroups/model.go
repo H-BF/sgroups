@@ -118,10 +118,11 @@ type (
 	}
 
 	ruleT[T any] struct {
-		ID    T
-		Ports []SGRulePorts
-		Logs  bool
-		Trace bool
+		ID     T
+		Ports  []SGRulePorts
+		Logs   bool
+		Trace  bool
+		Action ChainDefaultAction
 	}
 
 	ruleID[T any] interface {
@@ -133,10 +134,11 @@ type (
 
 	// SgIcmpRule SG:ICMP default rule
 	SgIcmpRule struct {
-		Sg    string
-		Icmp  ICMP
-		Logs  bool
-		Trace bool
+		Sg     string
+		Icmp   ICMP
+		Logs   bool
+		Trace  bool
+		Action ChainDefaultAction
 	}
 
 	// SgIcmpRuleID SG:ICMP rule ID
@@ -152,6 +154,7 @@ type (
 		Icmp   ICMP
 		Logs   bool
 		Trace  bool
+		Action ChainDefaultAction
 	}
 
 	// SgSgIcmpRuleID SG-SG:ICMP rule ID
@@ -169,6 +172,7 @@ type (
 		Icmp    ICMP
 		Logs    bool
 		Trace   bool
+		Action  ChainDefaultAction
 	}
 
 	// IESgSgIcmpRuleID <IN|E>GRESS:SG-SG:ICMP rule ID
@@ -187,6 +191,7 @@ type (
 		Icmp    ICMP
 		Logs    bool
 		Trace   bool
+		Action  ChainDefaultAction
 	}
 
 	// CidrSgIcmpRuleID <IN|E>GRESS:CIDR-SG:ICMP rule ID
@@ -392,7 +397,8 @@ func (rule ruleT[T]) IsEq(other ruleT[T]) bool {
 	return any(rule.ID).(ruleID[T]).IsEq(other.ID) &&
 		AreRulePortsEq(rule.Ports, other.Ports) &&
 		rule.Logs == other.Logs &&
-		rule.Trace == other.Trace
+		rule.Trace == other.Trace &&
+		rule.Action == other.Action
 }
 
 // IsEq -
@@ -436,6 +442,7 @@ func (o SgIcmpRuleID) String() string {
 func (o SgIcmpRule) IsEq(other SgIcmpRule) bool {
 	return o.Logs == other.Logs &&
 		o.Trace == other.Trace &&
+		o.Action == other.Action &&
 		o.Sg == other.Sg &&
 		o.Icmp.IPv == other.Icmp.IPv &&
 		o.Icmp.Types.Eq(&other.Icmp.Types)
@@ -453,6 +460,7 @@ func (o SgIcmpRule) ID() SgIcmpRuleID {
 func (o SgSgIcmpRule) IsEq(other SgSgIcmpRule) bool {
 	return o.Logs == other.Logs &&
 		o.Trace == other.Trace &&
+		o.Action == other.Action &&
 		o.SgFrom == other.SgFrom &&
 		o.Icmp.IPv == other.Icmp.IPv &&
 		o.Icmp.Types.Eq(&other.Icmp.Types)
@@ -485,7 +493,8 @@ func (o IESgSgIcmpRule) IsEq(other IESgSgIcmpRule) bool {
 		o.Icmp.IPv == other.Icmp.IPv &&
 		o.Icmp.Types.Eq(&other.Icmp.Types) &&
 		o.Logs == other.Logs &&
-		o.Trace == other.Trace
+		o.Trace == other.Trace &&
+		o.Action == other.Action
 }
 
 // ID -
@@ -520,7 +529,8 @@ func (o CidrSgIcmpRule) IsEq(other CidrSgIcmpRule) bool {
 		o.SG == other.SG &&
 		icmpIsEq &&
 		o.Logs == other.Logs &&
-		o.Trace == other.Trace
+		o.Trace == other.Trace &&
+		o.Action == other.Action
 }
 
 // ID -

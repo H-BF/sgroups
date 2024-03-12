@@ -64,6 +64,16 @@ func (r cidrSgRule) from(src *sg.CidrSgRule) error {
 	}
 	r.Logs = src.GetLogs()
 	r.Trace = src.GetTrace()
+	switch src.GetAction() {
+	case sg.DefaultAction_DEFAULT:
+		r.Action = model.DEFAULT
+	case sg.DefaultAction_DROP:
+		r.Action = model.DROP
+	case sg.DefaultAction_ACCEPT:
+		r.Action = model.ACCEPT
+	default:
+		return errors.Errorf("unsupported action ('%s')", src.GetAction())
+	}
 	e = ((*rulePorts)(&r.Ports)).from(src.GetPorts())
 	return e
 }

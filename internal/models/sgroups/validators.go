@@ -159,6 +159,7 @@ func (rule ruleT[T]) Validate() error {
 			}),
 			//oz.Skip,
 		),
+		oz.Field(&rule.Action),
 	)
 }
 
@@ -187,6 +188,7 @@ func (o SgIcmpRule) Validate() error {
 		oz.Field(&o.Sg, oz.Required.Error(sgNameRequired),
 			oz.Match(reCName)),
 		oz.Field(&o.Icmp),
+		oz.Field(&o.Action),
 	)
 }
 
@@ -198,6 +200,7 @@ func (o SgSgIcmpRule) Validate() error {
 		oz.Field(&o.SgTo, oz.Required.Error(sgNameRequired),
 			oz.Match(reCName)),
 		oz.Field(&o.Icmp),
+		oz.Field(&o.Action),
 	)
 }
 
@@ -208,6 +211,7 @@ func (o IESgSgIcmpRule) Validate() error {
 		oz.Field(&o.SgLocal, oz.Required.Error(sgNameRequired), oz.Match(reCName)),
 		oz.Field(&o.Sg, oz.Required.Error(sgNameRequired), oz.Match(reCName)),
 		oz.Field(&o.Icmp),
+		oz.Field(&o.Action),
 	)
 }
 
@@ -230,6 +234,7 @@ func (o CidrSgIcmpRule) Validate() error {
 		oz.Field(&o.CIDR, oz.By(cidrIsValid)),
 		oz.Field(&o.SG, oz.Required.Error(sgNameRequired), oz.Match(reCName)),
 		oz.Field(&o.Icmp),
+		oz.Field(&o.Action),
 	)
 }
 

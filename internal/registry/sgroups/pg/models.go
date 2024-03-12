@@ -62,21 +62,23 @@ type (
 
 	// SGRule -
 	SGRule struct {
-		SgFrom string           `db:"sg_from"`
-		SgTo   string           `db:"sg_to"`
-		Proto  Proto            `db:"proto"`
-		Ports  SgRulePortsArray `db:"ports"`
-		Logs   bool             `db:"logs"`
+		SgFrom string             `db:"sg_from"`
+		SgTo   string             `db:"sg_to"`
+		Proto  Proto              `db:"proto"`
+		Ports  SgRulePortsArray   `db:"ports"`
+		Logs   bool               `db:"logs"`
+		Action ChainDefaultAction `db:"action"`
 	}
 
 	// SG2FQDNRule -
 	SG2FQDNRule struct {
-		SgFrom        string           `db:"sg_from"`
-		FqndTo        FQDN             `db:"fqdn_to"`
-		Proto         Proto            `db:"proto"`
-		Ports         SgRulePortsArray `db:"ports"`
-		Logs          bool             `db:"logs"`
-		NdpiProtocols []string         `db:"ndpi_protocols"`
+		SgFrom        string             `db:"sg_from"`
+		FqndTo        FQDN               `db:"fqdn_to"`
+		Proto         Proto              `db:"proto"`
+		Ports         SgRulePortsArray   `db:"ports"`
+		Logs          bool               `db:"logs"`
+		NdpiProtocols []string           `db:"ndpi_protocols"`
+		Action        ChainDefaultAction `db:"action"`
 	}
 
 	// SyncStatus -
@@ -99,28 +101,31 @@ type (
 	// SgIcmpRule -
 	SgIcmpRule struct {
 		ICMP
-		Sg    string `db:"sg"`
-		Logs  bool   `db:"logs"`
-		Trace bool   `db:"trace"`
+		Sg     string             `db:"sg"`
+		Logs   bool               `db:"logs"`
+		Trace  bool               `db:"trace"`
+		Action ChainDefaultAction `db:"action"`
 	}
 
 	// SgSgIcmpRule -
 	SgSgIcmpRule struct {
 		ICMP
-		SgFrom string `db:"sg_from"`
-		SgTo   string `db:"sg_to"`
-		Logs   bool   `db:"logs"`
-		Trace  bool   `db:"trace"`
+		SgFrom string             `db:"sg_from"`
+		SgTo   string             `db:"sg_to"`
+		Logs   bool               `db:"logs"`
+		Trace  bool               `db:"trace"`
+		Action ChainDefaultAction `db:"action"`
 	}
 
 	// IESgSgIcmpRule -
 	IESgSgIcmpRule struct {
 		ICMP
-		SgLocal string  `db:"sg_local"`
-		Sg      string  `db:"sg"`
-		Traffic Traffic `db:"traffic"`
-		Logs    bool    `db:"logs"`
-		Trace   bool    `db:"trace"`
+		SgLocal string             `db:"sg_local"`
+		Sg      string             `db:"sg"`
+		Traffic Traffic            `db:"traffic"`
+		Logs    bool               `db:"logs"`
+		Trace   bool               `db:"trace"`
+		Action  ChainDefaultAction `db:"action"`
 	}
 
 	// Traffic -
@@ -128,34 +133,37 @@ type (
 
 	// CidrSgRule -
 	CidrSgRule struct {
-		Proto   Proto            `db:"proto"`
-		CIDR    net.IPNet        `db:"cidr"`
-		SG      string           `db:"sg"`
-		Traffic Traffic          `db:"traffic"`
-		Ports   SgRulePortsArray `db:"ports"`
-		Logs    bool             `db:"logs"`
-		Trace   bool             `db:"trace"`
+		Proto   Proto              `db:"proto"`
+		CIDR    net.IPNet          `db:"cidr"`
+		SG      string             `db:"sg"`
+		Traffic Traffic            `db:"traffic"`
+		Ports   SgRulePortsArray   `db:"ports"`
+		Logs    bool               `db:"logs"`
+		Trace   bool               `db:"trace"`
+		Action  ChainDefaultAction `db:"action"`
 	}
 
 	// CidrSgIcmpRule -
 	CidrSgIcmpRule struct {
 		ICMP
-		Traffic Traffic   `db:"traffic"`
-		CIDR    net.IPNet `db:"cidr"`
-		SG      string    `db:"sg"`
-		Logs    bool      `db:"logs"`
-		Trace   bool      `db:"trace"`
+		Traffic Traffic            `db:"traffic"`
+		CIDR    net.IPNet          `db:"cidr"`
+		SG      string             `db:"sg"`
+		Logs    bool               `db:"logs"`
+		Trace   bool               `db:"trace"`
+		Action  ChainDefaultAction `db:"action"`
 	}
 
 	// SgSgRule -
 	SgSgRule struct {
-		Proto   Proto            `db:"proto"`
-		SgLocal string           `db:"sg_local"`
-		Sg      string           `db:"sg"`
-		Traffic Traffic          `db:"traffic"`
-		Ports   SgRulePortsArray `db:"ports"`
-		Logs    bool             `db:"logs"`
-		Trace   bool             `db:"trace"`
+		Proto   Proto              `db:"proto"`
+		SgLocal string             `db:"sg_local"`
+		Sg      string             `db:"sg"`
+		Traffic Traffic            `db:"traffic"`
+		Ports   SgRulePortsArray   `db:"ports"`
+		Logs    bool               `db:"logs"`
+		Trace   bool               `db:"trace"`
+		Action  ChainDefaultAction `db:"action"`
 	}
 )
 

@@ -18,11 +18,11 @@ func (n *securityGroup) from(g *sg.SecGroup) error {
 	n.Logs = g.GetLogs()
 	n.Trace = g.GetTrace()
 	switch g.GetDefaultAction() {
-	case sg.SecGroup_DEFAULT:
+	case sg.DefaultAction_DEFAULT:
 		n.DefaultAction = model.DEFAULT
-	case sg.SecGroup_DROP:
+	case sg.DefaultAction_DROP:
 		n.DefaultAction = model.DROP
-	case sg.SecGroup_ACCEPT:
+	case sg.DefaultAction_ACCEPT:
 		n.DefaultAction = model.ACCEPT
 	default:
 		return errors.Errorf("unsupported SG chain default action ('%s')", g.GetDefaultAction())

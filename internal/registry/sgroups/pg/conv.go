@@ -215,6 +215,9 @@ func (o SGRule) ToModel() (sgm.SGRule, error) {
 	if ret.ID.Transport, err = o.Proto.ToModel(); err != nil {
 		return ret, err
 	}
+	if err = ret.Action.FromString(string(o.Action)); err != nil {
+		return ret, err
+	}
 	ret.Logs = o.Logs
 	ret.Ports, err = o.Ports.ToModel()
 	return ret, err
@@ -231,6 +234,7 @@ func (o *SGRule) FromModel(m sgm.SGRule) error {
 		return err
 	}
 	o.Logs = m.Logs
+	o.Action = ChainDefaultAction(strings.ToUpper(m.Action.String()))
 	return nil
 }
 
@@ -244,6 +248,9 @@ func (o SG2FQDNRule) ToModel() (sgm.FQDNRule, error) {
 	ret.ID.SgFrom = o.SgFrom
 	ret.ID.FqdnTo = sgm.FQDN(string(o.FqndTo))
 	if ret.ID.Transport, err = o.Proto.ToModel(); err != nil {
+		return ret, err
+	}
+	if err = ret.Action.FromString(string(o.Action)); err != nil {
 		return ret, err
 	}
 	ret.Logs = o.Logs
@@ -267,6 +274,7 @@ func (o *SG2FQDNRule) FromModel(m sgm.FQDNRule) error {
 		return err
 	}
 	o.Logs = m.Logs
+	o.Action = ChainDefaultAction(strings.ToUpper(m.Action.String()))
 	return nil
 }
 
@@ -320,6 +328,9 @@ func (o SgIcmpRule) ToModel() (ret sgm.SgIcmpRule, err error) {
 	ret.Sg = o.Sg
 	ret.Logs = o.Logs
 	ret.Trace = o.Trace
+	if err = ret.Action.FromString(string(o.Action)); err != nil {
+		return ret, err
+	}
 	ret.Icmp, err = o.ICMP.ToModel()
 	return ret, err
 }
@@ -329,6 +340,7 @@ func (o *SgIcmpRule) FromModel(m sgm.SgIcmpRule) error {
 	o.Sg = m.Sg
 	o.Logs = m.Logs
 	o.Trace = m.Trace
+	o.Action = ChainDefaultAction(strings.ToUpper(m.Action.String()))
 	return o.ICMP.FromModel(m.Icmp)
 }
 
@@ -338,6 +350,9 @@ func (o SgSgIcmpRule) ToModel() (ret sgm.SgSgIcmpRule, err error) {
 	ret.SgTo = o.SgTo
 	ret.Logs = o.Logs
 	ret.Trace = o.Trace
+	if err = ret.Action.FromString(string(o.Action)); err != nil {
+		return ret, err
+	}
 	ret.Icmp, err = o.ICMP.ToModel()
 	return ret, err
 }
@@ -348,6 +363,7 @@ func (o *SgSgIcmpRule) FromModel(m sgm.SgSgIcmpRule) error {
 	o.SgTo = m.SgTo
 	o.Logs = m.Logs
 	o.Trace = m.Trace
+	o.Action = ChainDefaultAction(strings.ToUpper(m.Action.String()))
 	return o.ICMP.FromModel(m.Icmp)
 }
 
@@ -357,6 +373,9 @@ func (o IESgSgIcmpRule) ToModel() (ret sgm.IESgSgIcmpRule, err error) {
 	ret.Sg = o.Sg
 	ret.Logs = o.Logs
 	ret.Trace = o.Trace
+	if err = ret.Action.FromString(string(o.Action)); err != nil {
+		return ret, err
+	}
 	if ret.Traffic, err = o.Traffic.ToModel(); err != nil {
 		return ret, err
 	}
@@ -370,6 +389,7 @@ func (o *IESgSgIcmpRule) FromModel(m sgm.IESgSgIcmpRule) error {
 	o.Sg = m.Sg
 	o.Logs = m.Logs
 	o.Trace = m.Trace
+	o.Action = ChainDefaultAction(strings.ToUpper(m.Action.String()))
 	if err := o.Traffic.FromModel(m.Traffic); err != nil {
 		return err
 	}
@@ -408,6 +428,7 @@ func (o *CidrSgRule) FromModel(m sgm.CidrSgRule) error { //nolint:dupl
 	}
 	o.CIDR = m.ID.CIDR
 	o.SG = m.ID.SG
+	o.Action = ChainDefaultAction(strings.ToUpper(m.Action.String()))
 	if err := o.Traffic.FromModel(m.ID.Traffic); err != nil {
 		return err
 	}
@@ -426,6 +447,9 @@ func (o CidrSgRule) ToModel() (ret sgm.CidrSgRule, err error) {
 	}
 	ret.ID.SG = o.SG
 	ret.ID.CIDR = o.CIDR
+	if err = ret.Action.FromString(string(o.Action)); err != nil {
+		return ret, err
+	}
 	if ret.ID.Traffic, err = o.Traffic.ToModel(); err != nil {
 		return ret, err
 	}
@@ -443,6 +467,7 @@ func (o *CidrSgIcmpRule) FromModel(m sgm.CidrSgIcmpRule) error {
 	o.SG = m.SG
 	o.Logs = m.Logs
 	o.Trace = m.Trace
+	o.Action = ChainDefaultAction(strings.ToUpper(m.Action.String()))
 	if err := o.Traffic.FromModel(m.Traffic); err != nil {
 		return err
 	}
@@ -455,6 +480,9 @@ func (o CidrSgIcmpRule) ToModel() (ret sgm.CidrSgIcmpRule, err error) {
 	ret.SG = o.SG
 	ret.Logs = o.Logs
 	ret.Trace = o.Trace
+	if err = ret.Action.FromString(string(o.Action)); err != nil {
+		return ret, err
+	}
 	if ret.Traffic, err = o.Traffic.ToModel(); err != nil {
 		return ret, err
 	}
@@ -469,6 +497,7 @@ func (o *SgSgRule) FromModel(m sgm.SgSgRule) error { //nolint:dupl
 	}
 	o.SgLocal = m.ID.SgLocal
 	o.Sg = m.ID.Sg
+	o.Action = ChainDefaultAction(strings.ToUpper(m.Action.String()))
 	if err := o.Traffic.FromModel(m.ID.Traffic); err != nil {
 		return err
 	}
@@ -487,6 +516,9 @@ func (o SgSgRule) ToModel() (ret sgm.SgSgRule, err error) {
 	}
 	ret.ID.SgLocal = o.SgLocal
 	ret.ID.Sg = o.Sg
+	if err = ret.Action.FromString(string(o.Action)); err != nil {
+		return ret, err
+	}
 	if ret.ID.Traffic, err = o.Traffic.ToModel(); err != nil {
 		return ret, err
 	}

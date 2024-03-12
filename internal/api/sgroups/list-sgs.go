@@ -36,14 +36,14 @@ func (srv *sgService) ListSecurityGroups(ctx context.Context, req *sg.ListSecuri
 	return resp, err
 }
 
-func sgDefaultAction2proto(m sgroups.ChainDefaultAction) (ret sg.SecGroup_DefaultAction, err error) {
+func sgDefaultAction2proto(m sgroups.ChainDefaultAction) (ret sg.DefaultAction, err error) {
 	switch m {
 	case sgroups.DEFAULT:
-		ret = sg.SecGroup_DEFAULT
+		ret = sg.DefaultAction_DEFAULT
 	case sgroups.ACCEPT:
-		ret = sg.SecGroup_ACCEPT
+		ret = sg.DefaultAction_ACCEPT
 	case sgroups.DROP:
-		ret = sg.SecGroup_DROP
+		ret = sg.DefaultAction_DROP
 	default:
 		err = errors.Errorf("unsupported SG chain default action (%v) ", m)
 	}
