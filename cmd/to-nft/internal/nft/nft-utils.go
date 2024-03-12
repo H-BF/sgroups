@@ -66,7 +66,10 @@ func (nameUtils) isLikeMainTableName(s string) bool {
 }
 
 func (nameUtils) nameOfInOutChain(dir direction, sgName string) string {
-	return tern(dir == dirIN, chnFWIN, chnFWOUT) + "-" + sgName
+	return fmt.Sprintf(
+		"%s-%s",
+		tern(dir == dirIN, chnIngressINPUT, chnEgressPOSTROUTING), sgName,
+	)
 }
 
 func (nameUtils) nameOfFqdnNetSet(ipV ipVersion, domain model.FQDN) string {
@@ -229,7 +232,7 @@ func val2ptr[T any](val T) *T {
 	return &val
 }
 
-func zeroEndedS(s string) string {
+func zeroEndedS(s string) string { //nolint:unused
 	const z = "\x00"
 	if n := len(s); n > 0 {
 		n1 := strings.LastIndex(s, z)
