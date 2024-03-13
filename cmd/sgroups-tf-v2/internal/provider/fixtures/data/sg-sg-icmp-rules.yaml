@@ -78,16 +78,18 @@ cases:
           sg_to = "group2"
           type = [0, 2, 255]
           ip_v = "IPv4"
-          logs = true
-          trace = true
+          logs    = true
+          trace   = true
+          action  = "ACCEPT"
         }
         "sg(group3)sg(group4)icmp6" = {
           sg_from = "group3"
           sg_to = "group4"
           type = [10, 30, 54]
           ip_v = "IPv6"
-          logs = true
-          trace = true
+          logs    = true
+          trace   = true
+          action  = "DROP"
         }
       }
     }
@@ -102,7 +104,8 @@ cases:
         "SgFrom": "group1",
         "SgTo": "group2",
         "logs": true,
-        "trace": true
+        "trace": true,
+        "action": "ACCEPT"
       }
     - |
       {
@@ -113,7 +116,8 @@ cases:
         "SgFrom": "group3",
         "SgTo": "group4",
         "logs": true,
-        "trace": true
+        "trace": true,
+        "action": "DROP"
       }
 - name: "change-first-and-delete-second"
   tf-config: |
@@ -124,8 +128,9 @@ cases:
           sg_to = "group2"
           type = [1,2,3]
           ip_v = "IPv4"
-          logs = false
-          trace = false
+          logs    = false
+          trace   = false
+          action  = "DROP"
         }
       }
     }
@@ -140,7 +145,8 @@ cases:
         "SgFrom": "group1",
         "SgTo": "group2",
         "logs": false,
-        "trace": false
+        "trace": false,
+        "action": "DROP"
       }
   not-expected-backend:
     sg-sg-icmp-rules:
@@ -153,5 +159,6 @@ cases:
         "SgFrom": "group3",
         "SgTo": "group4",
         "logs": true,
-        "trace": true
+        "trace": true,
+        "action": "DROP"
       }

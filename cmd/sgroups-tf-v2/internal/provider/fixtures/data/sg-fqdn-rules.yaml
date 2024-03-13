@@ -50,7 +50,8 @@ cases:
               s = "1000-2000"
             }
           ]
-          logs = true
+          logs    = true
+          action  = "ACCEPT"
         }
         "udp:sg(group2)fqdn(store.example.org)" = {
           transport = "udp"
@@ -62,7 +63,8 @@ cases:
               s = "15000-16000"
             }
           ]
-          logs = true
+          logs    = true
+          action  = "DROP"
         }
       }
     }
@@ -83,7 +85,8 @@ cases:
         ],
         "sgFrom": "group1",
         "FQDN": "front.example.org",
-        "transport": "TCP"
+        "transport": "TCP",
+        "action": "ACCEPT"
       }
     - |
       {
@@ -96,7 +99,8 @@ cases:
         ],
         "sgFrom": "group2",
         "FQDN": "store.example.org",
-        "transport": "UDP"
+        "transport": "UDP",
+        "action": "DROP"
       }
 - name: "change first and delete second"
   tf-config: |
@@ -115,7 +119,8 @@ cases:
               s = "3000-4000"
             }
           ]
-          logs = false
+          logs    = false
+          action  = "DROP"
         }
       }
     }
@@ -135,7 +140,8 @@ cases:
         ],
         "sgFrom": "group1",
         "FQDN": "front.example.org",
-        "transport": "TCP"
+        "transport": "TCP",
+        "action": "DROP"
       }
   not-expected-backend:
     sg-fqdn-rules:
@@ -150,7 +156,8 @@ cases:
         ],
         "sgFrom": "group2",
         "FQDN": "store.example.org",
-        "transport": "UDP"
+        "transport": "UDP",
+        "action": "DROP"
       }
 - name: "remove protocols"
   tf-config: |
@@ -166,7 +173,8 @@ cases:
               s = "3000-4000"
             }
           ]
-          logs = false
+          logs    = false
+          action  = "DROP"
         }
       }
     }
@@ -183,5 +191,6 @@ cases:
         ],
         "sgFrom": "group1",
         "FQDN": "front.example.org",
-        "transport": "TCP"
+        "transport": "TCP",
+        "action": "DROP"
       }

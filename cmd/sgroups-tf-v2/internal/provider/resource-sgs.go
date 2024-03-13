@@ -70,12 +70,7 @@ func (item sgItem) Attributes() map[string]schema.Attribute {
 			Optional:    true,
 			Computed:    true,
 			Default:     stringdefault.StaticString(protos.DefaultAction_DROP.String()),
-			Validators: []validator.String{
-				stringvalidator.OneOf(
-					protos.DefaultAction_ACCEPT.String(),
-					protos.DefaultAction_DROP.String(),
-					protos.DefaultAction_DEFAULT.String()),
-			},
+			Validators:  []validator.String{actionValidator},
 		},
 		"networks": schema.SetAttribute{
 			Description: "Set of networks for security group",
@@ -194,3 +189,10 @@ func readSgState(ctx context.Context, state NamedResources[sgItem], client *sgAP
 	}
 	return newState, diags
 }
+
+var (
+	actionValidator = stringvalidator.OneOf(
+		protos.DefaultAction_ACCEPT.String(),
+		protos.DefaultAction_DROP.String(),
+		protos.DefaultAction_DEFAULT.String())
+)

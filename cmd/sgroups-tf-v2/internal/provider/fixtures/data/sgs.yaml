@@ -47,9 +47,10 @@ cases:
           default_action = "DROP"
           networks = ["net1", "net2"]
           icmp = {
-            logs = true
-            trace = true
-            type = [1,2,3]
+            logs    = true
+            trace   = true
+            type    = [1,2,3]
+            action  = "ACCEPT"
           }
         }
         sg2 = {
@@ -57,7 +58,8 @@ cases:
           default_action = "ACCEPT"
           networks = ["net3", "net4"]
           icmp6 = {
-            type = [0, 255]
+            type    = [0, 255]
+            action  = "DROP"
           }
         }
       }
@@ -91,7 +93,8 @@ cases:
         },
         "Sg": "sg1",
         "logs": true,
-        "trace": true
+        "trace": true,
+        "action": "ACCEPT"
       }
     - |
       {
@@ -103,7 +106,8 @@ cases:
         },
         "Sg": "sg2",
         "logs": false,
-        "trace": false
+        "trace": false,
+        "action": "DROP"
       }
 - name: "change-first-and-delete-second"
   tf-config: |
@@ -116,14 +120,16 @@ cases:
           default_action = "DROP"
           networks = ["net1", "net5"]
           icmp = {
-            logs = false
-            trace = false
-            type = [10,20,30,40]
+            logs    = false
+            trace   = false
+            type    = [10,20,30,40]
+            action  = "DROP"
           }
           icmp6 = {
-            logs = true
-            trace = false
-            type = [10,20,30]
+            logs    = true
+            trace   = false
+            type    = [10,20,30]
+            action  = "DROP"
           }
         }
       }
@@ -149,7 +155,8 @@ cases:
         },
         "Sg": "sg1",
         "logs": false,
-        "trace": false
+        "trace": false,
+        "action": "DROP"
       }
     - |
       {
@@ -161,7 +168,8 @@ cases:
         },
         "Sg": "sg1",
         "logs": true,
-        "trace": false
+        "trace": false,
+        "action": "DROP"
       }
   not-expected-backend:
     sec-groups:
@@ -184,5 +192,6 @@ cases:
         },
         "Sg": "sg2",
         "logs": false,
-        "trace": false
+        "trace": false,
+        "action": "DROP"
       }

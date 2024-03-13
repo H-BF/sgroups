@@ -46,7 +46,8 @@ cases:
               s = "1000-2000"
             }
           ]
-          logs = true
+          logs    = true
+          action  = "ACCEPT"
         }
       }
     }
@@ -63,7 +64,8 @@ cases:
         ],
         "sgFrom": "group1",
         "FQDN": "front.example.org",
-        "transport": "TCP"
+        "transport": "TCP",
+        "action": "ACCEPT"
       }
 - name: "add another rule with empty list for ports"
   tf-config: |
@@ -80,6 +82,7 @@ cases:
             }
           ]
           logs = false
+          action  = "ACCEPT"
         }
 
         "udp:sg(group2)fqdn(store.example.org)" = {
@@ -88,6 +91,7 @@ cases:
           fqdn = "store.example.org"
           ports = []
           logs = true
+          action  = "DROP"
         }
       }
     }
@@ -104,7 +108,8 @@ cases:
         ],
         "sgFrom": "group1",
         "FQDN": "front.example.org",
-        "transport": "TCP"
+        "transport": "TCP",
+        "action": "ACCEPT"
       }
     - |
       {
@@ -112,5 +117,6 @@ cases:
         "ports": [],
         "sgFrom": "group2",
         "FQDN": "store.example.org",
-        "transport": "UDP"
+        "transport": "UDP",
+        "action": "DROP"
       }

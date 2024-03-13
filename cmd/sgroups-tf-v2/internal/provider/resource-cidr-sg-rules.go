@@ -44,6 +44,7 @@ type (
 		Ports     types.List   `tfsdk:"ports"`
 		Logs      types.Bool   `tfsdk:"logs"`
 		Trace     types.Bool   `tfsdk:"trace"`
+		Action    types.String `tfsdk:"action"`
 	}
 
 	cidrRuleKey struct {
@@ -116,6 +117,11 @@ func (item cidrRule) Attributes() map[string]schema.Attribute {
 			Computed:    true,
 			Default:     booldefault.StaticBool(false),
 		},
+		"action": schema.StringAttribute{
+			Description: "Rule action on packets in chain",
+			Required:    true,
+			Validators:  []validator.String{actionValidator},
+		},
 	}
 }
 
@@ -138,6 +144,7 @@ func (item cidrRule) IsDiffer(ctx context.Context, other cidrRule) bool {
 		item.Traffic.Equal(other.Traffic) &&
 		item.Logs.Equal(other.Logs) &&
 		item.Trace.Equal(other.Trace) &&
+		item.Action.Equal(other.Action) &&
 		model.AreRulePortsEq(itemModelPorts, otherModelPorts))
 }
 
@@ -178,6 +185,7 @@ func readCidrRules(ctx context.Context, state NamedResources[cidrRule], client *
 			it.Ports = portsList
 			it.Logs = types.BoolValue(rule.GetLogs())
 			it.Trace = types.BoolValue(rule.GetTrace())
+			it.Action = types.StringValue(rule.GetAction().String())
 			newState.Items[k] = it
 		}
 	}

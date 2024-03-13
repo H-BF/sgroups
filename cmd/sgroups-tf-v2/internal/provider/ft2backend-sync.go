@@ -126,8 +126,10 @@ func (tfSg2Backend) sync(ctx context.Context, items NamedResources[sgItem], clie
 				o.As(ctx, &icmpParams, basetypes.ObjectAsOptions{UnhandledUnknownAsEmpty: true})...,
 			)
 			if !diags.HasError() {
+				da := icmpParams.Action.ValueString()
 				rule.Logs = icmpParams.Logs.ValueBool()
 				rule.Trace = icmpParams.Trace.ValueBool()
+				rule.Action = protos.DefaultAction(protos.DefaultAction_value[da])
 				diags.Append(
 					icmpParams.Type.ElementsAs(ctx, &rule.ICMP.Types, true)...,
 				)
@@ -202,12 +204,14 @@ func (tfSgSgRules2Backend) sync(ctx context.Context, items NamedResources[sgSgRu
 				fmt.Sprintf("no proto conv for value(%s)", features.Transport.ValueString()))
 			return diags
 		}
+		da := features.Action.ValueString()
 		syncObj.Rules = append(syncObj.Rules, &protos.Rule{
 			SgFrom:    features.SgFrom.ValueString(),
 			SgTo:      features.SgTo.ValueString(),
 			Transport: common.Networks_NetIP_Transport(protoValue),
 			Logs:      features.Logs.ValueBool(),
 			Ports:     accPortsRangeToProto(accPorts),
+			Action:    protos.DefaultAction(protos.DefaultAction_value[da]),
 		})
 	}
 	req := protos.SyncReq{
@@ -229,12 +233,14 @@ func (tfSgSgIcmpRules2Backend) sync(ctx context.Context, items NamedResources[sg
 	var syncObj protos.SyncSgSgIcmpRules
 	var diags diag.Diagnostics
 	for _, features := range items.Items {
+		da := features.Action.ValueString()
 		syncObj.Rules = append(syncObj.Rules, &protos.SgSgIcmpRule{
 			SgFrom: features.SgFrom.ValueString(),
 			SgTo:   features.SgTo.ValueString(),
 			ICMP:   features.icmp2Proto(ctx, &diags),
 			Logs:   features.Logs.ValueBool(),
 			Trace:  features.Trace.ValueBool(),
+			Action: protos.DefaultAction(protos.DefaultAction_value[da]),
 		})
 		if diags.HasError() {
 			return diags
@@ -278,6 +284,7 @@ func (tfSgFqdnRules2Backend) sync(ctx context.Context, items NamedResources[sgFq
 		if diags.HasError() {
 			return diags
 		}
+		da := features.Action.ValueString()
 		syncFqdnRules.Rules = append(syncFqdnRules.Rules, &protos.FqdnRule{
 			SgFrom:    features.SgFrom.ValueString(),
 			FQDN:      features.Fqdn.ValueString(),
@@ -285,6 +292,7 @@ func (tfSgFqdnRules2Backend) sync(ctx context.Context, items NamedResources[sgFq
 			Logs:      features.Logs.ValueBool(),
 			Ports:     accPortsRangeToProto(accPorts),
 			Protocols: protocols,
+			Action:    protos.DefaultAction(protos.DefaultAction_value[da]),
 		})
 	}
 	req := protos.SyncReq{
@@ -330,6 +338,7 @@ func (tfCidrSgRules2Backend) sync(ctx context.Context, items NamedResources[cidr
 				fmt.Sprintf("no traffic conv for value(%s)", features.Traffic.ValueString()))
 			return diags
 		}
+		da := features.Action.ValueString()
 		syncCidrRules.Rules = append(syncCidrRules.Rules, &protos.CidrSgRule{
 			Transport: common.Networks_NetIP_Transport(protoValue),
 			CIDR:      features.Cidr.ValueString(),
@@ -338,6 +347,7 @@ func (tfCidrSgRules2Backend) sync(ctx context.Context, items NamedResources[cidr
 			Ports:     accPortsRangeToProto(accPorts),
 			Logs:      features.Logs.ValueBool(),
 			Trace:     features.Trace.ValueBool(),
+			Action:    protos.DefaultAction(protos.DefaultAction_value[da]),
 		})
 	}
 	req := protos.SyncReq{
@@ -368,6 +378,7 @@ func (tfCidrSgIcmpRules2Backend) sync(ctx context.Context, items NamedResources[
 				fmt.Sprintf("no traffic conv for value(%s)", features.Traffic.ValueString()))
 			return diags
 		}
+		da := features.Action.ValueString()
 		syncObj.Rules = append(syncObj.Rules, &protos.CidrSgIcmpRule{
 			CIDR:    features.Cidr.ValueString(),
 			SG:      features.SgName.ValueString(),
@@ -375,6 +386,7 @@ func (tfCidrSgIcmpRules2Backend) sync(ctx context.Context, items NamedResources[
 			ICMP:    features.icmp2Proto(ctx, &diags),
 			Logs:    features.Logs.ValueBool(),
 			Trace:   features.Trace.ValueBool(),
+			Action:  protos.DefaultAction(protos.DefaultAction_value[da]),
 		})
 		if diags.HasError() {
 			return diags
@@ -423,6 +435,7 @@ func (tfIESgSgRules2Backend) sync(ctx context.Context, items NamedResources[ieSg
 				fmt.Sprintf("no traffic conv for value(%s)", features.Traffic.ValueString()))
 			return diags
 		}
+		da := features.Action.ValueString()
 		syncObj.Rules = append(syncObj.Rules, &protos.SgSgRule{
 			Transport: common.Networks_NetIP_Transport(protoValue),
 			Sg:        features.Sg.ValueString(),
@@ -431,6 +444,7 @@ func (tfIESgSgRules2Backend) sync(ctx context.Context, items NamedResources[ieSg
 			Ports:     accPortsRangeToProto(accPorts),
 			Logs:      features.Logs.ValueBool(),
 			Trace:     features.Trace.ValueBool(),
+			Action:    protos.DefaultAction(protos.DefaultAction_value[da]),
 		})
 	}
 	req := protos.SyncReq{
@@ -459,6 +473,7 @@ func (tfIESgSgIcmpRules2Backend) sync(ctx context.Context, items NamedResources[
 				fmt.Sprintf("no traffic conv for value(%s)", features.Traffic.ValueString()))
 			return diags
 		}
+		da := features.Action.ValueString()
 		syncObj.Rules = append(syncObj.Rules, &protos.IESgSgIcmpRule{
 			Sg:      features.Sg.ValueString(),
 			SgLocal: features.SgLocal.ValueString(),
@@ -466,6 +481,7 @@ func (tfIESgSgIcmpRules2Backend) sync(ctx context.Context, items NamedResources[
 			ICMP:    features.icmp2Proto(ctx, &diags),
 			Logs:    features.Logs.ValueBool(),
 			Trace:   features.Trace.ValueBool(),
+			Action:  protos.DefaultAction(protos.DefaultAction_value[da]),
 		})
 		if diags.HasError() {
 			return diags

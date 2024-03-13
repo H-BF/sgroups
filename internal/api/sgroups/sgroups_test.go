@@ -136,7 +136,7 @@ func (sui *sGroupServiceTests) newSG(name string, nws ...string) *api.SecGroup {
 	return &api.SecGroup{
 		Name:          name,
 		Networks:      nws,
-		DefaultAction: api.SecGroup_DROP,
+		DefaultAction: api.DefaultAction_DROP,
 	}
 }
 
