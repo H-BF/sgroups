@@ -1,0 +1,187 @@
+---
+id: cidr-sg-rules
+---
+
+import { FancyboxDiagram } from '@site/src/components/commonBlocks/FancyboxDiagram'
+import { RESPOND_CODES } from '@site/src/constants/errorCodes.tsx'
+import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
+import { Restrictions } from '@site/src/components/commonBlocks/Restrictions'
+import { DICTIONARY } from '@site/src/constants/dictionary.ts'
+import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
+
+# POST /v1/cidr-sg/rules
+
+<div className="text-justify">
+  Этот метод отображает список Security Group to CIDR правил, в соответствии с указанным списком Security Groups.
+</div>
+
+<div className="text-justify">
+  Более подробно по организации БД можно посмотреть [здесь](../../database.mdx#tbl_cidr_sg_rule).
+</div>
+
+#### Входные параметры
+
+<ul>
+  <li>`sg[]` - {DICTIONARY.sgroupSet.short}</li>
+</ul>
+
+<div className="scrollable-x">
+  <table>
+    <thead>
+      <tr>
+        <th rowSpan="2">название</th>
+        <th rowSpan="2">обязательность</th>
+        <th rowSpan="2">тип данных</th>
+        <th rowSpan="2">Значение по умолчанию</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>sg[]</td>
+        <td>да</td>
+        <td>Object[]</td>
+        <td></td>
+      </tr>
+      </tbody>
+  </table>
+</div>
+
+<h4 className="custom-heading">Ограничения</h4>
+
+<ul>
+  <li>
+    `sg[]`:
+    <Restrictions data={RESTRICTIONS.name} />
+  </li>
+</ul>
+
+<h4 className="custom-heading">Пример использования</h4>
+
+```bash
+curl '127.0.0.1:9007/v1/cidr-sg/rules' \
+--header 'Content-Type: application/json' \
+--data '{
+    "sg": ["sg-example"]
+}'
+```
+
+<h4 className="custom-heading">Выходные параметры</h4>
+
+<ul>
+  <li>`$node.rules[]` - {DICTIONARY.rules.short}</li>
+  <li>`$node.rules[].CIDR` - {DICTIONARY.cidr.short}</li>
+  <li>`$node.rules[].SG` - {DICTIONARY.sg.short}</li>
+  <li>`$node.rules[].logs` - {DICTIONARY.log.short}</li>
+  <li>`$node.rules[].trace` - {DICTIONARY.trace.short}</li>
+  <li>`$node.rules[].ports` - {DICTIONARY.ports.short}</li>
+  <li>`$node.rules[].ports[].d` - {DICTIONARY.dstPorts.short}</li>
+  <li>`$node.rules[].ports[].s` - {DICTIONARY.srcPorts.short}</li>
+  <li>`$node.rules[].transport` - {DICTIONARY.transport.short}</li>
+  <li>`$node.rules[].traffic` - {DICTIONARY.traffic.short}</li>
+</ul>
+
+<div className="scrollable-x">
+  <table>
+    <thead>
+      <tr>
+        <th>название</th>
+        <th>тип данных</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>$node.rules[]</td>
+        <td>Object[]</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].CIDR</td>
+        <td>String</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].sg</td>
+        <td>String</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].logs</td>
+        <td>Boolean</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].ports</td>
+        <td>Object[]</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].ports[].d</td>
+        <td>String</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].ports[].s</td>
+        <td>String</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].trace</td>
+        <td>Boolean</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].traffic</td>
+        <td>String</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].transport</td>
+        <td>String</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<h4 className="custom-heading">Пример ответа</h4>
+
+```bash
+{
+    "rules": [{
+        "CIDR": "10.0.0.0/24",
+        "sg": "sg-example",
+        "logs": "true",
+        "ports": [{
+                "d": "7800",
+                "s": ""
+            }],
+        "trace": "true",
+        "traffic": "ingress",
+        "transport": "TCP",
+    }]
+}
+```
+
+<h4 className="custom-heading">Возможные ошибки API</h4>
+
+<Codes data = {RESPOND_CODES.not_found} />
+
+<h4 className="custom-heading">Диаграмма последовательности</h4>
+
+<FancyboxDiagram>
+
+```mermaid
+sequenceDiagram
+participant user as User
+participant server as Server
+participant db as Database
+
+user->>server: Отобразить список CIDR-SG правил для входящего и исходящего траффика
+
+alt Ошибка в запросе
+    server-->>user: Показать ошибку в запросе
+end
+
+server->>db: Отправить запрос
+db->>db: Проверка входящего запроса
+
+alt Указано некорректное значение существующего параметра
+    db-->>server: Ответ с ошибкой
+    server-->>user: Показать ошибку в запросе
+end
+
+db-->>server: Ответ со списком CIDR-SG правил соответствующий запросу
+server-->>user: Список CIDR-SG правил соответствующий запросу
+```
+
+</FancyboxDiagram>

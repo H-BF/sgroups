@@ -1,0 +1,394 @@
+---
+id: icmp-desciptions
+---
+
+# ICMP Дескрипторы
+
+import Tabs from '@theme/Tabs'
+import TabItem from '@theme/TabItem'
+
+<Tabs
+  defaultValue="v4"
+  values={[
+    { label: 'IPv4', value: 'v4' },
+    { label: 'IPv6', value: 'v6' },
+  ]}
+>
+  <TabItem value="v4">
+    <table>
+        <thead>
+            <tr>
+                <th>Значение</th>
+                <th>Дескриптор</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>0</td>
+                <td>Echo Reply</td>
+            </tr>
+            <tr>
+                <td>1</td>
+                <td>Unassigned</td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td>Unassigned</td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td>Destination Unreachable</td>
+            </tr>
+            <tr>
+                <td>4</td>
+                <td>Source Quench (Deprecated)</td>
+            </tr>
+            <tr>
+                <td>5</td>
+                <td>Redirect</td>
+            </tr>
+            <tr>
+                <td>6</td>
+                <td>Alternate Host Address (Deprecated)</td>
+            </tr>
+            <tr>
+                <td>7</td>
+                <td>Unassigned</td>
+            </tr>
+            <tr>
+                <td>8</td>
+                <td>Echo</td>
+            </tr>
+            <tr>
+                <td>9</td>
+                <td>Router Advertisement</td>
+            </tr>
+            <tr>
+                <td>10</td>
+                <td>Router Solicitation</td>
+            </tr>
+            <tr>
+                <td>11</td>
+                <td>Time Exceeded</td>
+            </tr>
+            <tr>
+                <td>12</td>
+                <td>Parameter Problem</td>
+            </tr>
+            <tr>
+                <td>13</td>
+                <td>Timestamp</td>
+            </tr>
+            <tr>
+                <td>14</td>
+                <td>Timestamp Reply</td>
+            </tr>
+            <tr>
+                <td>15</td>
+                <td>Information Request (Deprecated)</td>
+            </tr>
+            <tr>
+                <td>16</td>
+                <td>Information Reply (Deprecated)</td>
+            </tr>
+            <tr>
+                <td>17</td>
+                <td>Address Mask Request (Deprecated)</td>
+            </tr>
+            <tr>
+                <td>18</td>
+                <td>Address Mask Reply (Deprecated)</td>
+            </tr>
+            <tr>
+                <td>19</td>
+                <td>Reserved (for Security)</td>
+            </tr>
+            <tr>
+                <td>20-29</td>
+                <td>Reserved (for Robustness Experiment)</td>
+            </tr>
+            <tr>
+                <td>30</td>
+                <td>Traceroute (Deprecated)</td>
+            </tr>
+            <tr>
+                <td>31</td>
+                <td>Datagram Conversion Error (Deprecated)</td>
+            </tr>
+            <tr>
+                <td>32</td>
+                <td>Mobile Host Redirect (Deprecated)</td>
+            </tr>
+            <tr>
+                <td>33</td>
+                <td>IPv6 Where-Are-You (Deprecated)</td>
+            </tr>
+            <tr>
+                <td>34</td>
+                <td>IPv6 I-Am-Here (Deprecated)</td>
+            </tr>
+            <tr>
+                <td>35</td>
+                <td>Mobile Registration Request (Deprecated)</td>
+            </tr>
+            <tr>
+                <td>36</td>
+                <td>Mobile Registration Reply (Deprecated)</td>
+            </tr>
+            <tr>
+                <td>37</td>
+                <td>Domain Name Request (Deprecated)</td>
+            </tr>
+            <tr>
+                <td>38</td>
+                <td>Domain Name Reply (Deprecated)</td>
+            </tr>
+            <tr>
+                <td>39</td>
+                <td>SKIP (Deprecated)</td>
+            </tr>
+            <tr>
+                <td>40</td>
+                <td>Photuris</td>
+            </tr>
+            <tr>
+                <td>41</td>
+                <td>ICMP messages utilized by experimental mobility protocols such as Seamoby</td>
+            </tr>
+            <tr>
+                <td>42</td>
+                <td>Extended Echo Request</td>
+            </tr>
+            <tr>
+                <td>43</td>
+                <td>Extended Echo Reply</td>
+            </tr>
+            <tr>
+                <td>44-252</td>
+                <td>Unassigned</td>
+            </tr>
+            <tr>
+                <td>253</td>
+                <td>RFC3692-style Experiment 1</td>
+            </tr>
+            <tr>
+                <td>254</td>
+                <td>RFC3692-style Experiment 2</td>
+            </tr>
+            <tr>
+                <td>255</td>
+                <td>Reserved</td>
+            </tr>
+        </tbody>
+    </table>
+  </TabItem>
+  <TabItem value="v6">
+    <table>
+        <thead>
+            <tr>
+                <th>Значение</th>
+                <th>Дескриптор</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>0</td>
+                <td>Reserved</td>
+            </tr>
+            <tr>
+                <td>1</td>
+                <td>Destination Unreachable</td>
+            </tr>
+            <tr>
+                <td>2</td>
+                <td>Packet Too Big</td>
+            </tr>
+            <tr>
+                <td>3</td>
+                <td>Time Exceeded</td>
+            </tr>
+            <tr>
+                <td>4</td>
+                <td>Parameter Problem</td>
+            </tr>
+            <tr>
+                <td>5-99</td>
+                <td>Unassigned</td>
+            </tr>
+            <tr>
+                <td>100</td>
+                <td>Private experimentation</td>
+            </tr>
+            <tr>
+                <td>101</td>
+                <td>Private experimentation</td>
+            </tr>
+            <tr>
+                <td>102-126</td>
+                <td>Unassigned</td>
+            </tr>
+            <tr>
+                <td>127</td>
+                <td>Reserved for expansion of ICMPv6 error messages</td>
+            </tr>
+            <tr>
+                <td>128</td>
+                <td>Echo Request</td>
+            </tr>
+            <tr>
+                <td>129</td>
+                <td>Echo Reply</td>
+            </tr>
+            <tr>
+                <td>130</td>
+                <td>Multicast Listener Query</td>
+            </tr>
+            <tr>
+                <td>131</td>
+                <td>Multicast Listener Report</td>
+            </tr>
+            <tr>
+                <td>132</td>
+                <td>Multicast Listener Done</td>
+            </tr>
+            <tr>
+                <td>133</td>
+                <td>Router Solicitation</td>
+            </tr>
+            <tr>
+                <td>134</td>
+                <td>Router Advertisement</td>
+            </tr>
+            <tr>
+                <td>135</td>
+                <td>Neighbor Solicitation</td>
+            </tr>
+            <tr>
+                <td>136</td>
+                <td>Neighbor Advertisement</td>
+            </tr>
+            <tr>
+                <td>137</td>
+                <td>Redirect Message</td>
+            </tr>
+            <tr>
+                <td>138</td>
+                <td>Router Renumbering</td>
+            </tr>
+            <tr>
+                <td>139</td>
+                <td>ICMP Node Information Query</td>
+            </tr>
+            <tr>
+                <td>140</td>
+                <td>ICMP Node Information Response</td>
+            </tr>
+            <tr>
+                <td>141</td>
+                <td>Inverse Neighbor Discovery Solicitation Message</td>
+            </tr>
+            <tr>
+                <td>142</td>
+                <td>Inverse Neighbor Discovery Advertisement Message</td>
+            </tr>
+            <tr>
+                <td>143</td>
+                <td>Version 2 Multicast Listener Report</td>
+            </tr>
+            <tr>
+                <td>144</td>
+                <td>Home Agent Address Discovery Request Message</td>
+            </tr>
+            <tr>
+                <td>145</td>
+                <td>Home Agent Address Discovery Reply Message</td>
+            </tr>
+            <tr>
+                <td>146</td>
+                <td>Mobile Prefix Solicitation</td>
+            </tr>
+            <tr>
+                <td>147</td>
+                <td>Mobile Prefix Advertisement</td>
+            </tr>
+            <tr>
+                <td>148</td>
+                <td>Certification Path Solicitation Message</td>
+            </tr>
+            <tr>
+                <td>149</td>
+                <td>Certification Path Advertisement Message</td>
+            </tr>
+            <tr>
+                <td>150</td>
+                <td>ICMP messages utilized by experimental mobility protocols such as Seamoby</td>
+            </tr>
+            <tr>
+                <td>151</td>
+                <td>Multicast Router Advertisement</td>
+            </tr>
+            <tr>
+                <td>152</td>
+                <td>Multicast Router Solicitation</td>
+            </tr>
+            <tr>
+                <td>153</td>
+                <td>Multicast Router Termination</td>
+            </tr>
+            <tr>
+                <td>154</td>
+                <td>FMIPv6 Messages</td>
+            </tr>
+            <tr>
+                <td>155</td>
+                <td>RPL Control Message</td>
+            </tr>
+            <tr>
+                <td>156</td>
+                <td>ILNPv6 Locator Update Message</td>
+            </tr>
+            <tr>
+                <td>157</td>
+                <td>Duplicate Address Request</td>
+            </tr>
+            <tr>
+                <td>158</td>
+                <td>Duplicate Address Confirmation</td>
+            </tr>
+            <tr>
+                <td>159</td>
+                <td>MPL Control Message</td>
+            </tr>
+            <tr>
+                <td>160</td>
+                <td>Extended Echo Request</td>
+            </tr>
+            <tr>
+                <td>161</td>
+                <td>Extended Echo Reply</td>
+            </tr>
+            <tr>
+                <td>162-199</td>
+                <td>Unassigned</td>
+            </tr>
+            <tr>
+                <td>200</td>
+                <td>Private experimentation</td>
+            </tr>
+            <tr>
+                <td>201</td>
+                <td>Private experimentation</td>
+            </tr>
+            <tr>
+                <td>202-254</td>
+                <td>Unassigned</td>
+            </tr>
+            <tr>
+                <td>255</td>
+                <td>Reserved for expansion of ICMPv6 informational messages</td>
+            </tr>
+        </tbody>
+    </table>
+  </TabItem>
+
+</Tabs>

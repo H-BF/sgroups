@@ -1,0 +1,110 @@
+---
+id: ipset
+---
+
+import Tabs from '@theme/Tabs'
+import TabItem from '@theme/TabItem'
+
+# IPSet
+
+## Описание
+
+<div className="paragraph">
+  IPSet представляет собой структуру данных, позволяющую хранить и организовывать множество элементов для использования
+  в правилах nftables. Он используется для обработки больших списков элементов с минимальными затратами на ресурсы. В
+  нашем случае IPSet формируется для описания массива IP-адресов, относящихся к FQDN или Security Groups, для
+  дальнейшего использования в описаниях правил.
+</div>
+
+<div className="scrollable-x">
+  <table>
+      <thead>
+          <tr>
+              <td>Наименование параметра</td>
+              <td>Описание</td>
+              <td>Значения</td>
+          </tr>
+      </thead>
+      <tbody>
+          <tr>
+              <td>IPSet_Name</td>
+              <td>Наименование IPSet</td>
+              <td>
+                  Должно соответствовать одному из шаблонов:
+                  <ul>
+                      <li><b>NetIPv4-$\{NAME\}</b> - для описания массивов IP адресов типа v4</li>
+                      <li><b>NetIPv6-$\{NAME\}</b> - для описания массивов IP адресов типа v6</li>
+                  </ul>
+              </td>
+          </tr>
+          <tr>
+              <td>type</td>
+              <td>Описывает тип данных</td>
+              <td>
+                  Могут быть установлены следующие значения:
+                  <ul>
+                      <li><b>ipv4_addr</b> - для описания массивов IP адресов типа v4</li>
+                      <li><b>ipv6_addr</b> - для описания массивов IP адресов типа v6</li>
+                  </ul>
+              </td>
+          </tr>
+          <tr>
+              <td>flags</td>
+              <td>Описывает свойства IPSet</td>
+              <td>
+                  Установлены следующие значения:
+                  <ul>
+                      <li><b>constant</b> - флаг используется если значение элементов в множестве являются постоянными и не могут быть изменены</li>
+                      <li><b>interval</b> - флаг используется для создания диапазона элементов множества</li>
+                  </ul>
+              </td>
+          </tr>
+          <tr>
+              <td>elements</td>
+              <td>Указывает массив содержащихся в IPSet элементов подсетей (CIDR)</td>
+              <td>Значения CIDR, в случае нескольких значений перечисляются через запятую</td>
+          </tr>
+      </tbody>
+  </table>
+</div>
+
+## Шаблон
+
+```hcl
+set ${IPSet_Name} {
+    type ${type}
+    flags ${flags}
+    elements ${elements}
+}
+```
+
+## Пример использования
+
+<Tabs
+    defaltValue = 'sg'
+    values = {[
+        { label: "Security Group", value: "sg" },
+        { label: "FQDN", value: "fqdn" },
+    ]}
+>
+    <TabItem value='sg'>
+      ```hcl
+      set NetIPv4-sg-local-example {
+          type ipv4_addr
+          flags constant,interval
+          elements = { 10.168.24.0/23 }
+      }
+      ```
+    </TabItem>
+
+    <TabItem value='fqdn'>
+      ```hcl
+      set NetIPv4-fqdn-example.com {
+          type ipv4_addr
+          flags interval
+          elements = { 10.10.24.0 }
+      }
+      ```
+    </TabItem>
+
+</Tabs>
