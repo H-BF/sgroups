@@ -24,7 +24,12 @@ create table sgroups.tbl_cidr_sg_icmp_rule (
           cidr inet_ops with &&,
           sg with =,
           traffic with =
-       ) deferrable initially deferred
+       ) deferrable initially deferred,
+    constraint "cidr_and_ipv_consistency"
+        check (
+               (ip_v = 'IPv4'::sgroups.ip_family and family(cidr) = 4)
+            or (ip_v = 'IPv6'::sgroups.ip_family and family(cidr) = 6)
+        )
 );
 
 drop view if exists sgroups.vu_cidr_sg_icmp_rule cascade;
