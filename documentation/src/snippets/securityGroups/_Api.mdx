@@ -1,0 +1,374 @@
+import Tabs from '@theme/Tabs'
+import TabItem from '@theme/TabItem'
+import { Restrictions } from '@site/src/components/commonBlocks/Restrictions'
+import { DICTIONARY } from '@site/src/constants/dictionary.ts'
+import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
+import { FancyboxDiagram } from '@site/src/components/commonBlocks/FancyboxDiagram'
+import { RESPOND_CODES } from '@site/src/constants/errorCodes.tsx'
+import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
+
+#### Входные параметры
+
+<ul>
+  <li>`groups.grous[]` - Структура, содержащая описание создаваемых Security Group</li>
+  <li>`groups.groups[].defaultAction` - представляет действие по умолчанию в конце цепочек для SG</li>
+  <li>`groups.groups[].logs` - {DICTIONARY.log.short}</li>
+  <li>`groups.groups[].name` - {DICTIONARY.sgLocal.short}</li>
+  <li>`groups.groups[].networks` - Имена подсетей</li>
+  <li>`groups.groups[].trace` - {DICTIONARY.trace.short}</li>
+  <li>`sgIcmpRules.rules[]` - {DICTIONARY.rules.short}</li>
+  <li>`sgIcmpRules.rules[].ICMP` - {DICTIONARY.apiIcmp.short}</li>
+  <li>`sgIcmpRules.rules[].ICMP.IPv` - {DICTIONARY.icmpV.short}</li>
+  <li>`sgIcmpRules.rules[].ICMP.Types` - {DICTIONARY.icmpTypes.short}</li>
+  <li>`sgIcmpRules.rules[].Sg` - {DICTIONARY.sgLocal.short}</li>
+  <li>`sgIcmpRules.rules[].logs` - {DICTIONARY.log.short}</li>
+  <li>`sgIcmpRules.rules[].trace` - {DICTIONARY.trace.short}</li>
+  <li>`syncOp` - {DICTIONARY.syncOp.short}</li>
+</ul>
+
+<div className="scrollable-x">
+  <table>
+    <thead>
+      <tr>
+        <th rowSpan="2">название</th>
+        <th rowSpan="2">обязательность</th>
+        <th rowSpan="2">тип данных</th>
+        <th rowSpan="2">Значение по умолчанию</th>
+        <th colSpan="2">API request</th>
+      </tr>
+      <tr>
+        <th>groups</th>
+        <th>sgIcmpRules</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>groups.groups[]</td>
+        <td>да</td>
+        <td>Object[]</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center"></td>
+      </tr>
+      <tr>
+        <td>groups.groups[].defaultAction</td>
+        <td>да</td>
+        <td>
+          <nobr>Enum("ACCEPT", "DROP")</nobr>
+        </td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center"></td>
+      </tr>
+      <tr>
+        <td>groups.groups[].logs</td>
+        <td>нет</td>
+        <td>Boolean</td>
+        <td>false</td>
+        <td className="green center">✔</td>
+        <td className="green center"></td>
+      </tr>
+      <tr>
+        <td>groups.groups[].name</td>
+        <td>да</td>
+        <td>String</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center"></td>
+      </tr>
+      <tr>
+        <td>groups.groups[].networks</td>
+        <td>нет</td>
+        <td>String[]</td>
+        <td>[]</td>
+        <td className="green center">✔</td>
+        <td className="green center"></td>
+      </tr>
+      <tr>
+        <td>groups.groups[].trace</td>
+        <td>нет</td>
+        <td>Boolean</td>
+        <td>false</td>
+        <td className="green center">✔</td>
+        <td className="green center"></td>
+      </tr>
+      <tr>
+        <td>sgIcmpRules.rules[]</td>
+        <td>да</td>
+        <td>Object[]</td>
+        <td></td>
+        <td className="green center"></td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>sgIcmpRules.rules[].ICMP</td>
+        <td>да</td>
+        <td>Object</td>
+        <td></td>
+        <td className="green center"></td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>sgIcmpRules.rules[].ICMP.IPv</td>
+        <td>да</td>
+        <td>Enum("IPv4", "IPv6")</td>
+        <td></td>
+        <td className="green center"></td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>sgIcmpRules.rules[].ICMP.Types</td>
+        <td>нет</td>
+        <td>String[]</td>
+        <td>[]</td>
+        <td className="green center"></td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>sgIcmpRules.rules[].Sg</td>
+        <td>да</td>
+        <td>String</td>
+        <td></td>
+        <td className="green center"></td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>sgIcmpRules.rules[].logs</td>
+        <td>нет</td>
+        <td>Boolean</td>
+        <td>false</td>
+        <td className="green center"></td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>sgIcmpRules.rules[].trace</td>
+        <td>нет</td>
+        <td>Boolean</td>
+        <td>false</td>
+        <td className="green center"></td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>syncOp</td>
+        <td>да</td>
+        <td>
+          <nobr>Enum("Delete", "Upsert", "FullSync")</nobr>
+        </td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<h4 className="custom-heading">Ограничения</h4>
+
+<ul>
+  <li>
+    `groups.groups[].name`:
+    <Restrictions data={RESTRICTIONS.name} />
+  </li>
+  <li>
+    `groups.groups[].networks[]`:
+    <Restrictions data={RESTRICTIONS.cidrSet} />
+  </li>
+  <li>
+    `sgIcmpRules.rules[].Sg`:
+    <Restrictions data={RESTRICTIONS.name} />
+  </li>
+  <li>
+    `$node.rules[].type[]`:
+    <Restrictions data={RESTRICTIONS.icmpType} />
+  </li>
+</ul>
+
+#### Пример использования
+
+<Tabs
+    defaltValue="sg"
+    values={[
+        { label: "Security Groups", value: "sg" },
+        { label: "ICMP", value: "icmp" }
+    ]}
+>
+
+    <TabItem value="sg">
+        ```bash
+        curl '127.0.0.1:9007/v1/sync' \
+        --header 'Content-Type: application/json' \
+        --data '{
+            "groups": {
+                "groups": [{
+                    "defaultAction": "ACCEPT",
+                    "logs": true,
+                    "name": "sg-example",
+                    "networks": ["10.0.0.0/24", "11.0.0.0/24"],
+                    "trace": true
+                }]
+            },
+            "syncOp": "Upsert"
+        }'
+        ```
+
+        <h4 className="custom-heading">Выходные параметры</h4>
+
+        <table>
+          <thead>
+            <tr>
+              <th>название</th>
+              <th>тип данных</th>
+              <th>описание</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>-</td>
+              <td>Object</td>
+              <td>в случае успеха возвращается пустое тело</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h4 className="custom-heading">Возможные ошибки API</h4>
+
+        <Codes data = {RESPOND_CODES.invalid_argument} />
+        <Codes data = {RESPOND_CODES.not_found} />
+
+        <h4 className="custom-heading">Диаграмма последовательности</h4>
+
+        <FancyboxDiagram>
+
+        ```mermaid
+        sequenceDiagram
+        participant user as User
+        participant server as Server
+        participant db as Database
+
+        user->>server: Добавить Security Group
+
+        alt Ошибка в запросе
+            server-->>user: Показать ошибку в запросе
+        end
+
+        server->>db: Отправить запрос
+        db->>db: Проверка входящего запроса
+
+        alt SG c таким названием уже существует
+            db-->>server: Ответ с ошибкой
+            server-->>user: Показать ошибку в запросе
+        end
+
+        alt Пересечение значений source портов
+            db-->>server: Ответ с ошибкой
+            server-->>user: Показать ошибку в запросе
+        end
+
+        alt Некорректное значение поля определяющее действие с данными из запроса
+            db-->>server: Ответ с ошибкой
+            server-->>user: Показать ошибку в запросе
+        end
+
+        db->>db: Сохранить данные о SG в БД
+
+        db-->>server: Ответ с успешно добавленной новой SG
+        server-->>user: Успешно добавленная новая SG
+        ```
+
+        </FancyboxDiagram>
+    </TabItem>
+
+    <TabItem value="icmp">
+        ```bash
+        curl '127.0.0.1:9007/v1/sync' \
+        --header 'Content-Type: application/json' \
+        --data '{
+            "sgIcmpRules": {
+                "rules": [{
+                    "ICMP": {
+                        "IPv": "IPv4",
+                        "Types": [0,8]
+                    },
+                    "Sg": "sg-example",
+                    "logs": true,
+                    "trace": true
+                },
+                {
+                    "ICMP": {
+                        "IPv": "IPv6",
+                        "Types": [0,8]
+                    },
+                    "Sg": "sg-example",
+                    "logs": true,
+                    "trace": true
+                }]
+            },
+            "syncOp": "Upsert"
+        }'
+        ```
+
+        <h4 className="custom-heading">Выходные параметры</h4>
+
+        <table>
+          <thead>
+            <tr>
+              <th>название</th>
+              <th>тип данных</th>
+              <th>описание</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>-</td>
+              <td>Object</td>
+              <td>в случае успеха возвращается пустое тело</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h4 className="custom-heading">Возможные ошибки API</h4>
+
+        <Codes data = {RESPOND_CODES.invalid_argument} />
+        <Codes data = {RESPOND_CODES.not_found} />
+
+        <FancyboxDiagram>
+
+        ```mermaid
+        sequenceDiagram
+        participant user as User
+        participant server as Server
+        participant db as Database
+
+        user->>server: Добавить Security Group
+
+        alt Ошибка в запросе
+            server-->>user: Показать ошибку в запросе
+        end
+
+        server->>db: Отправить запрос
+        db->>db: Проверка входящего запроса
+
+        alt SG c таким названием уже существует
+            db-->>server: Ответ с ошибкой
+            server-->>user: Показать ошибку в запросе
+        end
+
+        alt Некорректное значение кода ICMP
+            db-->>server: Ответ с ошибкой
+            server-->>user: Показать ошибку в запросе
+        end
+
+        alt Некорректное значение IPv
+            db-->>server: Ответ с ошибкой
+            server-->>user: Показать ошибку в запросе
+        end
+
+        db->>db: Сохранить данные о SG в БД
+
+        db-->>server: Ответ с успешно добавленной новой SG
+        server-->>user: Успешно добавленная новая SG
+        ```
+
+        </FancyboxDiagram>
+    </TabItem>
+</Tabs>

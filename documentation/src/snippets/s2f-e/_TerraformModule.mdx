@@ -1,0 +1,195 @@
+import Tabs from '@theme/Tabs'
+import TabItem from '@theme/TabItem'
+import { Restrictions } from '@site/src/components/commonBlocks/Restrictions'
+import { DICTIONARY } from '@site/src/constants/dictionary.ts'
+import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
+
+<div className="paragraph">
+  <p>{DICTIONARY.terraformModule.full}</p>
+</div>
+<div className="paragraph">
+  Далее везде в документе подразумевается что все места, содержащие переменную `$traffic`, могут принять значениe:
+  `Egress`. Аналогчично для `$transport` подразумевается одно из двух значений: `tcp`, `udp`.
+</div>
+<ul>
+  <li>`rules` - {DICTIONARY.rules.short}</li>
+  <li>`rules.$traffic[]` - {DICTIONARY.traffic.short}</li>
+  <li>`rules.$traffic[].fqdnSet[]` - {DICTIONARY.fqdnSet.short}</li>
+  <li>`rules.$traffic[].log` - {DICTIONARY.log.short}</li>
+  <li>`rules.$traffic[].trace` - {DICTIONARY.trace.short}</li>
+  <li>`rules.$traffic[].access.$transport[]` - {DICTIONARY.transport.short}</li>
+  <li>`rules.$traffic[].access.protocols[]` - {DICTIONARY.l7ProtocolList.short}</li>
+  <li>`rules.$traffic[].access.$transport.description` - {DICTIONARY.description.short}</li>
+  <li>`rules.$traffic[].access.$transport.ports_to[]` - {DICTIONARY.dstPorts.short}</li>
+  <li>`rules.$traffic[].access.$transport.ports_from[]` - {DICTIONARY.srcPorts.short}</li>
+</ul>
+
+<div className="scrollable-x">
+  <table>
+    <caption>Области применения полей относительно используемого протокола</caption>
+    <thead>
+      <tr>
+        <th rowSpan="2">название параметра</th>
+        <th rowSpan="2">тип данных</th>
+        <th rowSpan="2">значение по умолчанию</th>
+        <th colSpan="3">transport*</th>
+      </tr>
+      <tr>
+        <th>TCP</th>
+        <th>UDP</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>rules</td>
+        <td>Object[]</td>
+        <td>[]</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>rules.$traffic[]</td>
+        <td>Object[]</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>rules.$traffic[].fqdnSet[]</td>
+        <td>String[]</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>rules.$traffic[].log</td>
+        <td>Boolean</td>
+        <td>false</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>rules.$traffic[].trace</td>
+        <td>Boolean</td>
+        <td>false</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>rules.$traffic[].access.$transport[]</td>
+        <td>Object[]</td>
+        <td>{}</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>rules.$traffic[].access.$transport.description</td>
+        <td>String</td>
+        <td>&quot;&quot;</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>rules.$traffic[].access.$transport.ports_to[]</td>
+        <td>Integer[]</td>
+        <td>null</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>rules.$traffic[].access.$transport.ports_from[]</td>
+        <td>Integer[]</td>
+        <td>null</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+#### Ограничения
+
+<ul>
+  <li>
+    `name`:
+    <Restrictions data={RESTRICTIONS.name} />
+  </li>
+  <li>
+    `rules.$traffic[].fqdnSet`:
+    <Restrictions data={RESTRICTIONS.fqdnSet} />
+  </li>
+  <li>
+    `rules.$traffic[].protocols[]`:
+    <Restrictions data={RESTRICTIONS.protocols} />
+  </li>
+  <li>
+    `rules.$traffic[].access.$transport[].ports_to[]`:
+    <Restrictions data={RESTRICTIONS.dstPorts} />
+  </li>
+  <li>
+    `rules.$traffic[].access.$transport[].ports_from[]`:
+    <Restrictions data={RESTRICTIONS.srcPorts} />
+  </li>
+</ul>
+
+<h4 className="custom-heading">
+  <a href="https://github.com/H-BF/swarm-spec-template/blob/master/spec/sg-local-example.yaml#L118">
+    Пример использования
+  </a>
+</h4>
+
+<Tabs
+    defaltValue="tcp"
+    values={[
+        { label: "TCP", value: "tcp" },
+        { label: "UDP", value: "udp" }
+    ]}
+>
+
+    <TabItem value="tcp">
+        ```yaml
+        name: sg-local-example
+        rules:
+            egress:
+              - fqdnSet:
+                  - example.com
+                logs:  true
+                trace: true
+                protocols:
+                  - "http"
+                  - "dns"
+                access:
+                  tcp:
+                    - description: "example"
+                      ports_from:
+                        - 64231
+                      ports_to:
+                        - 443
+                        - 80
+        ```
+    </TabItem>
+
+    <TabItem value="udp">
+        ```yaml
+        name: sg-local-example
+        rules:
+            egress:
+              - fqdnSet:
+                  - example.com
+                logs:  true
+                trace: true
+                protocols:
+                  - "http"
+                  - "dns"
+                access:
+                  udp:
+                    - description: "example"
+                      ports_from:
+                        - 64231
+                      ports_to:
+                        - 443
+                        - 80
+        ```
+    </TabItem>
+
+</Tabs>

@@ -1,0 +1,380 @@
+import Tabs from '@theme/Tabs'
+import TabItem from '@theme/TabItem'
+import { Restrictions } from '@site/src/components/commonBlocks/Restrictions'
+import { DICTIONARY } from '@site/src/constants/dictionary.ts'
+import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
+
+<div className="paragraph">
+  <p>{DICTIONARY.terraformResource.full}</p>
+</div>
+<ul>
+  <li>`items` - {DICTIONARY.terraformItems.short}</li>
+  <li>`items.$ruleName` - {DICTIONARY.terraformRuleName.short}</li>
+  <li>`items.$ruleName.traffic` - {DICTIONARY.traffic.short}</li>
+  <li>`items.$ruleName.transport` - {DICTIONARY.transport.short}</li>
+  <li>`items.$ruleName.sg` - {DICTIONARY.sg.short}</li>
+  <li>`items.$ruleName.sg_local` - {DICTIONARY.sgLocal.short}</li>
+  <li>`items.$ruleName.ports` - {DICTIONARY.ports.short}</li>
+  <li>`items.$ruleName.ports[].d` - {DICTIONARY.dstPorts.short}</li>
+  <li>`items.$ruleName.ports[].s` - {DICTIONARY.srcPorts.short}</li>
+  <li>`items.$ruleName.logs` - {DICTIONARY.log.short}</li>
+  <li>`items.$ruleName.trace` - {DICTIONARY.trace.short}</li>
+  <li>`items.$ruleName.ip_v` - {DICTIONARY.icmpV.short}</li>
+  <li>`items.$ruleName.type` - {DICTIONARY.icmpTypes.short}</li>
+</ul>
+
+<div className="scrollable-x">
+  <table>
+    <caption>Области применения полей относительно используемого протокола</caption>
+    <thead>
+      <tr>
+        <th rowSpan="2">название</th>
+        <th rowSpan="2">обязательность</th>
+        <th rowSpan="2">тип данных</th>
+        <th rowSpan="2">значение по умолчанию</th>
+        <th colSpan="3">transport*</th>
+      </tr>
+      <tr>
+        <th>TCP</th>
+        <th>UDP</th>
+        <th>ICMP</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>items</td>
+        <td>да</td>
+        <td>Object</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>items.$ruleName</td>
+        <td>да</td>
+        <td>Object</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>items.$ruleName.traffic</td>
+        <td>да</td>
+        <td>
+          <nobr>Enum("ingress", "egress")</nobr>
+        </td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>items.$ruleName.transport</td>
+        <td>да</td>
+        <td>Enum("TCP", "UDP")</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center"></td>
+      </tr>
+      <tr>
+        <td>items.$ruleName.sg</td>
+        <td>да</td>
+        <td>String</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>items.$ruleName.sg_local</td>
+        <td>да</td>
+        <td>String</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>items.$ruleName.ports</td>
+        <td>нет</td>
+        <td>Object[]</td>
+        <td>null</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center"></td>
+      </tr>
+      <tr>
+        <td>items.$ruleName.ports[].d</td>
+        <td>нет</td>
+        <td>String</td>
+        <td>""</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center"></td>
+      </tr>
+      <tr>
+        <td>items.$ruleName.ports[].s</td>
+        <td>нет</td>
+        <td>String</td>
+        <td>""</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center"></td>
+      </tr>
+      <tr>
+        <td>items.$ruleName.logs</td>
+        <td>нет</td>
+        <td>Boolean</td>
+        <td>false</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>items.$ruleName.trace</td>
+        <td>нет</td>
+        <td>Boolean</td>
+        <td>false</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>items.$ruleName.ip_v</td>
+        <td>да</td>
+        <td>Enum("IPv4", "IPv6")</td>
+        <td></td>
+        <td className="green center"></td>
+        <td className="green center"></td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>items.$ruleName.type</td>
+        <td>да</td>
+        <td>Strng[]</td>
+        <td>null</td>
+        <td className="green center"></td>
+        <td className="green center"></td>
+        <td className="green center">✔</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<h4 className="custom-heading">Ограничения</h4>
+
+<ul>
+  <li>
+    `items`:
+    <Restrictions data={RESTRICTIONS.items} />
+  </li>
+  <li>
+    `items.$ruleName`:
+    <Restrictions data={RESTRICTIONS.itemsRuleName_s2s_ie} />
+  </li>
+  <li>
+    `items.$ruleName.sg`:
+    <Restrictions data={RESTRICTIONS.name} />
+  </li>
+  <li>
+    `items.$ruleName.sg_local`:
+    <Restrictions data={RESTRICTIONS.name} />
+  </li>
+  <li>
+    `items.$ruleName.ports[].s`:
+    <Restrictions data={RESTRICTIONS.srcPorts} />
+  </li>
+  <li>
+    `items.$ruleName.ports[].d`:
+    <Restrictions data={RESTRICTIONS.dstPorts} />
+  </li>
+  <li>
+    `items.$ruleName.type[]`:
+    <Restrictions data={RESTRICTIONS.icmpType} />
+  </li>
+</ul>
+
+<h4 className="custom-heading">Пример использования</h4>
+
+<Tabs
+    defaltValue = "tcp"
+    values = {[
+        { label: "TCP", value: "tcp" },
+        { label: "UDP", value: "udp" },
+        { label: "ICMP", value: "icmp" }
+    ]}
+>
+    <TabItem value="tcp">
+        <div className="parent-div">
+            <div className="child-block">
+                <h4 className="center">Ingress</h4>
+
+                ```hcl
+                resource "sgroups_ie_rules" "rules" {
+                    items = {
+                    "tcp:sg-local(sg-local-example)sg(sg-example)ingress" = {
+                        traffic     = "ingress"
+                        transport   = "tcp"
+                        sg          = "sg-example"
+                        sg_local    = "sg-local-example"
+                        ports = [{
+                        d = "80"
+                        s = ""
+                        }]
+                        logs  = false
+                        trace = false
+                    }
+                    }
+                }
+                ```
+
+
+            </div>
+            <div className="child-block">
+                <h4 className="center">Egress</h4>
+
+
+                ```hcl
+                resource "sgroups_ie_rules" "rules" {
+                    items = {
+                    "tcp:sg-local(sg-local-example)sg(sg-example)egress" = {
+                        traffic     = "egress"
+                        transport   = "tcp"
+                        sg          = "sg-example"
+                        sg_local    = "sg-local-example"
+                        ports = [{
+                        d = "80"
+                        s = ""
+                        }]
+                        logs  = false
+                        trace = false
+                    }
+                    }
+                }
+                ```
+
+
+            </div>
+        </div>
+    </TabItem>
+
+    <TabItem value="udp">
+        <div className="parent-div">
+            <div className="child-block">
+                <h4 className="center">Ingress</h4>
+
+
+                ```hcl
+                resource "sgroups_ie_rules" "rules" {
+                    items = {
+                    "udp:sg-local(sg-local-example)sg(sg-example)ingress" = {
+                        traffic     = "ingress"
+                        transport   = "udp"
+                        sg          = "sg-example"
+                        sg_local    = "sg-local-example"
+                        ports = [{
+                        d = "80"
+                        s = ""
+                        }]
+                        logs  = false
+                        trace = false
+                    }
+                    }
+                }
+                ```
+
+
+            </div>
+            <div className="child-block">
+                <h4 className="center">Egress</h4>
+                ```hcl
+                resource "sgroups_ie_rules" "rules" {
+                    items = {
+                    "udp:sg-local(sg-local-example)sg(sg-example)egress" = {
+                        traffic     = "egress"
+                        transport   = "udp"
+                        sg          = "sg-example"
+                        sg_local    = "sg-local-example"
+                        ports = [{
+                        d = "80"
+                        s = ""
+                        }]
+                        logs  = false
+                        trace = false
+                    }
+                    }
+                }
+                ```
+            </div>
+        </div>
+    </TabItem>
+
+    <TabItem value="icmp">
+        <div className="parent-div">
+            <div className="child-block">
+                <h4 className="center">Ingress</h4>
+
+                ```hcl
+                resource "sgroups_ie_icmp_rules" "rules" {
+                    items = {
+                    "icmp4:sg-local(sg-example-local)sg(sg-example)ingress" = {
+                        logs    = true
+                        trace   = true
+                        sg_local = sg-example-local
+                        sg       = sg-example
+                        ip_v    = IPv4
+                        type    = [0,8]
+                        traffic = ingress
+                    }
+                    "icmp6:sg-local(sg-example-local)sg(sg-example)ingress" = {
+                        logs    = true
+                        trace   = true
+                        sg_local = sg-example-local
+                        sg       = sg-example
+                        ip_v    = IPv6
+                        type    = [0,8]
+                        traffic = ingress
+                    }
+                    }
+                }
+                ```
+
+            </div>
+            <div className="child-block">
+                <h4 className="center">Egress</h4>
+
+
+                ```hcl
+                resource "sgroups_icmp_rules" "rules" {
+                    items = {
+                    "icmp4:sg-local(sg-example-local)sg(sg-example)egress" = {
+                        logs    = true
+                        trace   = true
+                        sg_local = sg-example-local
+                        sg       = sg-example
+                        ip_v    = IPv4
+                        type    = [0,8]
+                        traffic = egress
+                    }
+                    "icmp6:sg-local(sg-example-local)sg(sg-example)egress" = {
+                        logs    = true
+                        trace   = true
+                        sg_local = sg-example-local
+                        sg       = sg-example
+                        ip_v    = IPv6
+                        type    = [0,8]
+                        traffic = egress
+                    }
+                    }
+                }
+                ```
+
+
+            </div>
+        </div>
+    </TabItem>
+
+</Tabs>

@@ -1,0 +1,222 @@
+import Tabs from '@theme/Tabs'
+import TabItem from '@theme/TabItem'
+import { Restrictions } from '@site/src/components/commonBlocks/Restrictions'
+import { DICTIONARY } from '@site/src/constants/dictionary.ts'
+import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
+
+<div className="paragraph">
+  <p>{DICTIONARY.terraformResource.full}</p>
+</div>
+<ul>
+  <li>`items` - список ресурсов создаваемые terraform ресурсом. </li>
+  <li>`items.$ruleName` - уникальное имя создаваемого ресурса.</li>
+  <li>`items.$ruleName.transport` - {DICTIONARY.transport.short}</li>
+  <li>`items.$ruleName.protocols[]` - {DICTIONARY.l7ProtocolList.short}</li>
+  <li>`items.$ruleName.logs` - {DICTIONARY.log.short}</li>
+  <li>`items.$ruleName.trace` - {DICTIONARY.trace.short}</li>
+  <li>`items.$ruleName.sg_from` - {DICTIONARY.sgLocal.short}</li>
+  <li>`items.$ruleName.fqdn` - {DICTIONARY.fqdn.short}</li>
+  <li>`items.$ruleName.ports[]` - {DICTIONARY.ports.short}</li>
+  <li>`items.$ruleName.ports[].s` - {DICTIONARY.srcPorts.short}</li>
+  <li>`items.$ruleName.ports[].d` - {DICTIONARY.dstPorts.short}</li>
+</ul>
+
+<div className="scrollable-x">
+  <table>
+    <caption>Области применения полей относительно используемого протокола</caption>
+    <thead>
+      <tr>
+        <th rowSpan="2">название</th>
+        <th rowSpan="2">обязательность</th>
+        <th rowSpan="2">тип данных</th>
+        <th rowSpan="2">значение по умолчанию</th>
+        <th colSpan="2">transport*</th>
+      </tr>
+      <tr>
+        <th>TCP</th>
+        <th>UDP</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>items</td>
+        <td>да</td>
+        <td>Object</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>items.$ruleName</td>
+        <td>да</td>
+        <td>Object</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>transport</td>
+        <td>да</td>
+        <td>Enum("TCP", "UDP")</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>logs</td>
+        <td>нет</td>
+        <td>Boolean</td>
+        <td>false</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>trace</td>
+        <td>нет</td>
+        <td>Boolean</td>
+        <td>false</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>sg_from</td>
+        <td>да</td>
+        <td>String</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>fqdn</td>
+        <td>да</td>
+        <td>String</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>protocols[]</td>
+        <td>нет</td>
+        <td>String[]</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>ports[]</td>
+        <td>нет</td>
+        <td>Object[]</td>
+        <td>null</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>ports[].s</td>
+        <td>нет</td>
+        <td>string</td>
+        <td>""</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>ports[].d</td>
+        <td>нет</td>
+        <td>string</td>
+        <td>""</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+#### Ограничения
+
+<ul>
+  <li>
+    `items`:
+    <Restrictions data={RESTRICTIONS.items} />
+  </li>
+  <li>
+    `items.$ruleName`:
+    <Restrictions data={RESTRICTIONS.itemsRuleName_s2f_e} />
+  </li>
+  <li>
+    `items.$ruleName.protocols[]`:
+    <Restrictions data={RESTRICTIONS.protocols} />
+  </li>
+  <li>
+    `items.$ruleName.sg_from`:
+    <Restrictions data={RESTRICTIONS.name} />
+  </li>
+  <li>
+    `items.$ruleName.fqdn`:
+    <Restrictions data={RESTRICTIONS.fqdn} />
+  </li>
+  <li>
+    `items.$ruleName.ports[].s`:
+    <Restrictions data={RESTRICTIONS.srcPorts} />
+  </li>
+  <li>
+    `items.$ruleName.ports[].d`:
+    <Restrictions data={RESTRICTIONS.dstPorts} />
+  </li>
+</ul>
+
+#### Пример использования
+
+<Tabs
+    defaltValue="tcp"
+    values={[
+        { label: "TCP", value: "tcp" },
+        { label: "UDP", value: "udp" }
+    ]}
+>
+
+    <TabItem value="tcp">
+        ```hcl
+        resource "sgroups_fqdn_rules" "rules" {
+            items = {
+                "tcp:sg(sg-local-example)fqdn(example.com)" = {
+                    transport   = "tcp"
+                    sg_from     = "sg-local-example"
+                    fqdn        = "example.com"
+                    protocols   = ["http", "dns"]
+                    ports = [
+                        {
+                            d = "443,80"
+                            s = "64231"
+                        }
+                    ]
+                    logs  = true
+                    trace = true
+                }
+            }
+        }
+        ```
+    </TabItem>
+
+    <TabItem value="udp">
+        ```hcl
+        resource "sgroups_fqdn_rules" "rules" {
+            items = {
+                "udp:sg(sg-local-example)fqdn(example.com)" = {
+                    transport   = "udp"
+                    sg_from     = "sg-local-example"
+                    fqdn        = "example.com"
+                    protocols   = ["http", "dns"]
+                    ports = [
+                        {
+                            d = "443,80"
+                            s = "64231"
+                        }
+                    ]
+                    logs  = true
+                    trace = true
+                }
+            }
+        }
+        ```
+    </TabItem>
+
+</Tabs>
