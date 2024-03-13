@@ -491,7 +491,7 @@ func (sui *sGroupServiceTests) Test_Sync_CidrSgIcmpRules() {
 	sui.syncSGs([]*api.SecGroup{sg1, sg2}, api.SyncReq_FullSync)
 
 	rule1 := sui.newCidrSgIcmpRule("10.10.10.0/24", sg1, common.Traffic_Egress, common.IpAddrFamily_IPv4)
-	rule2 := sui.newCidrSgIcmpRule("20.20.20.0/24", sg2, common.Traffic_Ingress, common.IpAddrFamily_IPv6)
+	rule2 := sui.newCidrSgIcmpRule("2001:db8::/64", sg2, common.Traffic_Ingress, common.IpAddrFamily_IPv6)
 
 	sui.syncCidrSgIcmpRules([]*api.CidrSgIcmpRule{rule1, rule2}, api.SyncReq_FullSync)
 	r := sui.reader()

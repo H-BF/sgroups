@@ -676,7 +676,7 @@ func (sui *memDbSuite) Test_CidrSgRules_IntersectCIDRS() {
 	sui.Require().NoError(err)
 	err = w.Commit()
 	sui.Require().Error(err)
-	sui.Require().Contains(err.Error(), "have CIDRS with intersected")
+	sui.Require().Contains(err.Error(), "have intersected CIDRs")
 }
 
 func (sui *memDbSuite) Test_CidrSgRules_NoIntersectCIDRS() {
@@ -751,7 +751,7 @@ func (sui *memDbSuite) Test_CidrSgIcmpRules_List() {
 	sui.Require().NoError(err)
 
 	rule1 := sui.newCidrSgIcmpRule(model.EGRESS, "1.1.1.1/32", sg1.Name, model.IPv4)
-	rule2 := sui.newCidrSgIcmpRule(model.INGRESS, "1.1.1.1/32", sg2.Name, model.IPv6)
+	rule2 := sui.newCidrSgIcmpRule(model.INGRESS, "2001:db8::1/128", sg2.Name, model.IPv6)
 
 	w = sui.regWriter()
 	err = w.SyncCidrSgIcmpRules(ctx, []model.IECidrSgIcmpRule{rule1, rule2}, NoScope)
@@ -804,7 +804,7 @@ func (sui *memDbSuite) Test_CidrSgIcmpRules_DelSG() {
 	sui.Require().NoError(err)
 
 	rule1 := sui.newCidrSgIcmpRule(model.EGRESS, "1.1.1.1/32", sg1.Name, model.IPv4)
-	rule2 := sui.newCidrSgIcmpRule(model.INGRESS, "1.1.1.1/32", sg2.Name, model.IPv6)
+	rule2 := sui.newCidrSgIcmpRule(model.INGRESS, "2001:db8::1/128", sg2.Name, model.IPv6)
 
 	w = sui.regWriter()
 	err = w.SyncCidrSgIcmpRules(ctx, []model.IECidrSgIcmpRule{rule1, rule2}, NoScope)
@@ -838,7 +838,7 @@ func (sui *memDbSuite) Test_CidrSgIcmpRules_IntersectCIDRS() {
 	sui.Require().NoError(err)
 
 	rule1 := sui.newCidrSgIcmpRule(model.EGRESS, "1.1.1.100/32", sg1.Name, model.IPv4)
-	rule2 := sui.newCidrSgIcmpRule(model.EGRESS, "1.1.1.1/24", sg1.Name, model.IPv6)
+	rule2 := sui.newCidrSgIcmpRule(model.EGRESS, "2001:db8::/64", sg1.Name, model.IPv6)
 	rule3 := sui.newCidrSgIcmpRule(model.EGRESS, "1.1.1.101/32", sg1.Name, model.IPv4)
 	rule4 := sui.newCidrSgIcmpRule(model.EGRESS, "1.1.1.1/24", sg1.Name, model.IPv4)
 
@@ -848,7 +848,7 @@ func (sui *memDbSuite) Test_CidrSgIcmpRules_IntersectCIDRS() {
 	sui.Require().NoError(err)
 	err = w.Commit()
 	sui.Require().Error(err)
-	sui.Require().Contains(err.Error(), "have CIDRS with intersected")
+	sui.Require().Contains(err.Error(), "have intersected CIDRs")
 }
 
 func (sui *memDbSuite) Test_CidrSgIcmpRules_NoIntersectCIDRS() {
@@ -860,7 +860,7 @@ func (sui *memDbSuite) Test_CidrSgIcmpRules_NoIntersectCIDRS() {
 	sui.Require().NoError(err)
 
 	rule1 := sui.newCidrSgIcmpRule(model.EGRESS, "1.1.1.100/32", sg1.Name, model.IPv4)
-	rule2 := sui.newCidrSgIcmpRule(model.EGRESS, "1.1.1.1/24", sg1.Name, model.IPv6)
+	rule2 := sui.newCidrSgIcmpRule(model.EGRESS, "2001:db8::/64", sg1.Name, model.IPv6)
 	rule3 := sui.newCidrSgIcmpRule(model.INGRESS, "1.1.1.1/24", sg1.Name, model.IPv4)
 
 	err = w.SyncCidrSgIcmpRules(ctx,

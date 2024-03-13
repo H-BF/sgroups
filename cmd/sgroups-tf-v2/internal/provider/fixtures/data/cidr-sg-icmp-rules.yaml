@@ -46,10 +46,10 @@ cases:
           trace = true
         }
     
-        "icmp6:cidr(20.0.0.0/24)sg(group2)egress" = {
+        "icmp6:cidr(2001:db8::/64)sg(group2)egress" = {
           traffic = "egress"
           sg_name = "group2"
-          cidr    = "20.0.0.0/24"
+          cidr    = "2001:db8::/64"
           ip_v    = "IPv6"
           type    = [10, 30, 54]
         }
@@ -73,7 +73,7 @@ cases:
       }
     - |
       {
-        "CIDR": "20.0.0.0/24",
+        "CIDR": "2001:db8::/64",
         "ICMP": {
           "IPv": "IPv6",
           "Types": [
@@ -120,7 +120,7 @@ cases:
     cidr-sg-icmp-rules:
     - |
       {
-        "CIDR": "20.0.0.0/24",
+        "CIDR": "2001:db8::/64",
         "ICMP": {
           "IPv": "IPv6",
           "Types": [
