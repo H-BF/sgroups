@@ -382,8 +382,8 @@ func (tfCidrSgIcmpRules2Backend) sync(ctx context.Context, items NamedResources[
 	}
 	req := protos.SyncReq{
 		SyncOp: op,
-		Subject: &protos.SyncReq_CidrSgImcpRules{
-			CidrSgImcpRules: &syncObj,
+		Subject: &protos.SyncReq_CidrSgIcmpRules{
+			CidrSgIcmpRules: &syncObj,
 		},
 	}
 	if _, err := client.Sync(ctx, &req); err != nil {

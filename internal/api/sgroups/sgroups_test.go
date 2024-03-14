@@ -270,8 +270,8 @@ func (sui *sGroupServiceTests) syncIESgSgIcmpRules(rules []*api.IESgSgIcmpRule, 
 func (sui *sGroupServiceTests) syncCidrSgIcmpRules(rules []*api.CidrSgIcmpRule, op api.SyncReq_SyncOp) {
 	req := api.SyncReq{
 		SyncOp: op,
-		Subject: &api.SyncReq_CidrSgImcpRules{
-			CidrSgImcpRules: &api.SyncCidrSgIcmpRules{
+		Subject: &api.SyncReq_CidrSgIcmpRules{
+			CidrSgIcmpRules: &api.SyncCidrSgIcmpRules{
 				Rules: rules,
 			},
 		},
