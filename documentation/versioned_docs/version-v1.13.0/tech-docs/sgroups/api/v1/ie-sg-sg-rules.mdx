@@ -1,0 +1,185 @@
+---
+id: ie-sg-sg-rules
+---
+
+import { FancyboxDiagram } from '@site/src/components/commonBlocks/FancyboxDiagram'
+import { RESPOND_CODES } from '@site/src/constants/errorCodes.tsx'
+import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
+import { DICTIONARY } from '@site/src/constants/dictionary.ts'
+
+# POST /v1/ie-sg-sg/rules
+
+<div className="text-justify">
+  Этот метод отображает список Security Group to Security Group правил, в соответствии с указанным списком Security
+  Groups и типом траффика.
+</div>
+
+<div className="text-justify">
+  Более подробно по организации БД можно посмотреть [здесь](../../database.mdx#tbl_ie_sg_sg_rule).
+</div>
+
+#### Входные параметры
+
+<ul>
+  <li>`Sg[]` - {DICTIONARY.sgroupSet.short}</li>
+  <li>`SgLocal[]` - {DICTIONARY.sgroupSet.short}</li>
+</ul>
+
+<div className="scrollable-x">
+  <table>
+    <thead>
+      <tr>
+        <th rowSpan="2">название</th>
+        <th rowSpan="2">обязательность</th>
+        <th rowSpan="2">тип данных</th>
+        <th rowSpan="2">Значение по умолчанию</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Sg[]</td>
+        <td>да</td>
+        <td>Object[]</td>
+        <td></td>
+      </tr>
+      <tr>
+        <td>SgLocal[]</td>
+        <td>да</td>
+        <td>Object[]</td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<h4 className="custom-heading">Пример использования</h4>
+
+```bash
+curl '127.0.0.1:9007/v1/ie-sg-sg/rules' \
+--header 'Content-Type: application/json' \
+--data '{
+    "Sg": ["sg-example"],
+    "SgLocal": ["sg-example-2"]
+}'
+```
+
+<h4 className="custom-heading">Выходные параметры</h4>
+
+<ul>
+  <li>`$node.rules[]` - {DICTIONARY.rules.short}</li>
+  <li>`$node.rules[].Sg` - {DICTIONARY.sg.short}</li>
+  <li>`$node.rules[].SgLocal` - {DICTIONARY.sg.short}</li>
+  <li>`$node.rules[].logs` - {DICTIONARY.log.short}</li>
+  <li>`$node.rules[].trace` - {DICTIONARY.trace.short}</li>
+  <li>`$node.rules[].ports` - {DICTIONARY.ports.short}</li>
+  <li>`$node.rules[].ports[].d` - {DICTIONARY.dstPorts.short}</li>
+  <li>`$node.rules[].ports[].s` - {DICTIONARY.srcPorts.short}</li>
+  <li>`$node.rules[].traffic` - {DICTIONARY.traffic.short}</li>
+  <li>`$node.rules[].transport` - {DICTIONARY.transport.short}</li>
+</ul>
+
+<div className="scrollable-x">
+  <table>
+    <thead>
+      <tr>
+        <th>название</th>
+        <th>тип данных</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>$node.rules[]</td>
+        <td>Object[]</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].Sg</td>
+        <td>String</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].SgLocal</td>
+        <td>String</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].logs</td>
+        <td>Boolean</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].trace</td>
+        <td>Boolean</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].ports</td>
+        <td>Object[]</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].ports[].s</td>
+        <td>String</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].ports[].d</td>
+        <td>String[]</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].traffic</td>
+        <td>String</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].transport</td>
+        <td>String</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<h4 className="custom-heading">Пример ответа</h4>
+
+```bash
+{
+    "rules": [{
+        "Sg": "sg-example",
+        "SgLocal": "sg-example-2",
+        "logs": "true",
+        "trace": "true",
+        "ports": [{
+                "d": "7800",
+                "s": "4446"
+            }],
+        "traffic": "ingress",
+        "transport": "TCP",
+    }]
+}
+```
+
+<h4 className="custom-heading">Возможные ошибки API</h4>
+
+<Codes data={RESPOND_CODES.not_found} />
+
+<h4 className="custom-heading">Диаграмма последовательности</h4>
+
+<FancyboxDiagram>
+
+```mermaid
+sequenceDiagram
+participant user as User
+participant server as Server
+participant db as Database
+
+user->>server: Отобразить список IE-SG-SG правил для входящего и исходящего траффика
+
+alt Ошибка в запросе
+    server-->>user: Показать ошибку в запросе
+end
+
+server->>db: Отправить запрос
+db->>db: Проверка входящего запроса
+
+alt Sg и/или SgLocal были указаны некорректно
+    db-->>server: Ответ с ошибкой
+    server-->>user: Показать ошибку в запросе
+end
+
+db-->>server: Ответ со списком IE-SG-SG правил входящего и исходящего траффика соответствующий запросу
+server-->>user: Список IE-SG-SG правил входящего и исходящего траффика соответствующий запросу
+```
+
+</FancyboxDiagram>

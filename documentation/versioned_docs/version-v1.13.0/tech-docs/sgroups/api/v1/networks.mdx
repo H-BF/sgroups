@@ -1,0 +1,141 @@
+---
+id: networks
+---
+
+import { FancyboxDiagram } from '@site/src/components/commonBlocks/FancyboxDiagram'
+import { RESPOND_CODES } from '@site/src/constants/errorCodes.tsx'
+import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
+import { DICTIONARY } from '@site/src/constants/dictionary.ts'
+
+# POST /v1/list/networks
+
+<div className="text-justify">
+  Этот метод отображает список подсетей (networks) и их IP, в соответствии с указанным списком имен подсетей (networks).
+</div>
+
+<div className="text-justify">
+  Более подробно по организации БД можно посмотреть [здесь](../../database.mdx#tbl_network).
+</div>
+
+#### Входные параметры
+
+<ul>
+  <li>`neteworkNames[]` - {DICTIONARY.networkNames.short}</li>
+</ul>
+
+<div className="scrollable-x">
+  <table>
+    <thead>
+      <tr>
+        <th rowSpan="2">название</th>
+        <th rowSpan="2">обязательность</th>
+        <th rowSpan="2">тип данных</th>
+        <th rowSpan="2">Значение по умолчанию</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>neteworkNames[]</td>
+        <td>да</td>
+        <td>Object[]</td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<h4 className="custom-heading">Пример использования</h4>
+
+```bash
+curl '127.0.0.1:9007/v1/list/networks' \
+--header 'Content-Type: application/json' \
+--data '{
+    "neteworkNames": ["network-example"]
+}'
+```
+
+<h4 className="custom-heading">Выходные параметры</h4>
+
+<ul>
+  <li>`$node.networks[]` - {DICTIONARY.rules.short}</li>
+  <li>`$node.networks[].name` - {DICTIONARY.nw.short}</li>
+  <li>`$node.networks[].network` - {DICTIONARY.networkObject.short}</li>
+  <li>`$node.networks[].network.CIDR` - {DICTIONARY.networks.short}</li>
+</ul>
+
+<div className="scrollable-x">
+  <table>
+    <thead>
+      <tr>
+        <th>название</th>
+        <th>тип данных</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>$node.networks[]</td>
+        <td>Object[]</td>
+      </tr>
+      <tr>
+        <td>$node.networks[].name</td>
+        <td>String</td>
+      </tr>
+      <tr>
+        <td>$node.networks[].network</td>
+        <td>Object</td>
+      </tr>
+      <tr>
+        <td>$node.networks[].network.CIDR</td>
+        <td>String</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<h4 className="custom-heading">Пример ответа</h4>
+
+```bash
+{
+    "networks": [{
+        "network": "network-example",
+        "ICMP": {
+                "CIDR": "10.150.0.220/32"
+            },
+    }]
+}
+```
+
+<h4 className="custom-heading">Возможные ошибки API</h4>
+
+<Codes data={RESPOND_CODES.internal} />
+<Codes data={RESPOND_CODES.not_found} />
+
+<h4 className="custom-heading">Диаграмма последовательности</h4>
+
+<FancyboxDiagram>
+
+```mermaid
+sequenceDiagram
+participant user as User
+participant server as Server
+participant db as Database
+
+user->>server: Отобразить список доступных сетей
+
+alt Ошибка в запросе
+    server-->>user: Показать ошибку в запросе
+end
+
+server->>db: Отправить запрос
+db->>db: Проверка входящего запроса
+
+alt Указано некорректное значение существующего параметра
+    db-->>server: Ответ с ошибкой
+    server-->>user: Показать ошибку в запросе
+end
+
+db-->>server: Ответ со списком доступных сетей соответствующий запросу
+server-->>user: Список доступных сетей соответствующий запросу
+```
+
+</FancyboxDiagram>

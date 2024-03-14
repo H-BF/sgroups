@@ -1,0 +1,47 @@
+---
+id: rules-priority
+---
+
+# Приоритет правил
+
+<div className="text-justify">
+  Приоритет правил в nftables определяет порядок в котором правила применяются к пакетам или сетевым потокам. Чем ниже
+  значение преоритета, тем выше преоритет имеет правило. Значение приоритета могут варьироваться от -32768 до 32767,
+  однако обычно они ограничиваются диапазоном от -300 до 300 для удобства управления и понимания. <br />
+  Ниже представлена птаблица преодитета правил в nftables:
+</div>
+
+<table>
+  <tr>
+    <td>Правило</td>
+    <td>Значение приоритета</td>
+  </tr>
+  <tr>
+    <td>Sgroup to Sgroup (icmp) (legacy)</td>
+    <td>-300</td>
+  </tr>
+  <tr>
+    <td>Sgroup to Sgroup (tcp\|udp) (legacy)</td>
+    <td>-200</td>
+  </tr>
+  <tr>
+    <td>Sgroup to Sgroup (icmp) (ingress/egress)</td>
+    <td>-100</td>
+  </tr>
+  <tr>
+    <td>Sgroup to Sgroup (tcp\|udp) (ingress/egress)</td>
+    <td>0</td>
+  </tr>
+  <tr>
+    <td>Sgroup to FQDN (tcp\|udp)</td>
+    <td>100</td>
+  </tr>
+  <tr>
+    <td>Sgroup to CIDR (icmp) (ingress/egress)</td>
+    <td>200</td>
+  </tr>
+  <tr>
+    <td>Sgroup to CIDR (tcp\|udp) (ingress/egress)</td>
+    <td>300</td>
+  </tr>
+</table>
