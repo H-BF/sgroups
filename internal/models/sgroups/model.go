@@ -5,6 +5,7 @@ import (
 	"crypto/md5" //nolint:gosec
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"net"
 	"strings"
 	"time"
@@ -193,8 +194,8 @@ type (
 	IECidrSgIcmpRuleID struct {
 		Traffic Traffic
 		IPv     uint8
-		CIDR    net.IPNet
 		SG      string
+		CIDR    net.IPNet
 	}
 )
 
@@ -531,6 +532,30 @@ func (o IECidrSgIcmpRule) ID() IECidrSgIcmpRuleID {
 // IdentityHash -
 func (o IECidrSgIcmpRuleID) IdentityHash() string {
 	return o.String()
+}
+
+// Cmp -
+func (o IECidrSgIcmpRuleID) Cmp(other IECidrSgIcmpRuleID) int {
+	if o.Traffic < other.Traffic {
+		return -1
+	}
+	if o.Traffic == other.Traffic {
+		if o.IPv < other.IPv {
+			return -1
+		}
+		if o.IPv == other.IPv {
+			if o.SG < other.SG {
+				return -1
+			}
+			if o.SG == other.SG {
+				var a, b big.Int
+				_ = a.SetBytes(o.CIDR.IP)
+				_ = b.SetBytes(other.CIDR.IP)
+				return a.Cmp(&b)
+			}
+		}
+	}
+	return 1
 }
 
 // String -
