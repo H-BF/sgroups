@@ -454,7 +454,7 @@ func (o SgSgIcmpRule) IsEq(other SgSgIcmpRule) bool {
 	return o.Logs == other.Logs &&
 		o.Trace == other.Trace &&
 		o.SgFrom == other.SgFrom &&
-		o.Icmp.IsEq(o.Icmp)
+		o.Icmp.IsEq(other.Icmp)
 }
 
 // ID -
@@ -512,7 +512,7 @@ func (o IECidrSgIcmpRule) IsEq(other IECidrSgIcmpRule) bool {
 		bytes.Equal(o.CIDR.Mask, other.CIDR.Mask)
 
 	return o.Traffic == other.Traffic &&
-		o.Icmp.IsEq(o.Icmp) &&
+		o.Icmp.IsEq(other.Icmp) &&
 		cidrIsEq &&
 		o.SG == other.SG &&
 		o.Logs == other.Logs &&

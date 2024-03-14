@@ -17,8 +17,8 @@ type CidrSgRules struct {
 }
 
 // IsEq -
-func (rules *CidrSgRules) IsEq(order CidrSgRules) bool {
-	return rules.Rules.Eq(&order.Rules, func(vL, vR *model.IECidrSgRule) bool {
+func (rules *CidrSgRules) IsEq(other CidrSgRules) bool {
+	return rules.Rules.Eq(&other.Rules, func(vL, vR *model.IECidrSgRule) bool {
 		return vL.IsEq(*vR)
 	})
 }

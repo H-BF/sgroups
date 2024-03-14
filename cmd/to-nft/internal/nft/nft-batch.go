@@ -861,13 +861,13 @@ func (bt *batch) makeInOutChains(dir direction) {
 		bt.chainInOutProlog(dir, sg)
 		bt.populateDefaultIcmpRules(dir, sg)
 		bt.populateInOutSgIcmpRules(dir, sg)
-		bt.populateSgIeSgIcmpRules(dir, sg)
 		bt.populateIeCidrSgIcmpRules(dir, sg)
 		bt.populateInOutSgRules(dir, sg)
 		bt.populateInOutSgIeSgRules(dir, sg)
 		if dir == dirOUT {
 			bt.populateOutSgFqdnRules(sg)
 		}
+		bt.populateSgIeSgIcmpRules(dir, sg)
 		bt.populateInOutCidrSgRules(dir, sg)
 		bt.chainInOutEpilog(dir, sg)
 		return true
