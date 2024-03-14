@@ -9,7 +9,7 @@ export const Header: FC = () => (
         Write your documentation in Markdown and create a professional static site in minutes – searchable,
         customizable, in 60+ languages, for all devices.
       </p>
-      <a href="/swarm_doc/">
+      <a href="/sgroups/">
         <button className={styles.button} type="button">
           Get started
         </button>
