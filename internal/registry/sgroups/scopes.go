@@ -49,9 +49,11 @@ type (
 
 	scopedSgSgIcmpIdentity map[string]model.SgSgIcmpRuleID
 
-	scopedCidrSgRuleIdentity map[string]model.CidrSgRuleIdenity
+	scopedCidrSgRuleIdentity map[string]model.IECidrSgRuleIdenity
 
-	scopedSgSgRuleIdentity map[string]model.SgSgRuleIdentity
+	scopedCidrSgIcmpRuleIdentity map[string]model.IECidrSgIcmpRuleID
+
+	scopedSgSgRuleIdentity map[string]model.IESgSgRuleIdentity
 
 	scopedIESgSgIcmpRuleIdentity map[string]model.IESgSgIcmpRuleID
 
@@ -182,7 +184,7 @@ func PKScopeOfSgSgIcmpRules(rules ...model.SgSgIcmpRule) Scope {
 }
 
 // PKScopedCidrSgRules makes PROTO:CIDR:SG:TRAFFIC primary rule scope
-func PKScopedCidrSgRules(rules ...model.CidrSgRule) Scope {
+func PKScopedCidrSgRules(rules ...model.IECidrSgRule) Scope {
 	ret := scopedCidrSgRuleIdentity{}
 	for _, r := range rules {
 		ret[r.ID.IdentityHash()] = r.ID
@@ -190,8 +192,18 @@ func PKScopedCidrSgRules(rules ...model.CidrSgRule) Scope {
 	return ret
 }
 
+// PKScopedCidrSgIcmpRules make ICMP<4|6>:CIDR:SG:TRAFFIC primary rule scope
+func PKScopedCidrSgIcmpRules(rules ...model.IECidrSgIcmpRule) Scope {
+	ret := scopedCidrSgIcmpRuleIdentity{}
+	for _, r := range rules {
+		id := r.ID()
+		ret[id.IdentityHash()] = id
+	}
+	return ret
+}
+
 // PKScopedSgSgRules makes PROTO:SG-SG:TRAFFIC primary rule scope
-func PKScopedSgSgRules(rules ...model.SgSgRule) Scope {
+func PKScopedSgSgRules(rules ...model.IESgSgRule) Scope {
 	ret := scopedSgSgRuleIdentity{}
 	for _, r := range rules {
 		ret[r.ID.IdentityHash()] = r.ID
@@ -225,14 +237,15 @@ func (scopedFqdnRuleIdentity) privateScope()       {}
 func (scopedSgIcmpIdentity) privateScope()         {}
 func (scopedSgSgIcmpIdentity) privateScope()       {}
 func (scopedCidrSgRuleIdentity) privateScope()     {}
+func (scopedCidrSgIcmpRuleIdentity) privateScope() {}
 func (scopedSgSgRuleIdentity) privateScope()       {}
 func (scopedIESgSgIcmpRuleIdentity) privateScope() {}
 
 type filterKindArg interface {
 	model.Network | model.SecurityGroup |
 		model.SGRule | model.FQDNRule | model.SgIcmpRule |
-		model.SgSgIcmpRule | model.CidrSgRule | model.SgSgRule |
-		model.IESgSgIcmpRule
+		model.SgSgIcmpRule | model.IECidrSgRule | model.IESgSgRule |
+		model.IESgSgIcmpRule | model.IECidrSgIcmpRule
 }
 
 type filterTree[filterArgT filterKindArg] struct {
@@ -366,12 +379,12 @@ func (p scopedSG) inSgIcmpRule(rule model.SgIcmpRule) bool {
 	return ok
 }
 
-func (p scopedSG) inCidrSgRule(rule model.CidrSgRule) bool {
+func (p scopedSG) inCidrSgRule(rule model.IECidrSgRule) bool {
 	_, ok := p[rule.ID.SG]
 	return ok
 }
 
-func (p scopedSG) inSgSgRule(rule model.SgSgRule) bool {
+func (p scopedSG) inSgSgRule(rule model.IESgSgRule) bool {
 	_, ok := p[rule.ID.Sg]
 	return ok
 }
@@ -381,17 +394,24 @@ func (p scopedSG) inIESgSgIcmpRule(rule model.IESgSgIcmpRule) bool {
 	return ok
 }
 
+func (p scopedSG) inCidrSgIcmpRule(rule model.IECidrSgIcmpRule) bool {
+	_, ok := p[rule.ID().SG]
+	return ok
+}
+
 func (p scopedSG) meta() metaInfo {
 	return metaInfo{
 		reflect.TypeOf((*model.SecurityGroup)(nil)).Elem(): reflect.ValueOf(p.inSG),
 
 		reflect.TypeOf((*model.SgIcmpRule)(nil)).Elem(): reflect.ValueOf(p.inSgIcmpRule),
 
-		reflect.TypeOf((*model.CidrSgRule)(nil)).Elem(): reflect.ValueOf(p.inCidrSgRule),
+		reflect.TypeOf((*model.IECidrSgRule)(nil)).Elem(): reflect.ValueOf(p.inCidrSgRule),
 
-		reflect.TypeOf((*model.SgSgRule)(nil)).Elem(): reflect.ValueOf(p.inSgSgRule),
+		reflect.TypeOf((*model.IESgSgRule)(nil)).Elem(): reflect.ValueOf(p.inSgSgRule),
 
 		reflect.TypeOf((*model.IESgSgIcmpRule)(nil)).Elem(): reflect.ValueOf(p.inIESgSgIcmpRule),
+
+		reflect.TypeOf((*model.IECidrSgIcmpRule)(nil)).Elem(): reflect.ValueOf(p.inCidrSgIcmpRule),
 	}
 }
 
@@ -438,7 +458,7 @@ func (p scopedSGTo) meta() metaInfo {
 	}
 }
 
-func (p scopedSGLocal) inSgSgRule(rule model.SgSgRule) bool {
+func (p scopedSGLocal) inSgSgRule(rule model.IESgSgRule) bool {
 	_, ok := p[rule.ID.SgLocal]
 	return ok
 }
@@ -450,7 +470,7 @@ func (p scopedSGLocal) inIESgSgIcmpRule(rule model.IESgSgIcmpRule) bool {
 
 func (p scopedSGLocal) meta() metaInfo {
 	return metaInfo{
-		reflect.TypeOf(model.SgSgRule{}):       reflect.ValueOf(p.inSgSgRule),
+		reflect.TypeOf(model.IESgSgRule{}):     reflect.ValueOf(p.inSgSgRule),
 		reflect.TypeOf(model.IESgSgIcmpRule{}): reflect.ValueOf(p.inIESgSgIcmpRule),
 	}
 }
@@ -513,7 +533,7 @@ func (p scopedSgSgIcmpIdentity) meta() metaInfo {
 	}
 }
 
-func (p scopedCidrSgRuleIdentity) inCidrSgRule(rule model.CidrSgRule) bool {
+func (p scopedCidrSgRuleIdentity) inCidrSgRule(rule model.IECidrSgRule) bool {
 	h := rule.ID.IdentityHash()
 	_, ok := p[h]
 	return ok
@@ -521,11 +541,11 @@ func (p scopedCidrSgRuleIdentity) inCidrSgRule(rule model.CidrSgRule) bool {
 
 func (p scopedCidrSgRuleIdentity) meta() metaInfo {
 	return metaInfo{
-		reflect.TypeOf((*model.CidrSgRule)(nil)).Elem(): reflect.ValueOf(p.inCidrSgRule),
+		reflect.TypeOf((*model.IECidrSgRule)(nil)).Elem(): reflect.ValueOf(p.inCidrSgRule),
 	}
 }
 
-func (p scopedSgSgRuleIdentity) inSgSgRule(rule model.SgSgRule) bool {
+func (p scopedSgSgRuleIdentity) inSgSgRule(rule model.IESgSgRule) bool {
 	h := rule.ID.IdentityHash()
 	_, ok := p[h]
 	return ok
@@ -533,7 +553,7 @@ func (p scopedSgSgRuleIdentity) inSgSgRule(rule model.SgSgRule) bool {
 
 func (p scopedSgSgRuleIdentity) meta() metaInfo {
 	return metaInfo{
-		reflect.TypeOf(model.SgSgRule{}): reflect.ValueOf(p.inSgSgRule),
+		reflect.TypeOf(model.IESgSgRule{}): reflect.ValueOf(p.inSgSgRule),
 	}
 }
 
@@ -546,5 +566,17 @@ func (p scopedIESgSgIcmpRuleIdentity) inIESgSgIcmpRule(rule model.IESgSgIcmpRule
 func (p scopedIESgSgIcmpRuleIdentity) meta() metaInfo {
 	return metaInfo{
 		reflect.TypeOf(model.IESgSgIcmpRule{}): reflect.ValueOf(p.inIESgSgIcmpRule),
+	}
+}
+
+func (p scopedCidrSgIcmpRuleIdentity) inCidrSgIcmpRule(rule model.IECidrSgIcmpRule) bool {
+	h := rule.ID().IdentityHash()
+	_, ok := p[h]
+	return ok
+}
+
+func (p scopedCidrSgIcmpRuleIdentity) meta() metaInfo {
+	return metaInfo{
+		reflect.TypeOf(model.IECidrSgIcmpRule{}): reflect.ValueOf(p.inCidrSgIcmpRule),
 	}
 }

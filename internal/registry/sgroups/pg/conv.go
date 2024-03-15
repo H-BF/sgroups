@@ -402,7 +402,7 @@ func (o Traffic) ToModel() (ret sgm.Traffic, err error) {
 }
 
 // FromModel -
-func (o *CidrSgRule) FromModel(m sgm.CidrSgRule) error { //nolint:dupl
+func (o *IECidrSgRule) FromModel(m sgm.IECidrSgRule) error { //nolint:dupl
 	if err := o.Proto.FromModel(m.ID.Transport); err != nil {
 		return err
 	}
@@ -420,7 +420,7 @@ func (o *CidrSgRule) FromModel(m sgm.CidrSgRule) error { //nolint:dupl
 }
 
 // ToModel -
-func (o CidrSgRule) ToModel() (ret sgm.CidrSgRule, err error) {
+func (o IECidrSgRule) ToModel() (ret sgm.IECidrSgRule, err error) {
 	if ret.ID.Transport, err = o.Proto.ToModel(); err != nil {
 		return ret, err
 	}
@@ -438,7 +438,32 @@ func (o CidrSgRule) ToModel() (ret sgm.CidrSgRule, err error) {
 }
 
 // FromModel -
-func (o *SgSgRule) FromModel(m sgm.SgSgRule) error { //nolint:dupl
+func (o *IECidrSgIcmpRule) FromModel(m sgm.IECidrSgIcmpRule) error {
+	o.CIDR = m.CIDR
+	o.SG = m.SG
+	o.Logs = m.Logs
+	o.Trace = m.Trace
+	if err := o.Traffic.FromModel(m.Traffic); err != nil {
+		return err
+	}
+	return o.ICMP.FromModel(m.Icmp)
+}
+
+// ToModel -
+func (o IECidrSgIcmpRule) ToModel() (ret sgm.IECidrSgIcmpRule, err error) {
+	ret.CIDR = o.CIDR
+	ret.SG = o.SG
+	ret.Logs = o.Logs
+	ret.Trace = o.Trace
+	if ret.Traffic, err = o.Traffic.ToModel(); err != nil {
+		return ret, err
+	}
+	ret.Icmp, err = o.ICMP.ToModel()
+	return ret, err
+}
+
+// FromModel -
+func (o *IESgSgRule) FromModel(m sgm.IESgSgRule) error { //nolint:dupl
 	if err := o.Proto.FromModel(m.ID.Transport); err != nil {
 		return err
 	}
@@ -456,7 +481,7 @@ func (o *SgSgRule) FromModel(m sgm.SgSgRule) error { //nolint:dupl
 }
 
 // ToModel -
-func (o SgSgRule) ToModel() (ret sgm.SgSgRule, err error) {
+func (o IESgSgRule) ToModel() (ret sgm.IESgSgRule, err error) {
 	if ret.ID.Transport, err = o.Proto.ToModel(); err != nil {
 		return ret, err
 	}

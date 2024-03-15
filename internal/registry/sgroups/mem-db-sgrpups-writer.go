@@ -281,7 +281,7 @@ func (wr sGroupsMemDbWriter) SyncSgSgIcmpRules(ctx context.Context, //nolint:dup
 }
 
 // SyncCidrSgRules impl Writer interface
-func (wr *sGroupsMemDbWriter) SyncCidrSgRules(ctx context.Context, rules []model.CidrSgRule, scope Scope, opts ...Option) error { //nolint:dupl
+func (wr *sGroupsMemDbWriter) SyncCidrSgRules(ctx context.Context, rules []model.IECidrSgRule, scope Scope, opts ...Option) error { //nolint:dupl
 	const api = "mem-db/SyncCidrSgRules"
 
 	tblID := TblCidrSgRules
@@ -289,20 +289,20 @@ func (wr *sGroupsMemDbWriter) SyncCidrSgRules(ctx context.Context, rules []model
 	if err != nil {
 		return errors.WithMessage(err, api)
 	}
-	var ft filterTree[model.CidrSgRule]
+	var ft filterTree[model.IECidrSgRule]
 	if !ft.init(scope) {
 		return errors.Errorf("bad scope")
 	}
 	it = memdb.NewFilterIterator(it, func(i interface{}) bool {
-		r := *i.(*model.CidrSgRule)
+		r := *i.(*model.IECidrSgRule)
 		return !ft.invoke(r)
 	})
 	var changed bool
-	h := syncHelper[model.CidrSgRule, string]{
-		keyExtract: func(r *model.CidrSgRule) string {
+	h := syncHelper[model.IECidrSgRule, string]{
+		keyExtract: func(r *model.IECidrSgRule) string {
 			return r.ID.String()
 		},
-		delete: func(obj *model.CidrSgRule) error {
+		delete: func(obj *model.IECidrSgRule) error {
 			e := wr.writer.Delete(tblID, obj)
 			if errors.Is(e, memdb.ErrNotFound) {
 				return nil
@@ -310,7 +310,48 @@ func (wr *sGroupsMemDbWriter) SyncCidrSgRules(ctx context.Context, rules []model
 			changed = changed || e == nil
 			return e
 		},
-		upsert: func(obj *model.CidrSgRule) error {
+		upsert: func(obj *model.IECidrSgRule) error {
+			e := wr.writer.Upsert(tblID, obj)
+			changed = changed || e == nil
+			return e
+		},
+	}
+	if err = h.doSync(rules, it, opts...); err == nil && changed {
+		err = wr.updateSyncStatus(ctx)
+	}
+	return errors.WithMessage(err, api)
+}
+
+// SyncCidrSgIcmpRules impl Writer interface
+func (wr *sGroupsMemDbWriter) SyncCidrSgIcmpRules(ctx context.Context, rules []model.IECidrSgIcmpRule, scope Scope, opts ...Option) error {
+	const api = "mem-db/SyncCidrSgIcmpRules"
+	tblID := TblIECidrSgIcmpRules
+	it, err := wr.writer.Get(tblID, indexID)
+	if err != nil {
+		return errors.WithMessage(err, api)
+	}
+	var ft filterTree[model.IECidrSgIcmpRule]
+	if !ft.init(scope) {
+		return errors.Errorf("bad scope")
+	}
+	it = memdb.NewFilterIterator(it, func(i interface{}) bool {
+		r := *i.(*model.IECidrSgIcmpRule)
+		return !ft.invoke(r)
+	})
+	var changed bool
+	h := syncHelper[model.IECidrSgIcmpRule, string]{
+		keyExtract: func(r *model.IECidrSgIcmpRule) string {
+			return r.ID().String()
+		},
+		delete: func(obj *model.IECidrSgIcmpRule) error {
+			e := wr.writer.Delete(tblID, obj)
+			if errors.Is(e, memdb.ErrNotFound) {
+				return nil
+			}
+			changed = changed || e == nil
+			return e
+		},
+		upsert: func(obj *model.IECidrSgIcmpRule) error {
 			e := wr.writer.Upsert(tblID, obj)
 			changed = changed || e == nil
 			return e
@@ -323,7 +364,7 @@ func (wr *sGroupsMemDbWriter) SyncCidrSgRules(ctx context.Context, rules []model
 }
 
 // SyncSgSgRules impl Writer interface
-func (wr *sGroupsMemDbWriter) SyncSgSgRules(ctx context.Context, rules []model.SgSgRule, scope Scope, opts ...Option) error { //nolint:dupl
+func (wr *sGroupsMemDbWriter) SyncSgSgRules(ctx context.Context, rules []model.IESgSgRule, scope Scope, opts ...Option) error { //nolint:dupl
 	const api = "mem-db/SyncSgSgRules"
 
 	tblID := TblSgSgRules
@@ -331,20 +372,20 @@ func (wr *sGroupsMemDbWriter) SyncSgSgRules(ctx context.Context, rules []model.S
 	if err != nil {
 		return errors.WithMessage(err, api)
 	}
-	var ft filterTree[model.SgSgRule]
+	var ft filterTree[model.IESgSgRule]
 	if !ft.init(scope) {
 		return errors.Errorf("bad scope")
 	}
 	it = memdb.NewFilterIterator(it, func(i interface{}) bool {
-		r := *i.(*model.SgSgRule)
+		r := *i.(*model.IESgSgRule)
 		return !ft.invoke(r)
 	})
 	var changed bool
-	h := syncHelper[model.SgSgRule, string]{
-		keyExtract: func(r *model.SgSgRule) string {
+	h := syncHelper[model.IESgSgRule, string]{
+		keyExtract: func(r *model.IESgSgRule) string {
 			return r.ID.String()
 		},
-		delete: func(obj *model.SgSgRule) error {
+		delete: func(obj *model.IESgSgRule) error {
 			e := wr.writer.Delete(tblID, obj)
 			if errors.Is(e, memdb.ErrNotFound) {
 				return nil
@@ -352,7 +393,7 @@ func (wr *sGroupsMemDbWriter) SyncSgSgRules(ctx context.Context, rules []model.S
 			changed = changed || e == nil
 			return e
 		},
-		upsert: func(obj *model.SgSgRule) error {
+		upsert: func(obj *model.IESgSgRule) error {
 			e := wr.writer.Upsert(tblID, obj)
 			changed = changed || e == nil
 			return e
@@ -490,7 +531,7 @@ func (wr sGroupsMemDbWriter) afterDeleteSGs(ctx context.Context, sgs []model.Sec
 	err5 := wr.SyncCidrSgRules(ctx, nil,
 		SG(names...), SyncOmitInsert{}, SyncOmitUpdate{})
 
-	// delete related SgSgRule(s)
+	// delete related IESgSgRule(s)
 	err6 := wr.SyncSgSgRules(ctx, nil,
 		Or(SGLocal(names[0], names[1:]...), SG(names...)),
 		SyncOmitInsert{}, SyncOmitUpdate{})
@@ -500,15 +541,20 @@ func (wr sGroupsMemDbWriter) afterDeleteSGs(ctx context.Context, sgs []model.Sec
 		Or(SGLocal(names[0], names[1:]...), SG(names...)),
 		SyncOmitInsert{}, SyncOmitUpdate{})
 
+	// delete related CidrSgIcmpRule(s)
+	err8 := wr.SyncCidrSgIcmpRules(ctx, nil,
+		SG(names...), SyncOmitInsert{}, SyncOmitUpdate{})
+
 	const delRel = "delete related"
 	return multierr.Combine(
 		errors.WithMessagef(err1, "%s SGRule(s)", delRel),
 		errors.WithMessagef(err2, "%s FQDNRule(s)", delRel),
 		errors.WithMessagef(err3, "%s SgIcmpRule(s)", delRel),
 		errors.WithMessagef(err4, "%s SgSgIcmpRule(s)", delRel),
-		errors.WithMessagef(err5, "%s CidrSgRule(s)", delRel),
-		errors.WithMessagef(err6, "%s SgSgRule(s)", delRel),
+		errors.WithMessagef(err5, "%s IECidrSgRule(s)", delRel),
+		errors.WithMessagef(err6, "%s IESgSgRule(s)", delRel),
 		errors.WithMessagef(err7, "%s IESgSgIcmpRule(s)", delRel),
+		errors.WithMessagef(err8, "%s CidrSgIcmpRule(s)", delRel),
 	)
 }
 

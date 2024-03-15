@@ -8,8 +8,8 @@ import (
 
 	"github.com/H-BF/protos/pkg/api/common"
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
+	"github.com/H-BF/sgroups/cmd/sgroups-tf-v2/internal/validators"
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
-
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
@@ -23,61 +23,62 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
-func NewIESgSgIcmpRulesResource() resource.Resource {
+func NewCidrSgIcmpRulesResource() resource.Resource {
 	d := Description{
-		ResourceDescription: "mapped 'icmp<4|6>:sg-local(local_sg)sg(external_sg)traffic' -> '<IN|E>GRESS:SG-SG:ICMP' rule resource",
-		ItemsDescription:    "<IN|E>GRESS SG -> SG ICMP rules",
+		ResourceDescription: "mapped 'icmp<4|6>:cidr(cidr_name)sg(sg_name)traffic' -> '<IN|E>GRESS:CIDR-SG:ICMP' rule resource",
+		ItemsDescription:    "<IN|E>GRESS CIDR -> SG ICMP rules",
 	}
-
-	return &ieSgSgIcmpRulesResource{
-		suffix:      "_ie_icmp_rules",
+	return &cidrSgIcmpRulesResource{
+		suffix:      "_cidr_icmp_rules",
 		description: d,
-		readState:   readIESgSgIcmpRules,
+		readState:   readCidrSgIcmpRules,
 	}
 }
 
 type (
-	ieSgSgIcmpRulesResource = CollectionResource[ieSgSgIcmpRule, tfIESgSgIcmpRules2Backend]
-	ieSgSgIcmpRule          struct {
+	cidrSgIcmpRulesResource = CollectionResource[cidrSgIcmpRule, tfCidrSgIcmpRules2Backend]
+
+	cidrSgIcmpRule struct {
 		Traffic   types.String `tfsdk:"traffic"`
-		SgLocal   types.String `tfsdk:"sg_local"`
-		Sg        types.String `tfsdk:"sg"`
+		Cidr      types.String `tfsdk:"cidr"`
+		SgName    types.String `tfsdk:"sg_name"`
 		Type      types.Set    `tfsdk:"type"`
 		IpVersion types.String `tfsdk:"ip_v"`
 		Logs      types.Bool   `tfsdk:"logs"`
 		Trace     types.Bool   `tfsdk:"trace"`
 	}
 
-	ieSgSgIcmpRuleKey struct {
+	cidrSgIcmpRuleKey struct {
 		ipVersion string
-		sgLocal   string
-		sg        string
+		cidr      string
+		sgName    string
 		traffic   string
 	}
 )
 
 // String -
-func (k ieSgSgIcmpRuleKey) String() string {
+func (k cidrSgIcmpRuleKey) String() string {
 	versions := map[string]uint{"IPv4": 4, "IPv6": 6}
 	ver, ok := versions[k.ipVersion]
 	if !ok {
 		panic("unreachable: check `IpVersion` field validation in resource schema for exhaustiveness")
 	}
-	return fmt.Sprintf("icmp%v:sg-local(%s)sg(%s)%s",
-		ver, k.sgLocal, k.sg, k.traffic)
+	return fmt.Sprintf("icmp%v:cidr(%s)sg(%s)%s",
+		ver, k.cidr, k.sgName, strings.ToLower(k.traffic))
 }
 
 // Key -
-func (item ieSgSgIcmpRule) Key() *ieSgSgIcmpRuleKey {
-	return &ieSgSgIcmpRuleKey{
+func (item cidrSgIcmpRule) Key() *cidrSgIcmpRuleKey {
+	return &cidrSgIcmpRuleKey{
 		ipVersion: item.IpVersion.ValueString(),
-		sgLocal:   item.SgLocal.ValueString(),
-		sg:        item.Sg.ValueString(),
+		cidr:      item.Cidr.ValueString(),
+		sgName:    item.SgName.ValueString(),
 		traffic:   item.Traffic.ValueString(),
 	}
 }
 
-func (item ieSgSgIcmpRule) Attributes() map[string]schema.Attribute {
+// Attributes -
+func (item cidrSgIcmpRule) Attributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"traffic": schema.StringAttribute{
 			Description: "direction of traffic <ingress|egress>",
@@ -86,12 +87,15 @@ func (item ieSgSgIcmpRule) Attributes() map[string]schema.Attribute {
 				stringvalidator.OneOf("ingress", "egress"),
 			},
 		},
-		"sg_local": schema.StringAttribute{
-			Description: "Security Group name of dst/src group when ingress/egress traffic chosen",
+		"cidr": schema.StringAttribute{
+			Description: "IP subnet",
 			Required:    true,
+			Validators: []validator.String{
+				validators.IsCIDR(),
+			},
 		},
-		"sg": schema.StringAttribute{
-			Description: "Security Group name of opposite group to sg_local",
+		"sg_name": schema.StringAttribute{
+			Description: "Security Group name",
 			Required:    true,
 		},
 		"type": schema.SetAttribute{
@@ -126,59 +130,54 @@ func (item ieSgSgIcmpRule) Attributes() map[string]schema.Attribute {
 	}
 }
 
-func (item ieSgSgIcmpRule) icmp2Proto(ctx context.Context, diags *diag.Diagnostics) *common.ICMP {
+func (item cidrSgIcmpRule) icmp2Proto(ctx context.Context, diags *diag.Diagnostics) *common.ICMP {
 	ret := new(common.ICMP)
-
-	switch item.IpVersion.ValueString() {
-	case "IPv4":
-		ret.IPv = common.IpAddrFamily_IPv4
-	case "IPv6":
-		ret.IPv = common.IpAddrFamily_IPv6
-	default:
-		panic("unreachable: check `IpVersion` field validation in resource schema for exhaustiveness")
+	val := item.IpVersion.ValueString()
+	if v, ok := common.IpAddrFamily_value[val]; !ok {
+		diags.AddError("ICMP", fmt.Sprintf("bad value for IPv='%s'", val))
+	} else {
+		ret.IPv = common.IpAddrFamily(v)
+		diags.Append(item.Type.ElementsAs(ctx, &ret.Types, true)...)
 	}
-	diags.Append(item.Type.ElementsAs(ctx, &ret.Types, true)...)
-
 	return ret
 }
 
-func (item ieSgSgIcmpRule) IsDiffer(_ context.Context, other ieSgSgIcmpRule) bool {
+// IsDiffer -
+func (item cidrSgIcmpRule) IsDiffer(_ context.Context, other cidrSgIcmpRule) bool {
 	return !(item.Traffic.Equal(other.Traffic) &&
-		item.SgLocal.Equal(other.SgLocal) &&
-		item.Sg.Equal(other.Sg) &&
+		item.Cidr.Equal(other.Cidr) &&
+		item.SgName.Equal(other.SgName) &&
 		item.Type.Equal(other.Type) &&
 		item.IpVersion.Equal(other.IpVersion) &&
 		item.Logs.Equal(other.Logs) &&
 		item.Trace.Equal(other.Trace))
 }
 
-func readIESgSgIcmpRules(
-	ctx context.Context, state NamedResources[ieSgSgIcmpRule], client *sgAPI.Client,
-) (NamedResources[ieSgSgIcmpRule], diag.Diagnostics) {
+func readCidrSgIcmpRules(
+	ctx context.Context, state NamedResources[cidrSgIcmpRule], client *sgAPI.Client,
+) (NamedResources[cidrSgIcmpRule], diag.Diagnostics) {
 	var diags diag.Diagnostics
-	newState := NewNamedResources[ieSgSgIcmpRule]()
-	var resp *protos.IESgSgIcmpRulesResp
+	newState := NewNamedResources[cidrSgIcmpRule]()
+	var resp *protos.CidrSgIcmpRulesResp
 	var err error
 	if len(state.Items) > 0 {
-		req := new(protos.FindIESgSgIcmpRulesReq)
+		req := new(protos.FindCidrSgIcmpRulesReq)
 		linq.From(state.Items).
 			SelectT(func(i linq.KeyValue) string {
-				return i.Value.(ieSgSgIcmpRule).SgLocal.ValueString()
-			}).Distinct().ToSlice(&req.SgLocal)
-		linq.From(state.Items).
-			SelectT(func(i linq.KeyValue) string {
-				return i.Value.(ieSgSgIcmpRule).Sg.ValueString()
-			}).Distinct().ToSlice(&req.Sg)
-		if resp, err = client.FindIESgSgIcmpRules(ctx, req); err != nil {
-			diags.AddError("read ie-sg-sg icmp rules", err.Error())
+				return i.Value.(cidrSgIcmpRule).SgName.ValueString()
+			}).
+			Distinct().
+			ToSlice(&req.Sg)
+		if resp, err = client.FindCidrSgIcmpRules(ctx, req); err != nil {
+			diags.AddError("read cidr-sg icmp rules", err.Error())
 		}
 	}
 
 	for _, icmpRule := range resp.GetRules() { //nolint:dupl
-		it := ieSgSgIcmpRule{
+		it := cidrSgIcmpRule{
 			Traffic:   types.StringValue(strings.ToLower(icmpRule.GetTraffic().String())),
-			SgLocal:   types.StringValue(icmpRule.GetSgLocal()),
-			Sg:        types.StringValue(icmpRule.GetSg()),
+			Cidr:      types.StringValue(icmpRule.GetCIDR()),
+			SgName:    types.StringValue(icmpRule.GetSG()),
 			IpVersion: types.StringValue(icmpRule.ICMP.GetIPv().String()),
 		}
 		k := it.Key().String()

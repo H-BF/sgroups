@@ -181,12 +181,37 @@ func (srv *sgService) FindCidrSgRules(ctx context.Context, req *sg.FindCidrSgRul
 		sc = registry.SG(sgs...)
 	}
 	resp = new(sg.CidrSgRulesResp)
-	err = reader.ListCidrSgRules(ctx, func(r model.CidrSgRule) error {
+	err = reader.ListCidrSgRules(ctx, func(r model.IECidrSgRule) error {
 		p, e := cidrSgRule2proto(r)
 		if e == nil {
 			resp.Rules = append(resp.Rules, p)
 		}
-		return errors.WithMessagef(e, "convert CidrSgRule '%s' to proto", r.ID)
+		return errors.WithMessagef(e, "convert IECidrSgRule '%s' to proto", r.ID)
+	}, sc)
+	return resp, err
+}
+
+// FindCidrSgIcmpRules -
+func (srv *sgService) FindCidrSgIcmpRules(ctx context.Context, req *sg.FindCidrSgIcmpRulesReq) (resp *sg.CidrSgIcmpRulesResp, err error) {
+	defer func() {
+		err = correctError(err)
+	}()
+	var reader registry.Reader
+	if reader, err = srv.registryReader(ctx); err != nil {
+		return nil, err
+	}
+	defer reader.Close() //lint:nolint
+	var sc registry.Scope = registry.NoScope
+	if sgs := req.GetSg(); len(sgs) > 0 {
+		sc = registry.SG(sgs...)
+	}
+	resp = new(sg.CidrSgIcmpRulesResp)
+	err = reader.ListCidrSgIcmpRules(ctx, func(r model.IECidrSgIcmpRule) error {
+		p, e := cidrSgIcmpRule2proto(r)
+		if e == nil {
+			resp.Rules = append(resp.Rules, p)
+		}
+		return errors.WithMessagef(e, "convert IECidrSgIcmpRule '%s' to proto", r.ID())
 	}, sc)
 	return resp, err
 }
@@ -209,12 +234,12 @@ func (srv *sgService) FindSgSgRules(ctx context.Context, req *sg.FindSgSgRulesRe
 	}
 
 	resp = new(sg.SgSgRulesResp)
-	err = reader.ListSgSgRules(ctx, func(r model.SgSgRule) error {
+	err = reader.ListSgSgRules(ctx, func(r model.IESgSgRule) error {
 		p, e := sgSgRule2proto(r)
 		if e == nil {
 			resp.Rules = append(resp.Rules, p)
 		}
-		return errors.WithMessagef(e, "convert SgSgRule '%s' to proto", r.ID)
+		return errors.WithMessagef(e, "convert IESgSgRule '%s' to proto", r.ID)
 	}, registry.And(scSgLocals, scSgs))
 
 	return resp, err

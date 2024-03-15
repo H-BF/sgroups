@@ -33,6 +33,9 @@ const (
 
 	// TblIESgSgIcmpRules table [INGRESS|EGRESS]:SG-SG:ICMP<4|6> rules
 	TblIESgSgIcmpRules
+
+	// TblIECidrSgIcmpRules table [INGRESS|EGRESS]:CIDR-SG:ICMP<4|6> rules
+	TblIECidrSgIcmpRules
 )
 
 // SchemaName database scheme name
@@ -52,16 +55,17 @@ func (tid TableID) IntegrityChecks() []IntegrityChecker {
 }
 
 var tableID2string = map[TableID]string{
-	TblNetworks:        "tbl_network",
-	TblSecGroups:       "tbl_sg",
-	TblSecRules:        "tbl_sgrule",
-	TblSyncStatus:      "tbl_sync_status",
-	TblFqdnRules:       "tbl_fqdnrule",
-	TblSgIcmpRules:     "tbl_sg_icmp_rule",
-	TblSgSgIcmpRules:   "tbl_sg_sg_icmp_rule",
-	TblCidrSgRules:     "tbl_cidr_sg_rules",
-	TblSgSgRules:       "tbl_ie_sg_sg_rule",
-	TblIESgSgIcmpRules: "tbl_ie_sg_sg_icmp_rule",
+	TblNetworks:          "tbl_network",
+	TblSecGroups:         "tbl_sg",
+	TblSecRules:          "tbl_sgrule",
+	TblSyncStatus:        "tbl_sync_status",
+	TblFqdnRules:         "tbl_fqdnrule",
+	TblSgIcmpRules:       "tbl_sg_icmp_rule",
+	TblSgSgIcmpRules:     "tbl_sg_sg_icmp_rule",
+	TblCidrSgRules:       "tbl_cidr_sg_rules",
+	TblSgSgRules:         "tbl_ie_sg_sg_rule",
+	TblIESgSgIcmpRules:   "tbl_ie_sg_sg_icmp_rule",
+	TblIECidrSgIcmpRules: "tbl_ie_cidr_sg_icmp_rule",
 }
 
 var tableID2IntegrityChecks = map[TableID]func() []IntegrityChecker{
@@ -99,6 +103,10 @@ var tableID2IntegrityChecks = map[TableID]func() []IntegrityChecker{
 	},
 	TblIESgSgIcmpRules: func() (ret []IntegrityChecker) {
 		ret = append(ret, IntegrityChecker4IESgSgIcmpRules())
+		return ret
+	},
+	TblIECidrSgIcmpRules: func() (ret []IntegrityChecker) {
+		ret = append(ret, IntegrityChecker4CidrSgIcmpRules())
 		return ret
 	},
 }

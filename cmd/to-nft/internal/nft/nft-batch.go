@@ -466,7 +466,7 @@ func (bt *batch) initSG2FQDNRulesDetails() {
 }
 
 func (bt *batch) initCidrSgRulesDetails() { //nolint:dupl
-	bt.data.CidrSgRules.Rules.Iterate(func(_ model.CidrSgRuleIdenity, r *model.CidrSgRule) bool {
+	bt.data.CidrSgRules.Rules.Iterate(func(_ model.IECidrSgRuleIdenity, r *model.IECidrSgRule) bool {
 		item := ruleDetails{
 			accports: setsUtils{}.makeAccPorts(r.Ports),
 			logs:     r.Logs,
@@ -484,7 +484,7 @@ func (bt *batch) initCidrSgRulesDetails() { //nolint:dupl
 }
 
 func (bt *batch) initSgIeSgRulesDetails() { //nolint:dupl
-	bt.data.SgIeSgRules.Rules.Iterate(func(_ model.SgSgRuleIdentity, r *model.SgSgRule) bool {
+	bt.data.SgIeSgRules.Rules.Iterate(func(_ model.IESgSgRuleIdentity, r *model.IESgSgRule) bool {
 		item := ruleDetails{
 			accports: setsUtils{}.makeAccPorts(r.Ports),
 			logs:     r.Logs,
@@ -678,6 +678,42 @@ func (bt *batch) populateSgIeSgIcmpRules(dir direction, sg *cases.SG) {
 	}
 }
 
+func (bt *batch) populateIeCidrSgIcmpRules(dir direction, sg *cases.SG) {
+	isIN := dir == dirIN
+	rules := bt.data.IECidrSgIcmpRules.GetRulesForTrafficAndSG(
+		tern(isIN, model.INGRESS, model.EGRESS), sg.Name,
+	)
+	targetSGchName := nameUtils{}.nameOfInOutChain(dir, sg.Name)
+	api := fmt.Sprintf("populate-cidr-sg-icmp-%sgress--rule(s)",
+		tern(isIN, "in", "e"),
+	)
+	for i := range rules {
+		rule := rules[i]
+		addrSetName := nameUtils{}.nameOfNetSet(int(rule.Icmp.IPv), rule.SG)
+		bt.addJob(api, func(tx *Tx) error {
+			chnApplyTo := bt.chains.At(targetSGchName)
+			addrSet := bt.addrsets.At(addrSetName)
+			if chnApplyTo != nil && addrSet != nil {
+				bt.log.Debugf("add cidr(%s)-sg(%s)-icmp-%sgress-rule for addr-set '%s' into '%s'/'%s'",
+					&rule.CIDR,
+					rule.SG,
+					tern(isIN, "in", "e"),
+					addrSetName,
+					bt.table.Name, targetSGchName)
+			}
+			rb := beginRule().
+				metaNFTRACE(rule.Trace).
+				srcOrDstSingleIpNet(rule.CIDR, isIN).
+				protoICMP(rule.Icmp).counter()
+			if rule.Logs {
+				rb = rb.dlogs(nfte.LogFlagsIPOpt)
+			}
+			rb.accept().applyRule(chnApplyTo, tx.Conn)
+			return nil
+		})
+	}
+}
+
 func (bt *batch) populateInOutSgRules(dir direction, sg *cases.SG) {
 	targetSGchName := nameUtils{}.nameOfInOutChain(dir, sg.Name)
 	isIN := dir == dirIN
@@ -824,14 +860,17 @@ func (bt *batch) makeInOutChains(dir direction) {
 	bt.data.LocalSGs.Iterate(func(_ string, sg *cases.SG) bool {
 		bt.chainInOutProlog(dir, sg)
 		bt.populateDefaultIcmpRules(dir, sg)
-		bt.populateInOutSgIcmpRules(dir, sg)
-		bt.populateSgIeSgIcmpRules(dir, sg)
-		bt.populateInOutSgRules(dir, sg)
-		bt.populateInOutSgIeSgRules(dir, sg)
+
+		bt.populateInOutSgIcmpRules(dir, sg) //  pri(-300)
+		bt.populateInOutSgRules(dir, sg)     //  pri(-200)
+		bt.populateSgIeSgIcmpRules(dir, sg)  //  pri(-100)
+		bt.populateInOutSgIeSgRules(dir, sg) //  pri(0)
 		if dir == dirOUT {
-			bt.populateOutSgFqdnRules(sg)
+			bt.populateOutSgFqdnRules(sg) //     pri(100)
 		}
-		bt.populateInOutCidrSgRules(dir, sg)
+		bt.populateIeCidrSgIcmpRules(dir, sg) // pri(200)
+		bt.populateInOutCidrSgRules(dir, sg)  // pri(300)
+
 		bt.chainInOutEpilog(dir, sg)
 		return true
 	})

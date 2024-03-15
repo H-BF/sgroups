@@ -105,11 +105,11 @@ func (nameUtils) nameOfSG2FQDNRuleDetails(tp model.NetworkTransport, sgFrom stri
 	return fmt.Sprintf("%s-%s-%s-fqdn", tp, sgFrom, domain)
 }
 
-func (nameUtils) nameCidrSgRuleDetails(rule *model.CidrSgRule) string {
+func (nameUtils) nameCidrSgRuleDetails(rule *model.IECidrSgRule) string {
 	return rule.ID.String()
 }
 
-func (nameUtils) nameSgIeSgRuleDetails(rule *model.SgSgRule) string {
+func (nameUtils) nameSgIeSgRuleDetails(rule *model.IESgSgRule) string {
 	return rule.ID.String()
 }
 

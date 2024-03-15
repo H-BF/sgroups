@@ -24,6 +24,9 @@ var (
 
 	// ErrInvalidFQDN -
 	ErrInvalidFQDN = errors.New("invalid FQDN")
+
+	errICMPrequiresNetIPv4  = errors.New("ICMP requires IPv4 net")
+	errICMP6requiresNetIPv6 = errors.New("ICMP6 requires IPv6 net")
 )
 
 // Validatable is a alias to oz.Validatable
@@ -211,28 +214,60 @@ func (o IESgSgIcmpRule) Validate() error {
 	)
 }
 
+func cidrIsValid(v interface{}) error {
+	cidr, _ := v.(net.IPNet)
+	switch len(cidr.IP) {
+	case net.IPv4len, net.IPv6len:
+	default:
+		return errors.New("IP of net is invalid")
+	}
+	if len(cidr.Mask) != len(cidr.IP) {
+		return errors.New("net mask is invalid")
+	}
+	return nil
+}
+
+func (o IECidrSgIcmpRule) Validate() error {
+	return oz.ValidateStruct(&o,
+		oz.Field(&o.Traffic),
+		oz.Field(&o.Icmp),
+		oz.Field(&o.CIDR, oz.By(func(_ any) (e error) {
+			defer func() {
+				e = errors.WithMessagef(e, "bad value '%s'", &o.CIDR)
+			}()
+			if e = cidrIsValid(o.CIDR); e != nil {
+				return e
+			}
+			switch n := len(o.CIDR.IP); o.Icmp.IPv {
+			case IPv4:
+				if n != net.IPv4len {
+					e = errICMPrequiresNetIPv4
+				}
+			case IPv6:
+				if n != net.IPv6len {
+					e = errICMP6requiresNetIPv6
+				}
+			default:
+				panic("IECidrSgIcmpRule.Validate UB")
+			}
+			return e
+		})),
+		oz.Field(&o.SG, oz.Required.Error(sgNameRequired), oz.Match(reCName)),
+	)
+}
+
 // Validate validate of CidrSgRuleIdenity
-func (o CidrSgRuleIdenity) Validate() error {
+func (o IECidrSgRuleIdenity) Validate() error {
 	return oz.ValidateStruct(&o,
 		oz.Field(&o.Transport),
 		oz.Field(&o.Traffic),
 		oz.Field(&o.SG, oz.Required.Error(sgNameRequired), oz.Match(reCName)),
-		oz.Field(&o.CIDR, oz.By(func(_ interface{}) error {
-			switch len(o.CIDR.IP) {
-			case net.IPv4len, net.IPv6len:
-			default:
-				return errors.New("IP of net is invalid")
-			}
-			if len(o.CIDR.Mask) != len(o.CIDR.IP) {
-				return errors.New("net mask is invalid")
-			}
-			return nil
-		})),
+		oz.Field(&o.CIDR, oz.By(cidrIsValid)),
 	)
 }
 
 // Validate implements ruleID.
-func (o SgSgRuleIdentity) Validate() error {
+func (o IESgSgRuleIdentity) Validate() error {
 	return oz.ValidateStruct(&o,
 		oz.Field(&o.Transport),
 		oz.Field(&o.Traffic),

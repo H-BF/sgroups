@@ -18,7 +18,8 @@ type (
 		domain.Network | domain.SecurityGroup |
 			domain.SGRule | domain.FQDNRule |
 			domain.SgIcmpRule | domain.SgSgIcmpRule |
-			domain.CidrSgRule | domain.SgSgRule | domain.IESgSgIcmpRule
+			domain.IECidrSgRule | domain.IECidrSgIcmpRule |
+			domain.IESgSgRule | domain.IESgSgIcmpRule
 	}
 
 	// DomainRcList -
@@ -192,13 +193,13 @@ func regHelpers() {
 	})
 
 	// ---------------------- RC CidrSGRule -------------------
-	regKeyExtractor(func(m domain.CidrSgRule) string {
+	regKeyExtractor(func(m domain.IECidrSgRule) string {
 		return m.ID.String()
 	})
-	regIsEQ(func(l, r domain.CidrSgRule) bool {
+	regIsEQ(func(l, r domain.IECidrSgRule) bool {
 		return l.IsEq(r)
 	})
-	regProto2domain(func(p *protos.CidrSgRule, r *domain.CidrSgRule) {
+	regProto2domain(func(p *protos.CidrSgRule, r *domain.IECidrSgRule) {
 		var e error
 		if *r, e = sgAPI.Proto2ModelCidrSgRule(p); e != nil {
 			panic(e)
@@ -206,9 +207,9 @@ func regHelpers() {
 	})
 
 	// ---------------------- RC IESgSgRule -------------------
-	regKeyExtractor(func(m domain.SgSgRule) string { return m.ID.String() })
-	regIsEQ(func(l, r domain.SgSgRule) bool { return l.IsEq(r) })
-	regProto2domain(func(p *protos.SgSgRule, r *domain.SgSgRule) {
+	regKeyExtractor(func(m domain.IESgSgRule) string { return m.ID.String() })
+	regIsEQ(func(l, r domain.IESgSgRule) bool { return l.IsEq(r) })
+	regProto2domain(func(p *protos.SgSgRule, r *domain.IESgSgRule) {
 		var e error
 		if *r, e = sgAPI.Proto2ModelSgSgRule(p); e != nil {
 			panic(e)
@@ -221,6 +222,16 @@ func regHelpers() {
 	regProto2domain(func(p *protos.IESgSgIcmpRule, r *domain.IESgSgIcmpRule) {
 		var e error
 		if *r, e = sgAPI.Proto2ModelIESgSgIcmpRule(p); e != nil {
+			panic(e)
+		}
+	})
+
+	// ------------------ RC CidrSgIcmpRule -------------------
+	regKeyExtractor(func(m domain.IECidrSgIcmpRule) string { return m.ID().String() })
+	regIsEQ(func(l, r domain.IECidrSgIcmpRule) bool { return l.IsEq(r) })
+	regProto2domain(func(p *protos.CidrSgIcmpRule, r *domain.IECidrSgIcmpRule) {
+		var e error
+		if *r, e = sgAPI.Proto2ModelIECidrSgIcmpRule(p); e != nil {
 			panic(e)
 		}
 	})

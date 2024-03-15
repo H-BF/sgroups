@@ -1,9 +1,11 @@
 package sgroups
 
 import (
+	"fmt"
+	"net"
+
 	"github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
-
 	"github.com/pkg/errors"
 )
 
@@ -115,66 +117,6 @@ func IntegrityChecker4SG() IntegrityChecker {
 	}
 }
 
-/*//TODO: remove this
-func IntegrityChecker4Networks2() IntegrityChecker { //nolint:gocyclo
-	const api = "Integrity-of-Networks"
-
-	type bound struct {
-		val    bigInt
-		isLeft bool
-		n      *model.Network
-	}
-	return func(reader MemDbReader) error {
-		it, e := reader.Get(TblNetworks, indexID)
-		if isInvalidTableErr(e) {
-			return nil
-		}
-		if e != nil {
-			return errors.WithMessage(e, api)
-		}
-		var bounds []bound
-		for x := it.Next(); x != nil; x = it.Next() {
-			n := x.(*model.Network)
-			var h cidr2bigInt
-			h.init(n.Net)
-			bounds = append(bounds,
-				bound{
-					isLeft: true,
-					n:      n,
-					val:    h.lowerBound(),
-				})
-			bounds = append(bounds,
-				bound{
-					n:   n,
-					val: h.upperBound(),
-				})
-		}
-		sort.Slice(bounds, func(i, j int) bool {
-			l, r := bounds[i], bounds[j]
-			d := l.val.Cmp(r.val)
-			if d != 0 {
-				return d < 0
-			}
-			return l.isLeft && !r.isLeft
-		})
-		c := 0
-		for i := range bounds {
-			b := bounds[i]
-			if b.isLeft {
-				c++
-			} else {
-				c--
-			}
-			if (i > 0) && (c > 1 || c < 0) {
-				return errors.Errorf("%s: networks %s, %s have overlapped region",
-					api, b.n, bounds[i-1].n)
-			}
-		}
-		return nil
-	}
-}
-*/
-
 // IntegrityChecker4Networks -
 func IntegrityChecker4Networks() IntegrityChecker { //nolint:gocyclo
 	const api = "Integrity-of-Networks"
@@ -261,7 +203,7 @@ func IntegrityChecker4SgIcmpRules() IntegrityChecker {
 	}
 }
 
-// IntegrityChecker4SgIcmpRules -
+// IntegrityChecker4SgSgIcmpRules -
 func IntegrityChecker4SgSgIcmpRules() IntegrityChecker {
 	const api = "Integrity-of-SgSgIcmpRules"
 
@@ -293,54 +235,6 @@ func IntegrityChecker4SgSgIcmpRules() IntegrityChecker {
 func IntegrityChecker4CidrSgRules() IntegrityChecker { //nolint:gocyclo
 	const api = "Integrity-of-CidrSgRules"
 
-	errf := func(objs ...model.CidrSgRuleIdenity) error {
-		if len(objs) <= 1 {
-			return nil
-		}
-		return errors.Errorf("some rules %s have CIDRS with intersected segments", objs)
-	}
-	detectCidrsIntersections := func(objs []model.CidrSgRuleIdenity) error {
-		type ref struct {
-			i        int
-			interval bool
-		}
-		if len(objs) < 2 {
-			return nil
-		}
-		var refs dict.RBDict[bigInt, ref]
-		var h cidr2bigInt
-		for i := range objs {
-			r := &objs[i]
-			h.init(r.CIDR)
-			lb, rb := h.lowerBound(), h.upperBound()
-			rf := ref{i: i, interval: lb.Cmp(rb) != 0}
-			if !refs.Insert(lb, rf) {
-				x := refs.At(lb)
-				return errf(*r, objs[x.i])
-			}
-			if rf.interval && !refs.Insert(rb, rf) {
-				x := refs.At(rb)
-				return errf(*r, objs[x.i])
-			}
-		}
-		var e error
-		prevRef := -1
-		refs.Iterate(func(_ bigInt, rf ref) bool {
-			if prevRef >= 0 {
-				if prevRef != rf.i {
-					e = errf(objs[prevRef], objs[rf.i])
-				}
-				prevRef = -1
-				return e == nil
-			}
-			if rf.interval {
-				prevRef = rf.i
-			}
-			return true
-		})
-		return e
-	}
-
 	return func(reader MemDbReader) error {
 		it, e := reader.Get(TblCidrSgRules, indexSG)
 		if isInvalidTableErr(e) {
@@ -350,7 +244,7 @@ func IntegrityChecker4CidrSgRules() IntegrityChecker { //nolint:gocyclo
 			return errors.WithMessage(e, api)
 		}
 		for x := it.Next(); x != nil; x = it.Next() { //SG ref validate
-			r := x.(*model.CidrSgRule)
+			r := x.(*model.IECidrSgRule)
 			i, e1 := reader.First(TblSecGroups, indexID, r.ID.SG)
 			if e1 != nil {
 				return errors.WithMessagef(e1, "%s: find ref to SG '%s'", api, r.ID.SG)
@@ -360,40 +254,107 @@ func IntegrityChecker4CidrSgRules() IntegrityChecker { //nolint:gocyclo
 			}
 		}
 
-		type groupKey struct {
-			Transport model.NetworkTransport
-			SG        string
-			Traffic   model.Traffic
-		}
 		it, e = reader.Get(TblCidrSgRules, indexProtoSgTraffic) //detects CIDRS intersections
 		if e != nil {
 			return errors.WithMessage(e, api)
 		}
-		var objs []model.CidrSgRuleIdenity
-		var prevKey groupKey
-		for x := it.Next(); x != nil; x = it.Next() {
-			r := x.(*model.CidrSgRule)
-			k := groupKey{
-				Transport: r.ID.Transport,
-				SG:        r.ID.SG,
-				Traffic:   r.ID.Traffic,
-			}
-		loop:
-			if len(objs) == 0 {
-				prevKey = k
-				objs = append(objs, r.ID)
-			} else if prevKey == k {
-				objs = append(objs, r.ID)
-			} else {
-				if err := detectCidrsIntersections(objs); err != nil {
-					return errors.WithMessage(err, api)
+
+		type gk struct {
+			Transport model.NetworkTransport
+			SG        string
+			Traffic   model.Traffic
+		}
+		det := cidrsIntersectionDetector[*model.IECidrSgRule]{
+			cidrExtractor: func(r *model.IECidrSgRule) net.IPNet {
+				return r.ID.CIDR
+			},
+			errf: func(rr []*model.IECidrSgRule) (e error) {
+				var ss []fmt.Stringer
+				for i := range rr {
+					ss = append(ss, rr[i].ID)
 				}
-				objs = objs[:0]
-				goto loop
+				if len(ss) > 0 {
+					e = fmt.Errorf("some 'IECidrSgRules' %s have intersected CIDRs", ss)
+				}
+				return e
+			},
+		}
+		e = groupIterator[*model.IECidrSgRule, gk]{
+			keyExtractor: func(r *model.IECidrSgRule) gk {
+				return gk{
+					Transport: r.ID.Transport,
+					SG:        r.ID.SG,
+					Traffic:   r.ID.Traffic,
+				}
+			},
+		}.iterate(it, func(rr []*model.IECidrSgRule) error {
+			rr2 := det.detect(rr)
+			return det.errf(rr2)
+		})
+		return errors.WithMessage(e, api)
+	}
+}
+
+// IntegrityChecker4CidrSgIcmpRules -
+func IntegrityChecker4CidrSgIcmpRules() IntegrityChecker {
+	const api = "Integrity-of-CidrSgIcmpRules"
+
+	return func(reader MemDbReader) error {
+		it, e := reader.Get(TblIECidrSgIcmpRules, indexID)
+		if isInvalidTableErr(e) {
+			return nil
+		}
+		if e != nil {
+			return errors.WithMessage(e, api)
+		}
+		for x := it.Next(); x != nil; x = it.Next() { //SG ref validate
+			r := x.(*model.IECidrSgIcmpRule)
+			sg := r.ID().SG
+			i, e1 := reader.First(TblSecGroups, indexID, sg)
+			if e1 != nil {
+				return errors.WithMessagef(e1, "%s: find ref to SG '%s'", api, sg)
+			}
+			if i == nil {
+				return errors.Errorf("%s: not found ref to SG '%s'", api, sg)
 			}
 		}
-		err := detectCidrsIntersections(objs)
-		return errors.WithMessage(err, api)
+		type gk struct {
+			IPv     uint8
+			SG      string
+			Traffic model.Traffic
+		}
+		it, e = reader.Get(TblIECidrSgIcmpRules, indexIPvSgTraffic)
+		if e != nil {
+			return errors.WithMessage(e, api)
+		}
+		det := cidrsIntersectionDetector[*model.IECidrSgIcmpRule]{
+			cidrExtractor: func(r *model.IECidrSgIcmpRule) net.IPNet {
+				return r.CIDR
+			},
+			errf: func(rr []*model.IECidrSgIcmpRule) (e error) {
+				var ss []fmt.Stringer
+				for i := range rr {
+					ss = append(ss, rr[i].ID())
+				}
+				if len(ss) > 0 {
+					e = fmt.Errorf("some 'IECidrSgIcmpRule(s)' %s have intersected CIDRs", ss)
+				}
+				return e
+			},
+		}
+		e = groupIterator[*model.IECidrSgIcmpRule, gk]{
+			keyExtractor: func(r *model.IECidrSgIcmpRule) gk {
+				return gk{
+					IPv:     r.Icmp.IPv,
+					SG:      r.SG,
+					Traffic: r.Traffic,
+				}
+			},
+		}.iterate(it, func(rr []*model.IECidrSgIcmpRule) error {
+			rr2 := det.detect(rr)
+			return det.errf(rr2)
+		})
+		return errors.WithMessage(e, api)
 	}
 }
 
@@ -410,7 +371,7 @@ func IntegrityChecker4SgSgRules() IntegrityChecker {
 			return errors.WithMessage(e, api)
 		}
 		for x := it.Next(); x != nil; x = it.Next() { // validate SG refs
-			rule := x.(*model.SgSgRule)
+			rule := x.(*model.IESgSgRule)
 			sg, e1 := reader.First(TblSecGroups, indexID, rule.ID.SgLocal)
 			if e1 != nil {
 				return errors.WithMessagef(e1, "%s: find ref to SgLocal '%s'", api, rule.ID.SgLocal)

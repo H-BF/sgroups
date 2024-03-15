@@ -43,7 +43,7 @@ func (sui *cidrRulesTests) testCidrRulesFromFixtureFilename(name string) resourc
 			Check: func(_ *terraform.State) error {
 				if len(expectedBackend)+len(nonExpectedBackend) > 0 {
 					allRules := sui.listAllCidrRules()
-					var checker fixtures.ExpectationsChecker[protos.CidrSgRule, domain.CidrSgRule]
+					var checker fixtures.ExpectationsChecker[protos.CidrSgRule, domain.IECidrSgRule]
 					checker.Init(allRules)
 
 					if !checker.WeExpectFindAll(expectedBackend) {

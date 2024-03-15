@@ -34,10 +34,13 @@ type SyncerOfSgSgIcmpRules = syncObj[sgm.SgSgIcmpRule, sgm.SgSgIcmpRuleID]
 type SyncerOfIESgSgIcmpRules = syncObj[sgm.IESgSgIcmpRule, sgm.IESgSgIcmpRuleID]
 
 // SyncerOfCidrSgRules -
-type SyncerOfCidrSgRules = syncObj[sgm.CidrSgRule, sgm.CidrSgRuleIdenity]
+type SyncerOfCidrSgRules = syncObj[sgm.IECidrSgRule, sgm.IECidrSgRuleIdenity]
+
+// SyncerOfCidrSgIcmpRules -
+type SyncerOfCidrSgIcmpRules = syncObj[sgm.IECidrSgIcmpRule, sgm.IECidrSgIcmpRuleID]
 
 // SyncerOfSgSgRules -
-type SyncerOfSgSgRules = syncObj[sgm.SgSgRule, sgm.SgSgRuleIdentity]
+type SyncerOfSgSgRules = syncObj[sgm.IESgSgRule, sgm.IESgSgRuleIdentity]
 
 type syncObj[T any, tFlt any] struct {
 	C   *pgx.Conn
@@ -126,7 +129,7 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
 			syncField{Name: "trace", PgTy: "bool", Notnull: true},
 		)
-	case *sgm.IESgSgIcmpRule:
+	case *sgm.IESgSgIcmpRule: //nolint:dupl
 		o.mutatorFn = "sgroups.sync_ie_sg_sg_icmp_rule"
 		o.tableDst = syncTable{
 			Name: "sgroups.vu_ie_sg_sg_icmp_rule",
@@ -139,7 +142,7 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
 			syncField{Name: "trace", PgTy: "bool", Notnull: true},
 		)
-	case *sgm.CidrSgRule: //nolint:dupl
+	case *sgm.IECidrSgRule: //nolint:dupl
 		o.mutatorFn = "sgroups.sync_cidr_sg_rule"
 		o.tableDst = syncTable{
 			Name: "sgroups.vu_cidr_sg_rule",
@@ -152,7 +155,20 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
 			syncField{Name: "trace", PgTy: "bool", Notnull: true},
 		)
-	case *sgm.SgSgRule: //nolint:dupl
+	case *sgm.IECidrSgIcmpRule: //nolint:dupl
+		o.mutatorFn = "sgroups.sync_cidr_sg_icmp_rule"
+		o.tableDst = syncTable{
+			Name: "sgroups.vu_cidr_sg_icmp_rule",
+		}.WithFields(
+			syncField{Name: "ip_v", PgTy: "sgroups.ip_family", Notnull: true, Pk: true},
+			syncField{Name: "types", PgTy: "sgroups.icmp_types", Notnull: true},
+			syncField{Name: "cidr", PgTy: "cidr", Notnull: true, Pk: true},
+			syncField{Name: "sg", PgTy: "sgroups.cname", Notnull: true, Pk: true},
+			syncField{Name: "traffic", PgTy: "sgroups.traffic", Notnull: true, Pk: true},
+			syncField{Name: "logs", PgTy: "bool", Notnull: true},
+			syncField{Name: "trace", PgTy: "bool", Notnull: true},
+		)
+	case *sgm.IESgSgRule: //nolint:dupl
 		o.mutatorFn = "sgroups.sync_ie_sg_sg_rule"
 		o.tableDst = syncTable{
 			Name: "sgroups.vu_ie_sg_sg_rule",
@@ -244,7 +260,7 @@ func (o *syncObj[T, tFlt]) AddToFilter(ctx context.Context, data ...tFlt) error 
 				return err
 			}
 			raw = append(raw, []any{ipv, v.SgLocal, v.Sg, t})
-		case sgm.CidrSgRuleIdenity:
+		case sgm.IECidrSgRuleIdenity:
 			var p Proto
 			var t Traffic
 			if err := p.FromModel(v.Transport); err != nil {
@@ -254,7 +270,17 @@ func (o *syncObj[T, tFlt]) AddToFilter(ctx context.Context, data ...tFlt) error 
 				return err
 			}
 			raw = append(raw, []any{p, v.CIDR, v.SG, t})
-		case sgm.SgSgRuleIdentity:
+		case sgm.IECidrSgIcmpRuleID:
+			ipv, e := ipFamilyFromModel(v.IPv)
+			if e != nil {
+				return e
+			}
+			var t Traffic
+			if err := t.FromModel(v.Traffic); err != nil {
+				return err
+			}
+			raw = append(raw, []any{ipv, v.CIDR, v.SG, t})
+		case sgm.IESgSgRuleIdentity:
 			var p Proto
 			var t Traffic
 			if err := p.FromModel(v.Transport); err != nil {
@@ -316,14 +342,20 @@ func (o *syncObj[T, tFlt]) AddData(ctx context.Context, data ...T) error { //nol
 				return err
 			}
 			raw = append(raw, []any{x.IPv, x.Tytes, x.SgLocal, x.Sg, x.Traffic, x.Logs, x.Trace})
-		case sgm.CidrSgRule:
-			var x CidrSgRule
+		case sgm.IECidrSgRule:
+			var x IECidrSgRule
 			if err := x.FromModel(v); err != nil {
 				return err
 			}
 			raw = append(raw, []any{x.Proto, x.CIDR, x.SG, x.Traffic, x.Ports, x.Logs, x.Trace})
-		case sgm.SgSgRule:
-			var x SgSgRule
+		case sgm.IECidrSgIcmpRule:
+			var x IECidrSgIcmpRule
+			if err := x.FromModel(v); err != nil {
+				return err
+			}
+			raw = append(raw, []any{x.IPv, x.Tytes, x.CIDR, x.SG, x.Traffic, x.Logs, x.Trace})
+		case sgm.IESgSgRule:
+			var x IESgSgRule
 			if err := x.FromModel(v); err != nil {
 				return err
 			}

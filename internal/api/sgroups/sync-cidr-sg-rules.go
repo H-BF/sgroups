@@ -12,11 +12,11 @@ import (
 )
 
 type cidrSgRule struct {
-	*model.CidrSgRule
+	*model.IECidrSgRule
 }
 
 type cidrSgRuleIdentity struct {
-	*model.CidrSgRuleIdenity
+	*model.IECidrSgRuleIdenity
 }
 
 type traffic struct {
@@ -58,7 +58,7 @@ func (id cidrSgRuleIdentity) from(src *sg.CidrSgRule) error {
 }
 
 func (r cidrSgRule) from(src *sg.CidrSgRule) error {
-	e := cidrSgRuleIdentity{CidrSgRuleIdenity: &r.ID}.from(src)
+	e := cidrSgRuleIdentity{IECidrSgRuleIdenity: &r.ID}.from(src)
 	if e != nil {
 		return e
 	}
@@ -68,13 +68,13 @@ func (r cidrSgRule) from(src *sg.CidrSgRule) error {
 	return e
 }
 
-var syncCidrSgRules = syncAlg[model.CidrSgRule, *sg.CidrSgRule]{
-	makePrimaryKeyScope: func(rr []model.CidrSgRule) registry.Scope {
+var syncCidrSgRules = syncAlg[model.IECidrSgRule, *sg.CidrSgRule]{
+	makePrimaryKeyScope: func(rr []model.IECidrSgRule) registry.Scope {
 		return registry.PKScopedCidrSgRules(rr...)
 	},
-	proto2model: func(r *sg.CidrSgRule) (model.CidrSgRule, error) {
-		var item model.CidrSgRule
-		err := cidrSgRule{CidrSgRule: &item}.from(r)
+	proto2model: func(r *sg.CidrSgRule) (model.IECidrSgRule, error) {
+		var item model.IECidrSgRule
+		err := cidrSgRule{IECidrSgRule: &item}.from(r)
 		return item, err
 	},
 }.process

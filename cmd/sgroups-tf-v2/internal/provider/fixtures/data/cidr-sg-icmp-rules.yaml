@@ -1,0 +1,134 @@
+initial-backend:
+  networks:
+  - |
+    {
+      "name": "net1",
+      "network": {
+        "CIDR": "10.10.10.0/24"
+      }
+    }
+  - |
+    {
+      "name": "net2",
+      "network": {
+        "CIDR": "10.10.20.0/24"
+      }
+    }
+  sec-groups:
+  - |
+    {
+      "defaultAction": "ACCEPT",
+      "logs": false,
+      "name": "group1",
+      "networks": ["net1"],
+      "trace": false
+    }
+  - |
+    {
+      "defaultAction": "DROP",
+      "logs": true,
+      "name": "group2",
+      "networks": ["net2"],
+      "trace": true
+    }
+cases:
+- name: "create two cidr-sg-icmp rules"
+  tf-config: |
+    resource "sgroups_cidr_icmp_rules" "rules-set" {
+      items = {
+        "icmp4:cidr(10.0.0.0/24)sg(group1)ingress" = {
+          traffic = "ingress"
+          sg_name = "group1"
+          cidr    = "10.0.0.0/24"
+          ip_v    = "IPv4"
+          type    = [0, 2, 255]
+          logs  = true
+          trace = true
+        }
+    
+        "icmp6:cidr(2001:db8::/64)sg(group2)egress" = {
+          traffic = "egress"
+          sg_name = "group2"
+          cidr    = "2001:db8::/64"
+          ip_v    = "IPv6"
+          type    = [10, 30, 54]
+        }
+      }
+    }
+  expected-backend:
+    cidr-sg-icmp-rules:
+    - |
+      {
+        "CIDR": "10.0.0.0/24",
+        "ICMP": {
+          "IPv": "IPv4",
+          "Types": [
+            0, 2, 255
+          ]
+        },
+        "SG": "group1",
+        "logs": true,
+        "trace": true,
+        "traffic": "Ingress"
+      }
+    - |
+      {
+        "CIDR": "2001:db8::/64",
+        "ICMP": {
+          "IPv": "IPv6",
+          "Types": [
+            10, 30, 54
+          ]
+        },
+        "SG": "group2",
+        "logs": false,
+        "trace": false,
+        "traffic": "Egress"
+      }
+- name: "change first and delete second"
+  tf-config: |
+    resource "sgroups_cidr_icmp_rules" "rules-set" {
+      items = {
+        "icmp4:cidr(10.0.0.0/24)sg(group1)ingress" = {
+          traffic = "ingress"
+          sg_name = "group1"
+          cidr    = "10.0.0.0/24"
+          ip_v    = "IPv4"
+          type    = [1,2,3]
+          logs  = false
+          trace = false
+        }
+      }
+    }
+  expected-backend:
+    cidr-sg-icmp-rules:
+    - |
+      {
+        "CIDR": "10.0.0.0/24",
+        "ICMP": {
+          "IPv": "IPv4",
+          "Types": [
+            1, 2, 3
+          ]
+        },
+        "SG": "group1",
+        "logs": false,
+        "trace": false,
+        "traffic": "Ingress"
+      }
+  not-expected-backend:
+    cidr-sg-icmp-rules:
+    - |
+      {
+        "CIDR": "2001:db8::/64",
+        "ICMP": {
+          "IPv": "IPv6",
+          "Types": [
+            10, 30, 54
+          ]
+        },
+        "SG": "group2",
+        "logs": false,
+        "trace": false,
+        "traffic": "Egress"
+      }

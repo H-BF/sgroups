@@ -260,7 +260,7 @@ func (wr *pgDbWriter) SyncSgSgIcmpRules(ctx context.Context, rules []model.SgSgI
 }
 
 // SyncCidrSgRules impl Writer interface
-func (wr *pgDbWriter) SyncCidrSgRules(ctx context.Context, rules []model.CidrSgRule, scope Scope, opts ...Option) error { //nolint:dupl
+func (wr *pgDbWriter) SyncCidrSgRules(ctx context.Context, rules []model.IECidrSgRule, scope Scope, opts ...Option) error { //nolint:dupl
 	const api = "PG/SyncCidrSgRules"
 
 	var err error
@@ -279,7 +279,45 @@ func (wr *pgDbWriter) SyncCidrSgRules(ctx context.Context, rules []model.CidrSgR
 	}
 	switch v := scope.(type) {
 	case scopedCidrSgRuleIdentity:
-		ids := make([]model.CidrSgRuleIdenity, 0, len(v))
+		ids := make([]model.IECidrSgRuleIdenity, 0, len(v))
+		for _, id := range v {
+			ids = append(ids, id)
+		}
+		if err = snc.AddToFilter(ctx, ids...); err != nil {
+			return err
+		}
+	case noScope:
+	default:
+		return ErrUnexpectedScope
+	}
+	affected, err = snc.Sync(ctx)
+	if err == nil && affected > 0 {
+		atomic.AddInt64(wr.affectedRows, affected)
+	}
+	return err
+}
+
+// SyncCidrSgIcmpRules impl Writer interface
+func (wr *pgDbWriter) SyncCidrSgIcmpRules(ctx context.Context, rules []model.IECidrSgIcmpRule, scope Scope, opts ...Option) error { //nolint:dupl
+	const api = "PG/SyncCidrSgIcmpRules"
+
+	var err error
+	var affected int64
+	defer func() {
+		err = errors.WithMessage(err, api)
+	}()
+	var tx pgx.Tx
+	if tx, err = wr.tx(); err != nil {
+		return err
+	}
+	snc := pg.SyncerOfCidrSgIcmpRules{C: tx.Conn()}
+	snc.Upd, snc.Ins, snc.Del = wr.opts2flags(opts)
+	if err = snc.AddData(ctx, rules...); err != nil {
+		return err
+	}
+	switch v := scope.(type) {
+	case scopedCidrSgIcmpRuleIdentity:
+		ids := make([]model.IECidrSgIcmpRuleID, 0, len(v))
 		for _, id := range v {
 			ids = append(ids, id)
 		}
@@ -298,7 +336,7 @@ func (wr *pgDbWriter) SyncCidrSgRules(ctx context.Context, rules []model.CidrSgR
 }
 
 // SyncSgSgRules impl Writer interface
-func (wr *pgDbWriter) SyncSgSgRules(ctx context.Context, rules []model.SgSgRule, scope Scope, opts ...Option) error { //nolint:dupl
+func (wr *pgDbWriter) SyncSgSgRules(ctx context.Context, rules []model.IESgSgRule, scope Scope, opts ...Option) error { //nolint:dupl
 	const api = "PG/SyncSgSgRules"
 
 	var err error
@@ -317,7 +355,7 @@ func (wr *pgDbWriter) SyncSgSgRules(ctx context.Context, rules []model.SgSgRule,
 	}
 	switch v := scope.(type) {
 	case scopedSgSgRuleIdentity:
-		ids := make([]model.SgSgRuleIdentity, 0, len(v))
+		ids := make([]model.IESgSgRuleIdentity, 0, len(v))
 		for _, id := range v {
 			ids = append(ids, id)
 		}

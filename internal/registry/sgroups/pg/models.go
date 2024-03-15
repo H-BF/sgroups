@@ -126,8 +126,8 @@ type (
 	// Traffic -
 	Traffic string
 
-	// CidrSgRule -
-	CidrSgRule struct {
+	// IECidrSgRule -
+	IECidrSgRule struct {
 		Proto   Proto            `db:"proto"`
 		CIDR    net.IPNet        `db:"cidr"`
 		SG      string           `db:"sg"`
@@ -137,8 +137,18 @@ type (
 		Trace   bool             `db:"trace"`
 	}
 
-	// SgSgRule -
-	SgSgRule struct {
+	// IECidrSgIcmpRule -
+	IECidrSgIcmpRule struct {
+		ICMP
+		Traffic Traffic   `db:"traffic"`
+		CIDR    net.IPNet `db:"cidr"`
+		SG      string    `db:"sg"`
+		Logs    bool      `db:"logs"`
+		Trace   bool      `db:"trace"`
+	}
+
+	// IESgSgRule -
+	IESgSgRule struct {
 		Proto   Proto            `db:"proto"`
 		SgLocal string           `db:"sg_local"`
 		Sg      string           `db:"sg"`
