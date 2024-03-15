@@ -860,15 +860,17 @@ func (bt *batch) makeInOutChains(dir direction) {
 	bt.data.LocalSGs.Iterate(func(_ string, sg *cases.SG) bool {
 		bt.chainInOutProlog(dir, sg)
 		bt.populateDefaultIcmpRules(dir, sg)
-		bt.populateInOutSgIcmpRules(dir, sg)
-		bt.populateIeCidrSgIcmpRules(dir, sg)
-		bt.populateInOutSgRules(dir, sg)
-		bt.populateInOutSgIeSgRules(dir, sg)
+
+		bt.populateInOutSgIcmpRules(dir, sg) //  pri(-300)
+		bt.populateInOutSgRules(dir, sg)     //  pri(-200)
+		bt.populateSgIeSgIcmpRules(dir, sg)  //  pri(-100)
+		bt.populateInOutSgIeSgRules(dir, sg) //  pri(0)
 		if dir == dirOUT {
-			bt.populateOutSgFqdnRules(sg)
+			bt.populateOutSgFqdnRules(sg) //     pri(100)
 		}
-		bt.populateSgIeSgIcmpRules(dir, sg)
-		bt.populateInOutCidrSgRules(dir, sg)
+		bt.populateIeCidrSgIcmpRules(dir, sg) // pri(200)
+		bt.populateInOutCidrSgRules(dir, sg)  // pri(300)
+
 		bt.chainInOutEpilog(dir, sg)
 		return true
 	})
