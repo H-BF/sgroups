@@ -3,6 +3,9 @@ package provider
 import (
 	"context"
 	"fmt"
+	"math"
+	"strings"
+
 	"github.com/H-BF/protos/pkg/api/common"
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/H-BF/sgroups/cmd/sgroups-tf-v2/internal/validators"
@@ -18,8 +21,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"math"
-	"strings"
 )
 
 func NewCidrSgIcmpRulesResource() resource.Resource {
@@ -131,17 +132,13 @@ func (item cidrSgIcmpRule) Attributes() map[string]schema.Attribute {
 
 func (item cidrSgIcmpRule) icmp2Proto(ctx context.Context, diags *diag.Diagnostics) *common.ICMP {
 	ret := new(common.ICMP)
-
-	switch item.IpVersion.ValueString() {
-	case "IPv4":
-		ret.IPv = common.IpAddrFamily_IPv4
-	case "IPv6":
-		ret.IPv = common.IpAddrFamily_IPv6
-	default:
-		panic("unreachable: check `IpVersion` field validation in resource schema for exhaustiveness")
+	val := item.IpVersion.ValueString()
+	if v, ok := common.IpAddrFamily_value[val]; !ok {
+		diags.AddError("ICMP", fmt.Sprintf("bad value for IPv='%s'", val))
+	} else {
+		ret.IPv = common.IpAddrFamily(v)
+		diags.Append(item.Type.ElementsAs(ctx, &ret.Types, true)...)
 	}
-	diags.Append(item.Type.ElementsAs(ctx, &ret.Types, true)...)
-
 	return ret
 }
 
@@ -176,7 +173,7 @@ func readCidrSgIcmpRules(
 		}
 	}
 
-	for _, icmpRule := range resp.GetRules() {
+	for _, icmpRule := range resp.GetRules() { //nolint:dupl
 		it := cidrSgIcmpRule{
 			Traffic:   types.StringValue(strings.ToLower(icmpRule.GetTraffic().String())),
 			Cidr:      types.StringValue(icmpRule.GetCIDR()),

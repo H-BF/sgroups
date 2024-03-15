@@ -129,7 +129,7 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
 			syncField{Name: "trace", PgTy: "bool", Notnull: true},
 		)
-	case *sgm.IESgSgIcmpRule:
+	case *sgm.IESgSgIcmpRule: //nolint:dupl
 		o.mutatorFn = "sgroups.sync_ie_sg_sg_icmp_rule"
 		o.tableDst = syncTable{
 			Name: "sgroups.vu_ie_sg_sg_icmp_rule",
@@ -155,7 +155,7 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
 			syncField{Name: "trace", PgTy: "bool", Notnull: true},
 		)
-	case *sgm.IECidrSgIcmpRule:
+	case *sgm.IECidrSgIcmpRule: //nolint:dupl
 		o.mutatorFn = "sgroups.sync_cidr_sg_icmp_rule"
 		o.tableDst = syncTable{
 			Name: "sgroups.vu_cidr_sg_icmp_rule",

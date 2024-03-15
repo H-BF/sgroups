@@ -174,7 +174,7 @@ func readIESgSgIcmpRules(
 		}
 	}
 
-	for _, icmpRule := range resp.GetRules() {
+	for _, icmpRule := range resp.GetRules() { //nolint:dupl
 		it := ieSgSgIcmpRule{
 			Traffic:   types.StringValue(strings.ToLower(icmpRule.GetTraffic().String())),
 			SgLocal:   types.StringValue(icmpRule.GetSgLocal()),

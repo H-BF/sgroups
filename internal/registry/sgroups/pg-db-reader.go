@@ -383,7 +383,7 @@ func (rd *pgDbReader) ListCidrSgRules(ctx context.Context, consume func(model.IE
 }
 
 // ListCidrSgIcmpRules impl Reader interface
-func (rd *pgDbReader) ListCidrSgIcmpRules(ctx context.Context, consume func(model.IECidrSgIcmpRule) error, scope Scope) error {
+func (rd *pgDbReader) ListCidrSgIcmpRules(ctx context.Context, consume func(model.IECidrSgIcmpRule) error, scope Scope) error { //nolint:dupl
 	const (
 		qry = "select ip_v, types, cidr, sg, traffic, logs, trace from sgroups.list_cidr_sg_icmp_rules($1)"
 	)
