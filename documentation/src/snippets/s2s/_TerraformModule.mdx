@@ -19,11 +19,12 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
   <li className="text-justify">`rules.s2s[].sgroupSet[]` - {DICTIONARY.sgroupSet.short}</li>
   <li className="text-justify">`rules.s2s[].log` - {DICTIONARY.log.short}</li>
   <li className="text-justify">`rules.s2s[].trace` - {DICTIONARY.trace.short}</li>
-  <li className="text-justify">`rules.s2s[].access.$transport[]` - {DICTIONARY.transport.short}</li>
-  <li className="text-justify">`rules.s2s[].access.$transport.description` - {DICTIONARY.description.short}</li>
-  <li className="text-justify">`rules.s2s[].access.$transport.ports_to[]` - {DICTIONARY.dstPorts.short}</li>
-  <li className="text-justify">`rules.s2s[].access.$transport.ports_from[]` - {DICTIONARY.srcPorts.short}</li>
-  <li className="text-justify">`rules.s2s[].access.$transport.type[]` - {DICTIONARY.icmpTypes.short}</li>
+  <li className="text-justify">`rules.s2s[].access.$transport` - {DICTIONARY.transport.short}</li>
+  <li className="text-justify">`rules.s2s[].access.$transport.ports[].description` - {DICTIONARY.description.short}</li>
+  <li className="text-justify">`rules.s2s[].access.$transport.ports[].ports_to[]` - {DICTIONARY.dstPorts.short}</li>
+  <li className="text-justify">`rules.s2s[].access.$transport.ports[].ports_from[]` - {DICTIONARY.srcPorts.short}</li>
+  <li className="text-justify">`rules.s2s[].access.$transport.types[].description` - {DICTIONARY.description.short}</li>
+  <li className="text-justify">`rules.s2s[].access.$transport.types[].type[]` - {DICTIONARY.icmpTypes.short}</li>
 </ul>
 
 <div className="scrollable-x">
@@ -139,15 +140,15 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
     <Restrictions data={RESTRICTIONS.sgroupSet} />
   </li>
   <li>
-    `rules.s2s[].access.$transport[].ports_to[]`:
+    `rules.s2s[].access.$transport.ports[].ports_to[]`:
     <Restrictions data={RESTRICTIONS.dstPorts} />
   </li>
   <li>
-    `rules.s2s[].access.$transport[].ports_from[]`:
+    `rules.s2s[].access.$transport.ports[].ports_from[]`:
     <Restrictions data={RESTRICTIONS.srcPorts} />
   </li>
   <li>
-    `rules.s2s[].access.$transport[].type[]`:
+    `rules.s2s[].access.$transport.types[].type[]`:
     <Restrictions data={RESTRICTIONS.icmpType} />
   </li>
 </ul>
@@ -163,21 +164,23 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
     values = {[
         { label: "TCP", value: "tcp" },
         { label: "UDP", value: "udp" },
-        { label: "ICMP", value: "icmp" }
+        { label: "ICMP4", value: "icmp4" },
+        { label: "ICMP6", value: "icmp6" }
     ]}
 >
     <TabItem value="tcp">
 
         ```yaml
-        name: sg-example-from
+        name: sg-local-example
         rules:
-            s2s:
-              - sgroupSet:
-                  - sg-example-to
-                logs:  true
-                trace: true
-                access:
-                  tcp:
+          s2s:
+            - sgroupSet:
+                - sg-example
+              access:
+                tcp:
+                  logs:  true
+                  trace: true
+                  ports:
                     - description: ""
                       ports_from:
                         - 64231
@@ -189,15 +192,16 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
     <TabItem value="udp">
 
         ```yaml
-        name: sg-example-from
+        name: sg-local-example
         rules:
-            s2s:
-              - sgroupSet:
-                  - sg-example-to
-                logs:  true
-                trace: true
-                access:
-                  udp:
+          s2s:
+            - sgroupSet:
+                - sg-example
+              access:
+                udp:
+                  logs:  true
+                  trace: true
+                  ports:
                     - description: ""
                       ports_from:
                         - 64231
@@ -206,22 +210,19 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                         - 80
         ```
     </TabItem>
-    <TabItem value="icmp">
+    <TabItem value="icmp4">
 
         ```yaml
-        name: sg-example-from
+        name: sg-local-example
         rules:
-            s2s:
-              - sgroupSet:
-                  - sg-example-to
-                logs:  true
-                access:
-                  icmpIPv4:
-                    - description: ""
-                      Types:
-                        - 0
-                        - 8
-                  icmpIPv6:
+          s2s:
+            - sgroupSet:
+                - sg-example
+              access:
+                icmpIPv4:
+                  logs:  true
+                  trace: true
+                  types:
                     - description: ""
                       Types:
                         - 0
@@ -229,4 +230,23 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         ```
     </TabItem>
 
+    <TabItem value="icmp6">
+
+        ```yaml
+        name: sg-local-example
+        rules:
+          s2s:
+            - sgroupSet:
+                - sg-example
+              access:
+                icmpIPv6:
+                  logs:  true
+                  trace: true
+                  types:
+                    - description: ""
+                      Types:
+                        - 0
+                        - 8
+        ```
+    </TabItem>
 </Tabs>

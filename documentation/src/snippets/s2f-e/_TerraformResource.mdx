@@ -176,22 +176,19 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
     <TabItem value="tcp">
         ```hcl
         resource "sgroups_fqdn_rules" "rules" {
-            items = {
-                "tcp:sg(sg-local-example)fqdn(example.com)" = {
-                    transport   = "tcp"
-                    sg_from     = "sg-local-example"
-                    fqdn        = "example.com"
-                    protocols   = ["http", "dns"]
-                    ports = [
-                        {
-                            d = "443,80"
-                            s = "64231"
-                        }
-                    ]
-                    logs  = true
-                    trace = true
-                }
+          items = {
+            "tcp:sg(sg-local-example)fqdn(example.com)" = {
+              transport   = "tcp"
+              sg_from     = "sg-local-example"
+              fqdn        = "example.com"
+              ports = [{
+                d = "443,80"
+                s = "64231"
+              }]
+              logs  = true
+              trace = true
             }
+          }
         }
         ```
     </TabItem>
@@ -199,22 +196,19 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
     <TabItem value="udp">
         ```hcl
         resource "sgroups_fqdn_rules" "rules" {
-            items = {
-                "udp:sg(sg-local-example)fqdn(example.com)" = {
-                    transport   = "udp"
-                    sg_from     = "sg-local-example"
-                    fqdn        = "example.com"
-                    protocols   = ["http", "dns"]
-                    ports = [
-                        {
-                            d = "443,80"
-                            s = "64231"
-                        }
-                    ]
-                    logs  = true
-                    trace = true
-                }
+          items = {
+            "udp:sg(sg-local-example)fqdn(example.com)" = {
+              transport   = "udp"
+              sg_from     = "sg-local-example"
+              fqdn        = "example.com"
+              ports = [{
+                d = "443,80"
+                s = "64231"
+              }]
+              logs  = true
+              trace = true
             }
+          }
         }
         ```
     </TabItem>

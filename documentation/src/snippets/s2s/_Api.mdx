@@ -198,7 +198,8 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
     values = {[
         { label: "TCP", value: "tcp" },
         { label: "UDP", value: "udp" },
-        { label: "ICMP", value: "icmp" }
+        { label: "ICMP4", value: "icmp4" },
+        { label: "ICMP6", value: "icmp6" },
     ]}
 >
     <TabItem value="tcp">
@@ -206,20 +207,20 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
         curl '127.0.0.1:9007/v1/sync' \
         --header 'Content-Type: application/json' \
         --data '{
-            "sgRules": {
-                "rules": [{
-                        "sgFrom": "sg-example-from",
-                        "sgTo": "sg-example-to",
-                        "logs": true,
-                        "trace": true,
-                        "ports": [{
-                                "d": "443,80",
-                                "s": "64231"
-                        }],
-                        "transport": "TCP"
-                }]
-            },
-            "syncOp": "Upsert"
+          "sgRules": {
+            "rules": [{
+              "sgFrom": "sg-local-example",
+              "sgTo": "sg-example",
+              "logs": true,
+              "trace": true,
+              "ports": [{
+                "d": "443,80",
+                "s": "64231"
+              }],
+              "transport": "TCP"
+            }]
+          },
+          "syncOp": "Upsert"
         }'
         ```
 
@@ -290,20 +291,20 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
         curl '127.0.0.1:9007/v1/sync' \
         --header 'Content-Type: application/json' \
         --data '{
-            "sgRules": {
-                "rules": [{
-                        "sgFrom": "sg-example-from",
-                        "sgTo": "sg-example-to",
-                        "logs": true,
-                        "trace": true,
-                        "ports": [{
-                                "d": "443,80",
-                                "s": "64231"
-                        }],
-                        "transport": "UDP"
-                }]
-            },
-            "syncOp": "Upsert"
+          "sgRules": {
+            "rules": [{
+              "sgFrom": "sg-local-example",
+              "sgTo": "sg-example",
+              "logs": true,
+              "trace": true,
+              "ports": [{
+                "d": "443,80",
+                "s": "64231"
+              }],
+              "transport": "UDP"
+            }]
+          },
+          "syncOp": "Upsert"
         }'
         ```
 
@@ -369,34 +370,24 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
 
         </FancyboxDiagram>
     </TabItem>
-    <TabItem value="icmp">
+    <TabItem value="icmp4">
         ```bash
         curl '127.0.0.1:9007/v1/sync' \
         --header 'Content-Type: application/json' \
         --data '{
-            "sgSgIcmpRules": {
-                "rules": [{
-                    "ICMP": {
-                        "IPv": "IPv4",
-                        "Types": [0,8]
-                    },
-                    "SgFrom": "sg-example-from",
-                    "SgTo": "sg-example-to",
-                    "logs": true,
-                    "trace": true
-                },
-                {
-                    "ICMP": {
-                        "IPv": "IPv6",
-                        "Types": [0,8]
-                    },
-                    "SgFrom": "sg-example-from",
-                    "SgTo": "sg-example-to",
-                    "logs": true,
-                    "trace": true
-                }]
-            },
-            "syncOp": "Upsert"
+          "sgSgIcmpRules": {
+            "rules": [{
+              "SgFrom": "sg-local-example",
+              "SgTo": "sg-example",
+              "logs": true,
+              "trace": true
+              "ICMP": {
+                "IPv": "IPv4",
+                "Types": [0,8]
+              },
+            }]
+          },
+          "syncOp": "Upsert"
         }'
         ```
 
@@ -467,4 +458,94 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
 
         </FancyboxDiagram>
     </TabItem>
+
+    <TabItem value="icmp6">
+        ```bash
+        curl '127.0.0.1:9007/v1/sync' \
+        --header 'Content-Type: application/json' \
+        --data '{
+          "sgSgIcmpRules": {
+            "rules": [{
+              "SgFrom": "sg-local-example",
+              "SgTo": "sg-example",
+              "logs": true,
+              "trace": true
+              "ICMP": {
+                "IPv": "IPv6",
+                "Types": [0,8]
+              },
+            }]
+          },
+          "syncOp": "Upsert"
+        }'
+        ```
+
+        <h4 className="custom-heading">Выходные параметры</h4>
+
+        <div className="scrollable-x">
+          <table>
+            <thead>
+              <tr>
+                <th>название</th>
+                <th>тип данных</th>
+                <th>описание</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>-</td>
+                <td>Object</td>
+                <td>в случае успеха возвращается пустое тело</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4 className="custom-heading">Возможные ошибки API</h4>
+
+        <Codes data = {RESPOND_CODES.invalid_argument} />
+        <Codes data = {RESPOND_CODES.not_found} />
+
+        <h4 className="custom-heading">Диаграмма последовательности</h4>
+        <FancyboxDiagram>
+
+        ```mermaid
+        sequenceDiagram
+        participant user as User
+        participant server as Server
+        participant db as Database
+
+        user->>server: Добавить IE-SG-SG правило
+
+        alt Ошибка в запросе
+            server-->>user: Показать ошибку в запросе
+        end
+
+        server->>db: Отправить запрос
+        db->>db: Проверка входящего запроса
+
+        alt Нет такого значения имени SG(sg и/или sg_local)
+            db-->>server: Ответ с ошибкой
+            server-->>user: Показать ошибку в запросе
+        end
+
+        alt Некорректное значение кода ICMP
+            db-->>server: Ответ с ошибкой
+            server-->>user: Показать ошибку в запросе
+        end
+
+        alt Некорректное значение IPv
+            db-->>server: Ответ с ошибкой
+            server-->>user: Показать ошибку в запросе
+        end
+
+        db->>db: Сохранить данные о IE-SG-SG в БД
+
+        db-->>server: Ответ с успешно добавленным новым IE-SG-SG правилом
+        server-->>user: Успешно добавленное новое IE-SG-SG правило
+        ```
+
+        </FancyboxDiagram>
+    </TabItem>
+
 </Tabs>

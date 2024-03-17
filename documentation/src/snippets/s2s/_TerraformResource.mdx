@@ -191,27 +191,26 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
     values = {[
         { label: "TCP", value: "tcp" },
         { label: "UDP", value: "udp" },
-        { label: "ICMP", value: "icmp" }
+        { label: "ICMP4", value: "icmp4" },
+        { label: "ICMP6", value: "icmp6" },
     ]}
 >
     <TabItem value="tcp">
         ```hcl
         resource "sgroups_rules" "rules" {
-            items = {
-                "tcp:sg(sg-example-from)sg(sg-example-to)" = {
-                    transport   = "tcp"
-                    sg_from     = "sg-example-from"
-                    sg_to       = "sg-example-to"
-                    ports = [
-                        {
-                            d = "443,80"
-                            s = "64231"
-                        }
-                    ]
-                    logs  = true
-                    trace = true
-                }
+          items = {
+            "tcp:sg(sg-local-example)sg(sg-example)" = {
+              sg_from     = "sg-local-example"
+              sg_to       = "sg-example"
+              logs        = true
+              trace       = true
+              transport   = "tcp"
+              ports = [{
+                d = "443,80"
+                s = "64231"
+              }]
             }
+          }
         }
         ```
     </TabItem>
@@ -219,46 +218,53 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
     <TabItem value="udp">
         ```hcl
         resource "sgroups_rules" "rules" {
-            items = {
-                "udp:sg(sg-example-from)sg(sg-example-to)" = {
-                    transport   = "udp"
-                    sg_from     = "sg-example-from"
-                    sg_to       = "sg-example-to"
-                    ports = [
-                        {
-                            d = "443,80"
-                            s = "64231"
-                        }
-                    ]
-                    logs  = true
-                    trace = true
-                }
+          items = {
+            "udp:sg(sg-local-example)sg(sg-example)" = {
+              sg_from     = "sg-local-example"
+              sg_to       = "sg-example"
+              logs        = true
+              trace       = true
+              transport   = "udp"
+              ports = [{
+                d = "443,80"
+                s = "64231"
+              }]
             }
+          }
         }
         ```
     </TabItem>
 
-    <TabItem value="icmp">
+    <TabItem value="icmp4">
         ```hcl
         resource "sgroups_icmp_rules" "rules" {
-            items = {
-                "sg(sg-example-from)sg(sg-example-to)icmp4" => {
-                    logs    = true
-                    trace   = true
-                    sg_from = sg-example-from
-                    sg_to   = sg-example-to
-                    ip_v    = IPv4
-                    type    = [0,8]
-                }
-                "sg(sg-example-from)sg(sg-example-to)icmp6" => {
-                    logs    = true
-                    trace   = true
-                    sg_from = sg-example-from
-                    sg_to   = sg-example-to
-                    ip_v    = IPv6
-                    type    = [0,8]
-                }
+          items = {
+            "sg(sg-local-example)sg(sg-example)icmp4" => {
+              sg_from     = "sg-local-example"
+              sg_to       = "sg-example"
+              logs        = true
+              trace       = true
+              ip_v        = "IPv4"
+              type        = [0,8]
             }
+          }
+        }
+        ```
+    </TabItem>
+
+    <TabItem value="icmp6">
+        ```hcl
+        resource "sgroups_icmp_rules" "rules" {
+          items = {
+            "sg(sg-local-example)sg(sg-example)icmp6" => {
+              sg_from     = "sg-local-example"
+              sg_to       = "sg-example"
+              logs        = true
+              trace       = true
+              ip_v        = "IPv6"
+              type        = [0,8]
+            }
+          }
         }
         ```
     </TabItem>
