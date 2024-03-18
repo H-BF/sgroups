@@ -10,11 +10,11 @@ import (
 
 type (
 	sgSgRule struct {
-		*model.SgSgRule
+		*model.IESgSgRule
 	}
 
 	sgSgRuleIdentity struct {
-		*model.SgSgRuleIdentity
+		*model.IESgSgRuleIdentity
 	}
 )
 
@@ -34,7 +34,7 @@ func (id sgSgRuleIdentity) from(src *sg.SgSgRule) error {
 }
 
 func (r sgSgRule) from(src *sg.SgSgRule) error {
-	e := sgSgRuleIdentity{SgSgRuleIdentity: &r.ID}.from(src)
+	e := sgSgRuleIdentity{IESgSgRuleIdentity: &r.ID}.from(src)
 	if e != nil {
 		return e
 	}
@@ -54,12 +54,12 @@ func (r sgSgRule) from(src *sg.SgSgRule) error {
 	return e
 }
 
-var syncSgSgRules = syncAlg[model.SgSgRule, *sg.SgSgRule]{
-	makePrimaryKeyScope: func(rr []model.SgSgRule) registry.Scope {
+var syncSgSgRules = syncAlg[model.IESgSgRule, *sg.SgSgRule]{
+	makePrimaryKeyScope: func(rr []model.IESgSgRule) registry.Scope {
 		return registry.PKScopedSgSgRules(rr...)
 	},
-	proto2model: func(r *sg.SgSgRule) (ret model.SgSgRule, err error) {
-		err = sgSgRule{SgSgRule: &ret}.from(r)
+	proto2model: func(r *sg.SgSgRule) (ret model.IESgSgRule, err error) {
+		err = sgSgRule{IESgSgRule: &ret}.from(r)
 		return
 	},
 }.process

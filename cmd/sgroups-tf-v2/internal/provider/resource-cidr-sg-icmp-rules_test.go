@@ -2,13 +2,14 @@ package provider
 
 import (
 	"fmt"
+	"testing"
+
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/H-BF/sgroups/cmd/sgroups-tf-v2/internal/provider/fixtures"
 	domain "github.com/H-BF/sgroups/internal/models/sgroups"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
 	"github.com/hashicorp/terraform-plugin-testing/terraform"
 	"github.com/stretchr/testify/suite"
-	"testing"
 )
 
 type cidrSgIcmpRulesTests struct {
@@ -41,7 +42,7 @@ func (sui *cidrSgIcmpRulesTests) testCidrSgIcmpRulesFromFixtureFilename(name str
 			Check: func(_ *terraform.State) error {
 				if len(expectedBackend)+len(nonExpectedBackend) > 0 {
 					allRules := sui.listAllRules()
-					var checker fixtures.ExpectationsChecker[protos.CidrSgIcmpRule, domain.CidrSgIcmpRule]
+					var checker fixtures.ExpectationsChecker[protos.CidrSgIcmpRule, domain.IECidrSgIcmpRule]
 					checker.Init(allRules)
 
 					if !checker.WeExpectFindAll(expectedBackend) {

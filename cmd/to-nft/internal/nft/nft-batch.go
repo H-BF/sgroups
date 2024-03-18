@@ -29,12 +29,8 @@ import (
 )
 
 const (
-	//chnFORWARD     = "FORWARD"
-	chnPOSTROUTING = "POSTROUTING"
-	//chnPREROUTING  = "PREROUTING"
-	chnINPUT = "INPUT"
-	chnFWIN  = "FW-IN"
-	chnFWOUT = "FW-OUT"
+	chnEgressPOSTROUTING = "EGRESS-POSTROUTING"
+	chnIngressINPUT      = "INGRESS-INPUT"
 )
 
 const (
@@ -166,7 +162,8 @@ func (bt *batch) prepare() {
 	bt.initCidrSgRulesDetails()
 	bt.initSgIeSgRulesDetails()
 	bt.initRootChains()
-	bt.initBaseRules()
+	bt.initBaseRules(dirIN)
+	bt.initBaseRules(dirOUT)
 	bt.makeInOutChains(dirIN)
 	bt.makeInOutChains(dirOUT)
 	bt.fwInOutAddDefaultRules()
@@ -283,77 +280,32 @@ func (bt *batch) initTable() {
 
 func (bt *batch) initRootChains() {
 	bt.addJob("init root chains", func(tx *Tx) error {
-		/*//
-		_ = tx.AddChain(&nftLib.Chain{
-			Name:     chnFORWARD,
-			Table:    bt.table,
-			Type:     nftLib.ChainTypeFilter,
-			Policy:   val2ptr(nftLib.ChainPolicyAccept),
-			Hooknum:  nftLib.ChainHookForward,
-			Priority: nftLib.ChainPriorityFilter,
-		})
-		bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chnFORWARD)
-		*/
-
-		fwInChain := tx.AddChain(&nftLib.Chain{
-			Name:  chnFWIN,
-			Table: bt.table,
-		})
-		bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chnFWIN)
-		bt.chains.Put(chnFWIN, fwInChain)
-		//beginRule().metaNFTRACE(true).
-		//	applyRule(fwInChain, tx.Conn)
-
-		fwOutChain := tx.AddChain(&nftLib.Chain{
-			Name:  chnFWOUT,
-			Table: bt.table,
-		})
-		bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chnFWOUT)
-		bt.chains.Put(chnFWOUT, fwOutChain)
-		//beginRule().metaNFTRACE(true).
-		//	applyRule(fwOutChain, tx.Conn)
-
 		chnOutput := tx.AddChain(&nftLib.Chain{
-			Name:     chnPOSTROUTING,
+			Name:     chnEgressPOSTROUTING,
 			Table:    bt.table,
 			Type:     nftLib.ChainTypeFilter,
-			Policy:   val2ptr(nftLib.ChainPolicyAccept),
+			Policy:   val2ptr(nftLib.ChainPolicyDrop),
 			Hooknum:  nftLib.ChainHookPostrouting,
 			Priority: nftLib.ChainPriorityConntrackHelper,
-			//Hooknum:  nftLib.ChainHookOutput,
-			//Priority: nftLib.ChainPriorityFilter,
 		})
-		bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chnPOSTROUTING)
-		bt.chains.Put(chnPOSTROUTING, chnOutput)
-		beginRule().
-			ctState(nfte.CtStateBitESTABLISHED|nfte.CtStateBitRELATED).
-			accept().applyRule(chnOutput, tx.Conn)
-		beginRule().oifname().neqS("lo").counter().
-			go2(chnFWOUT).applyRule(chnOutput, tx.Conn)
+		bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chnEgressPOSTROUTING)
+		bt.chains.Put(chnEgressPOSTROUTING, chnOutput)
 
 		chnInput := tx.AddChain(&nftLib.Chain{
-			//Name:   chnPREROUTING,
-			Name:   chnINPUT,
-			Table:  bt.table,
-			Type:   nftLib.ChainTypeFilter,
-			Policy: val2ptr(nftLib.ChainPolicyAccept),
-			//Hooknum:  nftLib.ChainHookPrerouting,
-			//Priority: nftLib.ChainPriorityRaw,
+			Name:     chnIngressINPUT,
+			Table:    bt.table,
+			Type:     nftLib.ChainTypeFilter,
+			Policy:   val2ptr(nftLib.ChainPolicyDrop),
 			Hooknum:  nftLib.ChainHookInput,
 			Priority: nftLib.ChainPriorityFilter,
 		})
-		bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chnINPUT)
-		bt.chains.Put(chnINPUT, chnInput)
-		beginRule().
-			ctState(nfte.CtStateBitESTABLISHED|nfte.CtStateBitRELATED).
-			accept().applyRule(chnInput, tx.Conn)
-		beginRule().iifname().neqS("lo").counter().
-			go2(chnFWIN).applyRule(chnInput, tx.Conn)
+		bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chnIngressINPUT)
+		bt.chains.Put(chnIngressINPUT, chnInput)
 		return nil
 	})
 }
 
-func (bt *batch) initBaseRules() {
+func (bt *batch) initBaseRules(dir direction) {
 	const api = "init-base-rules"
 
 	var nws []model.Network
@@ -380,11 +332,17 @@ func (bt *batch) initBaseRules() {
 				if err := tx.AddSet(netSet, elems); err != nil {
 					return err
 				}
-				bt.log.Debugf("add network(s) %s into base rules", slice2stringer(nw...))
+				chnDest := tern(dirIN == dir,
+					chnIngressINPUT,
+					chnEgressPOSTROUTING,
+				)
+				bt.log.Debugf("add network(s) %s into '%s'/'%s' base rules",
+					slice2stringer(nw...), bt.table.Name, chnDest)
 				rule := beginRule()
-				tern(isIP4, rule.daddr4, rule.daddr6)().
-					inSet(netSet).accept().
-					applyRule(bt.chains.At(chnFWOUT), tx.Conn)
+				tern(dirIN == dir, rule.saddr, rule.daddr)(
+					tern(isIP4, iplib.IP4Version, iplib.IP6Version),
+				).inSet(netSet).accept().
+					applyRule(bt.chains.At(chnDest), tx.Conn)
 				return nil
 			})
 		}
@@ -508,7 +466,7 @@ func (bt *batch) initSG2FQDNRulesDetails() {
 }
 
 func (bt *batch) initCidrSgRulesDetails() { //nolint:dupl
-	bt.data.CidrSgRules.Rules.Iterate(func(_ model.CidrSgRuleIdenity, r *model.CidrSgRule) bool {
+	bt.data.CidrSgRules.Rules.Iterate(func(_ model.IECidrSgRuleIdenity, r *model.IECidrSgRule) bool {
 		item := ruleDetails{
 			accports: setsUtils{}.makeAccPorts(r.Ports),
 			logs:     r.Logs,
@@ -526,7 +484,7 @@ func (bt *batch) initCidrSgRulesDetails() { //nolint:dupl
 }
 
 func (bt *batch) initSgIeSgRulesDetails() { //nolint:dupl
-	bt.data.SgIeSgRules.Rules.Iterate(func(_ model.SgSgRuleIdentity, r *model.SgSgRule) bool {
+	bt.data.SgIeSgRules.Rules.Iterate(func(_ model.IESgSgRuleIdentity, r *model.IESgSgRule) bool {
 		item := ruleDetails{
 			accports: setsUtils{}.makeAccPorts(r.Ports),
 			logs:     r.Logs,
@@ -720,6 +678,42 @@ func (bt *batch) populateSgIeSgIcmpRules(dir direction, sg *cases.SG) {
 	}
 }
 
+func (bt *batch) populateIeCidrSgIcmpRules(dir direction, sg *cases.SG) {
+	isIN := dir == dirIN
+	rules := bt.data.IECidrSgIcmpRules.GetRulesForTrafficAndSG(
+		tern(isIN, model.INGRESS, model.EGRESS), sg.Name,
+	)
+	targetSGchName := nameUtils{}.nameOfInOutChain(dir, sg.Name)
+	api := fmt.Sprintf("populate-cidr-sg-icmp-%sgress--rule(s)",
+		tern(isIN, "in", "e"),
+	)
+	for i := range rules {
+		rule := rules[i]
+		addrSetName := nameUtils{}.nameOfNetSet(int(rule.Icmp.IPv), rule.SG)
+		bt.addJob(api, func(tx *Tx) error {
+			chnApplyTo := bt.chains.At(targetSGchName)
+			addrSet := bt.addrsets.At(addrSetName)
+			if chnApplyTo != nil && addrSet != nil {
+				bt.log.Debugf("add cidr(%s)-sg(%s)-icmp-%sgress-rule for addr-set '%s' into '%s'/'%s'",
+					&rule.CIDR,
+					rule.SG,
+					tern(isIN, "in", "e"),
+					addrSetName,
+					bt.table.Name, targetSGchName)
+			}
+			rb := beginRule().
+				metaNFTRACE(rule.Trace).
+				srcOrDstSingleIpNet(rule.CIDR, isIN).
+				protoICMP(rule.Icmp).counter()
+			if rule.Logs {
+				rb = rb.dlogs(nfte.LogFlagsIPOpt)
+			}
+			rb.accept().applyRule(chnApplyTo, tx.Conn)
+			return nil
+		})
+	}
+}
+
 func (bt *batch) populateInOutSgRules(dir direction, sg *cases.SG) {
 	targetSGchName := nameUtils{}.nameOfInOutChain(dir, sg.Name)
 	isIN := dir == dirIN
@@ -866,14 +860,17 @@ func (bt *batch) makeInOutChains(dir direction) {
 	bt.data.LocalSGs.Iterate(func(_ string, sg *cases.SG) bool {
 		bt.chainInOutProlog(dir, sg)
 		bt.populateDefaultIcmpRules(dir, sg)
-		bt.populateInOutSgIcmpRules(dir, sg)
-		bt.populateSgIeSgIcmpRules(dir, sg)
-		bt.populateInOutSgRules(dir, sg)
-		bt.populateInOutSgIeSgRules(dir, sg)
+
+		bt.populateInOutSgIcmpRules(dir, sg) //  pri(-300)
+		bt.populateInOutSgRules(dir, sg)     //  pri(-200)
+		bt.populateSgIeSgIcmpRules(dir, sg)  //  pri(-100)
+		bt.populateInOutSgIeSgRules(dir, sg) //  pri(0)
 		if dir == dirOUT {
-			bt.populateOutSgFqdnRules(sg)
+			bt.populateOutSgFqdnRules(sg) //     pri(100)
 		}
-		bt.populateInOutCidrSgRules(dir, sg)
+		bt.populateIeCidrSgIcmpRules(dir, sg) // pri(200)
+		bt.populateInOutCidrSgRules(dir, sg)  // pri(300)
+
 		bt.chainInOutEpilog(dir, sg)
 		return true
 	})
@@ -884,7 +881,7 @@ func (bt *batch) chainInOutProlog(dir direction, sg *cases.SG) {
 	isIN := dir == dirIN
 	api := fmt.Sprintf("%s-chain-prolog", tern(isIN, "in", "out"))
 	for _, ipV := range sli(model.IPv4, model.IPv6) {
-		destChainName := tern(dir == dirIN, chnFWIN, chnFWOUT)
+		destChainName := tern(dir == dirIN, chnIngressINPUT, chnEgressPOSTROUTING)
 		ipV := ipV
 		bt.addJob(api, func(tx *Tx) error {
 			addrSetName := nameUtils{}.nameOfNetSet(ipV, sg.Name)
@@ -894,6 +891,9 @@ func (bt *batch) chainInOutProlog(dir direction, sg *cases.SG) {
 						Name:  sgChName,
 						Table: bt.table,
 					})
+					beginRule().
+						ctState(nfte.CtStateBitESTABLISHED|nfte.CtStateBitRELATED).
+						counter().accept().applyRule(chn, tx.Conn)
 					bt.chains.Put(sgChName, chn)
 					bt.log.Debugf("chain '%s'/'%s' is in progress",
 						bt.table.Name, sgChName)
@@ -944,11 +944,11 @@ func (bt *batch) chainInOutEpilog(dir direction, sg *cases.SG) {
 }
 
 func (bt *batch) fwInOutAddDefaultRules() {
-	for _, chName := range sli(chnFWIN, chnFWOUT) {
+	for _, chName := range sli(chnIngressINPUT, chnEgressPOSTROUTING) {
 		chName := chName
 		bt.addJob("add-default-rules", func(tx *Tx) error {
-			bt.log.Debugf("add defult rules into chain '%s'/'%s'", chName, bt.table.Name)
-			beginRule().drop().applyRule(bt.chains.At(chName), tx.Conn)
+			bt.log.Debugf("add default rules into chain '%s'/'%s'", bt.table.Name, chName)
+			beginRule().counter().applyRule(bt.chains.At(chName), tx.Conn)
 			return nil
 		})
 	}

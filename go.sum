@@ -41,8 +41,8 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym/WlBOVXweHU+Q+/VP0lqqI8lqeDx9IjBqo=
 github.com/H-BF/corlib v0.0.7 h1:Erf4PXslVueqbckmVMFnkd8pvDRjcnMyyNGqWP/FcyU=
 github.com/H-BF/corlib v0.0.7/go.mod h1:Dmd4z21TPWgEPaqyGatf2083RTviwFiPqjRcTwK5pXI=
-github.com/H-BF/protos v0.12.0-dev.1 h1:zvZic7BGqrIx2IiCFjl19VJTTvvT2xxsyeOTJ5uA/EM=
-github.com/H-BF/protos v0.12.0-dev.1/go.mod h1:uoLsNVsFGESodtSbKD0sV1MLtrt1upYi3xUN3CM9be8=
+github.com/H-BF/protos v0.12.0-dev.2 h1:oDgJshVP0OW9a+g3g4Dc1yx0Zj6GlwnVtdZNTXfrXkQ=
+github.com/H-BF/protos v0.12.0-dev.2/go.mod h1:uoLsNVsFGESodtSbKD0sV1MLtrt1upYi3xUN3CM9be8=
 github.com/Microsoft/go-winio v0.6.1 h1:9/kr64B9VUZrLm5YYwbGtUJnMgqWVOdUAXu6Migciow=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/ProtonMail/go-crypto v0.0.0-20230717121422-5aa5874ade95 h1:KLq8BE0KwCL+mmXnjLWEAOYO+2l2AE4YMmqG1ZpZHBs=

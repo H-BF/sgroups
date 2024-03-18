@@ -260,3 +260,28 @@ func Test_Validate_SgIcmpRule(t *testing.T) {
 	e = r.Validate()
 	require.NoError(t, e)
 }
+
+func Test_Validate_IECidrSgIcmpRule(t *testing.T) {
+	cases := []struct {
+		cidr string
+		ipv  int
+		fail bool
+	}{
+		{"1.1.1.1/24", IPv4, false},
+		{"2001:db8::/64", IPv6, false},
+		{"1.1.1.1/24", IPv6, true},
+		{"2001:db8::/64", IPv4, true},
+	}
+	for i := range cases {
+		c := cases[i]
+		_, cidr, err := net.ParseCIDR(c.cidr)
+		require.NoError(t, err)
+		rule := IECidrSgIcmpRule{INGRESS, *cidr, "sg1", ICMP{IPv: uint8(c.ipv)}, false, false, DROP}
+		e := rule.Validate()
+		if !c.fail {
+			require.NoErrorf(t, e, "test case #%v failed", i)
+		} else {
+			require.Errorf(t, e, "test case #%v failed", i)
+		}
+	}
+}

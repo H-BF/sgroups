@@ -217,7 +217,7 @@ func makeNetlinkWatcher(ctx context.Context, netNs string) (nl.NetlinkWatcher, e
 		},
 	}
 	if len(netNs) > 0 {
-		opts = append(opts, nl.WithNetns{Netns: netNs})
+		opts = append(opts, nl.WithNetnsName{Netns: netNs})
 	}
 	nlWatcher, err := nl.NewNetlinkWatcher(opts...)
 	return nlWatcher, errors.WithMessage(err, "create net-watcher")
@@ -295,6 +295,7 @@ func (m *mainJob) run(ctx context.Context) error {
 	nle := NetlinkEventSource{
 		Subject:        subject,
 		NetlinkWatcher: m.nlWatcher,
+		NetNS:          m.netNs,
 	}
 	ste := SyncStatusEventSource{
 		Subject:       subject,

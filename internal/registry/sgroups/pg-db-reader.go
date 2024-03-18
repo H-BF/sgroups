@@ -358,7 +358,7 @@ func (rd *pgDbReader) argsForListCidrSgRules(scope Scope) ([]any, error) {
 }
 
 // ListCidrSgRules impl Reader
-func (rd *pgDbReader) ListCidrSgRules(ctx context.Context, consume func(model.CidrSgRule) error, scope Scope) error { //nolint:dupl
+func (rd *pgDbReader) ListCidrSgRules(ctx context.Context, consume func(model.IECidrSgRule) error, scope Scope) error { //nolint:dupl
 	const (
 		qry = "select proto, cidr, sg, traffic, ports, logs, trace, action from sgroups.list_cidr_sg_rule($1)"
 	)
@@ -371,8 +371,8 @@ func (rd *pgDbReader) ListCidrSgRules(ctx context.Context, consume func(model.Ci
 		if e != nil {
 			return e
 		}
-		scanner := pgx.RowToStructByName[pg.CidrSgRule]
-		return pgxIterateRowsAndClose(rows, scanner, func(rule pg.CidrSgRule) error {
+		scanner := pgx.RowToStructByName[pg.IECidrSgRule]
+		return pgxIterateRowsAndClose(rows, scanner, func(rule pg.IECidrSgRule) error {
 			m, e1 := rule.ToModel()
 			if e1 != nil {
 				return e1
@@ -383,7 +383,7 @@ func (rd *pgDbReader) ListCidrSgRules(ctx context.Context, consume func(model.Ci
 }
 
 // ListCidrSgIcmpRules impl Reader interface
-func (rd *pgDbReader) ListCidrSgIcmpRules(ctx context.Context, consume func(model.CidrSgIcmpRule) error, scope Scope) error {
+func (rd *pgDbReader) ListCidrSgIcmpRules(ctx context.Context, consume func(model.IECidrSgIcmpRule) error, scope Scope) error { //nolint:dupl
 	const (
 		qry = "select ip_v, types, cidr, sg, traffic, logs, trace, action from sgroups.list_cidr_sg_icmp_rules($1)"
 	)
@@ -396,8 +396,8 @@ func (rd *pgDbReader) ListCidrSgIcmpRules(ctx context.Context, consume func(mode
 		if e != nil {
 			return e
 		}
-		scanner := pgx.RowToStructByName[pg.CidrSgIcmpRule]
-		return pgxIterateRowsAndClose(rows, scanner, func(rule pg.CidrSgIcmpRule) error {
+		scanner := pgx.RowToStructByName[pg.IECidrSgIcmpRule]
+		return pgxIterateRowsAndClose(rows, scanner, func(rule pg.IECidrSgIcmpRule) error {
 			m, e1 := rule.ToModel()
 			if e1 != nil {
 				return e1
@@ -445,7 +445,7 @@ func (rd *pgDbReader) argsForRulesWithSgLocalAndSg(scope Scope) ([]any, error) {
 }
 
 // ListSgSgRules impl Reader
-func (rd *pgDbReader) ListSgSgRules(ctx context.Context, consume func(model.SgSgRule) error, scope Scope) error { //nolint:dupl
+func (rd *pgDbReader) ListSgSgRules(ctx context.Context, consume func(model.IESgSgRule) error, scope Scope) error { //nolint:dupl
 	const (
 		qry = "select proto, sg_local, sg, traffic, ports, logs, trace, action from sgroups.list_ie_sg_sg_rules($1, $2)"
 	)
@@ -458,8 +458,8 @@ func (rd *pgDbReader) ListSgSgRules(ctx context.Context, consume func(model.SgSg
 		if e != nil {
 			return e
 		}
-		scanner := pgx.RowToStructByName[pg.SgSgRule]
-		return pgxIterateRowsAndClose(rows, scanner, func(rule pg.SgSgRule) error {
+		scanner := pgx.RowToStructByName[pg.IESgSgRule]
+		return pgxIterateRowsAndClose(rows, scanner, func(rule pg.IESgSgRule) error {
 			m, e1 := rule.ToModel()
 			if e1 != nil {
 				return e1

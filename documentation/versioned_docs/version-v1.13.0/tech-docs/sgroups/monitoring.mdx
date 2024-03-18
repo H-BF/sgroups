@@ -1,0 +1,270 @@
+---
+id: monitoring
+---
+
+# Мониторинг
+
+<div className="paragraph">
+  Информация о состоянии сервера основывается на метриках. В таблице ниже предоставлены доступные метрики и их описания.
+</div>
+
+<div>
+  <span className="green">
+    <b>Зеленым</b>
+  </span>
+  <span> цветом выделены ключевые метрики.</span>
+</div>
+
+<div className="scrollable-x">
+  <table>
+    <thead>
+      <tr>
+        <th>Metric Name</th>
+        <th>Metric Type</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>go_gc_duration_seconds</td>
+        <td>summary</td>
+        <td>Сводка длительности пауз циклов сборки мусора</td>
+      </tr>
+      <tr>
+        <td>go_gc_duration_seconds_count</td>
+        <td>counter</td>
+        <td>Сводка длительности пауз циклов сборки мусора</td>
+      </tr>
+      <tr>
+        <td>go_gc_duration_seconds_sum</td>
+        <td>counter</td>
+        <td>Сумма длительности паузы циклов сборки мусора</td>
+      </tr>
+      <tr>
+        <td>go_goroutines</td>
+        <td>gauge</td>
+        <td>Количество текущих горутин</td>
+      </tr>
+      <tr>
+        <td>go_info</td>
+        <td>gauge</td>
+        <td>Информация о среде выполнения</td>
+      </tr>
+      <tr>
+        <td>go_memstats_alloc_bytes</td>
+        <td>gauge</td>
+        <td>Количество выделенных и все еще используемых байтов</td>
+      </tr>
+      <tr>
+        <td>go_memstats_alloc_bytes_total</td>
+        <td>counter</td>
+        <td>Общее количество выделенных байтов, даже если они были освобождены</td>
+      </tr>
+      <tr>
+        <td>go_memstats_buck_hash_sys_bytes</td>
+        <td>gauge</td>
+        <td>Количество байтов, используемых хэш-таблицей профилирования</td>
+      </tr>
+      <tr>
+        <td>go_memstats_frees_total</td>
+        <td>counter</td>
+        <td>Общее количество &quot;освобожденных&quot; объектов кучи</td>
+      </tr>
+      <tr>
+        <td>go_memstats_gc_sys_bytes</td>
+        <td>gauge</td>
+        <td>Количество байтов, используемых для метаданных системы сборки мусора</td>
+      </tr>
+      <tr>
+        <td>go_memstats_heap_alloc_bytes</td>
+        <td>gauge</td>
+        <td>Количество выделенных и все еще используемых байтов кучи</td>
+      </tr>
+      <tr>
+        <td>go_memstats_heap_idle_bytes</td>
+        <td>gauge</td>
+        <td>Количество байтов кучи в ожидании использования</td>
+      </tr>
+      <tr>
+        <td>go_memstats_heap_inuse_bytes</td>
+        <td>gauge</td>
+        <td>Количество байтов кучи, используемых в данный момент</td>
+      </tr>
+      <tr>
+        <td>go_memstats_heap_objects</td>
+        <td>gauge</td>
+        <td>Количество выделенных объектов</td>
+      </tr>
+      <tr>
+        <td>go_memstats_heap_released_bytes</td>
+        <td>gauge</td>
+        <td>Количество байтов кучи, освобожденных в ОС</td>
+      </tr>
+      <tr>
+        <td>go_memstats_heap_sys_bytes</td>
+        <td>gauge</td>
+        <td>Количество байтов кучи, полученных от системы</td>
+      </tr>
+      <tr>
+        <td>go_memstats_last_gc_time_seconds</td>
+        <td>gauge</td>
+        <td>Количество секунд с 1970 года последней сборки мусора</td>
+      </tr>
+      <tr>
+        <td>go_memstats_lookups_total</td>
+        <td>counter</td>
+        <td>Общее количество поисков указателей</td>
+      </tr>
+      <tr>
+        <td>go_memstats_mallocs_total</td>
+        <td>counter</td>
+        <td>Общее количество выделений памяти</td>
+      </tr>
+      <tr>
+        <td>go_memstats_mcache_inuse_bytes</td>
+        <td>gauge</td>
+        <td>Количество байтов, используемых структурами mcache</td>
+      </tr>
+      <tr>
+        <td>go_memstats_mcache_sys_bytes</td>
+        <td>gauge</td>
+        <td>Количество байтов, используемых структурами mcache, полученных из системы</td>
+      </tr>
+      <tr>
+        <td>go_memstats_mspan_inuse_bytes</td>
+        <td>gauge</td>
+        <td>Количество байтов, используемых структурами mspan</td>
+      </tr>
+      <tr>
+        <td>go_memstats_mspan_sys_bytes</td>
+        <td>gauge</td>
+        <td>Количество байтов, используемых структурами mspan, полученных из системы</td>
+      </tr>
+      <tr>
+        <td>go_memstats_next_gc_bytes</td>
+        <td>gauge</td>
+        <td>Количество байтов кучи при следующей сборке мусора</td>
+      </tr>
+      <tr>
+        <td>go_memstats_other_sys_bytes</td>
+        <td>gauge</td>
+        <td>Количество байтов, используемых для других системных выделений</td>
+      </tr>
+      <tr>
+        <td>go_memstats_stack_inuse_bytes</td>
+        <td>gauge</td>
+        <td>Количество байтов, используемых выделителем стека</td>
+      </tr>
+      <tr>
+        <td>go_memstats_stack_sys_bytes</td>
+        <td>gauge</td>
+        <td>Количество байтов, полученных от системы для выделителя стека</td>
+      </tr>
+      <tr>
+        <td>go_memstats_sys_bytes</td>
+        <td>gauge</td>
+        <td>Количество байтов, полученных от системы</td>
+      </tr>
+      <tr>
+        <td>go_threads</td>
+        <td>gauge</td>
+        <td>Количество созданных ОС потоков</td>
+      </tr>
+      <tr>
+        <td className="green">
+          <b>healthcheck</b>
+        </td>
+        <td>gauge</td>
+        <td>Индикатор проверки состояния процесса (0 или 1)</td>
+      </tr>
+      <tr>
+        <td className="green">
+          <b>process_cpu_seconds_total</b>
+        </td>
+        <td>counter</td>
+        <td>Общее количество времени CPU пользователя и системы в секундах</td>
+      </tr>
+      <tr>
+        <td>process_max_fds</td>
+        <td>gauge</td>
+        <td>Максимальное количество открытых дескрипторов файлов</td>
+      </tr>
+      <tr>
+        <td>process_open_fds</td>
+        <td>gauge</td>
+        <td>Количество открытых дескрипторов файлов</td>
+      </tr>
+      <tr>
+        <td className="green">
+          <b>process_resident_memory_bytes</b>
+        </td>
+        <td>gauge</td>
+        <td>Размер резидентной памяти в байтах</td>
+      </tr>
+      <tr>
+        <td>process_start_time_seconds</td>
+        <td>gauge</td>
+        <td>Время запуска процесса с начала эпохи Unix в секундах</td>
+      </tr>
+      <tr>
+        <td>process_virtual_memory_bytes</td>
+        <td>gauge</td>
+        <td>Размер виртуальной памяти в байтах</td>
+      </tr>
+      <tr>
+        <td>process_virtual_memory_max_bytes</td>
+        <td>gauge</td>
+        <td>Максимальный объем доступной виртуальной памяти в байтах</td>
+      </tr>
+      <tr>
+        <td className="green">
+          <b>promhttp_metric_handler_requests_in_flight</b>
+        </td>
+        <td>counter</td>
+        <td>Количество обрабатываемых запросов в моменте на ручке /metrics</td>
+      </tr>
+      <tr>
+        <td>promhttp_metric_handler_requests_total</td>
+        <td>counter</td>
+        <td>Котичество запросов на ручку /metrics</td>
+      </tr>
+      <tr>
+        <td className="green">
+          <b>server_grpc_connections</b>
+        </td>
+        <td>gauge</td>
+        <td>Количество подключенных на данный момент агентов</td>
+      </tr>
+      <tr>
+        <td>server_grpc_response_time_sum</td>
+        <td>histogram</td>
+        <td>Суммарная гистограмма времени ответа по всем методам</td>
+      </tr>
+      <tr>
+        <td>server_grpc_response_time_count</td>
+        <td>histogram</td>
+        <td>Гистограмма времени ответа по каждому методу</td>
+      </tr>
+      <tr>
+        <td>server_grpc_response_time_bucket</td>
+        <td>histogram</td>
+        <td>Гистограмма времени ответа</td>
+      </tr>
+      <tr>
+        <td>server_grpc_methods_started</td>
+        <td>counter</td>
+        <td>Количество заходов в метод</td>
+      </tr>
+      <tr>
+        <td>server_grpc_methods_finished</td>
+        <td>counter</td>
+        <td>Количество выходов из метод</td>
+      </tr>
+      <tr>
+        <td>server_grpc_messages</td>
+        <td>counter</td>
+        <td>Количество полученных и отправленных сообщений</td>
+      </tr>
+    </tbody>
+  </table>
+</div>

@@ -26,7 +26,7 @@ type (
 	}
 
 	proto2CidrSgIcmpRule struct {
-		*model.CidrSgIcmpRule
+		*model.IECidrSgIcmpRule
 	}
 )
 
@@ -221,11 +221,11 @@ var syncIESgSgIcmpRule = syncAlg[model.IESgSgIcmpRule, *sg.IESgSgIcmpRule]{
 	},
 }.process
 
-var syncCidrSgIcmpRule = syncAlg[model.CidrSgIcmpRule, *sg.CidrSgIcmpRule]{
-	makePrimaryKeyScope: func(r []model.CidrSgIcmpRule) registry.Scope {
+var syncIECidrSgIcmpRule = syncAlg[model.IECidrSgIcmpRule, *sg.CidrSgIcmpRule]{
+	makePrimaryKeyScope: func(r []model.IECidrSgIcmpRule) registry.Scope {
 		return registry.PKScopedCidrSgIcmpRules(r...)
 	},
-	proto2model: func(r *sg.CidrSgIcmpRule) (ret model.CidrSgIcmpRule, err error) {
+	proto2model: func(r *sg.CidrSgIcmpRule) (ret model.IECidrSgIcmpRule, err error) {
 		err = proto2CidrSgIcmpRule{&ret}.from(r)
 		return ret, err
 	},

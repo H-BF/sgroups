@@ -17,6 +17,7 @@ const ( //indexes
 	indexIPNet          IndexID = "ip-net"
 	indexSG             IndexID = "sg"
 	indexProtoSgTraffic IndexID = "proto-sg-traffic"
+	indexIPvSgTraffic   IndexID = "IPv-sg-traffic"
 )
 
 type (
@@ -78,7 +79,7 @@ func AllTables() MemDbOption {
 	return MemDBTables([]TableID{
 		TblNetworks, TblSecGroups, TblSecRules,
 		TblSyncStatus, TblFqdnRules, TblSgIcmpRules,
-		TblSgSgIcmpRules, TblCidrSgIcmpRules, TblCidrSgRules,
+		TblSgSgIcmpRules, TblIECidrSgIcmpRules, TblCidrSgRules,
 		TblSgSgRules, TblIESgSgIcmpRules,
 	})
 }

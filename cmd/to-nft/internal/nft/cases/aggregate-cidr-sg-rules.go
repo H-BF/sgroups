@@ -13,12 +13,12 @@ import (
 
 // CidrSgRules -
 type CidrSgRules struct {
-	Rules dict.RBDict[model.CidrSgRuleIdenity, *model.CidrSgRule]
+	Rules dict.RBDict[model.IECidrSgRuleIdenity, *model.IECidrSgRule]
 }
 
 // IsEq -
-func (rules *CidrSgRules) IsEq(order CidrSgRules) bool {
-	return rules.Rules.Eq(&order.Rules, func(vL, vR *model.CidrSgRule) bool {
+func (rules *CidrSgRules) IsEq(other CidrSgRules) bool {
+	return rules.Rules.Eq(&other.Rules, func(vL, vR *model.IECidrSgRule) bool {
 		return vL.IsEq(*vR)
 	})
 }
@@ -39,7 +39,7 @@ func (rules *CidrSgRules) Load(ctx context.Context, client SGClient, locals SGs)
 		return err
 	}
 	for _, protoRule := range resp.GetRules() {
-		var rule model.CidrSgRule
+		var rule model.IECidrSgRule
 		_ = conv.Proto2ModelSGRule
 		if rule, err = conv.Proto2ModelCidrSgRule(protoRule); err != nil {
 			return err
@@ -50,9 +50,9 @@ func (rules *CidrSgRules) Load(ctx context.Context, client SGClient, locals SGs)
 }
 
 // GetRulesForTrafficAndSG -
-func (rules *CidrSgRules) GetRulesForTrafficAndSG(tr model.Traffic, sg string) []*model.CidrSgRule {
-	var ret []*model.CidrSgRule
-	rules.Rules.Iterate(func(_ model.CidrSgRuleIdenity, r *model.CidrSgRule) bool {
+func (rules *CidrSgRules) GetRulesForTrafficAndSG(tr model.Traffic, sg string) []*model.IECidrSgRule {
+	var ret []*model.IECidrSgRule
+	rules.Rules.Iterate(func(_ model.IECidrSgRuleIdenity, r *model.IECidrSgRule) bool {
 		if r.ID.SG == sg && r.ID.Traffic == tr {
 			ret = append(ret, r)
 		}

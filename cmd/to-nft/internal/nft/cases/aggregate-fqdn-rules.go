@@ -32,14 +32,17 @@ type (
 
 // IsEq -
 func (rules *SG2FQDNRules) IsEq(other SG2FQDNRules) bool {
+	if !rules.FQDNs.Eq(&other.FQDNs) {
+		return false
+	}
 	var l, r dict.HDict[string, *model.FQDNRule]
-	if len(rules.Rules) == len(other.Rules) {
-		for i := range rules.Rules {
-			a := &rules.Rules[i]
-			b := &other.Rules[i]
-			l.Insert(a.ID.String(), a)
-			r.Insert(a.ID.String(), b)
-		}
+	for i := range rules.Rules {
+		a := &rules.Rules[i]
+		l.Insert(a.ID.String(), a)
+	}
+	for i := range other.Rules {
+		a := &other.Rules[i]
+		r.Insert(a.ID.String(), a)
 	}
 	return l.Eq(&r, func(vL, vR *model.FQDNRule) bool {
 		return vL.IsEq(*vR)

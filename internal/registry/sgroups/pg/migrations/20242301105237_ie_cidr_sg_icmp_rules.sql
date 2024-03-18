@@ -1,7 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
 --------------------------------------- TABLES ---------------------------------------
-
 drop table if exists sgroups.tbl_cidr_sg_icmp_rule cascade;
 create table sgroups.tbl_cidr_sg_icmp_rule (
     id      bigint generated always as identity primary key,
@@ -15,17 +14,22 @@ create table sgroups.tbl_cidr_sg_icmp_rule (
     constraint cidr_sg_icmp_rule_identity
         unique (ip_v, cidr, sg, traffic),
     constraint fk_cidr_sg_icmp_rule__sg
-        foreign key (sg) references sgroups.tbl_sg (id)
+       foreign key (sg) references sgroups.tbl_sg (id)
             on delete cascade
             on update restrict
             deferrable initially deferred,
     constraint "prevent_cidrs_intersections_over(ip_v,sg,traffic)"
-        exclude using GIST (
-            ip_v with =,
-            cidr inet_ops with &&,
-            sg with =,
-            traffic with =
-        ) deferrable initially deferred
+       exclude using GIST (
+          ip_v with =,
+          cidr inet_ops with &&,
+          sg with =,
+          traffic with =
+       ) deferrable initially deferred,
+    constraint "cidr_and_ipv_consistency"
+        check (
+               (ip_v = 'IPv4'::sgroups.ip_family and family(cidr) = 4)
+            or (ip_v = 'IPv6'::sgroups.ip_family and family(cidr) = 6)
+        )
 );
 
 drop view if exists sgroups.vu_cidr_sg_icmp_rule cascade;
@@ -43,7 +47,8 @@ from sgroups.tbl_cidr_sg_icmp_rule as R;
 drop function if exists sgroups.list_cidr_sg_icmp_rules(sgroups.cname[]) cascade;
 create or replace function sgroups.list_cidr_sg_icmp_rules (
     sgs sgroups.cname[] default null
-) returns table ( ip_v sgroups.ip_family,
+) 
+  returns table ( ip_v sgroups.ip_family,
                   types sgroups.icmp_types,
                   cidr cidr,
                   sg sgroups.cname,
@@ -60,8 +65,8 @@ begin
                         r.traffic,
                         r.logs,
                         r.trace
-                 from sgroups.vu_cidr_sg_icmp_rule as r
-                 where ( sgs is null or r.sg = any(sgs) );
+                   from sgroups.vu_cidr_sg_icmp_rule as r
+                  where ( sgs is null or r.sg = any(sgs) );
 end;
 $$ language plpgsql immutable;
 
@@ -91,38 +96,40 @@ begin
     end if;
     if op = 'del' then
         delete from sgroups.tbl_cidr_sg_icmp_rule
-        where ip_v = (d).ip_v
-          and cidr = (d).cidr
-          and sg = sgID
-          and traffic = (d).traffic
-        returning id into ret;
+         where ip_v = (d).ip_v
+           and cidr = (d).cidr
+           and sg = sgID
+           and traffic = (d).traffic
+     returning id into ret;
     elseif op = 'upd' then
         update sgroups.tbl_cidr_sg_icmp_rule
-        set types = (d).types,
-            logs  = (d).logs,
-            trace = (d).trace
-        where ip_v = (d).ip_v
-          and cidr = (d).cidr
-          and sg = sgID
-          and traffic = (d).traffic
-        returning id into ret;
+           set types = (d).types,
+               logs  = (d).logs,
+               trace = (d).trace
+         where ip_v = (d).ip_v
+           and cidr = (d).cidr
+           and sg = sgID
+           and traffic = (d).traffic
+     returning id into ret;
     elseif op = 'ups' then
-        insert into sgroups.tbl_cidr_sg_icmp_rule (ip_v, types, cidr, sg, traffic, logs, trace)
+        insert 
+          into sgroups.tbl_cidr_sg_icmp_rule (ip_v, types, cidr, sg, traffic, logs, trace)
         values ((d).ip_v, (d).types, (d).cidr, sgID, (d).traffic, (d).logs, (d).trace)
         on conflict
-            on constraint cidr_sg_icmp_rule_identity
-            do update
-            set types = (d).types,
-                logs  = (d).logs,
-                trace = (d).trace
-        returning id into ret;
+           on constraint cidr_sg_icmp_rule_identity
+              do update
+                    set types = (d).types,
+                        logs  = (d).logs,
+                        trace = (d).trace
+              returning id into ret;
     elseif op = 'ins' then
-        insert into sgroups.tbl_cidr_sg_icmp_rule (ip_v, types, cidr, sg, traffic, logs, trace)
+        insert 
+          into sgroups.tbl_cidr_sg_icmp_rule (ip_v, types, cidr, sg, traffic, logs, trace)
         values ((d).ip_v, (d).types, (d).cidr, sgID, (d).traffic, (d).logs, (d).trace)
-        on conflict
-            on constraint cidr_sg_icmp_rule_identity
-            do nothing
-        returning id into ret;
+            on conflict
+               on constraint cidr_sg_icmp_rule_identity
+                  do nothing
+     returning id into ret;
     end if;
     return ret is not null;
 end;

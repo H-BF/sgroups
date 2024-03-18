@@ -166,7 +166,7 @@ func ieSgSgIcmpRule2proto(src model.IESgSgIcmpRule) (*sg.IESgSgIcmpRule, error) 
 	return ret, e
 }
 
-func cidrSgRule2proto(src model.CidrSgRule) (*sg.CidrSgRule, error) {
+func cidrSgRule2proto(src model.IECidrSgRule) (*sg.CidrSgRule, error) {
 	ret := &sg.CidrSgRule{
 		Logs:  src.Logs,
 		Trace: src.Trace,
@@ -187,7 +187,7 @@ func cidrSgRule2proto(src model.CidrSgRule) (*sg.CidrSgRule, error) {
 	return ret, e
 }
 
-func cidrSgIcmpRule2proto(src model.CidrSgIcmpRule) (*sg.CidrSgIcmpRule, error) {
+func cidrSgIcmpRule2proto(src model.IECidrSgIcmpRule) (*sg.CidrSgIcmpRule, error) {
 	ret := &sg.CidrSgIcmpRule{
 		CIDR:  src.CIDR.String(),
 		SG:    src.SG,
@@ -215,7 +215,7 @@ func cidrSgIcmpRule2proto(src model.CidrSgIcmpRule) (*sg.CidrSgIcmpRule, error) 
 	return ret, e
 }
 
-func sgSgRule2proto(src model.SgSgRule) (*sg.SgSgRule, error) {
+func sgSgRule2proto(src model.IESgSgRule) (*sg.SgSgRule, error) {
 	ret := &sg.SgSgRule{
 		Sg:      src.ID.Sg,
 		SgLocal: src.ID.SgLocal,
