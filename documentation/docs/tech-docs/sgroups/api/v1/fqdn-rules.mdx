@@ -77,6 +77,8 @@ curl '127.0.0.1:9007/v1/fqdn/rules' \
   <li>`$node.rules[].ports[].s` - {DICTIONARY.srcPorts.short}</li>
   <li>`$node.rules[].transport` - {DICTIONARY.transport.short}</li>
   <li>`$node.rules[].protocols` - {DICTIONARY.l7ProtocolList.short}</li>
+  <li>`$node.rules[].action` - {DICTIONARY.action.short}</li>
+  <li>`$node.rules[].priority` - {DICTIONARY.priority.short}</li>
 </ul>
 
 <div className="scrollable-x">
@@ -124,6 +126,14 @@ curl '127.0.0.1:9007/v1/fqdn/rules' \
         <td>$node.rules[].transport</td>
         <td>String</td>
       </tr>
+      <tr>
+        <td>$node.rules[].action</td>
+        <td>String</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].priority</td>
+        <td>String</td>
+      </tr>
     </tbody>
   </table>
 </div>
@@ -142,6 +152,8 @@ curl '127.0.0.1:9007/v1/fqdn/rules' \
             }],
         "protocols": ["ssh"],
         "transport": "TCP",
+        "action": "PACKET_ACCEPT",
+        "priority": "100",
     }]
 }
 ```

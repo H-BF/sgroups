@@ -18,6 +18,8 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
   <li>`fqdnRules.rules[].ports[].s` - {DICTIONARY.srcPorts.short}</li>
   <li>`fqdnRules.rules[].sgFrom` - {DICTIONARY.sgLocal.short}</li>
   <li>`fqdnRules.rules[].transport` - {DICTIONARY.transport.short}</li>
+  <li>`fqdnRules.rules[].action` - {DICTIONARY.action.short}</li>
+  <li>`fqdnRules.rules[].priority` - {DICTIONARY.priority.short}</li>
   {/* <li>`fqdnRules.rules[].protocols` - {DICTIONARY.l7ProtocolList.short}</li> */}
   <li>`syncOp` - {DICTIONARY.syncOp.short}</li>
 </ul>
@@ -103,6 +105,22 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
         <td className="green center">✔</td>
         <td className="green center">✔</td>
       </tr>
+      <tr>
+        <td>fqdnRules.rules[].action</td>
+        <td>да</td>
+        <td>Enum("UNDEF", "PACKET_ACCEPT", "PACKET_DROP")</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>fqdnRules.rules[].action</td>
+        <td>нет</td>
+        <td>String</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
       {/* <tr>
         <td>fqdnRules.rules[].protocols</td>
         <td>нет</td>
@@ -174,6 +192,8 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
                 }],
                 "sgFrom": "sg-local-example",
                 "transport": "TCP",
+                "action": "PACKET_ACCEPT",
+                "priority": "100"
               }]
             },
             "syncOp": "Upsert"
@@ -196,6 +216,8 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
                 }],
                 "sgFrom": "sg-local-example",
                 "transport": "UDP",
+                "action": "PACKET_ACCEPT",
+                "priority": "100"
               }]
             },
             "syncOp": "Upsert"

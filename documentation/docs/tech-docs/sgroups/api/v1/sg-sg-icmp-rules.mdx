@@ -74,6 +74,8 @@ curl '127.0.0.1:9007/v1/sg-sg-icmp/rules' \
   <li>`$node.rules[].ICMP` - {DICTIONARY.apiIcmp.short}</li>
   <li>`$node.rules[].ICMP.IPv` - {DICTIONARY.icmpV.short}</li>
   <li>`$node.rules[].ICMP.Types[]` - {DICTIONARY.icmpTypes.short}</li>
+  <li>`$node.rules[].action` - {DICTIONARY.action.short}</li>
+  <li>`$node.rules[].priority` - {DICTIONARY.priority.short}</li>
 </ul>
 
 <div className="scrollable-x">
@@ -117,6 +119,14 @@ curl '127.0.0.1:9007/v1/sg-sg-icmp/rules' \
         <td>$node.rules[].ICMP.Types[]</td>
         <td>Object[]</td>
       </tr>
+      <tr>
+        <td>$node.rules[].action</td>
+        <td>String</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].priority</td>
+        <td>String</td>
+      </tr>
     </tbody>
   </table>
 </div>
@@ -134,6 +144,8 @@ curl '127.0.0.1:9007/v1/sg-sg-icmp/rules' \
                 "IPv": "IPv4",
                 "Types": [0, 8]
             },
+        "action": "PACKET_ACCEPT",
+        "priority": "-300",
     }]
 }
 ```

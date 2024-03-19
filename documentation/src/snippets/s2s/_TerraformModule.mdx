@@ -17,9 +17,11 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
     `rules.s2s[]` - Список правил, описывающий сетевое взаимодействие текущей Security Group с внешней Security Group.
   </li>
   <li className="text-justify">`rules.s2s[].sgroupSet[]` - {DICTIONARY.sgroupSet.short}</li>
-  <li className="text-justify">`rules.s2s[].log` - {DICTIONARY.log.short}</li>
-  <li className="text-justify">`rules.s2s[].trace` - {DICTIONARY.trace.short}</li>
   <li className="text-justify">`rules.s2s[].access.$transport` - {DICTIONARY.transport.short}</li>
+  <li className="text-justify">`rules.s2s[].access.$transport.action` - {DICTIONARY.action.short}</li>
+  <li className="text-justify">`rules.s2s[].access.$transport.priority` - {DICTIONARY.priority.short}</li>
+  <li className="text-justify">`rules.s2s[].access.$transport.log` - {DICTIONARY.log.short}</li>
+  <li className="text-justify">`rules.s2s[].access.$transport.trace` - {DICTIONARY.trace.short}</li>
   <li className="text-justify">`rules.s2s[].access.$transport.ports[].description` - {DICTIONARY.description.short}</li>
   <li className="text-justify">`rules.s2s[].access.$transport.ports[].ports_to[]` - {DICTIONARY.dstPorts.short}</li>
   <li className="text-justify">`rules.s2s[].access.$transport.ports[].ports_from[]` - {DICTIONARY.srcPorts.short}</li>
@@ -69,23 +71,7 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         <td className="green center">✔</td>
       </tr>
       <tr>
-        <td>rules.s2s.log</td>
-        <td>Boolean</td>
-        <td>false</td>
-        <td className="green center">✔</td>
-        <td className="green center">✔</td>
-        <td className="green center">✔</td>
-      </tr>
-      <tr>
-        <td>rules.s2s.trace</td>
-        <td>Boolean</td>
-        <td>false</td>
-        <td className="green center">✔</td>
-        <td className="green center">✔</td>
-        <td className="green center">✔</td>
-      </tr>
-      <tr>
-        <td>rules.s2s.access.$transport[]</td>
+        <td>rules.s2s.access.$transport</td>
         <td>Object[]</td>
         <td></td>
         <td className="green center">✔</td>
@@ -93,7 +79,41 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         <td className="green center">✔</td>
       </tr>
       <tr>
-        <td>rules.s2s.access.$transport[].description</td>
+        <td>rules.s2s[].access.$transport.action</td>
+        <td>
+          <nobr>Enum("ACCEPT", "DROP")</nobr>
+        </td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>rules.s2s[].access.$transport.priority</td>
+        <td>String</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>rules.s2s[].access.$transport.log</td>
+        <td>Boolean</td>
+        <td>false</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>rules.s2s[].access.$transport.trace</td>
+        <td>Boolean</td>
+        <td>false</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>rules.s2s.access.$transport.ports[].description</td>
         <td>String</td>
         <td>&quot;&quot;</td>
         <td className="green center">✔</td>
@@ -101,7 +121,7 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         <td className="green center">✔</td>
       </tr>
       <tr>
-        <td>rules.s2s.access.$transport[].ports_to[]</td>
+        <td>rules.s2s.access.$transport.ports[].ports_to[]</td>
         <td>Integer[]</td>
         <td>null</td>
         <td className="green center">✔</td>
@@ -109,7 +129,7 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         <td className="green center"></td>
       </tr>
       <tr>
-        <td>rules.s2s.access.$transport[].ports_from[]</td>
+        <td>rules.s2s.access.$transport.ports[].ports_from[]</td>
         <td>Integer[]</td>
         <td>null</td>
         <td className="green center">✔</td>
@@ -117,7 +137,7 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         <td className="green center"></td>
       </tr>
       <tr>
-        <td>rules.s2s[].access.$transport[].type[]</td>
+        <td>rules.s2s[].access.$transport.types[].type[]</td>
         <td>Integer[]</td>
         <td>null</td>
         <td className="green center"></td>
@@ -138,6 +158,10 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
   <li>
     `rules.s2s[].sgroupSet`:
     <Restrictions data={RESTRICTIONS.sgroupSet} />
+  </li>
+  <li>
+    `rules.s2s[].access.$transport.priority`:
+    <Restrictions data={RESTRICTIONS.priority} />
   </li>
   <li>
     `rules.s2s[].access.$transport.ports[].ports_to[]`:
@@ -178,6 +202,8 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                 - sg-example
               access:
                 tcp:
+                  action: ACCEPT
+                  priority: -200
                   logs:  true
                   trace: true
                   ports:
@@ -199,6 +225,8 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                 - sg-example
               access:
                 udp:
+                  action: ACCEPT
+                  priority: -200
                   logs:  true
                   trace: true
                   ports:
@@ -220,6 +248,8 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                 - sg-example
               access:
                 icmpIPv4:
+                  action: ACCEPT
+                  priority: -300
                   logs:  true
                   trace: true
                   types:
@@ -240,6 +270,8 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                 - sg-example
               access:
                 icmpIPv6:
+                  action: ACCEPT
+                  priority: -300
                   logs:  true
                   trace: true
                   types:

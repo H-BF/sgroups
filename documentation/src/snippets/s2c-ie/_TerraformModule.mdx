@@ -19,6 +19,8 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
     <li className="text-justify">`rules.$traffic[]` - {DICTIONARY.traffic.short}</li>
     <li className="text-justify">`rules.$traffic[].cidrSet[]` - {DICTIONARY.cidrSet.short}</li>
     <li className="text-justify">`rules.$traffic[].access.$transport` - {DICTIONARY.transport.short}</li>
+    <li className="text-justify">`rules.$traffic[].access.$transport.action` - {DICTIONARY.action.short}</li>
+    <li className="text-justify">`rules.$traffic[].access.$transport.priority` - {DICTIONARY.priority.short}</li>
     <li className="text-justify">`rules.$traffic[].access.$transport.logs` - {DICTIONARY.log.short}</li>
     <li className="text-justify">`rules.$traffic[].access.$transport.trace` - {DICTIONARY.trace.short}</li>
     <li className="text-justify">`rules.$traffic[].access.$transport.ports[].description` - {DICTIONARY.description.short}</li>
@@ -73,6 +75,24 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
       <tr>
         <td>rules.$traffic[].access.$transport</td>
         <td>Object</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>rules.$traffic[].access.$transport.action</td>
+        <td>
+          <nobr>Enum("ACCEPT", "DROP")</nobr>
+        </td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>rules.$traffic[].access.$transport.priority</td>
+        <td>String</td>
         <td></td>
         <td className="green center">✔</td>
         <td className="green center">✔</td>
@@ -166,6 +186,10 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
     <Restrictions data={RESTRICTIONS.cidrSet} />
   </li>
   <li>
+    `rules.$traffic[].access.$transport.priority`:
+    <Restrictions data={RESTRICTIONS.priority} />
+  </li>
+  <li>
     `rules.$traffic[].access.$transport.ports[].ports_to[]`:
     <Restrictions data={RESTRICTIONS.dstPorts} />
   </li>
@@ -203,6 +227,8 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                 - "10.0.0.0/8"
               access:
                 tcp:
+                  action: ACCEPT
+                  priority: 300
                   logs: true
                   trace: true
                   ports:
@@ -226,6 +252,8 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                 - "10.0.0.0/8"
               access:
                 tcp:
+                  action: ACCEPT
+                  priority: 300
                   logs: true
                   trace: true
                   ports:
@@ -254,6 +282,8 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                 - "10.0.0.0/8"
               access:
                 udp:
+                  action: ACCEPT
+                  priority: 300
                   logs: true
                   trace: true
                   ports:
@@ -277,6 +307,8 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                 - "10.0.0.0/8"
               access:
                 udp:
+                  action: ACCEPT
+                  priority: 300
                   logs: true
                   trace: true
                   ports:
@@ -304,6 +336,8 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                 - "10.0.0.0/8"
               access:
                 icmpIPv4:
+                  action: ACCEPT
+                  priority: 200
                   logs: true
                   trace: true
                   types:
@@ -325,6 +359,8 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                 - "10.0.0.0/8"
               access:
                 icmpIPv4:
+                  action: ACCEPT
+                  priority: 200
                   logs: true
                   trace: true
                   types:
@@ -351,6 +387,8 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                 - "10.0.0.0/8"
               access:
                 icmpIPv6:
+                  action: ACCEPT
+                  priority: 200
                   logs: true
                   trace: true
                   types:
@@ -372,6 +410,8 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                 - "10.0.0.0/8"
               access:
                 icmpIPv6:
+                  action: ACCEPT
+                  priority: 200
                   logs: true
                   trace: true
                   types:
