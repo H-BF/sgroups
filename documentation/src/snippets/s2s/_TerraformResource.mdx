@@ -154,7 +154,7 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         <td>items.$ruleName.action</td>
         <td>да</td>
         <td>
-          <nobr>Enum("DROP", "ACCEPT")</nobr>
+          <nobr>Enum("RULE_ACCEPT", "RULE_DROP")</nobr>
         </td>
         <td></td>
         <td className="green center">✔</td>
@@ -235,7 +235,7 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                 d = "443,80"
                 s = "64231"
               }]
-              action      = "ACCEPT"
+              action      = "RULE_ACCEPT"
               priority    = "-200"
             }
           }
@@ -257,7 +257,7 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                 d = "443,80"
                 s = "64231"
               }]
-              action      = "ACCEPT"
+              action      = "RULE_ACCEPT"
               priority    = "-200"
             }
           }
@@ -276,7 +276,7 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
               trace       = true
               ip_v        = "IPv4"
               type        = [0,8]
-              action      = "ACCEPT"
+              action      = "RULE_ACCEPT"
               priority    = "-300"
             }
           }
@@ -295,7 +295,7 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
               trace       = true
               ip_v        = "IPv6"
               type        = [0,8]
-              action      = "ACCEPT"
+              action      = "RULE_ACCEPT"
               priority    = "-300"
             }
           }

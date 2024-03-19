@@ -285,6 +285,7 @@ import { DICTIONARY } from '@site/src/constants/dictionary.ts'
                 chain INGRESS-INPUT-sgName {
                     # **********
                     $Trace $NftRuleType $DstCIDR $Transport $IcmpTypeList $NftCounter $Log $NftRuleVerdict
+                    $Trace $NftRuleType $DstCIDR $Transport $IcmpTypeList $NftCounter $Log $NftRuleVerdict
                     # **********
                 }
                 ```
@@ -294,7 +295,8 @@ import { DICTIONARY } from '@site/src/constants/dictionary.ts'
                 ```hcl
                 chain INGRESS-INPUT-sg-local-example {
                     # **********
-                    nftrace set 1 ip saddr { 10.0.0.0/8 } icmp type { 0, 8 } counter packets 0 bytes 0 log level debug flags ip options accept
+                    nftrace set 1 ip saddr { 10.0.0.0/8 }       icmp  type { 0, 8 } counter packets 0 bytes 0 log level debug flags ip options accept
+                    nftrace set 1 ip saddr { ::ffff:a00:0/104 } icmp6 type { 0, 8 } counter packets 0 bytes 0 log level debug flags ip options accept
                     # **********
                 }
                 ```
@@ -306,6 +308,7 @@ import { DICTIONARY } from '@site/src/constants/dictionary.ts'
                 chain EGRESS-POSTROUTING-sgName {
                     # **********
                     $Trace $NftRuleType $DstCIDR $Transport $IcmpTypeList $NftCounter $Log $NftRuleVerdict
+                    $Trace $NftRuleType $DstCIDR $Transport $IcmpTypeList $NftCounter $Log $NftRuleVerdict
                     # **********
                 }
                 ```
@@ -315,7 +318,8 @@ import { DICTIONARY } from '@site/src/constants/dictionary.ts'
                 ```hcl
                 chain EGRESS-POSTROUTING-sg-local-example {
                     # **********
-                    nftrace set 1 ip daddr { 10.0.0.0/8 } icmp type { 0, 8 } counter packets 0 bytes 0 log level debug flags ip options accept
+                    nftrace set 1 ip daddr { 10.0.0.0/8 }       icmp  type { 0, 8 } counter packets 0 bytes 0 log level debug flags ip options accept
+                    nftrace set 1 ip daddr { ::ffff:a00:0/104 } icmp6 type { 0, 8 } counter packets 0 bytes 0 log level debug flags ip options accept
                     # **********
                 }
                 ```

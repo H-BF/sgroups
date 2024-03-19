@@ -384,7 +384,7 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         rules:
           ingress:
             - cidrSet:
-                - "10.0.0.0/8"
+                - "::ffff:a00:0/104"
               access:
                 icmpIPv6:
                   action: ACCEPT
@@ -407,7 +407,7 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         rules:
           egress:
             - cidrSet:
-                - "10.0.0.0/8"
+                - "::ffff:a00:0/104"
               access:
                 icmpIPv6:
                   action: ACCEPT

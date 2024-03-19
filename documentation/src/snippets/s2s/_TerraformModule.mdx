@@ -81,7 +81,7 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
       <tr>
         <td>rules.s2s[].access.$transport.action</td>
         <td>
-          <nobr>Enum("ACCEPT", "DROP")</nobr>
+          <nobr>Enum("RULE_ACCEPT", "RULE_DROP")</nobr>
         </td>
         <td></td>
         <td className="green center">✔</td>
@@ -202,7 +202,7 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                 - sg-example
               access:
                 tcp:
-                  action: ACCEPT
+                  action: RULE_ACCEPT
                   priority: -200
                   logs:  true
                   trace: true
@@ -225,7 +225,7 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                 - sg-example
               access:
                 udp:
-                  action: ACCEPT
+                  action: RULE_ACCEPT
                   priority: -200
                   logs:  true
                   trace: true
@@ -248,7 +248,7 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                 - sg-example
               access:
                 icmpIPv4:
-                  action: ACCEPT
+                  action: RULE_ACCEPT
                   priority: -300
                   logs:  true
                   trace: true
@@ -270,7 +270,7 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                 - sg-example
               access:
                 icmpIPv6:
-                  action: ACCEPT
+                  action: RULE_ACCEPT
                   priority: -300
                   logs:  true
                   trace: true

@@ -159,14 +159,14 @@ resource "sgroups_groups" "groups" {
                 logs = true
                 trace = true
                 type = [0, 8]
-                action = "ACCEPT"
+                action = "RULE_ACCEPT"
                 priority = "0"
             }
             icmp6 = {
                 logs = true
                 trace = true
                 type = [0, 8]
-                action = "ACCEPT"
+                action = "RULE_ACCEPT"
                 priority = "0"
             }
         }
