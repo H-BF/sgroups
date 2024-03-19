@@ -80,8 +80,7 @@ import { DICTIONARY } from '@site/src/constants/dictionary.ts'
         <td>
           <div className="text-justify">
             <i>
-              * Так как данное правило используется для проверки типа трафика то переход на другую цепочку правил
-              происходит только с помощью goto.
+              TODO
             </i>
           </div>
           <i>Подробнее: [Verdict statement](/tech-docs/to-nft/nftables/verdict-statement)</i>
@@ -116,8 +115,8 @@ chain EGRESS-POSTROUTING-sgName {
 ```hcl
 chain INGRESS-INPUT-sg-example {
     # **********
-    nftrace set 1 icmp   type { 0, 8 } counter packets 0 bytes 0 log level debug flags ip options accept  //ICMP
-    nftrace set 1 icmpv6 type { 0, 8 } counter packets 0 bytes 0 log level debug flags ip options accept  //ICMP
+    nftrace set 1 icmp   type { 0, 8 } counter packets 0 bytes 0 log level debug flags ip options drop  //ICMP
+    nftrace set 1 icmpv6 type { 0, 8 } counter packets 0 bytes 0 log level debug flags ip options drop  //ICMP
     # **********
     nftrace set 1 counter packets 0 bytes 0 log level debug flags ip options accept                       //Общие
 }
@@ -125,8 +124,8 @@ chain INGRESS-INPUT-sg-example {
 
 chain EGRESS-POSTROUTING-sg-example {
     # **********
-    nftrace set 1 icmp   type { 0, 8 } counter packets 0 bytes 0 log level debug flags ip options accept  //ICMP
-    nftrace set 1 icmpv6 type { 0, 8 } counter packets 0 bytes 0 log level debug flags ip options accept  //ICMP
+    nftrace set 1 icmp   type { 0, 8 } counter packets 0 bytes 0 log level debug flags ip options drop  //ICMP
+    nftrace set 1 icmpv6 type { 0, 8 } counter packets 0 bytes 0 log level debug flags ip options drop  //ICMP
     # **********
     nftrace set 1 counter packets 0 bytes 0 log level debug flags ip options accept                       //Общие
 }
