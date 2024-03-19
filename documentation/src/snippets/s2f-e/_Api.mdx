@@ -108,7 +108,7 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
       <tr>
         <td>fqdnRules.rules[].action</td>
         <td>да</td>
-        <td>Enum("UNDEF", "PACKET_ACCEPT", "PACKET_DROP")</td>
+        <td>Enum("UNDEF", "RULE_ACCEPT", "RULE_DROP")</td>
         <td></td>
         <td className="green center">✔</td>
         <td className="green center">✔</td>
@@ -192,7 +192,7 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
                 }],
                 "sgFrom": "sg-local-example",
                 "transport": "TCP",
-                "action": "PACKET_ACCEPT",
+                "action": "RULE_ACCEPT",
                 "priority": "100"
               }]
             },
@@ -216,7 +216,7 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
                 }],
                 "sgFrom": "sg-local-example",
                 "transport": "UDP",
-                "action": "PACKET_ACCEPT",
+                "action": "RULE_ACCEPT",
                 "priority": "100"
               }]
             },
