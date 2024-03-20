@@ -78,7 +78,7 @@ const config: Config = {
       logo: {
         src: 'img/logo.jpg',
       },
-      title: 'SGroups',
+      title: 'S.Groups',
       items: [
         {
           type: 'docSidebar',
