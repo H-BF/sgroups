@@ -149,7 +149,7 @@ func (item cidrSgIcmpRule) icmp2Proto(ctx context.Context, diags *diag.Diagnosti
 }
 
 // IsDiffer -
-func (item cidrSgIcmpRule) IsDiffer(_ context.Context, other cidrSgIcmpRule) bool {
+func (item cidrSgIcmpRule) IsDiffer(_ context.Context, other cidrSgIcmpRule) bool { //nolint:dupl
 	return !(item.Traffic.Equal(other.Traffic) &&
 		item.Cidr.Equal(other.Cidr) &&
 		item.SgName.Equal(other.SgName) &&

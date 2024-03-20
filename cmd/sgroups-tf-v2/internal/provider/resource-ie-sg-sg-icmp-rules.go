@@ -148,7 +148,7 @@ func (item ieSgSgIcmpRule) icmp2Proto(ctx context.Context, diags *diag.Diagnosti
 	return ret
 }
 
-func (item ieSgSgIcmpRule) IsDiffer(_ context.Context, other ieSgSgIcmpRule) bool {
+func (item ieSgSgIcmpRule) IsDiffer(_ context.Context, other ieSgSgIcmpRule) bool { //nolint:dupl
 	return !(item.Traffic.Equal(other.Traffic) &&
 		item.SgLocal.Equal(other.SgLocal) &&
 		item.Sg.Equal(other.Sg) &&
