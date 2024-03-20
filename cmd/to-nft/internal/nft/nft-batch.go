@@ -565,7 +565,7 @@ func (bt *batch) populateOutSgFqdnRules(sg *cases.SG) {
 					if rd.logs {
 						r = r.dlogs(nfte.LogFlagsIPOpt)
 					}
-					r.accept().applyRule(chnApplyTo, tx.Conn)
+					r.ruleAction2Verdict(rule.Action).applyRule(chnApplyTo, tx.Conn)
 					return nil
 				})
 			}
@@ -594,7 +594,7 @@ func (bt *batch) populateDefaultIcmpRules(dir direction, sg *cases.SG) {
 				if rule.Logs {
 					rb = rb.dlogs(nfte.LogFlagsIPOpt)
 				}
-				rb.accept().applyRule(chnApplyTo, tx.Conn)
+				rb.ruleAction2Verdict(rule.Action).applyRule(chnApplyTo, tx.Conn)
 			}
 			return nil
 		})
@@ -630,7 +630,7 @@ func (bt *batch) populateInOutSgIcmpRules(dir direction, sg *cases.SG) {
 				if rule.Logs {
 					rb = rb.dlogs(nfte.LogFlagsIPOpt)
 				}
-				rb.accept().applyRule(chnApplyTo, tx.Conn)
+				rb.ruleAction2Verdict(rule.Action).applyRule(chnApplyTo, tx.Conn)
 			}
 			return nil
 		})
@@ -671,7 +671,7 @@ func (bt *batch) populateSgIeSgIcmpRules(dir direction, sg *cases.SG) {
 				if rule.Logs {
 					rb = rb.dlogs(nfte.LogFlagsIPOpt)
 				}
-				rb.accept().applyRule(chnApplyTo, tx.Conn)
+				rb.ruleAction2Verdict(rule.Action).applyRule(chnApplyTo, tx.Conn)
 			}
 			return nil
 		})
@@ -708,7 +708,7 @@ func (bt *batch) populateIeCidrSgIcmpRules(dir direction, sg *cases.SG) {
 			if rule.Logs {
 				rb = rb.dlogs(nfte.LogFlagsIPOpt)
 			}
-			rb.accept().applyRule(chnApplyTo, tx.Conn)
+			rb.ruleAction2Verdict(rule.Action).applyRule(chnApplyTo, tx.Conn)
 			return nil
 		})
 	}
@@ -763,7 +763,7 @@ func (bt *batch) populateInOutSgRules(dir direction, sg *cases.SG) {
 						if details.logs {
 							r = r.dlogs(nfte.LogFlagsIPOpt)
 						}
-						r.accept().applyRule(chnApplyTo, tx.Conn)
+						r.ruleAction2Verdict(rule.Action).applyRule(chnApplyTo, tx.Conn)
 					}
 					return nil
 				})
@@ -809,7 +809,7 @@ func (bt *batch) populateInOutSgIeSgRules(dir direction, sg *cases.SG) {
 					if details.logs {
 						rb = rb.dlogs(nfte.LogFlagsIPOpt)
 					}
-					rb.accept().applyRule(chnApplyTo, tx.Conn)
+					rb.ruleAction2Verdict(rule.Action).applyRule(chnApplyTo, tx.Conn)
 					return nil
 				})
 			}
@@ -849,7 +849,7 @@ func (bt *batch) populateInOutCidrSgRules(dir direction, sg *cases.SG) {
 				if details.logs {
 					rb = rb.dlogs(nfte.LogFlagsIPOpt)
 				}
-				rb.accept().applyRule(chnApplyTo, tx.Conn)
+				rb.ruleAction2Verdict(rule.Action).applyRule(chnApplyTo, tx.Conn)
 				return nil
 			})
 		}
