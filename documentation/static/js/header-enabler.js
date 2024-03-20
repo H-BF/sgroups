@@ -21,14 +21,12 @@ const observeUrlChange = () => {
       oldHref = document.location.href
       if (document.location.pathname === '/sgroups/landing') {
         document.getElementById('medusa-root').style.display = 'block'
-        document.getElementsByTagName('body')[0].style.overflowX = 'hidden'
         if (!scriptInjected) {
           createMedusScript()
           scriptInjected = true
         }
       } else {
         document.getElementById('medusa-root').style.display = 'none'
-        document.getElementsByTagName('body')[0].style.overflowX = 'auto'
       }
     }
   })
