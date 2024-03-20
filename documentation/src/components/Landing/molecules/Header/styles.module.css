@@ -1,7 +1,6 @@
 .container {
   width: 100%;
   height: calc(100vh - var(--ifm-navbar-height));
-  background: url('/img/background.jpg');
   background-size: cover;
   background-position: center center;
   position: absolute;
@@ -16,6 +15,7 @@
   margin-right: auto;
   left: 0;
   right: 0;
+  z-index: 2;
   max-width: 550px;
   text-align: justify;
   background: rgba(0, 0, 0, 0.7);

@@ -87,3 +87,21 @@ table {
 .p-without-margin {
   margin: 0;
 }
+
+/* medusa */
+
+#medusa-stage {
+  position: absolute;
+  width: 98vw;
+  height: 100vh;
+  left: 0;
+  top: 0;
+  z-index: 0;
+}
+
+.medusa-container {
+  width: 98vw;
+  height: 100vh;
+  position: absolute;
+  top: 0;
+}
