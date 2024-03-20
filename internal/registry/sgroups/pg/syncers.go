@@ -92,7 +92,7 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "proto", PgTy: "sgroups.proto", Notnull: true, Pk: true},
 			syncField{Name: "ports", PgTy: "sgroups.sg_rule_ports[]"},
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
-			syncField{Name: "action", PgTy: "sgroups.chain_default_action", Notnull: true},
+			syncField{Name: "action", PgTy: "sgroups.rule_action", Notnull: true},
 		)
 		o.mutatorFn = "sgroups.sync_sg_rule"
 	case *sgm.FQDNRule:
@@ -105,7 +105,7 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "ports", PgTy: "sgroups.sg_rule_ports[]"},
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
 			syncField{Name: "ndpi_protocols", PgTy: "citext[]", Notnull: true},
-			syncField{Name: "action", PgTy: "sgroups.chain_default_action", Notnull: true},
+			syncField{Name: "action", PgTy: "sgroups.rule_action", Notnull: true},
 		)
 		o.mutatorFn = "sgroups.sync_fqdn_rule"
 	case *sgm.SgIcmpRule:
@@ -118,7 +118,7 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "types", PgTy: "sgroups.icmp_types", Notnull: true},
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
 			syncField{Name: "trace", PgTy: "bool", Notnull: true},
-			syncField{Name: "action", PgTy: "sgroups.chain_default_action", Notnull: true},
+			syncField{Name: "action", PgTy: "sgroups.rule_action", Notnull: true},
 		)
 	case *sgm.SgSgIcmpRule:
 		o.mutatorFn = "sgroups.sync_sg_sg_icmp_rule"
@@ -131,7 +131,7 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "types", PgTy: "sgroups.icmp_types", Notnull: true},
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
 			syncField{Name: "trace", PgTy: "bool", Notnull: true},
-			syncField{Name: "action", PgTy: "sgroups.chain_default_action", Notnull: true},
+			syncField{Name: "action", PgTy: "sgroups.rule_action", Notnull: true},
 		)
 	case *sgm.IESgSgIcmpRule: //nolint:dupl
 		o.mutatorFn = "sgroups.sync_ie_sg_sg_icmp_rule"
@@ -145,7 +145,7 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "traffic", PgTy: "sgroups.traffic", Notnull: true, Pk: true},
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
 			syncField{Name: "trace", PgTy: "bool", Notnull: true},
-			syncField{Name: "action", PgTy: "sgroups.chain_default_action", Notnull: true},
+			syncField{Name: "action", PgTy: "sgroups.rule_action", Notnull: true},
 		)
 	case *sgm.IECidrSgRule: //nolint:dupl
 		o.mutatorFn = "sgroups.sync_cidr_sg_rule"
@@ -159,7 +159,7 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "ports", PgTy: "sgroups.sg_rule_ports[]"},
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
 			syncField{Name: "trace", PgTy: "bool", Notnull: true},
-			syncField{Name: "action", PgTy: "sgroups.chain_default_action", Notnull: true},
+			syncField{Name: "action", PgTy: "sgroups.rule_action", Notnull: true},
 		)
 	case *sgm.IECidrSgIcmpRule: //nolint:dupl
 		o.mutatorFn = "sgroups.sync_cidr_sg_icmp_rule"
@@ -173,7 +173,7 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "traffic", PgTy: "sgroups.traffic", Notnull: true, Pk: true},
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
 			syncField{Name: "trace", PgTy: "bool", Notnull: true},
-			syncField{Name: "action", PgTy: "sgroups.chain_default_action", Notnull: true},
+			syncField{Name: "action", PgTy: "sgroups.rule_action", Notnull: true},
 		)
 	case *sgm.IESgSgRule: //nolint:dupl
 		o.mutatorFn = "sgroups.sync_ie_sg_sg_rule"
@@ -187,7 +187,7 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "ports", PgTy: "sgroups.sg_rule_ports[]"},
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
 			syncField{Name: "trace", PgTy: "bool", Notnull: true},
-			syncField{Name: "action", PgTy: "sgroups.chain_default_action", Notnull: true},
+			syncField{Name: "action", PgTy: "sgroups.rule_action", Notnull: true},
 		)
 	default:
 		panic("UB")

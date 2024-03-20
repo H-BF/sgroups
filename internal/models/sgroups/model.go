@@ -118,12 +118,15 @@ type (
 		UpdatedAt time.Time
 	}
 
+	// RuleAction verdict action for rules
+	RuleAction uint8
+
 	ruleT[T any] struct {
 		ID     T
 		Ports  []SGRulePorts
 		Logs   bool
 		Trace  bool
-		Action ChainDefaultAction
+		Action RuleAction
 	}
 
 	ruleID[T any] interface {
@@ -139,7 +142,7 @@ type (
 		Icmp   ICMP
 		Logs   bool
 		Trace  bool
-		Action ChainDefaultAction
+		Action RuleAction
 	}
 
 	// SgIcmpRuleID SG:ICMP rule ID
@@ -155,7 +158,7 @@ type (
 		Icmp   ICMP
 		Logs   bool
 		Trace  bool
-		Action ChainDefaultAction
+		Action RuleAction
 	}
 
 	// SgSgIcmpRuleID SG-SG:ICMP rule ID
@@ -173,7 +176,7 @@ type (
 		Icmp    ICMP
 		Logs    bool
 		Trace   bool
-		Action  ChainDefaultAction
+		Action  RuleAction
 	}
 
 	// IESgSgIcmpRuleID <IN|E>GRESS:SG-SG:ICMP rule ID
@@ -192,7 +195,7 @@ type (
 		Icmp    ICMP
 		Logs    bool
 		Trace   bool
-		Action  ChainDefaultAction
+		Action  RuleAction
 	}
 
 	// IECidrSgIcmpRuleID <IN|E>GRESS:CIDR-SG:ICMP rule ID
@@ -251,6 +254,17 @@ const (
 	ACCEPT
 )
 
+const (
+	// RA_UNDEF -
+	RA_UNDEF RuleAction = iota
+
+	// RA_DROP setups rule to drop packet
+	RA_DROP
+
+	// RA_ACCEPT setups rule to accept packet
+	RA_ACCEPT
+)
+
 // NewPortRarnges is a port rarnges constructor
 func NewPortRarnges() PortRanges {
 	return ranges.NewMultiRange(PortRangeFactory)
@@ -292,6 +306,25 @@ func (a *ChainDefaultAction) FromString(s string) error {
 		*a = DROP
 	case "accept":
 		*a = ACCEPT
+	default:
+		return errors.WithMessage(fmt.Errorf("unknown value '%s'", s), api)
+	}
+	return nil
+}
+
+// String impl Stringer
+func (a RuleAction) String() string {
+	return [...]string{"undef", "drop", "accept"}[a]
+}
+
+// FromString init from string
+func (a *RuleAction) FromString(s string) error {
+	const api = "RuleAction/FromString"
+	switch strings.ToLower(s) {
+	case "drop":
+		*a = RA_DROP
+	case "accept":
+		*a = RA_ACCEPT
 	default:
 		return errors.WithMessage(fmt.Errorf("unknown value '%s'", s), api)
 	}

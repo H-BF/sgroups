@@ -1,9 +1,15 @@
 -- +goose Up
 -- +goose StatementBegin
+------------------------------- types ---------------------------
+drop type if exists sgroups.rule_action cascade;
+create type sgroups.rule_action as enum (
+    'DROP',
+    'ACCEPT'
+);
 
 -- ie_sg_sg_rule
 alter table sgroups.tbl_ie_sg_sg_rule
-        add column action sgroups.chain_default_action not null default 'ACCEPT'::sgroups.chain_default_action;
+        add column action sgroups.rule_action not null default 'ACCEPT'::sgroups.rule_action;
 
 create or replace view sgroups.vu_ie_sg_sg_rule as
 select proto,
@@ -27,7 +33,7 @@ create or replace function sgroups.list_ie_sg_sg_rules (
                   ports sgroups.sg_rule_ports[],
                   logs bool,
                   trace bool,
-                  action sgroups.chain_default_action
+                  action sgroups.rule_action
                 )
 as $$
 begin
@@ -46,7 +52,7 @@ end;
 $$ language plpgsql immutable;
 
 alter type sgroups.row_of__ie_sg_sg_rule
-    add attribute action sgroups.chain_default_action;
+    add attribute action sgroups.rule_action;
 
 drop function if exists sgroups.sync_ie_sg_sg_rule(sgroups.sync_op, sgroups.row_of__ie_sg_sg_rule);
 create function sgroups.sync_ie_sg_sg_rule(op sgroups.sync_op, d sgroups.row_of__ie_sg_sg_rule)
@@ -108,7 +114,7 @@ $$ language plpgsql strict;
 
 -- ie_sg_sg_icmp_rule
 alter table sgroups.tbl_ie_sg_sg_icmp_rule
-        add column action sgroups.chain_default_action not null default 'ACCEPT'::sgroups.chain_default_action;
+        add column action sgroups.rule_action not null default 'ACCEPT'::sgroups.rule_action;
 
 create or replace view sgroups.vu_ie_sg_sg_icmp_rule as
 select ip_v,
@@ -132,7 +138,7 @@ create or replace function sgroups.list_ie_sg_sg_icmp_rules (
                   traffic sgroups.traffic,
                   logs bool,
                   trace bool,
-                  action sgroups.chain_default_action
+                  action sgroups.rule_action
                 )
 as $$
 begin
@@ -151,7 +157,7 @@ end;
 $$ language plpgsql immutable;
 
 alter type sgroups.row_of__ie_sg_sg_icmp_rule
-    add attribute action sgroups.chain_default_action;
+    add attribute action sgroups.rule_action;
 
 drop function if exists sgroups.sync_ie_sg_sg_icmp_rule(op sgroups.sync_op, d sgroups.row_of__ie_sg_sg_icmp_rule) cascade;
 create function sgroups.sync_ie_sg_sg_icmp_rule(op sgroups.sync_op, d sgroups.row_of__ie_sg_sg_icmp_rule)
@@ -213,7 +219,7 @@ $$ language plpgsql strict;
 
 -- cidr_sg_rule
 alter table sgroups.tbl_cidr_sg_rule
-        add column action sgroups.chain_default_action not null default 'ACCEPT'::sgroups.chain_default_action;
+        add column action sgroups.rule_action not null default 'ACCEPT'::sgroups.rule_action;
 
 create or replace view sgroups.vu_cidr_sg_rule as
 select proto,
@@ -236,7 +242,7 @@ create or replace function sgroups.list_cidr_sg_rule (
                   ports sgroups.sg_rule_ports[],
                   logs bool,
                   trace bool,
-                  action sgroups.chain_default_action
+                  action sgroups.rule_action
                 )
 as $$
 begin
@@ -255,7 +261,7 @@ end;
 $$ language plpgsql immutable;
 
 alter type sgroups.row_of__cidr_sg_rule
-    add attribute action sgroups.chain_default_action;
+    add attribute action sgroups.rule_action;
 
 drop function if exists sgroups.sync_cidr_sg_rule(sgroups.sync_op, sgroups.row_of__cidr_sg_rule);
 create function sgroups.sync_cidr_sg_rule(op sgroups.sync_op, d sgroups.row_of__cidr_sg_rule)
@@ -312,7 +318,7 @@ $$ language plpgsql strict;
 
 -- cidr_sg_icmp_rule
 alter table sgroups.tbl_cidr_sg_icmp_rule
-        add column action sgroups.chain_default_action not null default 'ACCEPT'::sgroups.chain_default_action;
+        add column action sgroups.rule_action not null default 'ACCEPT'::sgroups.rule_action;
 
 create or replace view sgroups.vu_cidr_sg_icmp_rule as
 select ip_v,
@@ -335,7 +341,7 @@ create or replace function sgroups.list_cidr_sg_icmp_rules (
                   traffic sgroups.traffic,
                   logs bool,
                   trace bool,
-                  action sgroups.chain_default_action
+                  action sgroups.rule_action
                 )
 as $$
 begin
@@ -353,7 +359,7 @@ end;
 $$ language plpgsql immutable;
 
 alter type sgroups.row_of__cidr_sg_icmp_rule
-    add attribute action sgroups.chain_default_action;
+    add attribute action sgroups.rule_action;
 
 drop function if exists sgroups.sync_cidr_sg_icmp_rule(op sgroups.sync_op, d sgroups.row_of__cidr_sg_icmp_rule) cascade;
 create function sgroups.sync_cidr_sg_icmp_rule(op sgroups.sync_op, d sgroups.row_of__cidr_sg_icmp_rule)
@@ -410,7 +416,7 @@ $$ language plpgsql strict;
 
 -- fqdn_rule
 alter table sgroups.tbl_fqdn_rule
-        add column action sgroups.chain_default_action not null default 'ACCEPT'::sgroups.chain_default_action;
+        add column action sgroups.rule_action not null default 'ACCEPT'::sgroups.rule_action;
 
 create or replace view sgroups.vu_fqdn_rule as
 select (select "name" from sgroups.tbl_sg where id = R.sg_from) as sg_from,
@@ -432,7 +438,7 @@ create or replace function sgroups.list_fqdn_rule (
                     ports sgroups.sg_rule_ports[],
                     logs bool,
                     ndpi_protocols citext[],
-                    action sgroups.chain_default_action
+                    action sgroups.rule_action
                 )
 as $$
 begin
@@ -450,7 +456,7 @@ end;
 $$ language plpgsql immutable;
 
 alter type sgroups.row_of__fqdn_rule
-    add attribute action sgroups.chain_default_action;
+    add attribute action sgroups.rule_action;
 
 drop function if exists sgroups.sync_fqdn_rule(op sgroups.sync_op, d sgroups.row_of__fqdn_rule) cascade;
 create function sgroups.sync_fqdn_rule(op sgroups.sync_op, d sgroups.row_of__fqdn_rule)
@@ -505,7 +511,7 @@ $$ language plpgsql strict;
 
 -- sg_icmp_rule
 alter table sgroups.tbl_sg_icmp_rule
-        add column action sgroups.chain_default_action not null default 'ACCEPT'::sgroups.chain_default_action;
+        add column action sgroups.rule_action not null default 'ACCEPT'::sgroups.rule_action;
 
 create or replace view sgroups.vu_sg_icmp_rule as
 select ip_v,
@@ -524,7 +530,7 @@ create or replace function sgroups.list_sg_icmp_rule (
                    sg sgroups.cname,
                    logs boolean,
                    trace boolean,
-                   action sgroups.chain_default_action
+                   action sgroups.rule_action
                 )
 as $$
 begin
@@ -541,7 +547,7 @@ end;
 $$ language plpgsql immutable;
 
 alter type sgroups.row_of__sg_icmp_rule
-    add attribute action sgroups.chain_default_action;
+    add attribute action sgroups.rule_action;
 
 drop function if exists sgroups.sync_sg_icmp_rule(sgroups.sync_op, sgroups.row_of__sg_icmp_rule) cascade;
 create function sgroups.sync_sg_icmp_rule(op sgroups.sync_op, d sgroups.row_of__sg_icmp_rule)
@@ -594,7 +600,7 @@ $$ language plpgsql strict;
 
 -- sg_rule
 alter table sgroups.tbl_sg_rule
-        add column action sgroups.chain_default_action not null default 'ACCEPT'::sgroups.chain_default_action;
+        add column action sgroups.rule_action not null default 'ACCEPT'::sgroups.rule_action;
 
 create or replace view sgroups.vu_sg_rule as
 select (select "name" from sgroups.tbl_sg where id = R.sg_from) as sg_from,
@@ -614,7 +620,7 @@ create or replace function sgroups.list_sg_rule(
                   proto sgroups.proto,
                   ports sgroups.sg_rule_ports[],
                   logs bool,
-                  action sgroups.chain_default_action
+                  action sgroups.rule_action
                 )
 as $$
 begin
@@ -633,7 +639,7 @@ end;
 $$ language plpgsql immutable;
 
 alter type sgroups.row_of__sg_rule
-    add attribute action sgroups.chain_default_action;
+    add attribute action sgroups.rule_action;
 
 drop function if exists sgroups.sync_sg_rule(sgroups.sync_op, sgroups.row_of__sg_rule) cascade;
 create function sgroups.sync_sg_rule(op sgroups.sync_op, d sgroups.row_of__sg_rule)
@@ -691,7 +697,7 @@ $$ language plpgsql strict;
 
 -- sg_sg_icmp_rule
 alter table sgroups.tbl_sg_sg_icmp_rule
-        add column action sgroups.chain_default_action not null default 'ACCEPT'::sgroups.chain_default_action;
+        add column action sgroups.rule_action not null default 'ACCEPT'::sgroups.rule_action;
 
 create or replace view sgroups.vu_sg_sg_icmp_rule as
 select ip_v,
@@ -713,7 +719,7 @@ create or replace function sgroups.list_sg_sg_icmp_rule(
                     sg_to sgroups.cname,
                     logs boolean,
                     trace boolean,
-                    action sgroups.chain_default_action
+                    action sgroups.rule_action
                 )
 as $$
 begin
@@ -733,7 +739,7 @@ end;
 $$ language plpgsql immutable;
 
 alter type sgroups.row_of__sg_sg_icmp_rule
-    add attribute action sgroups.chain_default_action;
+    add attribute action sgroups.rule_action;
 
 drop function if exists sgroups.sync_sg_sg_icmp_rule(sgroups.sync_op, sgroups.row_of__sg_sg_icmp_rule) cascade;
 create function sgroups.sync_sg_sg_icmp_rule(op sgroups.sync_op, d sgroups.row_of__sg_sg_icmp_rule)

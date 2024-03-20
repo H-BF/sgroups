@@ -6,7 +6,6 @@ import (
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 
 	sg "github.com/H-BF/protos/pkg/api/sgroups"
-	"github.com/pkg/errors"
 )
 
 type (
@@ -33,19 +32,13 @@ func (r sgFqdnRule) from(src *sg.FqdnRule) error {
 		from(src)
 	if err == nil {
 		r.Logs = src.GetLogs()
+		err = ruleAction{RuleAction: &r.Action}.from(src.GetAction())
+		if err != nil {
+			return err
+		}
 		var p rulePorts
 		if err = p.from(src.GetPorts()); err == nil {
 			r.Ports = p
-		}
-		switch src.GetAction() {
-		case sg.DefaultAction_DEFAULT:
-			r.Action = model.DEFAULT
-		case sg.DefaultAction_DROP:
-			r.Action = model.DROP
-		case sg.DefaultAction_ACCEPT:
-			r.Action = model.ACCEPT
-		default:
-			return errors.Errorf("unsupported action ('%s')", src.GetAction())
 		}
 	}
 	return err

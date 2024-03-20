@@ -74,6 +74,12 @@ func (a ChainDefaultAction) Validate() error {
 	return oz.Validate(x, oz.In(vals[:]...).Error("must be in ['DROP', 'ACCEPT']"))
 }
 
+// Validate RuleAction validator
+func (a RuleAction) Validate() error {
+	vals, x := [...]any{int(RA_DROP), int(RA_ACCEPT)}, int(a)
+	return oz.Validate(x, oz.In(vals[:]...).Error("must be in ['DROP', 'ACCEPT']"))
+}
+
 // Validate net transport validator
 func (nt NetworkTransport) Validate() error {
 	vals, x := [...]any{int(TCP), int(UDP)}, int(nt)

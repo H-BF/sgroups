@@ -120,11 +120,11 @@ func tf2protoSG(raw any) (string, *sgroupsAPI.SecGroup, error) {
 	nws, _ := it[RcLabelNetworks].(string)
 	sg.Networks = splitNetNames(nws)
 	da, _ := it[RcLabelDefaultAction].(string)
-	x, ok := sgroupsAPI.DefaultAction_value[strings.ToUpper(da)]
+	x, ok := sgroupsAPI.SecGroup_DefaultAction_value[strings.ToUpper(da)]
 	if !ok {
 		return "", nil, errors.Errorf("unable to convert '%s' into SG default action", da)
 	}
-	sg.DefaultAction = sgroupsAPI.DefaultAction(x)
+	sg.DefaultAction = sgroupsAPI.SecGroup_DefaultAction(x)
 	sg.Trace, _ = it[RcLabelTrace].(bool)
 	sg.Logs, _ = it[RcLabelLogs].(bool)
 	return sg.Name, &sg, nil

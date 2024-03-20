@@ -91,7 +91,7 @@ func (sui *memDbSuite) newSGRule(sgFrom, sgTo string, t model.NetworkTransport, 
 			SgTo:      sgTo,
 		},
 		Ports:  ports,
-		Action: model.ACCEPT,
+		Action: model.RA_ACCEPT,
 	}
 }
 
@@ -512,7 +512,7 @@ func (sui *memDbSuite) newCidrSgRule(proto model.NetworkTransport, cidr string, 
 			Traffic:   traffic,
 		},
 		Ports:  ports,
-		Action: model.ACCEPT,
+		Action: model.RA_ACCEPT,
 	}
 }
 
@@ -723,7 +723,7 @@ func (sui *memDbSuite) newCidrSgIcmpRule(traffic model.Traffic, cidr, sg string,
 		Icmp: model.ICMP{
 			IPv: ipv,
 		},
-		Action: model.ACCEPT,
+		Action: model.RA_ACCEPT,
 	}
 }
 
@@ -885,7 +885,7 @@ func (sui *memDbSuite) newSgSgRule(proto model.NetworkTransport, sgLocal, sg str
 			Sg:        sg,
 		},
 		Ports:  ports,
-		Action: model.ACCEPT,
+		Action: model.RA_ACCEPT,
 	}
 }
 
@@ -1034,7 +1034,7 @@ func (sui *memDbSuite) newIESgSgIcmpRule(traffic model.Traffic, sgLocal, sg stri
 		Icmp: model.ICMP{
 			IPv: ipv,
 		},
-		Action: model.ACCEPT,
+		Action: model.RA_ACCEPT,
 	}
 }
 

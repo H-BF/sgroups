@@ -51,15 +51,9 @@ func (r proto2SgIcmpRule) from(src *sg.SgIcmpRule) error {
 		}
 		r.Icmp.Types.Put(uint8(n))
 	}
-	switch src.GetAction() {
-	case sg.DefaultAction_DEFAULT:
-		r.Action = model.DEFAULT
-	case sg.DefaultAction_DROP:
-		r.Action = model.DROP
-	case sg.DefaultAction_ACCEPT:
-		r.Action = model.ACCEPT
-	default:
-		return errors.Errorf("unsupported action ('%s')", src.GetAction())
+	e := ruleAction{&r.Action}.from(src.GetAction())
+	if e != nil {
+		return e
 	}
 	return nil
 }
@@ -86,15 +80,9 @@ func (r proto2SgSgIcmpRule) from(src *sg.SgSgIcmpRule) error {
 		}
 		r.Icmp.Types.Put(uint8(n))
 	}
-	switch src.GetAction() {
-	case sg.DefaultAction_DEFAULT:
-		r.Action = model.DEFAULT
-	case sg.DefaultAction_DROP:
-		r.Action = model.DROP
-	case sg.DefaultAction_ACCEPT:
-		r.Action = model.ACCEPT
-	default:
-		return errors.Errorf("unsupported action ('%s')", src.GetAction())
+	e := ruleAction{&r.Action}.from(src.GetAction())
+	if e != nil {
+		return e
 	}
 	return nil
 }
@@ -127,15 +115,9 @@ func (r proto2IESgSgIcmpRule) from(src *sg.IESgSgIcmpRule) error {
 		}
 		r.Icmp.Types.Put(uint8(n))
 	}
-	switch src.GetAction() {
-	case sg.DefaultAction_DEFAULT:
-		r.Action = model.DEFAULT
-	case sg.DefaultAction_DROP:
-		r.Action = model.DROP
-	case sg.DefaultAction_ACCEPT:
-		r.Action = model.ACCEPT
-	default:
-		return errors.Errorf("unsupported action ('%s')", src.GetAction())
+	e = ruleAction{&r.Action}.from(src.GetAction())
+	if e != nil {
+		return e
 	}
 	return nil
 }
@@ -176,15 +158,9 @@ func (r proto2CidrSgIcmpRule) from(src *sg.CidrSgIcmpRule) error {
 		}
 		r.Icmp.Types.Put(uint8(n))
 	}
-	switch src.GetAction() {
-	case sg.DefaultAction_DEFAULT:
-		r.Action = model.DEFAULT
-	case sg.DefaultAction_DROP:
-		r.Action = model.DROP
-	case sg.DefaultAction_ACCEPT:
-		r.Action = model.ACCEPT
-	default:
-		return errors.Errorf("unsupported action ('%s')", src.GetAction())
+	e = ruleAction{&r.Action}.from(src.GetAction())
+	if e != nil {
+		return e
 	}
 	return nil
 }

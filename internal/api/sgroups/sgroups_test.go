@@ -136,7 +136,7 @@ func (sui *sGroupServiceTests) newSG(name string, nws ...string) *api.SecGroup {
 	return &api.SecGroup{
 		Name:          name,
 		Networks:      nws,
-		DefaultAction: api.DefaultAction_DROP,
+		DefaultAction: api.SecGroup_DROP,
 	}
 }
 
@@ -182,6 +182,7 @@ func (sui *sGroupServiceTests) newRule(from, to *api.SecGroup, tr common.Network
 		SgTo:      to.Name,
 		Transport: tr,
 		Ports:     ports,
+		Action:    api.RuleAction_ACCEPT,
 	}
 }
 
@@ -196,6 +197,7 @@ func (sui *sGroupServiceTests) newSgSgRule(
 		SgLocal:   sgLocal.Name,
 		Traffic:   traffic,
 		Ports:     ports,
+		Action:    api.RuleAction_DROP,
 	}
 }
 
@@ -209,6 +211,7 @@ func (sui *sGroupServiceTests) newIESgSgIcmpRule(
 		SgLocal: sgLocal.Name,
 		Traffic: traffic,
 		ICMP:    &common.ICMP{IPv: ipv},
+		Action:  api.RuleAction_DROP,
 	}
 }
 
@@ -225,6 +228,7 @@ func (sui *sGroupServiceTests) newCidrSgIcmpRule(
 		SG:      sg.GetName(),
 		Traffic: traffic,
 		ICMP:    &common.ICMP{IPv: ipv},
+		Action:  api.RuleAction_ACCEPT,
 	}
 }
 
