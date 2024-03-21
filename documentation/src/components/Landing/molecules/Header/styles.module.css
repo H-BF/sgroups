@@ -1,32 +1,32 @@
 .container {
-  width: 100%;
-  height: calc(100vh - var(--ifm-navbar-height));
-  background-size: cover;
-  background-position: center center;
   position: absolute;
   top: 4rem;
   left: 0;
+  width: 100%;
+  height: calc(100vh - var(--ifm-navbar-height));
   background: radial-gradient(circle, #125647 0%, #125647 25%, #000 100%);
+  background-position: center center;
+  background-size: cover;
 }
 
 .text {
   position: absolute;
-  bottom: 150px;
-  margin-left: auto;
-  margin-right: auto;
-  left: 0;
   right: 0;
+  bottom: 150px;
+  left: 0;
   z-index: 2;
   max-width: 550px;
+  margin-right: auto;
+  margin-left: auto;
+  padding: 15px;
   text-align: justify;
   background: rgba(0, 0, 0, 0.7);
-  padding: 15px;
 }
 
 @media (min-width: 997px) {
   .text {
-    margin-left: 0;
     left: 50px;
+    margin-left: 0;
   }
 }
 
@@ -37,24 +37,24 @@
 }
 
 .button {
+  display: inline-block;
+  min-height: 50px;
+  margin-top: 0.5rem;
+  margin-right: 0.5rem;
+  padding: 0.625em 2em;
+  color: #fff;
+  font-weight: 700;
   background-color: #dd2e57;
   border-width: 0;
-  color: #fff;
-  margin-right: 0.5rem;
-  margin-top: 0.5rem;
   border-radius: 0.1rem;
   cursor: pointer;
-  display: inline-block;
-  font-weight: 700;
-  padding: 0.625em 2em;
   transition:
     color 125ms,
     background-color 125ms,
     border-color 125ms;
-  min-height: 50px;
 }
 
 .button:hover {
-  background-color: var(--ifm-color-primary);
   color: #fff;
+  background-color: var(--ifm-color-primary);
 }

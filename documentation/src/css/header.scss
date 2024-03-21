@@ -74,8 +74,8 @@ body.header-not-at-top {
   content: '';
 
   @media (min-width: 997px) {
-    left: -25px;
     top: 10px;
+    left: -25px;
   }
 }
 
@@ -141,6 +141,7 @@ html[data-theme='dark'] .header-github-link:before {
 .navbar__item.dropdown {
   margin-right: 35px;
 }
+
 .navbar__items--right .navbar__item {
   margin-right: 35px;
 }

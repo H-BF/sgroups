@@ -7,7 +7,7 @@ export const Header: FC = () => (
       <h1>Firewall, который работает</h1>
       <p>
         Создавайте защищенные сети в вашей организации за пару минут, используя сетевую микросегментацию, основанную на
-        SGroups
+        S.Groups
       </p>
       <a href="/sgroups/info/introduction/">
         <button className={styles.button} type="button">
