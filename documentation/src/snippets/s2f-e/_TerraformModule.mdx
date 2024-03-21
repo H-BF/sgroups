@@ -73,7 +73,7 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
       <tr>
         <td>rules.$traffic[].access.$transport.action</td>
         <td>
-          <nobr>Enum("RULE_ACCEPT", "RULE_DROP")</nobr>
+          <nobr>Enum("ACCEPT", "DROP")</nobr>
         </td>
         <td></td>
         <td className="green center">✔</td>
@@ -184,7 +184,7 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                 - example.com
               access:
                 tcp:
-                  action: RULE_ACCEPT
+                  action: ACCEPT
                   priority: 100
                   logs:  true
                   trace: true
@@ -207,7 +207,7 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                 - example.com
               access:
                 udp:
-                  action: RULE_ACCEPT
+                  action: ACCEPT
                   priority: 100
                   logs:  true
                   trace: true

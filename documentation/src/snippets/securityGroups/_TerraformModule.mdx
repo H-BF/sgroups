@@ -103,7 +103,7 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
       <tr>
         <td>default_rules.access.$transport.action</td>
         <td>{DICTIONARY.action.short}</td>
-        <td>Enum("RULE_ACCEPT", "RULE_DROP")</td>
+        <td>Enum("ACCEPT", "DROP")</td>
         <td>`ACCEPT`</td>
       </tr><tr>
         <td>default_rules.access.$transport.priority</td>
@@ -155,14 +155,14 @@ default_rules:
       action: ACCEPT
 
     icmp:
-      action: RULE_DROP
+      action: DROP
       priority: 0
       logs: true
       trace: true
       type: [0, 8]
 
     icmp6:
-      action: RULE_DROP
+      action: DROP
       priority: 0
       logs: true
       trace: true

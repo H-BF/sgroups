@@ -98,7 +98,7 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
       <tr>
         <td>items.key.$transport.action</td>
         <td>да</td>
-        <td>Enum("RULE_ACCEPT", "RULE_DROP")</td>
+        <td>Enum("ACCEPT", "DROP")</td>
         <td>{DICTIONARY.action.short}</td>
       </tr>
       <tr>
@@ -159,14 +159,14 @@ resource "sgroups_groups" "groups" {
                 logs = true
                 trace = true
                 type = [0, 8]
-                action = "RULE_DROP"
+                action = "DROP"
                 priority = "0"
             }
             icmp6 = {
                 logs = true
                 trace = true
                 type = [0, 8]
-                action = "RULE_DROP"
+                action = "DROP"
                 priority = "0"
             }
         }
