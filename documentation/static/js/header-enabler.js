@@ -7,6 +7,7 @@ const createMedusScript = () => {
 
 const injectOnLandingLoad = () => {
   if (document.location.pathname === '/sgroups/') {
+    document.querySelector('footer').style.display = 'none'
     createMedusScript()
   }
 }
@@ -21,12 +22,14 @@ const observeUrlChange = () => {
       oldHref = document.location.href
       if (document.location.pathname === '/sgroups/') {
         document.getElementById('medusa-root').style.display = 'block'
+        document.querySelector('footer').style.display = 'none'
         if (!scriptInjected) {
           createMedusScript()
           scriptInjected = true
         }
       } else {
         document.getElementById('medusa-root').style.display = 'none'
+        document.querySelector('footer').style.display = 'block'
       }
     }
   })
