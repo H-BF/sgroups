@@ -6,7 +6,7 @@ const createMedusScript = () => {
 }
 
 const injectOnLandingLoad = () => {
-  if (document.location.pathname === '/sgroups/') {
+  if (document.location.pathname === '/sgroups/landing') {
     createMedusScript()
   }
 }
@@ -19,7 +19,7 @@ const observeUrlChange = () => {
   const observer = new MutationObserver(mutations => {
     if (oldHref !== document.location.href) {
       oldHref = document.location.href
-      if (document.location.pathname === '/sgroups/') {
+      if (document.location.pathname === '/sgroups/landing') {
         document.getElementById('medusa-root').style.display = 'block'
         if (!scriptInjected) {
           createMedusScript()

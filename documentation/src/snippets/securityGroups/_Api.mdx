@@ -23,6 +23,8 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
   <li>`sgIcmpRules.rules[].Sg` - {DICTIONARY.sgLocal.short}</li>
   <li>`sgIcmpRules.rules[].logs` - {DICTIONARY.log.short}</li>
   <li>`sgIcmpRules.rules[].trace` - {DICTIONARY.trace.short}</li>
+  <li>`sgIcmpRules.rules[].action` - {DICTIONARY.action.short}</li>
+  <li>`sgIcmpRules.rules[].priority` - {DICTIONARY.priority.short}</li>
   <li>`syncOp` - {DICTIONARY.syncOp.short}</li>
 </ul>
 
@@ -145,6 +147,24 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
         <td>нет</td>
         <td>Boolean</td>
         <td>false</td>
+        <td className="green center"></td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>sgIcmpRules.rules[].action</td>
+        <td>да</td>
+        <td>
+          <nobr>Enum("UNDEF", "ACCEPT", "DROP")</nobr>
+        </td>
+        <td></td>
+        <td className="green center"></td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>sgIcmpRules.rules[].priority</td>
+        <td>нет</td>
+        <td>String</td>
+        <td></td>
         <td className="green center"></td>
         <td className="green center">✔</td>
       </tr>
@@ -291,7 +311,9 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
                     },
                     "Sg": "sg-example",
                     "logs": true,
-                    "trace": true
+                    "trace": true,
+                    "action": "DROP",
+                    "priority": "-300",
                 },
                 {
                     "ICMP": {
@@ -300,7 +322,9 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
                     },
                     "Sg": "sg-example",
                     "logs": true,
-                    "trace": true
+                    "trace": true,
+                    "action": "DROP",
+                    "priority": "-300"
                 }]
             },
             "syncOp": "Upsert"

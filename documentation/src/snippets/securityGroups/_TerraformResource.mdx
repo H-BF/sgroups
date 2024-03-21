@@ -95,6 +95,18 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         <td>String[]</td>
         <td>{DICTIONARY.icmpTypes.short}</td>
       </tr>
+      <tr>
+        <td>items.key.$transport.action</td>
+        <td>да</td>
+        <td>Enum("ACCEPT", "DROP")</td>
+        <td>{DICTIONARY.action.short}</td>
+      </tr>
+      <tr>
+        <td>items.key.$transport.priority</td>
+        <td>нет</td>
+        <td>String</td>
+        <td>{DICTIONARY.priority.short}</td>
+      </tr>
     </tbody>
   </table>
 </div>
@@ -126,6 +138,10 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
     `items.key.icmp6.type`:
     <Restrictions data={RESTRICTIONS.icmpType} />
   </li>
+  <li>
+    `items.key.priority`:
+    <Restrictions data={RESTRICTIONS.priority} />
+  </li>
 </ul>
 
 #### Пример использования
@@ -143,11 +159,15 @@ resource "sgroups_groups" "groups" {
                 logs = true
                 trace = true
                 type = [0, 8]
+                action = "DROP"
+                priority = "0"
             }
             icmp6 = {
                 logs = true
                 trace = true
                 type = [0, 8]
+                action = "DROP"
+                priority = "0"
             }
         }
     }

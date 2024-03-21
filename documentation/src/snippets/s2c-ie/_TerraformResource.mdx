@@ -21,6 +21,8 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
   <li>`items.$ruleName.trace` - {DICTIONARY.trace.short}</li>
   <li>`items.$ruleName.ip_v` - {DICTIONARY.icmpV.short}</li>
   <li>`items.$ruleName.type` - {DICTIONARY.icmpTypes.short}</li>
+  <li>`items.$ruleName.action` - {DICTIONARY.action.short}</li>
+  <li>`items.$ruleName.priority` - {DICTIONARY.priority.short}</li>
 </ul>
 
 <div className="scrollable-x">
@@ -154,10 +156,30 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
       <tr>
         <td>items.$ruleName.type</td>
         <td>да</td>
-        <td>Strng[]</td>
+        <td>String[]</td>
         <td>null</td>
         <td className="green center"></td>
         <td className="green center"></td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>items.$ruleName.action</td>
+        <td>да</td>
+        <td>
+          <nobr>Enum("ACCEPT", "DROP")</nobr>
+        </td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>items.$ruleName.priority</td>
+        <td>нет</td>
+        <td>String</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
         <td className="green center">✔</td>
       </tr>
     </tbody>
@@ -195,7 +217,10 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         `items.$ruleName.type[]`:
         <Restrictions data={RESTRICTIONS.icmpType} />
     </li>
-
+    <li>
+        `items.$ruleName.priority`:
+        <Restrictions data={RESTRICTIONS.priority} />
+    </li>
 </ul>
 
 <h4 className="custom-heading">Пример использования</h4>
@@ -229,6 +254,8 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                         d = "80"
                         s = ""
                       }]
+                      action      = "ACCEPT"
+                      priority    = "300"
                     }
                   }
                 }
@@ -254,6 +281,8 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                         d = "80"
                         s = ""
                       }]
+                      action      = "ACCEPT"
+                      priority    = "300"
                     }
                   }
                 }
@@ -284,6 +313,8 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                         d = "80"
                         s = ""
                       }]
+                      action      = "ACCEPT"
+                      priority    = "300"
                     }
                   }
                 }
@@ -309,6 +340,8 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                         d = "80"
                         s = ""
                       }]
+                      action      = "ACCEPT"
+                      priority    = "300"
                     }
                   }
                 }
@@ -333,6 +366,8 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                       cidr        = "10.0.0.0/8"
                       ip_v        = "IPv4"
                       type        = [0,8]
+                      action      = "ACCEPT"
+                      priority    = "200"
                     }
                   }
                 }
@@ -355,6 +390,8 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                       cidr        = "10.0.0.0/8"
                       ip_v        = "IPv4"
                       type        = [0,8]
+                      action      = "ACCEPT"
+                      priority    = "200"
                     }
                   }
                 }
@@ -372,14 +409,16 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                 ```hcl
                 resource "sgroups_cidr_icmp_rules" "rules" {
                   items = {
-                    "icmp6:cidr(10.0.0.0/8)sg(sg-example)ingress" = {
+                    "icmp6:cidr(::ffff:a00:0/104)sg(sg-example)ingress" = {
                       traffic     = "ingress"
                       logs        = true
                       trace       = true
                       sg_name     = "sg-local-example"
-                      cidr        = "10.0.0.0/8"
+                      cidr        = "::ffff:a00:0/104"
                       ip_v        = "IPv6"
                       type        = [0,8]
+                      action      = "ACCEPT"
+                      priority    = "200"
                     }
                   }
                 }
@@ -394,14 +433,16 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
                 ```hcl
                 resource "sgroups_cidr_icmp_rules" "rules" {
                   items = {
-                    "icmp6:cidr(10.0.0.0/8)sg(sg-example)egress" = {
+                    "icmp6:cidr(::ffff:a00:0/104)sg(sg-example)egress" = {
                       traffic     = "egress"
                       logs        = true
                       trace       = true
                       sg_name     = "sg-local-example"
-                      cidr        = "10.0.0.0/8"
+                      cidr        = "::ffff:a00:0/104"
                       ip_v        = "IPv6"
                       type        = [0,8]
+                      action      = "ACCEPT"
+                      priority    = "200"
                     }
                   }
                 }
