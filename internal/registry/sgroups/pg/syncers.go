@@ -92,6 +92,7 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "proto", PgTy: "sgroups.proto", Notnull: true, Pk: true},
 			syncField{Name: "ports", PgTy: "sgroups.sg_rule_ports[]"},
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
+			syncField{Name: "action", PgTy: "sgroups.rule_action", Notnull: true},
 		)
 		o.mutatorFn = "sgroups.sync_sg_rule"
 	case *sgm.FQDNRule:
@@ -104,6 +105,7 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "ports", PgTy: "sgroups.sg_rule_ports[]"},
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
 			syncField{Name: "ndpi_protocols", PgTy: "citext[]", Notnull: true},
+			syncField{Name: "action", PgTy: "sgroups.rule_action", Notnull: true},
 		)
 		o.mutatorFn = "sgroups.sync_fqdn_rule"
 	case *sgm.SgIcmpRule:
@@ -116,6 +118,7 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "types", PgTy: "sgroups.icmp_types", Notnull: true},
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
 			syncField{Name: "trace", PgTy: "bool", Notnull: true},
+			syncField{Name: "action", PgTy: "sgroups.rule_action", Notnull: true},
 		)
 	case *sgm.SgSgIcmpRule:
 		o.mutatorFn = "sgroups.sync_sg_sg_icmp_rule"
@@ -128,6 +131,7 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "types", PgTy: "sgroups.icmp_types", Notnull: true},
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
 			syncField{Name: "trace", PgTy: "bool", Notnull: true},
+			syncField{Name: "action", PgTy: "sgroups.rule_action", Notnull: true},
 		)
 	case *sgm.IESgSgIcmpRule: //nolint:dupl
 		o.mutatorFn = "sgroups.sync_ie_sg_sg_icmp_rule"
@@ -141,6 +145,7 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "traffic", PgTy: "sgroups.traffic", Notnull: true, Pk: true},
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
 			syncField{Name: "trace", PgTy: "bool", Notnull: true},
+			syncField{Name: "action", PgTy: "sgroups.rule_action", Notnull: true},
 		)
 	case *sgm.IECidrSgRule: //nolint:dupl
 		o.mutatorFn = "sgroups.sync_cidr_sg_rule"
@@ -154,6 +159,7 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "ports", PgTy: "sgroups.sg_rule_ports[]"},
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
 			syncField{Name: "trace", PgTy: "bool", Notnull: true},
+			syncField{Name: "action", PgTy: "sgroups.rule_action", Notnull: true},
 		)
 	case *sgm.IECidrSgIcmpRule: //nolint:dupl
 		o.mutatorFn = "sgroups.sync_cidr_sg_icmp_rule"
@@ -167,6 +173,7 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "traffic", PgTy: "sgroups.traffic", Notnull: true, Pk: true},
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
 			syncField{Name: "trace", PgTy: "bool", Notnull: true},
+			syncField{Name: "action", PgTy: "sgroups.rule_action", Notnull: true},
 		)
 	case *sgm.IESgSgRule: //nolint:dupl
 		o.mutatorFn = "sgroups.sync_ie_sg_sg_rule"
@@ -180,6 +187,7 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "ports", PgTy: "sgroups.sg_rule_ports[]"},
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
 			syncField{Name: "trace", PgTy: "bool", Notnull: true},
+			syncField{Name: "action", PgTy: "sgroups.rule_action", Notnull: true},
 		)
 	default:
 		panic("UB")
@@ -317,49 +325,49 @@ func (o *syncObj[T, tFlt]) AddData(ctx context.Context, data ...T) error { //nol
 			if err := x.FromModel(v); err != nil {
 				return err
 			}
-			raw = append(raw, []any{x.SgFrom, x.SgTo, x.Proto, x.Ports, x.Logs})
+			raw = append(raw, []any{x.SgFrom, x.SgTo, x.Proto, x.Ports, x.Logs, x.Action})
 		case sgm.FQDNRule:
 			var x SG2FQDNRule
 			if err := x.FromModel(v); err != nil {
 				return err
 			}
-			raw = append(raw, []any{x.SgFrom, x.FqndTo, x.Proto, x.Ports, x.Logs, x.NdpiProtocols})
+			raw = append(raw, []any{x.SgFrom, x.FqndTo, x.Proto, x.Ports, x.Logs, x.NdpiProtocols, x.Action})
 		case sgm.SgIcmpRule:
 			var x SgIcmpRule
 			if err := x.FromModel(v); err != nil {
 				return err
 			}
-			raw = append(raw, []any{x.IPv, x.Sg, x.Tytes, x.Logs, x.Trace})
+			raw = append(raw, []any{x.IPv, x.Sg, x.Tytes, x.Logs, x.Trace, x.Action})
 		case sgm.SgSgIcmpRule:
 			var x SgSgIcmpRule
 			if err := x.FromModel(v); err != nil {
 				return err
 			}
-			raw = append(raw, []any{x.IPv, x.SgFrom, x.SgTo, x.Tytes, x.Logs, x.Trace})
+			raw = append(raw, []any{x.IPv, x.SgFrom, x.SgTo, x.Tytes, x.Logs, x.Trace, x.Action})
 		case sgm.IESgSgIcmpRule:
 			var x IESgSgIcmpRule
 			if err := x.FromModel(v); err != nil {
 				return err
 			}
-			raw = append(raw, []any{x.IPv, x.Tytes, x.SgLocal, x.Sg, x.Traffic, x.Logs, x.Trace})
+			raw = append(raw, []any{x.IPv, x.Tytes, x.SgLocal, x.Sg, x.Traffic, x.Logs, x.Trace, x.Action})
 		case sgm.IECidrSgRule:
 			var x IECidrSgRule
 			if err := x.FromModel(v); err != nil {
 				return err
 			}
-			raw = append(raw, []any{x.Proto, x.CIDR, x.SG, x.Traffic, x.Ports, x.Logs, x.Trace})
+			raw = append(raw, []any{x.Proto, x.CIDR, x.SG, x.Traffic, x.Ports, x.Logs, x.Trace, x.Action})
 		case sgm.IECidrSgIcmpRule:
 			var x IECidrSgIcmpRule
 			if err := x.FromModel(v); err != nil {
 				return err
 			}
-			raw = append(raw, []any{x.IPv, x.Tytes, x.CIDR, x.SG, x.Traffic, x.Logs, x.Trace})
+			raw = append(raw, []any{x.IPv, x.Tytes, x.CIDR, x.SG, x.Traffic, x.Logs, x.Trace, x.Action})
 		case sgm.IESgSgRule:
 			var x IESgSgRule
 			if err := x.FromModel(v); err != nil {
 				return err
 			}
-			raw = append(raw, []any{x.Proto, x.SgLocal, x.Sg, x.Traffic, x.Ports, x.Logs, x.Trace})
+			raw = append(raw, []any{x.Proto, x.SgLocal, x.Sg, x.Traffic, x.Ports, x.Logs, x.Trace, x.Action})
 		default:
 			panic("UB")
 		}

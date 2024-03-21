@@ -84,8 +84,9 @@ cases:
                 s = "1000-2000"
               }
             ]
-            logs = true
-            trace = true
+            logs    = true
+            trace   = true
+            action  = "ACCEPT"
         }
       }
     }
@@ -104,7 +105,8 @@ cases:
         "Sg": "group2",
         "trace": true,
         "traffic": "Ingress",
-        "transport": "TCP"
+        "transport": "TCP",
+        "action": "ACCEPT"
       }
 - name: "add another rule with empty list for ports"
   tf-config: |
@@ -121,8 +123,9 @@ cases:
                 s = "1000-2000"
               }
             ]
-            logs = true
-            trace = true
+            logs    = true
+            trace   = true
+            action  = "ACCEPT"
         }
         "udp:sg-local(group3)sg(group4)egress" = {
           transport = "udp"
@@ -130,8 +133,9 @@ cases:
           sg = "group4"
           traffic = "egress"
           ports = []
-          logs = true
-          trace = true
+          logs    = true
+          trace   = true
+          action  = "DROP"
         }
       }
     }
@@ -150,7 +154,8 @@ cases:
         "Sg": "group2",
         "trace": true,
         "traffic": "Ingress",
-        "transport": "TCP"
+        "transport": "TCP",
+        "action": "ACCEPT"
       }
     - |
       {
@@ -160,5 +165,6 @@ cases:
         "Sg": "group4",
         "trace": true,
         "traffic": "Egress",
-        "transport": "UDP"
+        "transport": "UDP",
+        "action": "DROP"
       }

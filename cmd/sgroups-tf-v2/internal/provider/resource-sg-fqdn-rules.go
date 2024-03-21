@@ -44,6 +44,7 @@ type (
 		Ports     types.List   `tfsdk:"ports"`
 		Logs      types.Bool   `tfsdk:"logs"`
 		Protocols types.Set    `tfsdk:"protocols"`
+		Action    types.String `tfsdk:"action"`
 	}
 
 	sgFqdnRuleKey struct {
@@ -124,6 +125,11 @@ func (item sgFqdnRule) Attributes() map[string]schema.Attribute { //nolint:dupl
 			Optional:    true,
 			ElementType: types.StringType,
 		},
+		"action": schema.StringAttribute{
+			Description: "Rule action on packets in chain",
+			Required:    true,
+			Validators:  []validator.String{actionValidator},
+		},
 	}
 }
 
@@ -146,6 +152,7 @@ func (item sgFqdnRule) IsDiffer(ctx context.Context, other sgFqdnRule) bool {
 			IsEq(model.FQDN(other.Fqdn.ValueString())) &&
 		item.Logs.Equal(other.Logs) &&
 		item.Protocols.Equal(other.Protocols) &&
+		item.Action.Equal(other.Action) &&
 		model.AreRulePortsEq(itemModelPorts, otherModelPorts))
 }
 
@@ -187,6 +194,7 @@ func readFqdnRules(ctx context.Context, state NamedResources[sgFqdnRule], client
 			Logs:      types.BoolValue(fqdnRule.GetLogs()),
 			Ports:     portsList,
 			Protocols: protocolsList,
+			Action:    types.StringValue(fqdnRule.GetAction().String()),
 		}
 		k := it.Key().String()
 		if _, ok := state.Items[k]; ok {

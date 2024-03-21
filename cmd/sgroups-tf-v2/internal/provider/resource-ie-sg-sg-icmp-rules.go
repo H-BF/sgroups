@@ -46,6 +46,7 @@ type (
 		IpVersion types.String `tfsdk:"ip_v"`
 		Logs      types.Bool   `tfsdk:"logs"`
 		Trace     types.Bool   `tfsdk:"trace"`
+		Action    types.String `tfsdk:"action"`
 	}
 
 	ieSgSgIcmpRuleKey struct {
@@ -123,6 +124,11 @@ func (item ieSgSgIcmpRule) Attributes() map[string]schema.Attribute {
 			Computed:    true,
 			Default:     booldefault.StaticBool(false),
 		},
+		"action": schema.StringAttribute{
+			Description: "Rule action on packets in chain",
+			Required:    true,
+			Validators:  []validator.String{actionValidator},
+		},
 	}
 }
 
@@ -142,14 +148,15 @@ func (item ieSgSgIcmpRule) icmp2Proto(ctx context.Context, diags *diag.Diagnosti
 	return ret
 }
 
-func (item ieSgSgIcmpRule) IsDiffer(_ context.Context, other ieSgSgIcmpRule) bool {
+func (item ieSgSgIcmpRule) IsDiffer(_ context.Context, other ieSgSgIcmpRule) bool { //nolint:dupl
 	return !(item.Traffic.Equal(other.Traffic) &&
 		item.SgLocal.Equal(other.SgLocal) &&
 		item.Sg.Equal(other.Sg) &&
 		item.Type.Equal(other.Type) &&
 		item.IpVersion.Equal(other.IpVersion) &&
 		item.Logs.Equal(other.Logs) &&
-		item.Trace.Equal(other.Trace))
+		item.Trace.Equal(other.Trace) &&
+		item.Action.Equal(other.Action))
 }
 
 func readIESgSgIcmpRules(
@@ -191,6 +198,7 @@ func readIESgSgIcmpRules(
 			it.Type = typeSet
 			it.Logs = types.BoolValue(icmpRule.GetLogs())
 			it.Trace = types.BoolValue(icmpRule.GetTrace())
+			it.Action = types.StringValue(icmpRule.GetAction().String())
 			newState.Items[k] = it
 		}
 	}

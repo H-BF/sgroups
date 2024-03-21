@@ -17,9 +17,10 @@ import (
 )
 
 type IcmpParameters struct {
-	Logs  types.Bool `tfsdk:"logs"`
-	Trace types.Bool `tfsdk:"trace"`
-	Type  types.Set  `tfsdk:"type"`
+	Logs   types.Bool   `tfsdk:"logs"`
+	Trace  types.Bool   `tfsdk:"trace"`
+	Type   types.Set    `tfsdk:"type"`
+	Action types.String `tfsdk:"action"`
 }
 
 func (params IcmpParameters) Attributes() map[string]schema.Attribute {
@@ -44,6 +45,11 @@ func (params IcmpParameters) Attributes() map[string]schema.Attribute {
 				setvalidator.ValueInt64sAre(int64validator.Between(0, math.MaxUint8)),
 			},
 		},
+		"action": schema.StringAttribute{
+			Description: "Rule action on packets in chain",
+			Required:    true,
+			Validators:  []validator.String{actionValidator},
+		},
 	}
 }
 
@@ -54,6 +60,7 @@ func (params IcmpParameters) AttrTypes() map[string]attr.Type {
 		"type": types.SetType{
 			ElemType: types.Int64Type,
 		},
+		"action": types.StringType,
 	}
 }
 
@@ -67,9 +74,10 @@ func (params IcmpParameters) fromProto(ctx context.Context, proto *protos.SgIcmp
 		return params.nullObj(), d
 	}
 	value := types.ObjectValueMust(params.AttrTypes(), map[string]attr.Value{
-		"logs":  types.BoolValue(proto.GetLogs()),
-		"trace": types.BoolValue(proto.GetTrace()),
-		"type":  typeSet,
+		"logs":   types.BoolValue(proto.GetLogs()),
+		"trace":  types.BoolValue(proto.GetTrace()),
+		"type":   typeSet,
+		"action": types.StringValue(proto.GetAction().String()),
 	})
 	return value, nil
 }

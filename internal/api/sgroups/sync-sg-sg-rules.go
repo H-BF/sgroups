@@ -38,6 +38,10 @@ func (r sgSgRule) from(src *sg.SgSgRule) error {
 	}
 	r.Logs = src.GetLogs()
 	r.Trace = src.GetTrace()
+	e = ruleAction{&r.Action}.from(src.GetAction())
+	if e != nil {
+		return e
+	}
 	e = ((*rulePorts)(&r.Ports)).from(src.GetPorts())
 	return e
 }

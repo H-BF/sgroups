@@ -118,11 +118,15 @@ type (
 		UpdatedAt time.Time
 	}
 
+	// RuleAction verdict action for rules
+	RuleAction uint8
+
 	ruleT[T any] struct {
-		ID    T
-		Ports []SGRulePorts
-		Logs  bool
-		Trace bool
+		ID     T
+		Ports  []SGRulePorts
+		Logs   bool
+		Trace  bool
+		Action RuleAction
 	}
 
 	ruleID[T any] interface {
@@ -134,10 +138,11 @@ type (
 
 	// SgIcmpRule SG:ICMP default rule
 	SgIcmpRule struct {
-		Sg    string
-		Icmp  ICMP
-		Logs  bool
-		Trace bool
+		Sg     string
+		Icmp   ICMP
+		Logs   bool
+		Trace  bool
+		Action RuleAction
 	}
 
 	// SgIcmpRuleID SG:ICMP rule ID
@@ -153,6 +158,7 @@ type (
 		Icmp   ICMP
 		Logs   bool
 		Trace  bool
+		Action RuleAction
 	}
 
 	// SgSgIcmpRuleID SG-SG:ICMP rule ID
@@ -170,6 +176,7 @@ type (
 		Icmp    ICMP
 		Logs    bool
 		Trace   bool
+		Action  RuleAction
 	}
 
 	// IESgSgIcmpRuleID <IN|E>GRESS:SG-SG:ICMP rule ID
@@ -188,6 +195,7 @@ type (
 		Icmp    ICMP
 		Logs    bool
 		Trace   bool
+		Action  RuleAction
 	}
 
 	// IECidrSgIcmpRuleID <IN|E>GRESS:CIDR-SG:ICMP rule ID
@@ -246,6 +254,17 @@ const (
 	ACCEPT
 )
 
+const (
+	// RA_UNDEF -
+	RA_UNDEF RuleAction = iota
+
+	// RA_DROP setups rule to drop packet
+	RA_DROP
+
+	// RA_ACCEPT setups rule to accept packet
+	RA_ACCEPT
+)
+
 // NewPortRarnges is a port rarnges constructor
 func NewPortRarnges() PortRanges {
 	return ranges.NewMultiRange(PortRangeFactory)
@@ -287,6 +306,25 @@ func (a *ChainDefaultAction) FromString(s string) error {
 		*a = DROP
 	case "accept":
 		*a = ACCEPT
+	default:
+		return errors.WithMessage(fmt.Errorf("unknown value '%s'", s), api)
+	}
+	return nil
+}
+
+// String impl Stringer
+func (a RuleAction) String() string {
+	return [...]string{"undef", "drop", "accept"}[a]
+}
+
+// FromString init from string
+func (a *RuleAction) FromString(s string) error {
+	const api = "RuleAction/FromString"
+	switch strings.ToLower(s) {
+	case "drop":
+		*a = RA_DROP
+	case "accept":
+		*a = RA_ACCEPT
 	default:
 		return errors.WithMessage(fmt.Errorf("unknown value '%s'", s), api)
 	}
@@ -393,7 +431,8 @@ func (rule ruleT[T]) IsEq(other ruleT[T]) bool {
 	return any(rule.ID).(ruleID[T]).IsEq(other.ID) &&
 		AreRulePortsEq(rule.Ports, other.Ports) &&
 		rule.Logs == other.Logs &&
-		rule.Trace == other.Trace
+		rule.Trace == other.Trace &&
+		rule.Action == other.Action
 }
 
 // IsEq -
@@ -437,6 +476,7 @@ func (o SgIcmpRuleID) String() string {
 func (o SgIcmpRule) IsEq(other SgIcmpRule) bool {
 	return o.Logs == other.Logs &&
 		o.Trace == other.Trace &&
+		o.Action == other.Action &&
 		o.Sg == other.Sg &&
 		o.Icmp.IsEq(other.Icmp)
 }
@@ -453,6 +493,7 @@ func (o SgIcmpRule) ID() SgIcmpRuleID {
 func (o SgSgIcmpRule) IsEq(other SgSgIcmpRule) bool {
 	return o.Logs == other.Logs &&
 		o.Trace == other.Trace &&
+		o.Action == other.Action &&
 		o.SgFrom == other.SgFrom &&
 		o.Icmp.IsEq(other.Icmp)
 }
@@ -483,7 +524,8 @@ func (o IESgSgIcmpRule) IsEq(other IESgSgIcmpRule) bool {
 		o.Sg == other.Sg &&
 		o.Icmp.IsEq(other.Icmp) &&
 		o.Logs == other.Logs &&
-		o.Trace == other.Trace
+		o.Trace == other.Trace &&
+		o.Action == other.Action
 }
 
 // ID -
@@ -516,7 +558,8 @@ func (o IECidrSgIcmpRule) IsEq(other IECidrSgIcmpRule) bool {
 		cidrIsEq &&
 		o.SG == other.SG &&
 		o.Logs == other.Logs &&
-		o.Trace == other.Trace
+		o.Trace == other.Trace &&
+		o.Action == other.Action
 }
 
 // ID -

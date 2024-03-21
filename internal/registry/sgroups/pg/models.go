@@ -42,6 +42,9 @@ type (
 	// ChainDefaultAction -
 	ChainDefaultAction string
 
+	// RuleAction -
+	RuleAction string
+
 	// Network -
 	Network struct {
 		Name    string    `db:"name"`
@@ -67,6 +70,7 @@ type (
 		Proto  Proto            `db:"proto"`
 		Ports  SgRulePortsArray `db:"ports"`
 		Logs   bool             `db:"logs"`
+		Action RuleAction       `db:"action"`
 	}
 
 	// SG2FQDNRule -
@@ -77,6 +81,7 @@ type (
 		Ports         SgRulePortsArray `db:"ports"`
 		Logs          bool             `db:"logs"`
 		NdpiProtocols []string         `db:"ndpi_protocols"`
+		Action        RuleAction       `db:"action"`
 	}
 
 	// SyncStatus -
@@ -99,28 +104,31 @@ type (
 	// SgIcmpRule -
 	SgIcmpRule struct {
 		ICMP
-		Sg    string `db:"sg"`
-		Logs  bool   `db:"logs"`
-		Trace bool   `db:"trace"`
+		Sg     string     `db:"sg"`
+		Logs   bool       `db:"logs"`
+		Trace  bool       `db:"trace"`
+		Action RuleAction `db:"action"`
 	}
 
 	// SgSgIcmpRule -
 	SgSgIcmpRule struct {
 		ICMP
-		SgFrom string `db:"sg_from"`
-		SgTo   string `db:"sg_to"`
-		Logs   bool   `db:"logs"`
-		Trace  bool   `db:"trace"`
+		SgFrom string     `db:"sg_from"`
+		SgTo   string     `db:"sg_to"`
+		Logs   bool       `db:"logs"`
+		Trace  bool       `db:"trace"`
+		Action RuleAction `db:"action"`
 	}
 
 	// IESgSgIcmpRule -
 	IESgSgIcmpRule struct {
 		ICMP
-		SgLocal string  `db:"sg_local"`
-		Sg      string  `db:"sg"`
-		Traffic Traffic `db:"traffic"`
-		Logs    bool    `db:"logs"`
-		Trace   bool    `db:"trace"`
+		SgLocal string     `db:"sg_local"`
+		Sg      string     `db:"sg"`
+		Traffic Traffic    `db:"traffic"`
+		Logs    bool       `db:"logs"`
+		Trace   bool       `db:"trace"`
+		Action  RuleAction `db:"action"`
 	}
 
 	// Traffic -
@@ -135,16 +143,18 @@ type (
 		Ports   SgRulePortsArray `db:"ports"`
 		Logs    bool             `db:"logs"`
 		Trace   bool             `db:"trace"`
+		Action  RuleAction       `db:"action"`
 	}
 
 	// IECidrSgIcmpRule -
 	IECidrSgIcmpRule struct {
 		ICMP
-		Traffic Traffic   `db:"traffic"`
-		CIDR    net.IPNet `db:"cidr"`
-		SG      string    `db:"sg"`
-		Logs    bool      `db:"logs"`
-		Trace   bool      `db:"trace"`
+		Traffic Traffic    `db:"traffic"`
+		CIDR    net.IPNet  `db:"cidr"`
+		SG      string     `db:"sg"`
+		Logs    bool       `db:"logs"`
+		Trace   bool       `db:"trace"`
+		Action  RuleAction `db:"action"`
 	}
 
 	// IESgSgRule -
@@ -156,6 +166,7 @@ type (
 		Ports   SgRulePortsArray `db:"ports"`
 		Logs    bool             `db:"logs"`
 		Trace   bool             `db:"trace"`
+		Action  RuleAction       `db:"action"`
 	}
 )
 
@@ -291,6 +302,15 @@ func RegisterSGroupsTypesOntoPGX(ctx context.Context, c *pgx.Conn) (err error) {
 	pgTypeMap.RegisterType(pgType)
 	{
 		var x Traffic
+		pgTypeMap.RegisterDefaultPgType(x, pgType.Name)
+		pgTypeMap.RegisterDefaultPgType(&x, pgType.Name)
+	}
+	if pgType, err = c.LoadType(ctx, "sgroups.rule_action"); err != nil {
+		return err
+	}
+	pgTypeMap.RegisterType(pgType)
+	{
+		var x RuleAction
 		pgTypeMap.RegisterDefaultPgType(x, pgType.Name)
 		pgTypeMap.RegisterDefaultPgType(&x, pgType.Name)
 	}

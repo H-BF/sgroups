@@ -74,6 +74,12 @@ func (a ChainDefaultAction) Validate() error {
 	return oz.Validate(x, oz.In(vals[:]...).Error("must be in ['DROP', 'ACCEPT']"))
 }
 
+// Validate RuleAction validator
+func (a RuleAction) Validate() error {
+	vals, x := [...]any{int(RA_DROP), int(RA_ACCEPT)}, int(a)
+	return oz.Validate(x, oz.In(vals[:]...).Error("must be in ['DROP', 'ACCEPT']"))
+}
+
 // Validate net transport validator
 func (nt NetworkTransport) Validate() error {
 	vals, x := [...]any{int(TCP), int(UDP)}, int(nt)
@@ -162,6 +168,7 @@ func (rule ruleT[T]) Validate() error {
 			}),
 			//oz.Skip,
 		),
+		oz.Field(&rule.Action),
 	)
 }
 
@@ -190,6 +197,7 @@ func (o SgIcmpRule) Validate() error {
 		oz.Field(&o.Sg, oz.Required.Error(sgNameRequired),
 			oz.Match(reCName)),
 		oz.Field(&o.Icmp),
+		oz.Field(&o.Action),
 	)
 }
 
@@ -201,6 +209,7 @@ func (o SgSgIcmpRule) Validate() error {
 		oz.Field(&o.SgTo, oz.Required.Error(sgNameRequired),
 			oz.Match(reCName)),
 		oz.Field(&o.Icmp),
+		oz.Field(&o.Action),
 	)
 }
 
@@ -211,6 +220,7 @@ func (o IESgSgIcmpRule) Validate() error {
 		oz.Field(&o.SgLocal, oz.Required.Error(sgNameRequired), oz.Match(reCName)),
 		oz.Field(&o.Sg, oz.Required.Error(sgNameRequired), oz.Match(reCName)),
 		oz.Field(&o.Icmp),
+		oz.Field(&o.Action),
 	)
 }
 
@@ -253,6 +263,7 @@ func (o IECidrSgIcmpRule) Validate() error {
 			return e
 		})),
 		oz.Field(&o.SG, oz.Required.Error(sgNameRequired), oz.Match(reCName)),
+		oz.Field(&o.Action),
 	)
 }
 

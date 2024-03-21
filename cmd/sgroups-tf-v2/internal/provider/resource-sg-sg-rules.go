@@ -42,6 +42,7 @@ type (
 		Ports     types.List   `tfsdk:"ports"`
 		Logs      types.Bool   `tfsdk:"logs"`
 		// TODO: add Trace param
+		Action types.String `tfsdk:"action"`
 	}
 
 	sgSgRuleKey struct {
@@ -82,6 +83,7 @@ func (item sgSgRule) IsDiffer(ctx context.Context, other sgSgRule) bool { //noli
 		item.SgFrom.Equal(other.SgFrom) &&
 		item.SgTo.Equal(other.SgTo) &&
 		item.Logs.Equal(other.Logs) &&
+		item.Action.Equal(other.Action) &&
 		model.AreRulePortsEq(itemModelPorts, otherModelPorts))
 }
 
@@ -118,6 +120,11 @@ func (item sgSgRule) Attributes() map[string]schema.Attribute { //nolint:dupl
 				Attributes: AccessPorts{}.Attributes(),
 			},
 			PlanModifiers: []planmodifier.List{ListAccessPortsModifier()},
+		},
+		"action": schema.StringAttribute{
+			Description: "Rule action on packets in chain",
+			Required:    true,
+			Validators:  []validator.String{actionValidator},
 		},
 	}
 }
@@ -158,6 +165,7 @@ func readSgSgRules(ctx context.Context, state NamedResources[sgSgRule], client *
 			SgTo:      types.StringValue(sgRule.GetSgTo()),
 			Logs:      types.BoolValue(sgRule.GetLogs()),
 			Ports:     portsList,
+			Action:    types.StringValue(sgRule.GetAction().String()),
 		}
 		k := it.Key().String()
 		if _, ok := state.Items[k]; ok {

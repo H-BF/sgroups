@@ -70,6 +70,17 @@ func (rb ruleBuilder) drop() ruleBuilder {
 	return rb
 }
 
+func (rb ruleBuilder) ruleAction2Verdict(a model.RuleAction) ruleBuilder {
+	var f func() ruleBuilder
+	switch a {
+	case model.RA_ACCEPT:
+		f = rb.accept
+	case model.RA_DROP:
+		f = rb.drop
+	}
+	return f()
+}
+
 func (rb ruleBuilder) jump(chain string) ruleBuilder { //nolint:unused
 	rb.exprs = append(rb.exprs,
 		&Verdict{Kind: VerdictJump, Chain: chain},

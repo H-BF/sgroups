@@ -43,6 +43,7 @@ type (
 		Ports     types.List   `tfsdk:"ports"`
 		Logs      types.Bool   `tfsdk:"logs"`
 		Trace     types.Bool   `tfsdk:"trace"`
+		Action    types.String `tfsdk:"action"`
 	}
 
 	ieSgSgRuleKey struct {
@@ -69,7 +70,7 @@ func (item ieSgSgRule) Key() *ieSgSgRuleKey {
 	}
 }
 
-func (i ieSgSgRule) Attributes() map[string]schema.Attribute {
+func (item ieSgSgRule) Attributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"transport": schema.StringAttribute{
 			Description: "IP-L4 proto <tcp|udp>",
@@ -113,6 +114,11 @@ func (i ieSgSgRule) Attributes() map[string]schema.Attribute {
 			Computed:    true,
 			Default:     booldefault.StaticBool(false),
 		},
+		"action": schema.StringAttribute{
+			Description: "Rule action on packets in chain",
+			Required:    true,
+			Validators:  []validator.String{actionValidator},
+		},
 	}
 }
 
@@ -134,6 +140,7 @@ func (item ieSgSgRule) IsDiffer(ctx context.Context, other ieSgSgRule) bool { //
 		item.Sg.Equal(other.Sg) &&
 		item.Logs.Equal(other.Logs) &&
 		item.Trace.Equal(other.Trace) &&
+		item.Action.Equal(other.Action) &&
 		model.AreRulePortsEq(itemModelPorts, otherModelPorts))
 }
 
@@ -179,6 +186,7 @@ func readIESgSgRules(ctx context.Context, state NamedResources[ieSgSgRule], clie
 			it.Ports = portsList
 			it.Logs = types.BoolValue(rule.GetLogs())
 			it.Trace = types.BoolValue(rule.GetTrace())
+			it.Action = types.StringValue(rule.GetAction().String())
 			newState.Items[k] = it
 		}
 	}

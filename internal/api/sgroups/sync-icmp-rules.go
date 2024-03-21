@@ -51,6 +51,10 @@ func (r proto2SgIcmpRule) from(src *sg.SgIcmpRule) error {
 		}
 		r.Icmp.Types.Put(uint8(n))
 	}
+	e := ruleAction{&r.Action}.from(src.GetAction())
+	if e != nil {
+		return e
+	}
 	return nil
 }
 
@@ -75,6 +79,10 @@ func (r proto2SgSgIcmpRule) from(src *sg.SgSgIcmpRule) error {
 			return errors.Errorf("ICMP type(s) must be in [0-255] but we got (%v)", n)
 		}
 		r.Icmp.Types.Put(uint8(n))
+	}
+	e := ruleAction{&r.Action}.from(src.GetAction())
+	if e != nil {
+		return e
 	}
 	return nil
 }
@@ -106,6 +114,10 @@ func (r proto2IESgSgIcmpRule) from(src *sg.IESgSgIcmpRule) error {
 			return errors.Errorf("ICMP type(s) must be in [0-255] but we got (%v)", n)
 		}
 		r.Icmp.Types.Put(uint8(n))
+	}
+	e = ruleAction{&r.Action}.from(src.GetAction())
+	if e != nil {
+		return e
 	}
 	return nil
 }
@@ -145,6 +157,10 @@ func (r proto2CidrSgIcmpRule) from(src *sg.CidrSgIcmpRule) error {
 			return errors.Errorf("ICMP type(s) must be in [0-255] but we got (%v)", n)
 		}
 		r.Icmp.Types.Put(uint8(n))
+	}
+	e = ruleAction{&r.Action}.from(src.GetAction())
+	if e != nil {
+		return e
 	}
 	return nil
 }

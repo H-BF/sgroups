@@ -32,6 +32,10 @@ func (r sgFqdnRule) from(src *sg.FqdnRule) error {
 		from(src)
 	if err == nil {
 		r.Logs = src.GetLogs()
+		err = ruleAction{RuleAction: &r.Action}.from(src.GetAction())
+		if err != nil {
+			return err
+		}
 		var p rulePorts
 		if err = p.from(src.GetPorts()); err == nil {
 			r.Ports = p

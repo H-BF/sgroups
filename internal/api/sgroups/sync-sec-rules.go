@@ -66,6 +66,10 @@ func (r sgRule) from(src *sg.Rule) error {
 	if err == nil {
 		r.Logs = src.GetLogs()
 		var p rulePorts
+		err = ruleAction{&r.Action}.from(src.GetAction())
+		if err != nil {
+			return err
+		}
 		if err = p.from(src.GetPorts()); err == nil {
 			r.Ports = p
 		}

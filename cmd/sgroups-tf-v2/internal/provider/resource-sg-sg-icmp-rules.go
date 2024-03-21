@@ -44,6 +44,7 @@ type (
 		IpVersion types.String `tfsdk:"ip_v"`
 		Logs      types.Bool   `tfsdk:"logs"`
 		Trace     types.Bool   `tfsdk:"trace"`
+		Action    types.String `tfsdk:"action"`
 	}
 
 	sgSgIcmpRuleKey struct {
@@ -76,7 +77,8 @@ func (item sgSgIcmpRule) IsDiffer(ctx context.Context, other sgSgIcmpRule) bool 
 		item.Type.Equal(other.Type) &&
 		item.IpVersion.Equal(other.IpVersion) &&
 		item.Logs.Equal(other.Logs) &&
-		item.Trace.Equal(other.Trace))
+		item.Trace.Equal(other.Trace) &&
+		item.Action.Equal(other.Action))
 }
 
 func (item sgSgIcmpRule) Attributes() map[string]schema.Attribute {
@@ -117,6 +119,11 @@ func (item sgSgIcmpRule) Attributes() map[string]schema.Attribute {
 			Optional:    true,
 			Computed:    true,
 			Default:     booldefault.StaticBool(false),
+		},
+		"action": schema.StringAttribute{
+			Description: "Rule action on packets in chain",
+			Required:    true,
+			Validators:  []validator.String{actionValidator},
 		},
 	}
 }
@@ -172,6 +179,7 @@ func readSgSgIcmpRules(
 			IpVersion: types.StringValue(icmpRule.ICMP.GetIPv().String()),
 			Logs:      types.BoolValue(icmpRule.GetLogs()),
 			Trace:     types.BoolValue(icmpRule.GetTrace()),
+			Action:    types.StringValue(icmpRule.Action.String()),
 		}
 		k := it.Key().String()
 		if _, ok := state.Items[k]; ok {

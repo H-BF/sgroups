@@ -69,122 +69,129 @@ initial-backend:
         "trace": true
       }
 cases:
-  - name: "add new IE Sg2Sg rules"
-    tf-config: |
-      resource "sgroups_ie_rules" "rules-set" {
-        items = {
-          "tcp:sg-local(group1)sg(group2)ingress" = {
-            transport = "tcp"
-            sg_local = "group1"
-            sg = "group2"
-            traffic = "ingress"
-            ports = [
-              {
-                d = "80,443"
-                s = "1000-2000"
-              }
-            ]
-            logs = true
-            trace = true
-          }
-          "udp:sg-local(group3)sg(group4)egress" = {
-            transport = "udp"
-            sg_local = "group3"
-            sg = "group4"
-            traffic = "egress"
-            ports = [
-              {
-                d = "15000-16000"
-                s = "15000-16000"
-              }
-            ]
-            logs = true
-            trace = true
-          }
+- name: "add new IE Sg2Sg rules"
+  tf-config: |
+    resource "sgroups_ie_rules" "rules-set" {
+      items = {
+        "tcp:sg-local(group1)sg(group2)ingress" = {
+          transport = "tcp"
+          sg_local = "group1"
+          sg = "group2"
+          traffic = "ingress"
+          ports = [
+            {
+              d = "80,443"
+              s = "1000-2000"
+            }
+          ]
+          logs    = true
+          trace   = true
+          action  = "ACCEPT"
+        }
+        "udp:sg-local(group3)sg(group4)egress" = {
+          transport = "udp"
+          sg_local = "group3"
+          sg = "group4"
+          traffic = "egress"
+          ports = [
+            {
+              d = "15000-16000"
+              s = "15000-16000"
+            }
+          ]
+          logs    = true
+          trace   = true
+          action  = "DROP"
         }
       }
-    expected-backend:
-      ie-sg-sg-rules:
-        - |
+    }
+  expected-backend:
+    ie-sg-sg-rules:
+    - |
+      {
+        "logs": true,
+        "ports": [
           {
-            "logs": true,
-            "ports": [
-              {
-                "d": "80,443",
-                "s": "1000-2000"
-              }
-            ],
-            "SgLocal": "group1",
-            "Sg": "group2",
-            "trace": true,
-            "traffic": "Ingress",
-            "transport": "TCP"
+            "d": "80,443",
+            "s": "1000-2000"
           }
-        - |
+        ],
+        "SgLocal": "group1",
+        "Sg": "group2",
+        "trace": true,
+        "traffic": "Ingress",
+        "transport": "TCP",
+        "action": "ACCEPT"
+      }
+    - |
+      {
+        "logs": true,
+        "ports": [
           {
-            "logs": true,
-            "ports": [
-              {
-                "d": "15000-16000",
-                "s": "15000-16000"
-              }
-            ],
-            "SgLocal": "group3",
-            "Sg": "group4",
-            "trace": true,
-            "traffic": "Egress",
-            "transport": "UDP"
+            "d": "15000-16000",
+            "s": "15000-16000"
           }
-  - name: "change-first-and-delete-second"
-    tf-config: |
-      resource "sgroups_ie_rules" "rules-set" {
-        items = {
-          "tcp:sg-local(group1)sg(group2)ingress" = {
-            transport = "tcp"
-            sg_local = "group1"
-            sg = "group2"
-            traffic = "ingress"
-            ports = [
-              {
-                d = "22,80,443"
-                s = "3000-4000"
-              }
-            ]
-            logs = false
-          }
+        ],
+        "SgLocal": "group3",
+        "Sg": "group4",
+        "trace": true,
+        "traffic": "Egress",
+        "transport": "UDP",
+        "action": "DROP"
+      }
+- name: "change-first-and-delete-second"
+  tf-config: |
+    resource "sgroups_ie_rules" "rules-set" {
+      items = {
+        "tcp:sg-local(group1)sg(group2)ingress" = {
+          transport = "tcp"
+          sg_local = "group1"
+          sg = "group2"
+          traffic = "ingress"
+          ports = [
+            {
+              d = "22,80,443"
+              s = "3000-4000"
+            }
+          ]
+          logs    = false
+          action  = "DROP"
         }
       }
-    expected-backend:
-      ie-sg-sg-rules:
-        - |
+    }
+  expected-backend:
+    ie-sg-sg-rules:
+    - |
+      {
+        "logs": false,
+        "ports": [
           {
-            "logs": false,
-            "ports": [
-              {
-                "d": "22,80,443",
-                "s": "3000-4000"
-              }
-            ],
-            "SgLocal": "group1",
-            "Sg": "group2",
-            "trace": false,
-            "traffic": "Ingress",
-            "transport": "TCP"
+            "d": "22,80,443",
+            "s": "3000-4000"
           }
-    not-expected-backend:
-      ie-sg-sg-rules:
-        - |
+        ],
+        "SgLocal": "group1",
+        "Sg": "group2",
+        "trace": false,
+        "traffic": "Ingress",
+        "transport": "TCP",
+        "action": "DROP"
+      }
+  not-expected-backend:
+    ie-sg-sg-rules:
+    - |
+      {
+        "logs": true,
+        "ports": [
           {
-            "logs": true,
-            "ports": [
-              {
-                "d": "15000-16000",
-                "s": "15000-16000"
-              }
-            ],
-            "SgLocal": "group3",
-            "Sg": "group4",
-            "trace": true,
-            "traffic": "Egress",
-            "transport": "UDP"
+            "d": "15000-16000",
+            "s": "15000-16000"
           }
+        ],
+        "SgLocal": "group3",
+        "Sg": "group4",
+        "trace": true,
+        "traffic": "Egress",
+        "transport": "UDP",
+        "action": "DROP"
+      }

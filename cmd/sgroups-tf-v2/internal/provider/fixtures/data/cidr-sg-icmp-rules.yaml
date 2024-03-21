@@ -42,8 +42,9 @@ cases:
           cidr    = "10.0.0.0/24"
           ip_v    = "IPv4"
           type    = [0, 2, 255]
-          logs  = true
-          trace = true
+          logs    = true
+          trace   = true
+          action  = "ACCEPT"
         }
     
         "icmp6:cidr(2001:db8::/64)sg(group2)egress" = {
@@ -52,6 +53,7 @@ cases:
           cidr    = "2001:db8::/64"
           ip_v    = "IPv6"
           type    = [10, 30, 54]
+          action  = "DROP"
         }
       }
     }
@@ -69,7 +71,8 @@ cases:
         "SG": "group1",
         "logs": true,
         "trace": true,
-        "traffic": "Ingress"
+        "traffic": "Ingress",
+        "action": "ACCEPT"
       }
     - |
       {
@@ -83,7 +86,8 @@ cases:
         "SG": "group2",
         "logs": false,
         "trace": false,
-        "traffic": "Egress"
+        "traffic": "Egress",
+        "action": "DROP"
       }
 - name: "change first and delete second"
   tf-config: |
@@ -95,8 +99,9 @@ cases:
           cidr    = "10.0.0.0/24"
           ip_v    = "IPv4"
           type    = [1,2,3]
-          logs  = false
-          trace = false
+          logs    = false
+          trace   = false
+          action  = "DROP"
         }
       }
     }
@@ -114,7 +119,8 @@ cases:
         "SG": "group1",
         "logs": false,
         "trace": false,
-        "traffic": "Ingress"
+        "traffic": "Ingress",
+        "action": "DROP"
       }
   not-expected-backend:
     cidr-sg-icmp-rules:
@@ -130,5 +136,6 @@ cases:
         "SG": "group2",
         "logs": false,
         "trace": false,
-        "traffic": "Egress"
+        "traffic": "Egress",
+        "action": "DROP"
       }
