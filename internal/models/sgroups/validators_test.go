@@ -296,7 +296,7 @@ func Test_Validate_IECidrSgIcmpRule(t *testing.T) {
 		c := cases[i]
 		_, cidr, err := net.ParseCIDR(c.cidr)
 		require.NoError(t, err)
-		rule := IECidrSgIcmpRule{INGRESS, *cidr, "sg1", ICMP{IPv: uint8(c.ipv)}, false, false, RA_DROP}
+		rule := IECidrSgIcmpRule{INGRESS, *cidr, "sg1", ICMP{IPv: uint8(c.ipv)}, false, false, RA_DROP, RulePriority{}}
 		e := rule.Validate()
 		if !c.fail {
 			require.NoErrorf(t, e, "test case #%v failed", i)

@@ -2,6 +2,10 @@ package cases
 
 import (
 	"net"
+	"reflect"
+
+	"github.com/H-BF/sgroups/internal/dict"
+	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
 	"github.com/ahmetb/go-linq/v3"
 )
@@ -33,4 +37,51 @@ func SeparateNetworks(nws []Network, scopeIPs ...net.IP) (netIPv4, netIPv6 []net
 			}
 		})
 	return netIPv4, netIPv6
+}
+
+type ruleTypeKind interface {
+	model.SGRule | *model.SGRule |
+		model.FQDNRule | *model.FQDNRule |
+		model.SgSgIcmpRule | *model.SgSgIcmpRule |
+		model.IECidrSgRule | *model.IECidrSgRule |
+		model.IESgSgRule | *model.IESgSgRule |
+		model.IESgSgIcmpRule | *model.IESgSgIcmpRule |
+		model.IECidrSgIcmpRule | *model.IECidrSgIcmpRule
+}
+
+// RuleBasePriority -
+func RuleBasePriority[ruleT ruleTypeKind](_ ruleT) int16 {
+	v := ruleBasePriorities.At(
+		reflect.TypeOf((*ruleT)(nil)).Elem(),
+	)
+	return *v
+}
+
+func regRuleBasePriority[ruleT ruleTypeKind](basePri int16) {
+	ruleBasePriorities.Put(reflect.TypeOf((*ruleT)(nil)).Elem(), &basePri)
+}
+
+var ruleBasePriorities dict.HDict[reflect.Type, *int16]
+
+func init() {
+	regRuleBasePriority[model.SgSgIcmpRule](-300)
+	regRuleBasePriority[*model.SgSgIcmpRule](-300)
+
+	regRuleBasePriority[model.SGRule](-200)
+	regRuleBasePriority[*model.SGRule](-200)
+
+	regRuleBasePriority[model.IESgSgIcmpRule](-100)
+	regRuleBasePriority[*model.IESgSgIcmpRule](-100)
+
+	regRuleBasePriority[model.IESgSgRule](0)
+	regRuleBasePriority[*model.IESgSgRule](0)
+
+	regRuleBasePriority[model.FQDNRule](100)
+	regRuleBasePriority[*model.FQDNRule](100)
+
+	regRuleBasePriority[model.IECidrSgIcmpRule](200)
+	regRuleBasePriority[*model.IECidrSgIcmpRule](200)
+
+	regRuleBasePriority[model.IECidrSgRule](300)
+	regRuleBasePriority[*model.IECidrSgRule](300)
 }

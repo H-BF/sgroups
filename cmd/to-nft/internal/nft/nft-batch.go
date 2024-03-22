@@ -41,12 +41,17 @@ const (
 type (
 	direction bool
 
+	jobf = func(tx *Tx) error
+
 	jobItem struct {
 		name string
 		jobf
 	}
 
-	jobf = func(tx *Tx) error
+	jobGroup struct {
+		di.RBDict[int16, []jobItem]
+		bt *batch
+	}
 
 	accports struct {
 		sp [][2]model.PortNumber
@@ -175,6 +180,23 @@ func (bt *batch) addJob(n string, job jobf) {
 		bt.jobs = list.New()
 	}
 	bt.jobs.PushBack(jobItem{name: n, jobf: job})
+}
+
+func (bt *batch) withGroup(fg func(g *jobGroup)) {
+	g := jobGroup{bt: bt}
+	fg(&g)
+	g.Iterate(func(_ int16, items []jobItem) bool {
+		for _, f := range items {
+			bt.addJob(f.name, f.jobf)
+		}
+		return true
+	})
+}
+
+func (g *jobGroup) addJob(pri int16, n string, job jobf) {
+	items := g.At(pri)
+	items = append(items, jobItem{name: n, jobf: job})
+	g.Put(pri, items)
 }
 
 func (bt *batch) execute(ctx context.Context) error {
@@ -501,12 +523,13 @@ func (bt *batch) initSgIeSgRulesDetails() { //nolint:dupl
 	})
 }
 
-func (bt *batch) populateOutSgFqdnRules(sg *cases.SG) {
+func (gp *jobGroup) populateOutSgFqdnRules(sg *cases.SG) {
 	const (
 		useDNS = 1 << iota
 		useNDPI
 	)
 	var strategy int
+	bt := gp.bt
 	if bt.fqdnStrategy.Eq(internal.FqdnRulesStartegyNDPI) {
 		strategy = useNDPI
 	} else if bt.fqdnStrategy.Eq(internal.FqdnRulesStartegyDNS) {
@@ -526,9 +549,12 @@ func (bt *batch) populateOutSgFqdnRules(sg *cases.SG) {
 			daddrSetName := nameUtils{}.nameOfFqdnNetSet(ipV, rule.ID.FqdnTo)
 			rd := bt.ruleDetails.At(detailsName)
 			rule := rule
+			pri := rule.Priority.SomeOr(
+				cases.RuleBasePriority(rule),
+			)
 			for i := range rd.accports {
 				ports := rd.accports[i]
-				bt.addJob("populate-fqdn-rule", func(tx *Tx) error {
+				gp.addJob(pri, "populate-fqdn-rule", func(tx *Tx) error {
 					chnApplyTo := bt.chains.At(targetChName)
 					if chnApplyTo == nil {
 						return nil
@@ -601,16 +627,20 @@ func (bt *batch) populateDefaultIcmpRules(dir direction, sg *cases.SG) {
 	}
 }
 
-func (bt *batch) populateInOutSgIcmpRules(dir direction, sg *cases.SG) {
+func (gp *jobGroup) populateInOutSgIcmpRules(dir direction, sg *cases.SG) {
 	targetChName := nameUtils{}.nameOfInOutChain(dir, sg.Name)
 	isIN := dir == dirIN
+	bt := gp.bt
 	rules := tern(isIN,
 		bt.data.SgSgIcmpRules.In, bt.data.SgSgIcmpRules.Out,
 	)(sg.Name)
 	api := fmt.Sprintf("populate-%s-sg-icmp-rule", tern(isIN, "in", "out"))
 	for i := range rules {
 		rule := rules[i]
-		bt.addJob(api, func(tx *Tx) error {
+		pri := rule.Priority.SomeOr(
+			cases.RuleBasePriority(rule),
+		)
+		gp.addJob(pri, api, func(tx *Tx) error {
 			addrSetName := nameUtils{}.nameOfNetSet(
 				int(rule.Icmp.IPv),
 				tern(isIN, rule.SgFrom, rule.SgTo),
@@ -637,8 +667,9 @@ func (bt *batch) populateInOutSgIcmpRules(dir direction, sg *cases.SG) {
 	}
 }
 
-func (bt *batch) populateSgIeSgIcmpRules(dir direction, sg *cases.SG) {
+func (gp *jobGroup) populateSgIeSgIcmpRules(dir direction, sg *cases.SG) {
 	isIN := dir == dirIN
+	bt := gp.bt
 	rules := bt.data.SgIeSgIcmpRules.GetRulesForTrafficAndSG(
 		tern(isIN, model.INGRESS, model.EGRESS), sg.Name,
 	)
@@ -650,10 +681,13 @@ func (bt *batch) populateSgIeSgIcmpRules(dir direction, sg *cases.SG) {
 	)
 	for i := range rules {
 		rule := rules[i]
+		pri := rule.Priority.SomeOr(
+			cases.RuleBasePriority(rule),
+		)
 		addrSetName := nameUtils{}.nameOfNetSet(
 			int(rule.Icmp.IPv), rule.Sg,
 		)
-		bt.addJob(api, func(tx *Tx) error {
+		gp.addJob(pri, api, func(tx *Tx) error {
 			chnApplyTo := bt.chains.At(targetSGchName)
 			addrSet := bt.addrsets.At(addrSetName)
 			if chnApplyTo != nil && addrSet != nil {
@@ -678,8 +712,9 @@ func (bt *batch) populateSgIeSgIcmpRules(dir direction, sg *cases.SG) {
 	}
 }
 
-func (bt *batch) populateIeCidrSgIcmpRules(dir direction, sg *cases.SG) {
+func (gp *jobGroup) populateIeCidrSgIcmpRules(dir direction, sg *cases.SG) {
 	isIN := dir == dirIN
+	bt := gp.bt
 	rules := bt.data.IECidrSgIcmpRules.GetRulesForTrafficAndSG(
 		tern(isIN, model.INGRESS, model.EGRESS), sg.Name,
 	)
@@ -690,7 +725,10 @@ func (bt *batch) populateIeCidrSgIcmpRules(dir direction, sg *cases.SG) {
 	for i := range rules {
 		rule := rules[i]
 		addrSetName := nameUtils{}.nameOfNetSet(int(rule.Icmp.IPv), rule.SG)
-		bt.addJob(api, func(tx *Tx) error {
+		pri := rule.Priority.SomeOr(
+			cases.RuleBasePriority(rule),
+		)
+		gp.addJob(pri, api, func(tx *Tx) error {
 			chnApplyTo := bt.chains.At(targetSGchName)
 			addrSet := bt.addrsets.At(addrSetName)
 			if chnApplyTo != nil && addrSet != nil {
@@ -714,9 +752,10 @@ func (bt *batch) populateIeCidrSgIcmpRules(dir direction, sg *cases.SG) {
 	}
 }
 
-func (bt *batch) populateInOutSgRules(dir direction, sg *cases.SG) {
+func (gp *jobGroup) populateInOutSgRules(dir direction, sg *cases.SG) {
 	targetSGchName := nameUtils{}.nameOfInOutChain(dir, sg.Name)
 	isIN := dir == dirIN
+	bt := gp.bt
 	rules := tern(isIN, bt.data.SG2SGRules.In, bt.data.SG2SGRules.Out)(sg.Name)
 	api := fmt.Sprintf("populate-%s-sg-rule", tern(isIN, "in", "out"))
 	for _, ipV := range sli(model.IPv4, model.IPv6) {
@@ -734,9 +773,12 @@ func (bt *batch) populateInOutSgRules(dir direction, sg *cases.SG) {
 			if details == nil {
 				continue
 			}
+			pri := rule.Priority.SomeOr(
+				cases.RuleBasePriority(rule),
+			)
 			for i := range details.accports { //nolint:dupl
 				ports := details.accports[i]
-				bt.addJob(api, func(tx *Tx) error {
+				gp.addJob(pri, api, func(tx *Tx) error {
 					chnApplyTo := bt.chains.At(targetSGchName)
 					addrSet := bt.addrsets.At(addrSetName)
 					if chnApplyTo != nil && addrSet != nil {
@@ -772,8 +814,9 @@ func (bt *batch) populateInOutSgRules(dir direction, sg *cases.SG) {
 	}
 }
 
-func (bt *batch) populateInOutSgIeSgRules(dir direction, sg *cases.SG) {
+func (gp *jobGroup) populateInOutSgIeSgRules(dir direction, sg *cases.SG) {
 	isIN := dir == dirIN
+	bt := gp.bt
 	rules := bt.data.SgIeSgRules.GetRulesForTrafficAndSG(
 		tern(isIN, model.INGRESS, model.EGRESS), sg.Name,
 	)
@@ -789,9 +832,12 @@ func (bt *batch) populateInOutSgIeSgRules(dir direction, sg *cases.SG) {
 			if details == nil {
 				continue
 			}
+			pri := rule.Priority.SomeOr(
+				cases.RuleBasePriority(rule),
+			)
 			for i := range details.accports {
 				ports := details.accports[i]
-				bt.addJob(api, func(tx *Tx) error {
+				gp.addJob(pri, api, func(tx *Tx) error {
 					chnApplyTo := bt.chains.At(targetSGchName)
 					addrSet := bt.addrsets.At(addrSetName)
 					if chnApplyTo == nil || addrSet == nil {
@@ -817,8 +863,9 @@ func (bt *batch) populateInOutSgIeSgRules(dir direction, sg *cases.SG) {
 	}
 }
 
-func (bt *batch) populateInOutCidrSgRules(dir direction, sg *cases.SG) {
+func (gp *jobGroup) populateInOutCidrSgRules(dir direction, sg *cases.SG) {
 	isIN := dir == dirIN
+	bt := gp.bt
 	rules := bt.data.CidrSgRules.GetRulesForTrafficAndSG(
 		tern(isIN, model.INGRESS, model.EGRESS),
 		sg.Name,
@@ -832,9 +879,12 @@ func (bt *batch) populateInOutCidrSgRules(dir direction, sg *cases.SG) {
 		if details == nil {
 			continue
 		}
+		pri := rule.Priority.SomeOr(
+			cases.RuleBasePriority(rule),
+		)
 		for i := range details.accports {
 			ports := details.accports[i]
-			bt.addJob(api, func(tx *Tx) error {
+			gp.addJob(pri, api, func(tx *Tx) error {
 				bt.log.Debugf("add '%s' rule into '%s'/'%s'",
 					rule.ID, bt.table.Name, targetSGchName)
 				chnApplyTo := bt.chains.At(targetSGchName)
@@ -861,15 +911,17 @@ func (bt *batch) makeInOutChains(dir direction) {
 		bt.chainInOutProlog(dir, sg)
 		bt.populateDefaultIcmpRules(dir, sg)
 
-		bt.populateInOutSgIcmpRules(dir, sg) //  pri(-300)
-		bt.populateInOutSgRules(dir, sg)     //  pri(-200)
-		bt.populateSgIeSgIcmpRules(dir, sg)  //  pri(-100)
-		bt.populateInOutSgIeSgRules(dir, sg) //  pri(0)
-		if dir == dirOUT {
-			bt.populateOutSgFqdnRules(sg) //     pri(100)
-		}
-		bt.populateIeCidrSgIcmpRules(dir, sg) // pri(200)
-		bt.populateInOutCidrSgRules(dir, sg)  // pri(300)
+		bt.withGroup(func(g *jobGroup) {
+			g.populateInOutSgIcmpRules(dir, sg) //  base-pri(-300)
+			g.populateInOutSgRules(dir, sg)     //  base-pri(-200)
+			g.populateSgIeSgIcmpRules(dir, sg)  //  base-pri(-100)
+			g.populateInOutSgIeSgRules(dir, sg) //  base-pri(0)
+			if dir == dirOUT {
+				g.populateOutSgFqdnRules(sg) //     base-pri(100)
+			}
+			g.populateIeCidrSgIcmpRules(dir, sg) // base-pri(200)
+			g.populateInOutCidrSgRules(dir, sg)  // base-pri(300)
+		})
 
 		bt.chainInOutEpilog(dir, sg)
 		return true
