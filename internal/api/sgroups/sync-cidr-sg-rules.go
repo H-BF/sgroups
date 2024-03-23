@@ -83,10 +83,12 @@ func (r cidrSgRule) from(src *sg.CidrSgRule) error {
 	r.Logs = src.GetLogs()
 	r.Trace = src.GetTrace()
 	e = ruleAction{&r.Action}.from(src.GetAction())
-	if e != nil {
-		return e
+	if e == nil {
+		e = ((*rulePorts)(&r.Ports)).from(src.GetPorts())
+		if e == nil {
+			e = rulePriority{&r.Priority}.from(src.GetPriority())
+		}
 	}
-	e = ((*rulePorts)(&r.Ports)).from(src.GetPorts())
 	return e
 }
 

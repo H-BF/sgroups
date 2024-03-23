@@ -43,6 +43,9 @@ func (r sgSgRule) from(src *sg.SgSgRule) error {
 		return e
 	}
 	e = ((*rulePorts)(&r.Ports)).from(src.GetPorts())
+	if e == nil {
+		e = rulePriority{&r.Priority}.from(src.GetPriority())
+	}
 	return e
 }
 
