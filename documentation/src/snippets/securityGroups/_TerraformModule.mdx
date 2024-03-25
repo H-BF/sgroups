@@ -105,11 +105,6 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         <td>{DICTIONARY.action.short}</td>
         <td>Enum("ACCEPT", "DROP")</td>
         <td>`ACCEPT`</td>
-      </tr><tr>
-        <td>default_rules.access.$transport.priority</td>
-        <td>{DICTIONARY.priority.short}</td>
-        <td>String</td>
-        <td></td>
       </tr>
     </tbody>
   </table>
@@ -134,10 +129,6 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
     `default_rules.access.icmp6.type`:
     <Restrictions data={RESTRICTIONS.icmpType} />
   </li>
-  <li>
-    `default_rules.access.$transport.priority`:
-    <Restrictions data={RESTRICTIONS.priority} />
-  </li>
 </ul>
 
 #### [Пример использования](https://github.com/H-BF/swarm-spec-template/blob/master/spec/sg-example.yaml#L2)
@@ -156,14 +147,12 @@ default_rules:
 
     icmp:
       action: DROP
-      priority: 0
       logs: true
       trace: true
       type: [0, 8]
 
     icmp6:
       action: DROP
-      priority: 0
       logs: true
       trace: true
       type: [0, 8]
