@@ -54,6 +54,11 @@ type (
 	// FQDN -
 	FQDN string
 
+	// RulePriority -
+	RulePriority struct {
+		pgtype.Int2 `db:"priority"`
+	}
+
 	// SG -
 	SG struct {
 		Name          string             `db:"name"`
@@ -71,6 +76,7 @@ type (
 		Ports  SgRulePortsArray `db:"ports"`
 		Logs   bool             `db:"logs"`
 		Action RuleAction       `db:"action"`
+		RulePriority
 	}
 
 	// SG2FQDNRule -
@@ -82,6 +88,7 @@ type (
 		Logs          bool             `db:"logs"`
 		NdpiProtocols []string         `db:"ndpi_protocols"`
 		Action        RuleAction       `db:"action"`
+		RulePriority
 	}
 
 	// SyncStatus -
@@ -118,6 +125,7 @@ type (
 		Logs   bool       `db:"logs"`
 		Trace  bool       `db:"trace"`
 		Action RuleAction `db:"action"`
+		RulePriority
 	}
 
 	// IESgSgIcmpRule -
@@ -129,6 +137,7 @@ type (
 		Logs    bool       `db:"logs"`
 		Trace   bool       `db:"trace"`
 		Action  RuleAction `db:"action"`
+		RulePriority
 	}
 
 	// Traffic -
@@ -144,6 +153,7 @@ type (
 		Logs    bool             `db:"logs"`
 		Trace   bool             `db:"trace"`
 		Action  RuleAction       `db:"action"`
+		RulePriority
 	}
 
 	// IECidrSgIcmpRule -
@@ -155,6 +165,7 @@ type (
 		Logs    bool       `db:"logs"`
 		Trace   bool       `db:"trace"`
 		Action  RuleAction `db:"action"`
+		RulePriority
 	}
 
 	// IESgSgRule -
@@ -167,6 +178,7 @@ type (
 		Logs    bool             `db:"logs"`
 		Trace   bool             `db:"trace"`
 		Action  RuleAction       `db:"action"`
+		RulePriority
 	}
 )
 

@@ -45,6 +45,7 @@ type (
 		Logs      types.Bool   `tfsdk:"logs"`
 		Trace     types.Bool   `tfsdk:"trace"`
 		Action    types.String `tfsdk:"action"`
+		Priority  RulePriority `tfsdk:"priority"`
 	}
 
 	cidrRuleKey struct {
@@ -122,6 +123,7 @@ func (item cidrRule) Attributes() map[string]schema.Attribute {
 			Required:    true,
 			Validators:  []validator.String{actionValidator},
 		},
+		rulePriorityAttrLabel: rulePriorityAttr(),
 	}
 }
 
@@ -145,7 +147,8 @@ func (item cidrRule) IsDiffer(ctx context.Context, other cidrRule) bool {
 		item.Logs.Equal(other.Logs) &&
 		item.Trace.Equal(other.Trace) &&
 		item.Action.Equal(other.Action) &&
-		model.AreRulePortsEq(itemModelPorts, otherModelPorts))
+		model.AreRulePortsEq(itemModelPorts, otherModelPorts) &&
+		item.Priority.Equal(other.Priority))
 }
 
 func readCidrRules(ctx context.Context, state NamedResources[cidrRule], client *sgAPI.Client) (NamedResources[cidrRule], diag.Diagnostics) {
@@ -173,6 +176,12 @@ func readCidrRules(ctx context.Context, state NamedResources[cidrRule], client *
 		}
 		k := it.Key().String()           //nolint:dupl
 		if _, ok := state.Items[k]; ok { //nolint:dupl
+			if p, d := rulePriorityFromProto(rule.GetPriority()); d != nil {
+				diags.Append(d)
+				break
+			} else {
+				it.Priority = p
+			}
 			accPorts := []AccessPorts{}
 			for _, p := range rule.GetPorts() {
 				accPorts = append(accPorts, AccessPorts{
@@ -182,6 +191,9 @@ func readCidrRules(ctx context.Context, state NamedResources[cidrRule], client *
 			}
 			portsList, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: AccessPorts{}.AttrTypes()}, accPorts)
 			diags.Append(d...)
+			if d.HasError() {
+				break
+			}
 			it.Ports = portsList
 			it.Logs = types.BoolValue(rule.GetLogs())
 			it.Trace = types.BoolValue(rule.GetTrace())

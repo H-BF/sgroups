@@ -9,7 +9,8 @@ create type sgroups.rule_action as enum (
 
 -- ie_sg_sg_rule
 alter table sgroups.tbl_ie_sg_sg_rule
-        add column action sgroups.rule_action not null default 'ACCEPT'::sgroups.rule_action;
+        add column action sgroups.rule_action not null default 'ACCEPT'::sgroups.rule_action,
+        add column priority smallint;
 
 create or replace view sgroups.vu_ie_sg_sg_rule as
 select proto,
@@ -19,7 +20,8 @@ select proto,
        ports,
        logs,
        trace,
-       action
+       action,
+       priority
   from sgroups.tbl_ie_sg_sg_rule as R;
 
 drop function if exists sgroups.list_ie_sg_sg_rules(sgroups.cname[], sgroups.cname[]) cascade;
@@ -33,7 +35,8 @@ create or replace function sgroups.list_ie_sg_sg_rules (
                   ports sgroups.sg_rule_ports[],
                   logs bool,
                   trace bool,
-                  action sgroups.rule_action
+                  action sgroups.rule_action,
+                  priority smallint
                 )
 as $$
 begin
@@ -44,7 +47,8 @@ begin
                         r.ports,
                         r.logs,
                         r.trace,
-                        r.action
+                        r.action,
+                        r.priority
                    from sgroups.vu_ie_sg_sg_rule as r
                   where ( sglocals is null or r.sg_local = any(sglocals) )
                     and ( sgs is null or r.sg = any(sgs) );
@@ -52,7 +56,8 @@ end;
 $$ language plpgsql immutable;
 
 alter type sgroups.row_of__ie_sg_sg_rule
-      add attribute action sgroups.rule_action;
+      add attribute action sgroups.rule_action,
+      add attribute priority smallint;
 
 drop function if exists sgroups.sync_ie_sg_sg_rule(sgroups.sync_op, sgroups.row_of__ie_sg_sg_rule);
 create function sgroups.sync_ie_sg_sg_rule(op sgroups.sync_op, d sgroups.row_of__ie_sg_sg_rule)
@@ -83,26 +88,28 @@ begin
            set ports = (d).ports,
                logs = (d).logs,
                trace = (d).trace,
-               action = (d).action
+               action = (d).action,
+               priority = (d).priority
          where proto = (d).proto
            and sg_local = sgLocalID
            and sg = sgID
            and traffic = (d).traffic
      returning id into ret;
     elseif op = 'ups' then
-        insert into sgroups.tbl_ie_sg_sg_rule (proto, sg_local, sg, traffic, ports, logs, trace, action)
-             values ((d).proto, sgLocalID, sgID, (d).traffic, (d).ports, (d).logs, (d).trace, (d).action)
+        insert into sgroups.tbl_ie_sg_sg_rule (proto, sg_local, sg, traffic, ports, logs, trace, action, priority)
+             values ((d).proto, sgLocalID, sgID, (d).traffic, (d).ports, (d).logs, (d).trace, (d).action, (d).priority)
             on conflict
                on constraint ie_sg_sg_rule_identity
                   do update
                      set ports = (d).ports,
                          logs = (d).logs,
                          trace = (d).trace,
-                         action = (d).action
+                         action = (d).action,
+                         priority = (d).priority
      returning id into ret;
     elseif op = 'ins' then
-        insert into sgroups.tbl_ie_sg_sg_rule (proto, sg_local, sg, traffic, ports, logs, trace, action)
-             values ((d).proto, sgLocalID, sgID, (d).traffic, (d).ports, (d).logs, (d).trace, (d).action)
+        insert into sgroups.tbl_ie_sg_sg_rule (proto, sg_local, sg, traffic, ports, logs, trace, action, priority)
+             values ((d).proto, sgLocalID, sgID, (d).traffic, (d).ports, (d).logs, (d).trace, (d).action, (d).priority)
             on conflict
                on constraint ie_sg_sg_rule_identity
                   do nothing
@@ -114,7 +121,8 @@ $$ language plpgsql strict;
 
 -- ie_sg_sg_icmp_rule
 alter table sgroups.tbl_ie_sg_sg_icmp_rule
-        add column action sgroups.rule_action not null default 'ACCEPT'::sgroups.rule_action;
+        add column action sgroups.rule_action not null default 'ACCEPT'::sgroups.rule_action,
+        add column priority smallint;
 
 create or replace view sgroups.vu_ie_sg_sg_icmp_rule as
 select ip_v,
@@ -124,7 +132,8 @@ select ip_v,
        traffic,
        logs,
        trace,
-       action
+       action,
+       priority
   from sgroups.tbl_ie_sg_sg_icmp_rule as R;
 
 drop function if exists sgroups.list_ie_sg_sg_icmp_rules(sgroups.cname[], sgroups.cname[]) cascade;
@@ -138,7 +147,8 @@ create or replace function sgroups.list_ie_sg_sg_icmp_rules (
                   traffic sgroups.traffic,
                   logs bool,
                   trace bool,
-                  action sgroups.rule_action
+                  action sgroups.rule_action,
+                  priority smallint
                 )
 as $$
 begin
@@ -149,7 +159,8 @@ begin
                         r.traffic,
                         r.logs,
                         r.trace,
-                        r.action
+                        r.action,
+                        r.priority
                    from sgroups.vu_ie_sg_sg_icmp_rule as r
                   where ( sglocals is null or r.sg_local = any(sglocals) )
                     and ( sgs is null or r.sg = any(sgs) );
@@ -157,7 +168,8 @@ end;
 $$ language plpgsql immutable;
 
 alter type sgroups.row_of__ie_sg_sg_icmp_rule
-      add attribute action sgroups.rule_action;
+      add attribute action sgroups.rule_action,
+      add attribute priority smallint;
 
 drop function if exists sgroups.sync_ie_sg_sg_icmp_rule(op sgroups.sync_op, d sgroups.row_of__ie_sg_sg_icmp_rule) cascade;
 create function sgroups.sync_ie_sg_sg_icmp_rule(op sgroups.sync_op, d sgroups.row_of__ie_sg_sg_icmp_rule)
@@ -188,26 +200,28 @@ begin
            set types = (d).types,
                logs  = (d).logs,
                trace = (d).trace,
-               action = (d).action
+               action = (d).action,
+               priority = (d).priority
          where ip_v = (d).ip_v
            and sg_local = sgLocalID
            and sg = sgID
            and traffic = (d).traffic
      returning id into ret;
     elseif op = 'ups' then
-        insert into sgroups.tbl_ie_sg_sg_icmp_rule (ip_v, types, sg_local, sg, traffic, logs, trace, action)
-             values ((d).ip_v, (d).types, sgLocalID, sgID, (d).traffic, (d).logs, (d).trace, (d).action)
+        insert into sgroups.tbl_ie_sg_sg_icmp_rule (ip_v, types, sg_local, sg, traffic, logs, trace, action, priority)
+             values ((d).ip_v, (d).types, sgLocalID, sgID, (d).traffic, (d).logs, (d).trace, (d).action, (d).priority)
             on conflict
                on constraint ie_sg_sg_icmp_rule_identity
                   do update
                      set types = (d).types,
                          logs  = (d).logs,
                          trace = (d).trace,
-                         action = (d).action
+                         action = (d).action,
+                         priority = (d).priority
      returning id into ret;
     elseif op = 'ins' then
-        insert into sgroups.tbl_ie_sg_sg_icmp_rule (ip_v, types, sg_local, sg, traffic, logs, trace, action)
-             values ((d).ip_v, (d).types, sgLocalID, sgID, (d).traffic, (d).logs, (d).trace, (d).action)
+        insert into sgroups.tbl_ie_sg_sg_icmp_rule (ip_v, types, sg_local, sg, traffic, logs, trace, action, priority)
+             values ((d).ip_v, (d).types, sgLocalID, sgID, (d).traffic, (d).logs, (d).trace, (d).action, (d).priority)
             on conflict
                 on constraint ie_sg_sg_icmp_rule_identity
                     do nothing
@@ -219,7 +233,8 @@ $$ language plpgsql strict;
 
 -- cidr_sg_rule
 alter table sgroups.tbl_cidr_sg_rule
-        add column action sgroups.rule_action not null default 'ACCEPT'::sgroups.rule_action;
+        add column action sgroups.rule_action not null default 'ACCEPT'::sgroups.rule_action,
+        add column priority smallint;
 
 create or replace view sgroups.vu_cidr_sg_rule as
 select proto,
@@ -229,7 +244,8 @@ select proto,
        ports,
        logs,
        trace,
-       action
+       action,
+       priority
   from sgroups.tbl_cidr_sg_rule as R;
 
 drop function if exists sgroups.list_cidr_sg_rule(sgroups.cname[]) cascade;
@@ -242,7 +258,8 @@ create or replace function sgroups.list_cidr_sg_rule (
                   ports sgroups.sg_rule_ports[],
                   logs bool,
                   trace bool,
-                  action sgroups.rule_action
+                  action sgroups.rule_action,
+                  priority smallint
                 )
 as $$
 begin
@@ -253,7 +270,8 @@ begin
                         r.ports,
                         r.logs,
                         r.trace,
-                        r.action
+                        r.action,
+                        r.priority
                    from sgroups.vu_cidr_sg_rule as r
                   where ( sgs is null or
                           r.sg = any(sgs) );
@@ -261,7 +279,8 @@ end;
 $$ language plpgsql immutable;
 
 alter type sgroups.row_of__cidr_sg_rule
-      add attribute action sgroups.rule_action;
+      add attribute action sgroups.rule_action,
+      add attribute priority smallint;
 
 drop function if exists sgroups.sync_cidr_sg_rule(sgroups.sync_op, sgroups.row_of__cidr_sg_rule);
 create function sgroups.sync_cidr_sg_rule(op sgroups.sync_op, d sgroups.row_of__cidr_sg_rule)
@@ -287,26 +306,28 @@ begin
            set ports = (d).ports,
                logs = (d).logs,
                trace = (d).trace,
-               action = (d).action
+               action = (d).action,
+               priority = (d).priority
          where proto = (d).proto
            and cidr = (d).cidr
            and sg = sgID
            and traffic = (d).traffic
      returning id into ret;
     elsif op = 'ups' then
-        insert into sgroups.tbl_cidr_sg_rule (proto, cidr, sg, traffic, ports, logs, trace, action)
-             values ((d).proto, (d).cidr, sgID, (d).traffic ,(d).ports, (d).logs, (d).trace, (d).action)
+        insert into sgroups.tbl_cidr_sg_rule (proto, cidr, sg, traffic, ports, logs, trace, action, priority)
+             values ((d).proto, (d).cidr, sgID, (d).traffic ,(d).ports, (d).logs, (d).trace, (d).action, (d).priority)
             on conflict
                on constraint cidr_sg_rule_identity
                   do update
                      set ports = (d).ports,
                          logs = (d).logs,
                          trace = (d).trace,
-                         action = (d).action
+                         action = (d).action,
+                         priority = (d).priority
       returning id into ret;
     elsif op = 'ins' then
-        insert into sgroups.tbl_cidr_sg_rule (proto, cidr, sg, traffic, ports, logs, trace, action)
-             values ((d).proto, (d).cidr, sgID, (d).traffic ,(d).ports, (d).logs, (d).trace, (d).action)
+        insert into sgroups.tbl_cidr_sg_rule (proto, cidr, sg, traffic, ports, logs, trace, action, priority)
+             values ((d).proto, (d).cidr, sgID, (d).traffic ,(d).ports, (d).logs, (d).trace, (d).action, (d).priority)
             on conflict
                on constraint cidr_sg_rule_identity
                   do nothing
@@ -318,7 +339,8 @@ $$ language plpgsql strict;
 
 -- cidr_sg_icmp_rule
 alter table sgroups.tbl_cidr_sg_icmp_rule
-        add column action sgroups.rule_action not null default 'ACCEPT'::sgroups.rule_action;
+        add column action sgroups.rule_action not null default 'ACCEPT'::sgroups.rule_action,
+        add column priority smallint;
 
 create or replace view sgroups.vu_cidr_sg_icmp_rule as
 select ip_v,
@@ -328,7 +350,8 @@ select ip_v,
        traffic,
        logs,
        trace,
-       action
+       action,
+       priority
   from sgroups.tbl_cidr_sg_icmp_rule as R;
 
 drop function if exists sgroups.list_cidr_sg_icmp_rules(sgroups.cname[]) cascade;
@@ -341,7 +364,8 @@ create or replace function sgroups.list_cidr_sg_icmp_rules (
                   traffic sgroups.traffic,
                   logs bool,
                   trace bool,
-                  action sgroups.rule_action
+                  action sgroups.rule_action,
+                  priority smallint
                 )
 as $$
 begin
@@ -352,14 +376,16 @@ begin
                         r.traffic,
                         r.logs,
                         r.trace,
-                        r.action
+                        r.action,
+                        r.priority
                    from sgroups.vu_cidr_sg_icmp_rule as r
                   where ( sgs is null or r.sg = any(sgs) );
 end;
 $$ language plpgsql immutable;
 
 alter type sgroups.row_of__cidr_sg_icmp_rule
-    add attribute action sgroups.rule_action;
+    add attribute action sgroups.rule_action,
+    add attribute priority smallint;
 
 drop function if exists sgroups.sync_cidr_sg_icmp_rule(op sgroups.sync_op, d sgroups.row_of__cidr_sg_icmp_rule) cascade;
 create function sgroups.sync_cidr_sg_icmp_rule(op sgroups.sync_op, d sgroups.row_of__cidr_sg_icmp_rule)
@@ -385,26 +411,28 @@ begin
            set types = (d).types,
                logs  = (d).logs,
                trace = (d).trace,
-               action = (d).action
+               action = (d).action,
+               priority = (d).priority
          where ip_v = (d).ip_v
            and cidr = (d).cidr
            and sg = sgID
            and traffic = (d).traffic
      returning id into ret;
     elseif op = 'ups' then
-        insert into sgroups.tbl_cidr_sg_icmp_rule (ip_v, types, cidr, sg, traffic, logs, trace, action)
-             values ((d).ip_v, (d).types, (d).cidr, sgID, (d).traffic, (d).logs, (d).trace, (d).action)
+        insert into sgroups.tbl_cidr_sg_icmp_rule (ip_v, types, cidr, sg, traffic, logs, trace, action, priority)
+             values ((d).ip_v, (d).types, (d).cidr, sgID, (d).traffic, (d).logs, (d).trace, (d).action, (d).priority)
             on conflict
                on constraint cidr_sg_icmp_rule_identity
                   do update
                      set types = (d).types,
                          logs  = (d).logs,
                           trace = (d).trace,
-                          action = (d).action
+                          action = (d).action,
+                          priority = (d).priority
      returning id into ret;
     elseif op = 'ins' then
-        insert into sgroups.tbl_cidr_sg_icmp_rule (ip_v, types, cidr, sg, traffic, logs, trace, action)
-             values ((d).ip_v, (d).types, (d).cidr, sgID, (d).traffic, (d).logs, (d).trace, (d).action)
+        insert into sgroups.tbl_cidr_sg_icmp_rule (ip_v, types, cidr, sg, traffic, logs, trace, action, priority)
+             values ((d).ip_v, (d).types, (d).cidr, sgID, (d).traffic, (d).logs, (d).trace, (d).action, (d).priority)
             on conflict
                on constraint cidr_sg_icmp_rule_identity
                   do nothing
@@ -416,7 +444,8 @@ $$ language plpgsql strict;
 
 -- fqdn_rule
 alter table sgroups.tbl_fqdn_rule
-        add column action sgroups.rule_action not null default 'ACCEPT'::sgroups.rule_action;
+        add column action sgroups.rule_action not null default 'ACCEPT'::sgroups.rule_action,
+        add column priority smallint;
 
 create or replace view sgroups.vu_fqdn_rule as
 select (select "name" from sgroups.tbl_sg where id = R.sg_from) as sg_from,
@@ -425,7 +454,8 @@ select (select "name" from sgroups.tbl_sg where id = R.sg_from) as sg_from,
        ports,
        logs,
        ndpi_protocols,
-       action
+       action,
+       priority
   from sgroups.tbl_fqdn_rule as R;
 
 drop function if exists sgroups.list_fqdn_rule(sgroups.cname[]) cascade;
@@ -438,7 +468,8 @@ create or replace function sgroups.list_fqdn_rule (
                     ports sgroups.sg_rule_ports[],
                     logs bool,
                     ndpi_protocols citext[],
-                    action sgroups.rule_action
+                    action sgroups.rule_action,
+                    priority smallint
                 )
 as $$
 begin
@@ -448,7 +479,8 @@ begin
                         r.ports,
                         r.logs,
                         r.ndpi_protocols,
-                        r.action
+                        r.action,
+                        r.priority
                    from sgroups.vu_fqdn_rule as r
                   where ( sgfrom is null or
                           r.sg_from = any (sgfrom) );
@@ -456,7 +488,8 @@ end;
 $$ language plpgsql immutable;
 
 alter type sgroups.row_of__fqdn_rule
-      add attribute action sgroups.rule_action;
+      add attribute action sgroups.rule_action,
+      add attribute priority smallint;
 
 drop function if exists sgroups.sync_fqdn_rule(op sgroups.sync_op, d sgroups.row_of__fqdn_rule) cascade;
 create function sgroups.sync_fqdn_rule(op sgroups.sync_op, d sgroups.row_of__fqdn_rule)
@@ -481,25 +514,27 @@ begin
            set ports = (d).ports,
                logs = (d).logs,
                ndpi_protocols = (d).ndpi_protocols,
-               action = (d).action
+               action = (d).action,
+               priority = (d).priority
          where sg_from = sgFrom
            and fqdn_to = (d).fqdn_to
            and proto = (d).proto
      returning id into ret;
     elseif op = 'ups' then
-        insert into sgroups.tbl_fqdn_rule (sg_from, fqdn_to, proto, ports, logs, ndpi_protocols, action)
-             values (sgFrom, (d).fqdn_to, (d).proto, (d).ports, (d).logs, (d).ndpi_protocols, (d).action)
+        insert into sgroups.tbl_fqdn_rule (sg_from, fqdn_to, proto, ports, logs, ndpi_protocols, action, priority)
+             values (sgFrom, (d).fqdn_to, (d).proto, (d).ports, (d).logs, (d).ndpi_protocols, (d).action, (d).priority)
            on conflict
               on constraint sg_fqdn_rule_identity
                  do update
                     set ports = (d).ports,
                         logs = (d).logs,
                         ndpi_protocols = (d).ndpi_protocols,
-                        action = (d).action
+                        action = (d).action,
+                        priority = (d).priority
      returning id into ret;
     elseif op = 'ins' then
-        insert into sgroups.tbl_fqdn_rule (sg_from, fqdn_to, proto, ports, logs, ndpi_protocols, action)
-             values (sgFrom, (d).fqdn_to, (d).proto, (d).ports, (d).logs, (d).ndpi_protocols, (d).action)
+        insert into sgroups.tbl_fqdn_rule (sg_from, fqdn_to, proto, ports, logs, ndpi_protocols, action, priority)
+             values (sgFrom, (d).fqdn_to, (d).proto, (d).ports, (d).logs, (d).ndpi_protocols, (d).action, (d).priority)
             on conflict
                on constraint sg_fqdn_rule_identity
                   do nothing
@@ -600,7 +635,8 @@ $$ language plpgsql strict;
 
 -- sg_rule
 alter table sgroups.tbl_sg_rule
-        add column action sgroups.rule_action not null default 'ACCEPT'::sgroups.rule_action;
+        add column action sgroups.rule_action not null default 'ACCEPT'::sgroups.rule_action,
+        add column priority smallint;
 
 create or replace view sgroups.vu_sg_rule as
 select (select "name" from sgroups.tbl_sg where id = R.sg_from) as sg_from,
@@ -608,7 +644,8 @@ select (select "name" from sgroups.tbl_sg where id = R.sg_from) as sg_from,
        proto,
        ports,
        logs,
-       action
+       action,
+       priority
   from sgroups.tbl_sg_rule as R;
 
 drop function if exists sgroups.list_sg_rule(sgroups.cname[], sgroups.cname[]) cascade;
@@ -620,7 +657,8 @@ create or replace function sgroups.list_sg_rule(
                   proto sgroups.proto,
                   ports sgroups.sg_rule_ports[],
                   logs bool,
-                  action sgroups.rule_action
+                  action sgroups.rule_action,
+                  priority smallint
                 )
 as $$
 begin
@@ -629,7 +667,8 @@ begin
                         r.proto,
                         r.ports,
                         r.logs,
-                        r.action
+                        r.action,
+                        r.priority
                    from sgroups.vu_sg_rule as r
                   where ( sgfrom is null or
                           r.sg_from = any (sgfrom) )
@@ -639,7 +678,8 @@ end;
 $$ language plpgsql immutable;
 
 alter type sgroups.row_of__sg_rule
-      add attribute action sgroups.rule_action;
+      add attribute action sgroups.rule_action,
+      add attribute priority smallint;
 
 drop function if exists sgroups.sync_sg_rule(sgroups.sync_op, sgroups.row_of__sg_rule) cascade;
 create function sgroups.sync_sg_rule(op sgroups.sync_op, d sgroups.row_of__sg_rule)
@@ -668,24 +708,26 @@ begin
         update sgroups.tbl_sg_rule
            set ports = (d).ports,
                logs = (d).logs,
-               action = (d).action
+               action = (d).action,
+               priority = (d).priority
          where sg_from = sgFrom
            and sg_to = sgTo
            and proto = (d).proto
      returning id into ret;
     elsif op = 'ups' then
-        insert into sgroups.tbl_sg_rule (sg_from, sg_to, proto, ports, logs, action)
-             values (sgFrom, sgTo, (d).proto, (d).ports, (d).logs, (d).action)
+        insert into sgroups.tbl_sg_rule (sg_from, sg_to, proto, ports, logs, action, priority)
+             values (sgFrom, sgTo, (d).proto, (d).ports, (d).logs, (d).action, (d).priority)
             on conflict
                on constraint sg_rule_identity
                   do update
                      set ports = (d).ports,
                          logs = (d).logs,
-                         action = (d).action
+                         action = (d).action,
+                         priority = (d).priority
      returning id into ret;
     elsif op = 'ins' then
-        insert into sgroups.tbl_sg_rule (sg_from, sg_to, proto, ports, logs, action)
-             values (sgFrom, sgTo, (d).proto, (d).ports, (d).logs, (d).action)
+        insert into sgroups.tbl_sg_rule (sg_from, sg_to, proto, ports, logs, action, priority)
+             values (sgFrom, sgTo, (d).proto, (d).ports, (d).logs, (d).action, (d).priority)
             on conflict
                on constraint sg_rule_identity
                   do nothing
@@ -697,7 +739,8 @@ $$ language plpgsql strict;
 
 -- sg_sg_icmp_rule
 alter table sgroups.tbl_sg_sg_icmp_rule
-        add column action sgroups.rule_action not null default 'ACCEPT'::sgroups.rule_action;
+        add column action sgroups.rule_action not null default 'ACCEPT'::sgroups.rule_action,
+        add column priority smallint;
 
 create or replace view sgroups.vu_sg_sg_icmp_rule as
 select ip_v,
@@ -706,7 +749,8 @@ select ip_v,
        (select "name" from sgroups.tbl_sg where id = R.sg_to) as sg_to,
        logs,
        trace,
-       action
+       action,
+       priority
   from sgroups.tbl_sg_sg_icmp_rule as R;
 
 drop function if exists sgroups.list_sg_sg_icmp_rule(sgroups.cname[], sgroups.cname[]) cascade;
@@ -719,7 +763,8 @@ create or replace function sgroups.list_sg_sg_icmp_rule(
                     sg_to sgroups.cname,
                     logs boolean,
                     trace boolean,
-                    action sgroups.rule_action
+                    action sgroups.rule_action,
+                    priority smallint
                 )
 as $$
 begin
@@ -729,7 +774,8 @@ begin
                         r.sg_to,
                         r.logs,
                         r.trace,
-                        r.action
+                        r.action,
+                        r.priority
                    from sgroups.vu_sg_sg_icmp_rule as r
                   where ( sgFrom is null or
                           r.sg_from = any (sgFrom) )
@@ -739,7 +785,8 @@ end;
 $$ language plpgsql immutable;
 
 alter type sgroups.row_of__sg_sg_icmp_rule
-      add attribute action sgroups.rule_action;
+      add attribute action sgroups.rule_action,
+      add attribute priority smallint;
 
 drop function if exists sgroups.sync_sg_sg_icmp_rule(sgroups.sync_op, sgroups.row_of__sg_sg_icmp_rule) cascade;
 create function sgroups.sync_sg_sg_icmp_rule(op sgroups.sync_op, d sgroups.row_of__sg_sg_icmp_rule)
@@ -769,25 +816,27 @@ begin
            set types = (d).types,
                logs = (d).logs,
                trace = (d).trace,
-               action = (d).action
+               action = (d).action,
+               priority = (d).priority
          where ip_v = (d).ip_v
            and sg_from = sg_from_id
            and sg_to = sg_to_id
      returning id into ret;
     elsif op = 'ups' then
-        insert into sgroups.tbl_sg_sg_icmp_rule(ip_v, sg_from, sg_to, types, logs, trace, action)
-             values ((d).ip_v, sg_from_id, sg_to_id, (d).types, (d).logs, (d).trace, (d).action)
+        insert into sgroups.tbl_sg_sg_icmp_rule(ip_v, sg_from, sg_to, types, logs, trace, action, priority)
+             values ((d).ip_v, sg_from_id, sg_to_id, (d).types, (d).logs, (d).trace, (d).action, (d).priority)
             on conflict
                on constraint sg_sg_icmp_rule_identity
                   do update
                      set types = (d).types,
                          logs = (d).logs,
                          trace = (d).trace,
-                         action = (d).action
+                         action = (d).action,
+                         priority = (d).priority
      returning id into ret;
     elsif op = 'ins' then
-        insert into sgroups.tbl_sg_sg_icmp_rule(ip_v, sg_from, sg_to, types, logs, trace, action)
-             values ((d).ip_v, sg_from_id, sg_to_id, (d).types, (d).logs, (d).trace, (d).action)
+        insert into sgroups.tbl_sg_sg_icmp_rule(ip_v, sg_from, sg_to, types, logs, trace, action, priority)
+             values ((d).ip_v, sg_from_id, sg_to_id, (d).types, (d).logs, (d).trace, (d).action, (d).priority)
             on conflict
                on constraint sg_sg_icmp_rule_identity
                   do nothing

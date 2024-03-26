@@ -45,6 +45,7 @@ type (
 		Logs      types.Bool   `tfsdk:"logs"`
 		Protocols types.Set    `tfsdk:"protocols"`
 		Action    types.String `tfsdk:"action"`
+		Priority  RulePriority `tfsdk:"priority"`
 	}
 
 	sgFqdnRuleKey struct {
@@ -130,6 +131,7 @@ func (item sgFqdnRule) Attributes() map[string]schema.Attribute { //nolint:dupl
 			Required:    true,
 			Validators:  []validator.String{actionValidator},
 		},
+		rulePriorityAttrLabel: rulePriorityAttr(),
 	}
 }
 
@@ -153,7 +155,8 @@ func (item sgFqdnRule) IsDiffer(ctx context.Context, other sgFqdnRule) bool {
 		item.Logs.Equal(other.Logs) &&
 		item.Protocols.Equal(other.Protocols) &&
 		item.Action.Equal(other.Action) &&
-		model.AreRulePortsEq(itemModelPorts, otherModelPorts))
+		model.AreRulePortsEq(itemModelPorts, otherModelPorts) &&
+		item.Priority.Equal(other.Priority))
 }
 
 func readFqdnRules(ctx context.Context, state NamedResources[sgFqdnRule], client *sgAPI.Client) (NamedResources[sgFqdnRule], diag.Diagnostics) {
@@ -198,6 +201,12 @@ func readFqdnRules(ctx context.Context, state NamedResources[sgFqdnRule], client
 		}
 		k := it.Key().String()
 		if _, ok := state.Items[k]; ok {
+			if p, d := rulePriorityFromProto(fqdnRule.GetPriority()); d != nil {
+				diags.Append(d)
+				break
+			} else {
+				it.Priority = p
+			}
 			newState.Items[k] = it
 		}
 	}

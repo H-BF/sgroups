@@ -47,6 +47,7 @@ type (
 		Logs      types.Bool   `tfsdk:"logs"`
 		Trace     types.Bool   `tfsdk:"trace"`
 		Action    types.String `tfsdk:"action"`
+		Priority  RulePriority `tfsdk:"priority"`
 	}
 
 	cidrSgIcmpRuleKey struct {
@@ -133,6 +134,7 @@ func (item cidrSgIcmpRule) Attributes() map[string]schema.Attribute {
 			Required:    true,
 			Validators:  []validator.String{actionValidator},
 		},
+		rulePriorityAttrLabel: rulePriorityAttr(),
 	}
 }
 
@@ -157,7 +159,8 @@ func (item cidrSgIcmpRule) IsDiffer(_ context.Context, other cidrSgIcmpRule) boo
 		item.IpVersion.Equal(other.IpVersion) &&
 		item.Logs.Equal(other.Logs) &&
 		item.Trace.Equal(other.Trace) &&
-		item.Action.Equal(other.Action))
+		item.Action.Equal(other.Action) &&
+		item.Priority.Equal(other.Priority))
 }
 
 func readCidrSgIcmpRules(
@@ -177,6 +180,7 @@ func readCidrSgIcmpRules(
 			ToSlice(&req.Sg)
 		if resp, err = client.FindCidrSgIcmpRules(ctx, req); err != nil {
 			diags.AddError("read cidr-sg icmp rules", err.Error())
+			return newState, diags
 		}
 	}
 
@@ -189,10 +193,16 @@ func readCidrSgIcmpRules(
 		}
 		k := it.Key().String()
 		if _, ok := state.Items[k]; ok {
+			if p, d := rulePriorityFromProto(icmpRule.GetPriority()); d != nil {
+				diags.Append(d)
+				break
+			} else {
+				it.Priority = p
+			}
 			typeSet, d := types.SetValueFrom(ctx, types.Int64Type, icmpRule.ICMP.GetTypes())
 			diags.Append(d...)
 			if d.HasError() {
-				return newState, diags
+				break
 			}
 			it.Type = typeSet
 			it.Logs = types.BoolValue(icmpRule.GetLogs())

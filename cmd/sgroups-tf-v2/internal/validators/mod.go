@@ -1,7 +1,9 @@
 package validators
 
 import (
+	"context"
 	"fmt"
+	"math"
 	"net"
 	"time"
 
@@ -12,32 +14,74 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 )
 
+// IsDuration -
 func IsDuration() validator.String {
-	return parseFuncValidator{
-		description: "value must be duration",
-		parseFunc: func(s string) error {
+	return stringValidator{
+		validatorBase: validatorBase{
+			description: "value must be duration",
+		},
+		validateFn: func(s string) error {
 			_, err := time.ParseDuration(s)
 			return err
 		},
 	}
 }
 
+// IsEndpoint -
 func IsEndpoint() validator.String {
-	return parseFuncValidator{
-		description: "value must be endpoint",
-		parseFunc: func(s string) error {
+	return stringValidator{
+		validatorBase: validatorBase{
+			description: "value must be endpoint",
+		},
+		validateFn: func(s string) error {
 			_, err := pkgNet.ParseEndpoint(s)
 			return err
 		},
 	}
 }
 
+// IsCIDR -
 func IsCIDR() validator.String {
-	return parseFuncValidator{
-		description: "value must be CIDR",
-		parseFunc: func(s string) error {
+	return stringValidator{
+		validatorBase: validatorBase{
+			description: "value must be CIDR",
+		},
+		validateFn: func(s string) error {
 			_, _, err := net.ParseCIDR(s)
 			return err
+		},
+	}
+}
+
+// CheckRulePriority -
+func CheckRulePriority() validator.Int64 {
+	return intValidator{
+		validatorBase: validatorBase{
+			description: "validate RulePriority",
+		},
+		validateFn: func(ctx context.Context, req validator.Int64Request, resp *validator.Int64Response) {
+			c := req.ConfigValue
+			if c.IsNull() {
+				return
+			}
+			if c.IsUnknown() {
+				di := diag.NewAttributeErrorDiagnostic(
+					req.Path,
+					"the RulePriority is undefined",
+					"",
+				)
+				resp.Diagnostics.Append(di)
+			} else {
+				x := c.ValueInt64()
+				if !(int64(math.MinInt16) <= x && x <= int64(math.MaxInt16)) {
+					di := diag.NewAttributeErrorDiagnostic(
+						req.Path,
+						fmt.Sprintf("the RulePriority(%v) is out of range", x),
+						fmt.Sprintf("valid range interval is [%v, %v]", math.MinInt16, math.MaxInt16),
+					)
+					resp.Diagnostics.Append(di)
+				}
+			}
 		},
 	}
 }

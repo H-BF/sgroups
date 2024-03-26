@@ -45,6 +45,7 @@ type (
 		Logs      types.Bool   `tfsdk:"logs"`
 		Trace     types.Bool   `tfsdk:"trace"`
 		Action    types.String `tfsdk:"action"`
+		Priority  RulePriority `tfsdk:"priority"`
 	}
 
 	sgSgIcmpRuleKey struct {
@@ -78,7 +79,8 @@ func (item sgSgIcmpRule) IsDiffer(ctx context.Context, other sgSgIcmpRule) bool 
 		item.IpVersion.Equal(other.IpVersion) &&
 		item.Logs.Equal(other.Logs) &&
 		item.Trace.Equal(other.Trace) &&
-		item.Action.Equal(other.Action))
+		item.Action.Equal(other.Action) &&
+		item.Priority.Equal(other.Priority))
 }
 
 func (item sgSgIcmpRule) Attributes() map[string]schema.Attribute {
@@ -125,6 +127,7 @@ func (item sgSgIcmpRule) Attributes() map[string]schema.Attribute {
 			Required:    true,
 			Validators:  []validator.String{actionValidator},
 		},
+		rulePriorityAttrLabel: rulePriorityAttr(),
 	}
 }
 
@@ -183,6 +186,12 @@ func readSgSgIcmpRules(
 		}
 		k := it.Key().String()
 		if _, ok := state.Items[k]; ok {
+			if p, d := rulePriorityFromProto(icmpRule.GetPriority()); d != nil {
+				diags.Append(d)
+				break
+			} else {
+				it.Priority = p
+			}
 			newState.Items[k] = it
 		}
 	}
