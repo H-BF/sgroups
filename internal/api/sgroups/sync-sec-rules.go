@@ -1,6 +1,7 @@
 package sgroups
 
 import (
+	"fmt"
 	"math"
 
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
@@ -94,8 +95,10 @@ func (p rulePriority) from(src *sg.RulePriority) error {
 				t.Some, math.MaxInt16, math.MaxInt16)
 		}
 		p.Set(int16(t.Some))
-	default:
+	case nil:
 		p.Unset()
+	default:
+		return fmt.Errorf("unsupported rule-priority value(%v)", t)
 	}
 	return nil
 }
