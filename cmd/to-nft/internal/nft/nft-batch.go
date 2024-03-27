@@ -302,27 +302,32 @@ func (bt *batch) initTable() {
 
 func (bt *batch) initRootChains() {
 	bt.addJob("init root chains", func(tx *Tx) error {
-		chnOutput := tx.AddChain(&nftLib.Chain{
-			Name:     chnEgressPOSTROUTING,
-			Table:    bt.table,
-			Type:     nftLib.ChainTypeFilter,
-			Policy:   val2ptr(nftLib.ChainPolicyDrop),
-			Hooknum:  nftLib.ChainHookPostrouting,
-			Priority: nftLib.ChainPriorityConntrackHelper,
-		})
-		bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chnEgressPOSTROUTING)
-		bt.chains.Put(chnEgressPOSTROUTING, chnOutput)
-
-		chnInput := tx.AddChain(&nftLib.Chain{
-			Name:     chnIngressINPUT,
-			Table:    bt.table,
-			Type:     nftLib.ChainTypeFilter,
-			Policy:   val2ptr(nftLib.ChainPolicyDrop),
-			Hooknum:  nftLib.ChainHookInput,
-			Priority: nftLib.ChainPriorityFilter,
-		})
-		bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chnIngressINPUT)
-		bt.chains.Put(chnIngressINPUT, chnInput)
+		chains := sli(
+			&nftLib.Chain{
+				Name:     chnIngressINPUT,
+				Table:    bt.table,
+				Type:     nftLib.ChainTypeFilter,
+				Policy:   val2ptr(nftLib.ChainPolicyDrop),
+				Hooknum:  nftLib.ChainHookInput,
+				Priority: nftLib.ChainPriorityFilter,
+			},
+			&nftLib.Chain{
+				Name:     chnEgressPOSTROUTING,
+				Table:    bt.table,
+				Type:     nftLib.ChainTypeFilter,
+				Policy:   val2ptr(nftLib.ChainPolicyDrop),
+				Hooknum:  nftLib.ChainHookPostrouting,
+				Priority: nftLib.ChainPriorityConntrackHelper,
+			},
+		)
+		for i := range chains {
+			chain := tx.AddChain(chains[i])
+			beginRule().
+				ctState(nfte.CtStateBitESTABLISHED|nfte.CtStateBitRELATED).
+				counter().accept().applyRule(chain, tx.Conn)
+			bt.chains.Put(chain.Name, chain)
+			bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chain.Name)
+		}
 		return nil
 	})
 }
@@ -943,9 +948,6 @@ func (bt *batch) chainInOutProlog(dir direction, sg *cases.SG) {
 						Name:  sgChName,
 						Table: bt.table,
 					})
-					beginRule().
-						ctState(nfte.CtStateBitESTABLISHED|nfte.CtStateBitRELATED).
-						counter().accept().applyRule(chn, tx.Conn)
 					bt.chains.Put(sgChName, chn)
 					bt.log.Debugf("chain '%s'/'%s' is in progress",
 						bt.table.Name, sgChName)
