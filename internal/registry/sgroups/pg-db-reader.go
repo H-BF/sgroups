@@ -168,7 +168,7 @@ func (rd *pgDbReader) argsForListSGRules(scope Scope) ([]any, error) { //nolint:
 // ListSGRules impl Reader interface
 func (rd *pgDbReader) ListSGRules(ctx context.Context, consume func(model.SGRule) error, scope Scope) error { //nolint:dupl
 	const (
-		qry = "select sg_from, sg_to, proto, ports, logs, action from, priority sgroups.list_sg_rule($1, $2)"
+		qry = "select sg_from, sg_to, proto, ports, logs, action, priority from sgroups.list_sg_rule($1, $2)"
 	)
 	args, err := rd.argsForListSGRules(scope)
 	if err != nil {

@@ -56,7 +56,7 @@ type (
 
 	// RulePriority -
 	RulePriority struct {
-		pgtype.Int2 `db:"priority"`
+		pgtype.Int2 `db:"-"`
 	}
 
 	// SG -
@@ -70,13 +70,13 @@ type (
 
 	// SGRule -
 	SGRule struct {
-		SgFrom string           `db:"sg_from"`
-		SgTo   string           `db:"sg_to"`
-		Proto  Proto            `db:"proto"`
-		Ports  SgRulePortsArray `db:"ports"`
-		Logs   bool             `db:"logs"`
-		Action RuleAction       `db:"action"`
-		RulePriority
+		SgFrom   string           `db:"sg_from"`
+		SgTo     string           `db:"sg_to"`
+		Proto    Proto            `db:"proto"`
+		Ports    SgRulePortsArray `db:"ports"`
+		Logs     bool             `db:"logs"`
+		Action   RuleAction       `db:"action"`
+		Priority RulePriority     `db:"priority"`
 	}
 
 	// SG2FQDNRule -
@@ -88,7 +88,7 @@ type (
 		Logs          bool             `db:"logs"`
 		NdpiProtocols []string         `db:"ndpi_protocols"`
 		Action        RuleAction       `db:"action"`
-		RulePriority
+		Priority      RulePriority     `db:"priority"`
 	}
 
 	// SyncStatus -
@@ -120,24 +120,24 @@ type (
 	// SgSgIcmpRule -
 	SgSgIcmpRule struct {
 		ICMP
-		SgFrom string     `db:"sg_from"`
-		SgTo   string     `db:"sg_to"`
-		Logs   bool       `db:"logs"`
-		Trace  bool       `db:"trace"`
-		Action RuleAction `db:"action"`
-		RulePriority
+		SgFrom   string       `db:"sg_from"`
+		SgTo     string       `db:"sg_to"`
+		Logs     bool         `db:"logs"`
+		Trace    bool         `db:"trace"`
+		Action   RuleAction   `db:"action"`
+		Priority RulePriority `db:"priority"`
 	}
 
 	// IESgSgIcmpRule -
 	IESgSgIcmpRule struct {
 		ICMP
-		SgLocal string     `db:"sg_local"`
-		Sg      string     `db:"sg"`
-		Traffic Traffic    `db:"traffic"`
-		Logs    bool       `db:"logs"`
-		Trace   bool       `db:"trace"`
-		Action  RuleAction `db:"action"`
-		RulePriority
+		SgLocal  string       `db:"sg_local"`
+		Sg       string       `db:"sg"`
+		Traffic  Traffic      `db:"traffic"`
+		Logs     bool         `db:"logs"`
+		Trace    bool         `db:"trace"`
+		Action   RuleAction   `db:"action"`
+		Priority RulePriority `db:"priority"`
 	}
 
 	// Traffic -
@@ -145,40 +145,40 @@ type (
 
 	// IECidrSgRule -
 	IECidrSgRule struct {
-		Proto   Proto            `db:"proto"`
-		CIDR    net.IPNet        `db:"cidr"`
-		SG      string           `db:"sg"`
-		Traffic Traffic          `db:"traffic"`
-		Ports   SgRulePortsArray `db:"ports"`
-		Logs    bool             `db:"logs"`
-		Trace   bool             `db:"trace"`
-		Action  RuleAction       `db:"action"`
-		RulePriority
+		Proto    Proto            `db:"proto"`
+		CIDR     net.IPNet        `db:"cidr"`
+		SG       string           `db:"sg"`
+		Traffic  Traffic          `db:"traffic"`
+		Ports    SgRulePortsArray `db:"ports"`
+		Logs     bool             `db:"logs"`
+		Trace    bool             `db:"trace"`
+		Action   RuleAction       `db:"action"`
+		Priority RulePriority     `db:"priority"`
 	}
 
 	// IECidrSgIcmpRule -
 	IECidrSgIcmpRule struct {
 		ICMP
-		Traffic Traffic    `db:"traffic"`
-		CIDR    net.IPNet  `db:"cidr"`
-		SG      string     `db:"sg"`
-		Logs    bool       `db:"logs"`
-		Trace   bool       `db:"trace"`
-		Action  RuleAction `db:"action"`
-		RulePriority
+		Traffic  Traffic      `db:"traffic"`
+		CIDR     net.IPNet    `db:"cidr"`
+		SG       string       `db:"sg"`
+		Logs     bool         `db:"logs"`
+		Trace    bool         `db:"trace"`
+		Action   RuleAction   `db:"action"`
+		Priority RulePriority `db:"priority"`
 	}
 
 	// IESgSgRule -
 	IESgSgRule struct {
-		Proto   Proto            `db:"proto"`
-		SgLocal string           `db:"sg_local"`
-		Sg      string           `db:"sg"`
-		Traffic Traffic          `db:"traffic"`
-		Ports   SgRulePortsArray `db:"ports"`
-		Logs    bool             `db:"logs"`
-		Trace   bool             `db:"trace"`
-		Action  RuleAction       `db:"action"`
-		RulePriority
+		Proto    Proto            `db:"proto"`
+		SgLocal  string           `db:"sg_local"`
+		Sg       string           `db:"sg"`
+		Traffic  Traffic          `db:"traffic"`
+		Ports    SgRulePortsArray `db:"ports"`
+		Logs     bool             `db:"logs"`
+		Trace    bool             `db:"trace"`
+		Action   RuleAction       `db:"action"`
+		Priority RulePriority     `db:"priority"`
 	}
 )
 

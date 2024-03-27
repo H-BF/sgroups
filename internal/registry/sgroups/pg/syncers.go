@@ -332,13 +332,13 @@ func (o *syncObj[T, tFlt]) AddData(ctx context.Context, data ...T) error { //nol
 			if err := x.FromModel(v); err != nil {
 				return err
 			}
-			raw = append(raw, []any{x.SgFrom, x.SgTo, x.Proto, x.Ports, x.Logs, x.Action, x.RulePriority.Int2})
+			raw = append(raw, []any{x.SgFrom, x.SgTo, x.Proto, x.Ports, x.Logs, x.Action, x.Priority.Int2})
 		case sgm.FQDNRule:
 			var x SG2FQDNRule
 			if err := x.FromModel(v); err != nil {
 				return err
 			}
-			raw = append(raw, []any{x.SgFrom, x.FqndTo, x.Proto, x.Ports, x.Logs, x.NdpiProtocols, x.Action, x.RulePriority.Int2})
+			raw = append(raw, []any{x.SgFrom, x.FqndTo, x.Proto, x.Ports, x.Logs, x.NdpiProtocols, x.Action, x.Priority.Int2})
 		case sgm.SgIcmpRule:
 			var x SgIcmpRule
 			if err := x.FromModel(v); err != nil {
@@ -350,31 +350,31 @@ func (o *syncObj[T, tFlt]) AddData(ctx context.Context, data ...T) error { //nol
 			if err := x.FromModel(v); err != nil {
 				return err
 			}
-			raw = append(raw, []any{x.IPv, x.SgFrom, x.SgTo, x.Tytes, x.Logs, x.Trace, x.Action, x.RulePriority.Int2})
+			raw = append(raw, []any{x.IPv, x.SgFrom, x.SgTo, x.Tytes, x.Logs, x.Trace, x.Action, x.Priority.Int2})
 		case sgm.IESgSgIcmpRule:
 			var x IESgSgIcmpRule
 			if err := x.FromModel(v); err != nil {
 				return err
 			}
-			raw = append(raw, []any{x.IPv, x.Tytes, x.SgLocal, x.Sg, x.Traffic, x.Logs, x.Trace, x.Action, x.RulePriority.Int2})
+			raw = append(raw, []any{x.IPv, x.Tytes, x.SgLocal, x.Sg, x.Traffic, x.Logs, x.Trace, x.Action, x.Priority.Int2})
 		case sgm.IECidrSgRule:
 			var x IECidrSgRule
 			if err := x.FromModel(v); err != nil {
 				return err
 			}
-			raw = append(raw, []any{x.Proto, x.CIDR, x.SG, x.Traffic, x.Ports, x.Logs, x.Trace, x.Action, x.RulePriority.Int2})
+			raw = append(raw, []any{x.Proto, x.CIDR, x.SG, x.Traffic, x.Ports, x.Logs, x.Trace, x.Action, x.Priority.Int2})
 		case sgm.IECidrSgIcmpRule:
 			var x IECidrSgIcmpRule
 			if err := x.FromModel(v); err != nil {
 				return err
 			}
-			raw = append(raw, []any{x.IPv, x.Tytes, x.CIDR, x.SG, x.Traffic, x.Logs, x.Trace, x.Action, x.RulePriority.Int2})
+			raw = append(raw, []any{x.IPv, x.Tytes, x.CIDR, x.SG, x.Traffic, x.Logs, x.Trace, x.Action, x.Priority.Int2})
 		case sgm.IESgSgRule:
 			var x IESgSgRule
 			if err := x.FromModel(v); err != nil {
 				return err
 			}
-			raw = append(raw, []any{x.Proto, x.SgLocal, x.Sg, x.Traffic, x.Ports, x.Logs, x.Trace, x.Action, x.RulePriority.Int2})
+			raw = append(raw, []any{x.Proto, x.SgLocal, x.Sg, x.Traffic, x.Ports, x.Logs, x.Trace, x.Action, x.Priority.Int2})
 		default:
 			panic("UB")
 		}

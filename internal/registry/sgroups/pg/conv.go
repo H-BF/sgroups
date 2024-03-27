@@ -246,7 +246,7 @@ func (o SGRule) ToModel() (sgm.SGRule, error) {
 		return ret, err
 	}
 	ret.Logs = o.Logs
-	ret.Priority = o.RulePriority.ToModel()
+	ret.Priority = o.Priority.ToModel()
 	ret.Ports, err = o.Ports.ToModel()
 	return ret, err
 }
@@ -262,7 +262,7 @@ func (o *SGRule) FromModel(m sgm.SGRule) error {
 		return err
 	}
 	o.Logs = m.Logs
-	o.RulePriority.FromModel(m.Priority)
+	o.Priority.FromModel(m.Priority)
 	return o.Action.FromModel(m.Action)
 }
 
@@ -282,7 +282,7 @@ func (o SG2FQDNRule) ToModel() (sgm.FQDNRule, error) {
 		return ret, err
 	}
 	ret.Logs = o.Logs
-	ret.Priority = o.RulePriority.ToModel()
+	ret.Priority = o.Priority.ToModel()
 	ret.Ports, err = o.Ports.ToModel()
 	return ret, err
 }
@@ -303,7 +303,7 @@ func (o *SG2FQDNRule) FromModel(m sgm.FQDNRule) error {
 		return err
 	}
 	o.Logs = m.Logs
-	o.RulePriority.FromModel(m.Priority)
+	o.Priority.FromModel(m.Priority)
 	return o.Action.FromModel(m.Action)
 }
 
@@ -381,7 +381,7 @@ func (o SgSgIcmpRule) ToModel() (ret sgm.SgSgIcmpRule, err error) {
 	ret.SgTo = o.SgTo
 	ret.Logs = o.Logs
 	ret.Trace = o.Trace
-	ret.Priority = o.RulePriority.ToModel()
+	ret.Priority = o.Priority.ToModel()
 	if ret.Action, err = o.Action.ToModel(); err != nil {
 		return ret, err
 	}
@@ -395,7 +395,7 @@ func (o *SgSgIcmpRule) FromModel(m sgm.SgSgIcmpRule) error {
 	o.SgTo = m.SgTo
 	o.Logs = m.Logs
 	o.Trace = m.Trace
-	o.RulePriority.FromModel(m.Priority)
+	o.Priority.FromModel(m.Priority)
 	if err := o.Action.FromModel(m.Action); err != nil {
 		return err
 	}
@@ -414,7 +414,7 @@ func (o IESgSgIcmpRule) ToModel() (ret sgm.IESgSgIcmpRule, err error) {
 	if ret.Traffic, err = o.Traffic.ToModel(); err != nil {
 		return ret, err
 	}
-	ret.Priority = o.RulePriority.ToModel()
+	ret.Priority = o.Priority.ToModel()
 	ret.Icmp, err = o.ICMP.ToModel()
 	return ret, err
 }
@@ -425,7 +425,7 @@ func (o *IESgSgIcmpRule) FromModel(m sgm.IESgSgIcmpRule) error {
 	o.Sg = m.Sg
 	o.Logs = m.Logs
 	o.Trace = m.Trace
-	o.RulePriority.FromModel(m.Priority)
+	o.Priority.FromModel(m.Priority)
 	if err := o.Action.FromModel(m.Action); err != nil {
 		return err
 	}
@@ -475,7 +475,7 @@ func (o *IECidrSgRule) FromModel(m sgm.IECidrSgRule) error { //nolint:dupl
 	}
 	o.Logs = m.Logs
 	o.Trace = m.Trace
-	o.RulePriority.FromModel(m.Priority)
+	o.Priority.FromModel(m.Priority)
 	return o.Action.FromModel(m.Action)
 }
 
@@ -497,7 +497,7 @@ func (o IECidrSgRule) ToModel() (ret sgm.IECidrSgRule, err error) {
 	}
 	ret.Logs = o.Logs
 	ret.Trace = o.Trace
-	ret.Priority = o.RulePriority.ToModel()
+	ret.Priority = o.Priority.ToModel()
 	return ret, nil
 }
 
@@ -507,7 +507,7 @@ func (o *IECidrSgIcmpRule) FromModel(m sgm.IECidrSgIcmpRule) error {
 	o.SG = m.SG
 	o.Logs = m.Logs
 	o.Trace = m.Trace
-	o.RulePriority.FromModel(m.Priority)
+	o.Priority.FromModel(m.Priority)
 	if err := o.Action.FromModel(m.Action); err != nil {
 		return err
 	}
@@ -529,7 +529,7 @@ func (o IECidrSgIcmpRule) ToModel() (ret sgm.IECidrSgIcmpRule, err error) {
 	if ret.Traffic, err = o.Traffic.ToModel(); err != nil {
 		return ret, err
 	}
-	ret.Priority = o.RulePriority.ToModel()
+	ret.Priority = o.Priority.ToModel()
 	ret.Icmp, err = o.ICMP.ToModel()
 	return ret, err
 }
@@ -549,7 +549,7 @@ func (o *IESgSgRule) FromModel(m sgm.IESgSgRule) error { //nolint:dupl
 	}
 	o.Logs = m.Logs
 	o.Trace = m.Trace
-	o.RulePriority.FromModel(m.Priority)
+	o.Priority.FromModel(m.Priority)
 	return o.Action.FromModel(m.Action)
 }
 
@@ -571,7 +571,7 @@ func (o IESgSgRule) ToModel() (ret sgm.IESgSgRule, err error) {
 	}
 	ret.Logs = o.Logs
 	ret.Trace = o.Trace
-	ret.Priority = o.RulePriority.ToModel()
+	ret.Priority = o.Priority.ToModel()
 	return ret, err
 }
 

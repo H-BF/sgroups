@@ -89,7 +89,7 @@ func (r sgRule) from(src *sg.Rule) error {
 func (p rulePriority) from(src *sg.RulePriority) error {
 	switch t := src.GetValue().(type) {
 	case *sg.RulePriority_Some:
-		if !(math.MaxInt16 <= t.Some && t.Some <= math.MaxInt16) {
+		if !(math.MinInt16 <= t.Some && t.Some <= math.MaxInt16) {
 			return errors.Errorf("rule priority (%v) is out of range [%v, %v]",
 				t.Some, math.MaxInt16, math.MaxInt16)
 		}
