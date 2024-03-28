@@ -25,7 +25,8 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
   <li>`$node.rules[].ICMP.IPv` - {DICTIONARY.icmpV.short}</li>
   <li>`$node.rules[].ICMP.Types` - {DICTIONARY.icmpTypes.short}</li>
   <li>`$node.rules[].action` - {DICTIONARY.action.short}</li>
-  <li>`$node.rules[].priority` - {DICTIONARY.priority.short}</li>
+  <li>`$node.rules[].priority` - {DICTIONARY.priorityst.short}</li>
+  <li>`$node.rules[].priority.some` - {DICTIONARY.priority.short}</li>
   <li>`syncOp` - {DICTIONARY.syncOp.short}</li>
 </ul>
 
@@ -178,7 +179,16 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
       <tr>
         <td>$node.rules[].priority</td>
         <td>нет</td>
-        <td>String</td>
+        <td>Object</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].priority.some</td>
+        <td>нет</td>
+        <td>Integer</td>
         <td></td>
         <td className="green center">✔</td>
         <td className="green center">✔</td>
@@ -257,7 +267,9 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
                         }],
                         "transport": "TCP",
                         "action": "ACCEPT",
-                        "priority": "300"
+                        "priority": {
+                          "some": 300
+                        }
                       }
                     ]
                   },
@@ -285,7 +297,9 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
                         }],
                         "transport": "TCP",
                         "action": "ACCEPT",
-                        "priority": "300"
+                        "priority": {
+                          "some": 300
+                        }
                       }
                     ]
                   },
@@ -380,7 +394,9 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
                         }],
                         "transport": "UDP",
                         "action": "ACCEPT",
-                        "priority": "300"
+                        "priority": {
+                          "some": 300
+                        }
                       }
                     ]
                   },
@@ -408,7 +424,9 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
                         }],
                         "transport": "UDP",
                         "action": "ACCEPT",
-                        "priority": "300"
+                        "priority": {
+                          "some": 300
+                        }
                       }
                     ]
                   },
@@ -502,7 +520,9 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
                           "Types": [0, 8]
                         },
                         "action": "ACCEPT",
-                        "priority": "200"
+                        "priority": {
+                          "some": 200
+                        }
                       }
                     ]
                   },
@@ -529,7 +549,9 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
                           "Types": [0, 8]
                         },
                         "action": "ACCEPT",
-                        "priority": "200"
+                        "priority": {
+                          "some": 200
+                        }
                       }
                     ]
                   },
@@ -629,7 +651,9 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
                           "Types": [0, 8]
                         },
                         "action": "ACCEPT",
-                        "priority": "200"
+                        "priority": {
+                          "some": 200
+                        }
                       }
                     ]
                   },
@@ -656,7 +680,9 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
                           "Types": [0, 8]
                         },
                         "action": "ACCEPT",
-                        "priority": "200"
+                        "priority": {
+                          "some": 200
+                        }
                       }
                     ]
                   },

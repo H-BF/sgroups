@@ -19,7 +19,8 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
   <li>`fqdnRules.rules[].sgFrom` - {DICTIONARY.sgLocal.short}</li>
   <li>`fqdnRules.rules[].transport` - {DICTIONARY.transport.short}</li>
   <li>`fqdnRules.rules[].action` - {DICTIONARY.action.short}</li>
-  <li>`fqdnRules.rules[].priority` - {DICTIONARY.priority.short}</li>
+  <li>`fqdnRules.rules[].priority` - {DICTIONARY.priorityst.short}</li>
+  <li>`fqdnRules.rules[].priority.some` - {DICTIONARY.priority.short}</li>
   {/* <li>`fqdnRules.rules[].protocols` - {DICTIONARY.l7ProtocolList.short}</li> */}
   <li>`syncOp` - {DICTIONARY.syncOp.short}</li>
 </ul>
@@ -114,9 +115,17 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
         <td className="green center">✔</td>
       </tr>
       <tr>
-        <td>fqdnRules.rules[].action</td>
+        <td>fqdnRules.rules[].priority</td>
         <td>нет</td>
-        <td>String</td>
+        <td>Object</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>fqdnRules.rules[].priority.some</td>
+        <td>нет</td>
+        <td>Integer</td>
         <td></td>
         <td className="green center">✔</td>
         <td className="green center">✔</td>
@@ -193,7 +202,9 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
                 "sgFrom": "sg-local-example",
                 "transport": "TCP",
                 "action": "ACCEPT",
-                "priority": "100"
+                "priority": {
+                  "some": 100
+                }
               }]
             },
             "syncOp": "Upsert"
@@ -217,7 +228,9 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
                 "sgFrom": "sg-local-example",
                 "transport": "UDP",
                 "action": "ACCEPT",
-                "priority": "100"
+                "priority": {
+                  "some": 100
+                }
               }]
             },
             "syncOp": "Upsert"
