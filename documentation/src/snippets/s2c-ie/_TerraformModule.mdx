@@ -18,13 +18,16 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
     <li className="text-justify">`rules` - {DICTIONARY.rules.short}</li>
     <li className="text-justify">`rules.$traffic[]` - {DICTIONARY.traffic.short}</li>
     <li className="text-justify">`rules.$traffic[].cidrSet[]` - {DICTIONARY.cidrSet.short}</li>
-    <li className="text-justify">`rules.$traffic[].log` - {DICTIONARY.log.short}</li>
-    <li className="text-justify">`rules.$traffic[].trace` - {DICTIONARY.trace.short}</li>
-    <li className="text-justify">`rules.$traffic[].access.$transport[]` - {DICTIONARY.transport.short}</li>
-    <li className="text-justify">`rules.$traffic[].access.$transport[].description` - {DICTIONARY.description.short}</li>
-    <li className="text-justify">`rules.$traffic[].access.$transport[].ports_to[]` - {DICTIONARY.dstPorts.short}</li>
-    <li className="text-justify">`rules.$traffic[].access.$transport[].ports_from[]` - {DICTIONARY.srcPorts.short}</li>
-    <li className="text-justify">`rules.$traffic[].access.$transport[].type[]` - {DICTIONARY.icmpTypes.short}</li>
+    <li className="text-justify">`rules.$traffic[].access.$transport` - {DICTIONARY.transport.short}</li>
+    <li className="text-justify">`rules.$traffic[].access.$transport.action` - {DICTIONARY.action.short}</li>
+    <li className="text-justify">`rules.$traffic[].access.$transport.priority` - {DICTIONARY.priority.short}</li>
+    <li className="text-justify">`rules.$traffic[].access.$transport.logs` - {DICTIONARY.log.short}</li>
+    <li className="text-justify">`rules.$traffic[].access.$transport.trace` - {DICTIONARY.trace.short}</li>
+    <li className="text-justify">`rules.$traffic[].access.$transport.ports[].description` - {DICTIONARY.description.short}</li>
+    <li className="text-justify">`rules.$traffic[].access.$transport.ports[].ports_to[]` - {DICTIONARY.dstPorts.short}</li>
+    <li className="text-justify">`rules.$traffic[].access.$transport.ports[].ports_from[]` - {DICTIONARY.srcPorts.short}</li>
+    <li className="text-justify">`rules.$traffic[].access.$transport.types[].description` - {DICTIONARY.description.short}</li>
+    <li className="text-justify">`rules.$traffic[].access.$transport.types[].type[]` - {DICTIONARY.icmpTypes.short}</li>
 
 </ul>
 
@@ -54,15 +57,15 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         <td className="green center">✔</td>
       </tr>
       <tr>
-        <td>rules.$traffic</td>
-        <td>Object</td>
+        <td>rules.$traffic[]</td>
+        <td>Object[]</td>
         <td></td>
         <td className="green center">✔</td>
         <td className="green center">✔</td>
         <td className="green center">✔</td>
       </tr>
       <tr>
-        <td>rules.$traffic.cidrSet[]</td>
+        <td>rules.$traffic[].cidrSet[]</td>
         <td>String[]</td>
         <td></td>
         <td className="green center">✔</td>
@@ -70,7 +73,33 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         <td className="green center">✔</td>
       </tr>
       <tr>
-        <td>rules.$traffic.log</td>
+        <td>rules.$traffic[].access.$transport</td>
+        <td>Object</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>rules.$traffic[].access.$transport.action</td>
+        <td>
+          <nobr>Enum("ACCEPT", "DROP")</nobr>
+        </td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>rules.$traffic[].access.$transport.priority</td>
+        <td>String</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>rules.$traffic[].access.$transport.log</td>
         <td>Boolean</td>
         <td>false</td>
         <td className="green center">✔</td>
@@ -78,7 +107,7 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         <td className="green center">✔</td>
       </tr>
       <tr>
-        <td>rules.$traffic.trace</td>
+        <td>rules.$traffic[].access.$transport.trace</td>
         <td>Boolean</td>
         <td>false</td>
         <td className="green center">✔</td>
@@ -86,7 +115,7 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         <td className="green center">✔</td>
       </tr>
       <tr>
-        <td>rules.$traffic.access.$transport[]</td>
+        <td>rules.$traffic[].access.$transport.ports[]</td>
         <td>Object[]</td>
         <td>{}</td>
         <td className="green center">✔</td>
@@ -94,15 +123,15 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         <td className="green center">✔</td>
       </tr>
       <tr>
-        <td>rules.$traffic.access.$transport[].description</td>
+        <td>rules.$traffic[].access.$transport.ports[].description</td>
         <td>String</td>
         <td>&quot;&quot;</td>
         <td className="green center">✔</td>
         <td className="green center">✔</td>
-        <td className="green center">✔</td>
+        <td className="green center"></td>
       </tr>
       <tr>
-        <td>rules.$traffic.access.$transport[].ports_to[]</td>
+        <td>rules.$traffic[].access.$transport.ports[].ports_to[]</td>
         <td>Integer[]</td>
         <td>null</td>
         <td className="green center">✔</td>
@@ -110,7 +139,7 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         <td className="green center"></td>
       </tr>
       <tr>
-        <td>rules.$traffic.access.$transport[].ports_from[]</td>
+        <td>rules.$traffic[].access.$transport.ports[].ports_from[]</td>
         <td>Integer[]</td>
         <td>null</td>
         <td className="green center">✔</td>
@@ -118,7 +147,23 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         <td className="green center"></td>
       </tr>
       <tr>
-        <td>rules.$traffic[].access.$transport[].type[]</td>
+        <td>rules.$traffic[].access.$transport.types[]</td>
+        <td>Object[]</td>
+        <td></td>
+        <td className="green center"></td>
+        <td className="green center"></td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>rules.$traffic[].access.$transport.types[].description</td>
+        <td>String</td>
+        <td>&quot;&quot;</td>
+        <td className="green center"></td>
+        <td className="green center"></td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>rules.$traffic[].access.$transport.types[].type[]</td>
         <td>Integer[]</td>
         <td>null</td>
         <td className="green center"></td>
@@ -141,15 +186,19 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
     <Restrictions data={RESTRICTIONS.cidrSet} />
   </li>
   <li>
-    `rules.$traffic[].access.$transport[].ports_to[]`:
+    `rules.$traffic[].access.$transport.priority`:
+    <Restrictions data={RESTRICTIONS.priority} />
+  </li>
+  <li>
+    `rules.$traffic[].access.$transport.ports[].ports_to[]`:
     <Restrictions data={RESTRICTIONS.dstPorts} />
   </li>
   <li>
-    `rules.$traffic[].access.$transport[].ports_from[]`:
+    `rules.$traffic[].access.$transport.ports[].ports_from[]`:
     <Restrictions data={RESTRICTIONS.srcPorts} />
   </li>
   <li>
-    `rules.$traffic[].access.$transport[].type[]`:
+    `rules.$traffic[].access.$transport.types[].type[]`:
     <Restrictions data={RESTRICTIONS.icmpType} />
   </li>
 </ul>
@@ -161,7 +210,8 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
   values={[
     { label: 'TCP', value: 'tcp' },
     { label: 'UDP', value: 'udp' },
-    { label: 'ICMP', value: 'icmp' },
+    { label: 'ICMP4', value: 'icmp4' },
+    { label: 'ICMP6', value: 'icmp6' },
   ]}
 >
   <TabItem value="tcp">
@@ -172,13 +222,16 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         ```yaml
         name: sg-local-example
         rules:
-            ingress:
-              - cidrSet:
-                  - "10.0.0.0/8"
-                logs: true
-                trace: true
-                access:
-                  tcp:
+          ingress:
+            - cidrSet:
+                - "10.0.0.0/8"
+              access:
+                tcp:
+                  action: ACCEPT
+                  priority: 300
+                  logs: true
+                  trace: true
+                  ports:
                     - description: "example"
                       ports_from:
                         - 64231
@@ -194,13 +247,16 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         ```yaml
         name: sg-local-example
         rules:
-            egress:
-              - cidrSet:
-                  - "10.0.0.0/8"
-                logs: true
-                trace: true
-                access:
-                  tcp:
+          egress:
+            - cidrSet:
+                - "10.0.0.0/8"
+              access:
+                tcp:
+                  action: ACCEPT
+                  priority: 300
+                  logs: true
+                  trace: true
+                  ports:
                     - description: "example"
                       ports_from:
                         - 64231
@@ -221,13 +277,16 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         ```yaml
         name: sg-local-example
         rules:
-            ingress:
-              - cidrSet:
-                  - "10.0.0.0/8"
-                logs: true
-                trace: true
-                access:
-                  udp:
+          ingress:
+            - cidrSet:
+                - "10.0.0.0/8"
+              access:
+                udp:
+                  action: ACCEPT
+                  priority: 300
+                  logs: true
+                  trace: true
+                  ports:
                     - description: "example"
                       ports_from:
                         - 64231
@@ -243,13 +302,16 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         ```yaml
         name: sg-local-example
         rules:
-            egress:
-              - cidrSet:
-                  - "10.0.0.0/8"
-                logs: true
-                trace: true
-                access:
-                  udp:
+          egress:
+            - cidrSet:
+                - "10.0.0.0/8"
+              access:
+                udp:
+                  action: ACCEPT
+                  priority: 300
+                  logs: true
+                  trace: true
+                  ports:
                     - description: "example"
                       ports_from:
                         - 64231
@@ -261,7 +323,7 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
     </div>
 
   </TabItem>
-  <TabItem value="icmp">
+  <TabItem value="icmp4">
     <div className="parent-div">
       <div className="child-block">
         <h4 className="center">Ingress</h4>
@@ -269,18 +331,16 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         ```yaml
         name: sg-local-example
         rules:
-            ingress:
-              - cidrSet:
-                  - "10.0.0.0/8"
-                logs: true
-                trace: true
-                access:
-                  icmpIPv4:
-                    - description: "example"
-                      type:
-                        - 0
-                        - 8
-                  icmpIPv6:
+          ingress:
+            - cidrSet:
+                - "10.0.0.0/8"
+              access:
+                icmpIPv4:
+                  action: ACCEPT
+                  priority: 200
+                  logs: true
+                  trace: true
+                  types:
                     - description: "example"
                       type:
                         - 0
@@ -294,18 +354,16 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         ```yaml
         name: sg-local-example
         rules:
-            egress:
-              - cidrSet:
-                  - "10.0.0.0/8"
-                logs: true
-                trace: true
-                access:
-                  icmpIPv4:
-                    - description: "example"
-                      type:
-                        - 0
-                        - 8
-                  icmpIPv6:
+          egress:
+            - cidrSet:
+                - "10.0.0.0/8"
+              access:
+                icmpIPv4:
+                  action: ACCEPT
+                  priority: 200
+                  logs: true
+                  trace: true
+                  types:
                     - description: "example"
                       type:
                         - 0
@@ -315,4 +373,56 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
     </div>
 
   </TabItem>
+
+  <TabItem value="icmp6">
+    <div className="parent-div">
+      <div className="child-block">
+        <h4 className="center">Ingress</h4>
+
+        ```yaml
+        name: sg-local-example
+        rules:
+          ingress:
+            - cidrSet:
+                - "::ffff:a00:0/104"
+              access:
+                icmpIPv6:
+                  action: ACCEPT
+                  priority: 200
+                  logs: true
+                  trace: true
+                  types:
+                    - description: "example"
+                      type:
+                        - 0
+                        - 8
+          ```
+
+      </div>
+      <div className="child-block">
+        <h4 className="center">Egress</h4>
+
+        ```yaml
+        name: sg-local-example
+        rules:
+          egress:
+            - cidrSet:
+                - "::ffff:a00:0/104"
+              access:
+                icmpIPv6:
+                  action: ACCEPT
+                  priority: 200
+                  logs: true
+                  trace: true
+                  types:
+                    - description: "example"
+                      type:
+                        - 0
+                        - 8
+          ```
+      </div>
+    </div>
+
+  </TabItem>
+
 </Tabs>

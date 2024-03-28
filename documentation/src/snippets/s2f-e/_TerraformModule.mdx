@@ -15,13 +15,15 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
   <li>`rules` - {DICTIONARY.rules.short}</li>
   <li>`rules.$traffic[]` - {DICTIONARY.traffic.short}</li>
   <li>`rules.$traffic[].fqdnSet[]` - {DICTIONARY.fqdnSet.short}</li>
-  <li>`rules.$traffic[].log` - {DICTIONARY.log.short}</li>
-  <li>`rules.$traffic[].trace` - {DICTIONARY.trace.short}</li>
-  <li>`rules.$traffic[].access.$transport[]` - {DICTIONARY.transport.short}</li>
-  <li>`rules.$traffic[].access.protocols[]` - {DICTIONARY.l7ProtocolList.short}</li>
-  <li>`rules.$traffic[].access.$transport.description` - {DICTIONARY.description.short}</li>
-  <li>`rules.$traffic[].access.$transport.ports_to[]` - {DICTIONARY.dstPorts.short}</li>
-  <li>`rules.$traffic[].access.$transport.ports_from[]` - {DICTIONARY.srcPorts.short}</li>
+  {/* <li>`rules.$traffic[].access.protocols[]` - {DICTIONARY.l7ProtocolList.short}</li> */}
+  <li>`rules.$traffic[].access.$transport` - {DICTIONARY.transport.short}</li>
+  <li>`rules.$traffic[].access.$transport.action` - {DICTIONARY.action.short}</li>
+  <li>`rules.$traffic[].access.$transport.priority` - {DICTIONARY.priority.short}</li>
+  <li>`rules.$traffic[].access.$transport.log` - {DICTIONARY.log.short}</li>
+  <li>`rules.$traffic[].access.$transport.trace` - {DICTIONARY.trace.short}</li>
+  <li>`rules.$traffic[].access.$transport.ports[].description` - {DICTIONARY.description.short}</li>
+  <li>`rules.$traffic[].access.$transport.ports[].ports_to[]` - {DICTIONARY.dstPorts.short}</li>
+  <li>`rules.$traffic[].access.$transport.ports[].ports_from[]` - {DICTIONARY.srcPorts.short}</li>
 </ul>
 
 <div className="scrollable-x">
@@ -62,42 +64,65 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         <td className="green center">✔</td>
       </tr>
       <tr>
-        <td>rules.$traffic[].log</td>
+        <td>rules.$traffic[].access.$transport</td>
+        <td>Object</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>rules.$traffic[].access.$transport.action</td>
+        <td>
+          <nobr>Enum("ACCEPT", "DROP")</nobr>
+        </td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>rules.$traffic[].access.$transport.priority</td>
+        <td>String</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>rules.$traffic[].access.$transport.log</td>
         <td>Boolean</td>
         <td>false</td>
         <td className="green center">✔</td>
         <td className="green center">✔</td>
       </tr>
       <tr>
-        <td>rules.$traffic[].trace</td>
+        <td>rules.$traffic[].access.$transport.trace</td>
         <td>Boolean</td>
         <td>false</td>
         <td className="green center">✔</td>
         <td className="green center">✔</td>
       </tr>
       <tr>
-        <td>rules.$traffic[].access.$transport[]</td>
+        <td>rules.$traffic[].access.$transport.ports[]</td>
         <td>Object[]</td>
-        <td>{}</td>
+        <td></td>
         <td className="green center">✔</td>
         <td className="green center">✔</td>
       </tr>
       <tr>
-        <td>rules.$traffic[].access.$transport.description</td>
+        <td>rules.$traffic[].access.$transport.ports[].description</td>
         <td>String</td>
         <td>&quot;&quot;</td>
         <td className="green center">✔</td>
         <td className="green center">✔</td>
       </tr>
       <tr>
-        <td>rules.$traffic[].access.$transport.ports_to[]</td>
+        <td>rules.$traffic[].access.$transport.ports[].ports_to[]</td>
         <td>Integer[]</td>
         <td>null</td>
         <td className="green center">✔</td>
         <td className="green center">✔</td>
       </tr>
       <tr>
-        <td>rules.$traffic[].access.$transport.ports_from[]</td>
+        <td>rules.$traffic[].access.$transport.ports[].ports_from[]</td>
         <td>Integer[]</td>
         <td>null</td>
         <td className="green center">✔</td>
@@ -118,16 +143,20 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
     `rules.$traffic[].fqdnSet`:
     <Restrictions data={RESTRICTIONS.fqdnSet} />
   </li>
-  <li>
+  {/* <li>
     `rules.$traffic[].protocols[]`:
     <Restrictions data={RESTRICTIONS.protocols} />
+  </li> */}
+  <li>
+    `rules.$traffic[].access.$transport.priority`:
+    <Restrictions data={RESTRICTIONS.priority} />
   </li>
   <li>
-    `rules.$traffic[].access.$transport[].ports_to[]`:
+    `rules.$traffic[].access.$transport.ports[].ports_to[]`:
     <Restrictions data={RESTRICTIONS.dstPorts} />
   </li>
   <li>
-    `rules.$traffic[].access.$transport[].ports_from[]`:
+    `rules.$traffic[].access.$transport.ports[].ports_from[]`:
     <Restrictions data={RESTRICTIONS.srcPorts} />
   </li>
 </ul>
@@ -150,16 +179,16 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         ```yaml
         name: sg-local-example
         rules:
-            egress:
-              - fqdnSet:
-                  - example.com
-                logs:  true
-                trace: true
-                protocols:
-                  - "http"
-                  - "dns"
-                access:
-                  tcp:
+          egress:
+            - fqdnSet:
+                - example.com
+              access:
+                tcp:
+                  action: ACCEPT
+                  priority: 100
+                  logs:  true
+                  trace: true
+                  ports:
                     - description: "example"
                       ports_from:
                         - 64231
@@ -173,16 +202,16 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         ```yaml
         name: sg-local-example
         rules:
-            egress:
-              - fqdnSet:
-                  - example.com
-                logs:  true
-                trace: true
-                protocols:
-                  - "http"
-                  - "dns"
-                access:
-                  udp:
+          egress:
+            - fqdnSet:
+                - example.com
+              access:
+                udp:
+                  action: ACCEPT
+                  priority: 100
+                  logs:  true
+                  trace: true
+                  ports:
                     - description: "example"
                       ports_from:
                         - 64231

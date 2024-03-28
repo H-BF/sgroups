@@ -6,6 +6,10 @@ pre span {
   font-family: 'Source Code Pro', monospace;
 }
 
+footer {
+  z-index: 2;
+}
+
 /*
   Выравнивание текста по ширине
 */
@@ -86,4 +90,22 @@ table {
 
 .p-without-margin {
   margin: 0;
+}
+
+/* medusa */
+
+#medusa-stage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  width: 98vw;
+  height: 100vh;
+}
+
+.medusa-container {
+  position: absolute;
+  top: 0;
+  width: 98vw;
+  height: 100vh;
 }

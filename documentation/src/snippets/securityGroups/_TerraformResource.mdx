@@ -95,6 +95,12 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         <td>String[]</td>
         <td>{DICTIONARY.icmpTypes.short}</td>
       </tr>
+      <tr>
+        <td>items.key.$transport.action</td>
+        <td>да</td>
+        <td>Enum("ACCEPT", "DROP")</td>
+        <td>{DICTIONARY.action.short}</td>
+      </tr>
     </tbody>
   </table>
 </div>
@@ -143,11 +149,13 @@ resource "sgroups_groups" "groups" {
                 logs = true
                 trace = true
                 type = [0, 8]
+                action = "DROP"
             }
             icmp6 = {
                 logs = true
                 trace = true
                 type = [0, 8]
+                action = "DROP"
             }
         }
     }

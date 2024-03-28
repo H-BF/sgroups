@@ -77,6 +77,9 @@ curl '127.0.0.1:9007/v1/cidr-sg-icmp/rules' \
   <li>`$node.rules[].ICMP.IPv` - {DICTIONARY.icmpV.short}</li>
   <li>`$node.rules[].ICMP.Types[]` - {DICTIONARY.icmpTypes.short}</li>
   <li>`$node.rules[].traffic` - {DICTIONARY.traffic.short}</li>
+  <li>`$node.rules[].action` - {DICTIONARY.action.short}</li>
+  <li>`$node.rules[].priority` - {DICTIONARY.priorityst.short}</li>
+  <li>`$node.rules[].priority.some` - {DICTIONARY.priority.short}</li>
 </ul>
 
 <div className="scrollable-x">
@@ -124,6 +127,18 @@ curl '127.0.0.1:9007/v1/cidr-sg-icmp/rules' \
         <td>$node.rules[].traffic</td>
         <td>String</td>
       </tr>
+      <tr>
+        <td>$node.rules[].action</td>
+        <td>String</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].priority</td>
+        <td>Object</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].priority.some</td>
+        <td>Integer</td>
+      </tr>
     </tbody>
   </table>
 </div>
@@ -142,6 +157,10 @@ curl '127.0.0.1:9007/v1/cidr-sg-icmp/rules' \
             },
         "trace": "true",
         "traffic": "ingress",
+        "action": "ACCEPT",
+        "priority": {
+                "some": 200
+            }
     }]
 }
 ```

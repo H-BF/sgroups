@@ -100,6 +100,12 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         <td>Integer[]</td>
         <td>[]</td>
       </tr>
+      <tr>
+        <td>default_rules.access.$transport.action</td>
+        <td>{DICTIONARY.action.short}</td>
+        <td>Enum("ACCEPT", "DROP")</td>
+        <td>`ACCEPT`</td>
+      </tr>
     </tbody>
   </table>
 </div>
@@ -140,11 +146,13 @@ default_rules:
       action: ACCEPT
 
     icmp:
+      action: DROP
       logs: true
       trace: true
       type: [0, 8]
 
     icmp6:
+      action: DROP
       logs: true
       trace: true
       type: [0, 8]
