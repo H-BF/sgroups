@@ -18,7 +18,10 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
   <li>`fqdnRules.rules[].ports[].s` - {DICTIONARY.srcPorts.short}</li>
   <li>`fqdnRules.rules[].sgFrom` - {DICTIONARY.sgLocal.short}</li>
   <li>`fqdnRules.rules[].transport` - {DICTIONARY.transport.short}</li>
-  <li>`fqdnRules.rules[].protocols` - {DICTIONARY.l7ProtocolList.short}</li>
+  <li>`fqdnRules.rules[].action` - {DICTIONARY.action.short}</li>
+  <li>`fqdnRules.rules[].priority` - {DICTIONARY.priorityst.short}</li>
+  <li>`fqdnRules.rules[].priority.some` - {DICTIONARY.priority.short}</li>
+  {/* <li>`fqdnRules.rules[].protocols` - {DICTIONARY.l7ProtocolList.short}</li> */}
   <li>`syncOp` - {DICTIONARY.syncOp.short}</li>
 </ul>
 
@@ -104,13 +107,37 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
         <td className="green center">✔</td>
       </tr>
       <tr>
+        <td>fqdnRules.rules[].action</td>
+        <td>да</td>
+        <td>Enum("UNDEF", "ACCEPT", "DROP")</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>fqdnRules.rules[].priority</td>
+        <td>нет</td>
+        <td>Object</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>fqdnRules.rules[].priority.some</td>
+        <td>нет</td>
+        <td>Integer</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      {/* <tr>
         <td>fqdnRules.rules[].protocols</td>
         <td>нет</td>
         <td>Object[]</td>
         <td></td>
         <td className="green center">✔</td>
         <td className="green center">✔</td>
-      </tr>
+      </tr> */}
       <tr>
         <td>syncOp</td>
         <td>да</td>
@@ -165,17 +192,20 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
         --header 'Content-Type: application/json' \
         --data '{
             "fqdnRules": {
-                "rules": [{
-                    "FQDN": "example.com",
-                    "logs": true,
-                    "ports": [{
-                        "d": "443,80",
-                        "s": "64231"
-                    }],
-                    "sgFrom": "sg-local-example",
-                    "transport": "TCP",
-                    "protocols": ["http","dns"]
-                }]
+              "rules": [{
+                "FQDN": "example.com",
+                "logs": true,
+                "ports": [{
+                  "d": "443,80",
+                  "s": "64231"
+                }],
+                "sgFrom": "sg-local-example",
+                "transport": "TCP",
+                "action": "ACCEPT",
+                "priority": {
+                  "some": 100
+                }
+              }]
             },
             "syncOp": "Upsert"
         }'
@@ -188,17 +218,20 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
         --header 'Content-Type: application/json' \
         --data '{
             "fqdnRules": {
-                "rules": [{
-                    "FQDN": "example.com",
-                    "logs": true,
-                    "ports": [{
-                        "d": "443,80",
-                        "s": "64231"
-                    }],
-                    "sgFrom": "sg-local-example",
-                    "transport": "UDP",
-                    "protocols": ["http","dns"]
-                }]
+              "rules": [{
+                "FQDN": "example.com",
+                "logs": true,
+                "ports": [{
+                  "d": "443,80",
+                  "s": "64231"
+                }],
+                "sgFrom": "sg-local-example",
+                "transport": "UDP",
+                "action": "ACCEPT",
+                "priority": {
+                  "some": 100
+                }
+              }]
             },
             "syncOp": "Upsert"
         }'

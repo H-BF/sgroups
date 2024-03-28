@@ -99,6 +99,27 @@ import TabItem from '@theme/TabItem'
               </thead>
               <tbody>
                   <tr>
+                    <td>$ConntrackState</td>
+                    <td>`ct state`</td>
+                    <td>`established,related`</td>
+                    <td>
+                      <div className="text-justify">
+                        Оптеделяет правило для обработки пакетов, удовлетворяющих условиям установленного и связанного состояния соединения.
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>$CtVerdict</td>
+                    <td></td>
+                    <td>`accept`</td>
+                    <td>
+                      <div className="text-justify">
+                          $CtVerdict - указывает на принятие (accept) пакетов  по указанным условиям.
+                          <i>Подробнее: [Verdict statement](./verdict-statement.mdx)</i>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
                     <td>$BaseRules</td>
                     <td></td>
                     <td></td>
@@ -176,6 +197,7 @@ import TabItem from '@theme/TabItem'
         ```hcl
         chain INGRESS-INPUT {
             type filter $Hook $HookPriority; $PolicyVerdict;
+            $ConntrackState $Counter $CtVerdict
             $BaseRules
             # **********
             $RuleType $DstSgroup $Counter $Verdict INGRESS-INPUT-$sgName
@@ -189,6 +211,7 @@ import TabItem from '@theme/TabItem'
         ```hcl
         chain INGRESS-INPUT {
             type filter hook input priority 0; policy drop;
+            ct state established,related counter packets 0 bytes 0 accept
             ip saddr { 1.1.1.1, 2.2.2.2} accept
             # **********
             ip daddr @NetIPv4-exampleSG counter packets   0 bytes 0 goto INGRESS-INPUT-exampleSG
@@ -202,6 +225,7 @@ import TabItem from '@theme/TabItem'
 
             chain INGRESS-INPUT {
                 type filter hook input priority filter; policy drop;
+                ct state established,related counter packets 0 bytes 0 accept
                 ip saddr { 1.1.1.1, 2.2.2.2} accept
                 # ******
                 ip daddr @NetIPv4-no-routed counter packets   0 bytes 0 goto INGRESS-INPUT-no-routed
@@ -210,13 +234,11 @@ import TabItem from '@theme/TabItem'
             }
 
             chain INGRESS-INPUT-no-routed {
-                ct state established,related counter packets 0 bytes 0 accept
                 # ******
                 counter packets 0 bytes 0 accept
             }
 
             chain INGRESS-INPUT-exampleSG {
-                ct state established,related counter packets 0 bytes 0 accept
                 # ******
                 counter packets 0 bytes 0 accept
             }
@@ -245,6 +267,27 @@ import TabItem from '@theme/TabItem'
                   </tr>
               </thead>
               <tbody>
+                  <tr>
+                    <td>$ConntrackState</td>
+                    <td>`ct state`</td>
+                    <td>`established,related`</td>
+                    <td>
+                      <div className="text-justify">
+                        Оптеделяет правило для обработки пакетов, удовлетворяющих условиям установленного и связанного состояния соединения.
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>$CtVerdict</td>
+                    <td></td>
+                    <td>`accept`</td>
+                    <td>
+                      <div className="text-justify">
+                          $CtVerdict - указывает на принятие (accept) пакетов  по указанным условиям.
+                          <i>Подробнее: [Verdict statement](./verdict-statement.mdx)</i>
+                      </div>
+                    </td>
+                  </tr>
                   <tr>
                     <td>$BaseRules</td>
                     <td></td>
@@ -323,6 +366,7 @@ import TabItem from '@theme/TabItem'
         ```hcl
         chain EGRESS-POSTROUTING {
             type filter $Hook $HookPriority; $PolicyVerdict;
+            $ConntrackState $Counter $CtVerdict
             $BaseRules
             # **********
             $RuleType $SrcSgroup $Counter $Verdict EGRESS-POSTROUTING-$sgName
@@ -336,6 +380,7 @@ import TabItem from '@theme/TabItem'
         ```hcl
         chain EGRESS-POSTROUTING {
             type filter hook postrouting priority 300; policy drop;
+            ct state established,related counter packets 0 bytes 0 accept
             ip daddr { 1.1.1.1, 2.2.2.2} accept
             # **********
             ip saddr @NetIPv4-exampleSG counter packets 0 bytes 0 goto EGRESS-POSTROUTING-exampleSG
@@ -349,6 +394,7 @@ import TabItem from '@theme/TabItem'
 
           chain EGRESS-POSTROUTING {
               type filter hook postrouting priority 300; policy drop;
+              ct state established,related counter packets 0 bytes 0 accept
               ip daddr { 1.1.1.1, 2.2.2.2} accept
               # **********
               ip saddr @NetIPv4-exampleSG counter packets 0 bytes 0 goto EGRESS-POSTROUTING-exampleSG
@@ -357,13 +403,11 @@ import TabItem from '@theme/TabItem'
           }
 
           chain EGRESS-POSTROUTING-no-routed {
-              ct state established,related counter packets 0 bytes 0 accept
               # ******
               counter packets 0 bytes 0 accept
           }
 
           chain EGRESS-POSTROUTING-exampleSG {
-              ct state established,related counter packets 0 bytes 0 accept
               # ******
               counter packets 0 bytes 0 accept
           }

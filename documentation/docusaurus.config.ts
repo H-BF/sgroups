@@ -32,7 +32,10 @@ const config: Config = {
         docs: {
           sidebarPath: './sidebars.ts',
           routeBasePath: '/',
-          includeCurrentVersion: process.env.DOC_INCLUDE_CURRENT_VERSION && process.env.DOC_INCLUDE_CURRENT_VERSION.toLowerCase() === 'true' || false
+          includeCurrentVersion:
+            (process.env.DOC_INCLUDE_CURRENT_VERSION &&
+              process.env.DOC_INCLUDE_CURRENT_VERSION.toLowerCase() === 'true') ||
+            false,
         },
         blog: false,
         pages: {
@@ -53,7 +56,7 @@ const config: Config = {
     ],
   ],
 
-  plugins: [require.resolve('./plugins/webpack'), 'docusaurus-plugin-astroturf'],
+  plugins: [require.resolve('./plugins/webpack'), require.resolve('./plugins/medusa'), 'docusaurus-plugin-astroturf'],
 
   themes: ['@docusaurus/theme-mermaid'],
 
@@ -75,7 +78,7 @@ const config: Config = {
       logo: {
         src: 'img/logo.jpg',
       },
-      title: 'SGroups',
+      title: 'S.Groups',
       items: [
         {
           type: 'docSidebar',
