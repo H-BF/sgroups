@@ -6,30 +6,49 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 )
 
-type parseFuncValidator struct {
+type validatorBase struct {
 	description string
-	parseFunc   func(s string) error
 }
 
-func (d parseFuncValidator) Description(ctx context.Context) string {
+type stringValidator struct {
+	validatorBase
+	validateFn func(s string) error
+}
+
+type intValidator struct {
+	validatorBase
+	validateFn func(context.Context, validator.Int64Request, *validator.Int64Response)
+}
+
+// Description -
+func (d validatorBase) Description(_ context.Context) string {
 	return d.description
 }
 
-func (d parseFuncValidator) MarkdownDescription(ctx context.Context) string {
+// MarkdownDescription -
+func (d validatorBase) MarkdownDescription(ctx context.Context) string {
 	return d.Description(ctx)
 }
 
-func (d parseFuncValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
-	if req.ConfigValue.ValueString() == "" {
+// ValidateString -
+func (d stringValidator) ValidateString(ctx context.Context, req validator.StringRequest, resp *validator.StringResponse) {
+	val := req.ConfigValue.ValueString()
+	if val == "" {
 		return
 	}
-
-	err := d.parseFunc(req.ConfigValue.ValueString())
-	if err != nil {
+	if err := d.validateFn(val); err != nil {
 		resp.Diagnostics.Append(
 			invalidAttributeValueDiagnostic(req.Path, d.Description(ctx), req.ConfigValue.ValueString()),
 		)
 	}
 }
 
-var _ validator.String = &parseFuncValidator{}
+// ValidateInt64 -
+func (d intValidator) ValidateInt64(ctx context.Context, req validator.Int64Request, resp *validator.Int64Response) {
+	d.validateFn(ctx, req, resp)
+}
+
+var (
+	_ validator.String = (*stringValidator)(nil)
+	_ validator.Int64  = (*intValidator)(nil)
+)

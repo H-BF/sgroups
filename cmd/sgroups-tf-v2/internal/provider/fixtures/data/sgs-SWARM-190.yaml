@@ -33,14 +33,16 @@ cases:
           default_action = "DROP"
           networks = ["net1", "net2"]
           icmp = {
-            logs = true
-            trace = true
-            type = [1,2,3]
+            logs    = true
+            trace   = true
+            type    = [1,2,3]
+            action  = "ACCEPT"
           }
           icmp6 = {
-            logs = false
-            trace = false
-            type = [0,255]
+            logs    = false
+            trace   = false
+            type    = [0,255]
+            action  = "ACCEPT"
           }
         }
         sg2 = {
@@ -48,7 +50,8 @@ cases:
           default_action = "DROP"
           networks = ["net3"]
           icmp = {
-            type = [1,2,3]
+            type    = [1,2,3]
+            action  = "DROP"
           }
         }
       }
@@ -82,7 +85,8 @@ cases:
         },
         "Sg": "sg1",
         "logs": true,
-        "trace": true
+        "trace": true,
+        "action": "ACCEPT"
       }
     - |
       {
@@ -94,7 +98,8 @@ cases:
         },
         "Sg": "sg1",
         "logs": false,
-        "trace": false
+        "trace": false,
+        "action": "ACCEPT"
       }
     - |
       {
@@ -106,7 +111,8 @@ cases:
         },
         "Sg": "sg2",
         "logs": false,
-        "trace": false
+        "trace": false,
+        "action": "DROP"
       }
 - name: "remove icmp in first sg and change in second"
   tf-config: |
@@ -124,8 +130,9 @@ cases:
           default_action = "DROP"
           networks = ["net3"]
           icmp = {
-            type = [255]
-            logs = true
+            type    = [255]
+            logs    = true
+            action  = "ACCEPT"
           }
         }
       }
@@ -157,7 +164,8 @@ cases:
         },
         "Sg": "sg2",
         "logs": true,
-        "trace": false
+        "trace": false,
+        "action": "ACCEPT"
       }
   not-expected-backend:
     sg-icmp-rules:
@@ -171,7 +179,8 @@ cases:
         },
         "Sg": "sg1",
         "logs": true,
-        "trace": true
+        "trace": true,
+        "action": "ACCEPT"
       }
     - |
       {
@@ -183,5 +192,6 @@ cases:
         },
         "Sg": "sg1",
         "logs": false,
-        "trace": false
+        "trace": false,
+        "action": "ACCEPT"
       }

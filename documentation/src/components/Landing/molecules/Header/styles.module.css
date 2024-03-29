@@ -1,31 +1,39 @@
 .container {
-  width: 100%;
-  height: calc(100vh - var(--ifm-navbar-height));
-  background: url('/img/background.jpg');
-  background-size: cover;
-  background-position: center center;
   position: absolute;
   top: 4rem;
   left: 0;
+  width: 100%;
+  height: calc(100vh - var(--ifm-navbar-height));
+  background: radial-gradient(circle, #000 0%, #000 75%, #082a23 100%);
+  background-position: center center;
+  background-size: cover;
 }
 
 .text {
   position: absolute;
-  bottom: 100px;
-  margin-left: auto;
-  margin-right: auto;
-  left: 0;
   right: 0;
-  max-width: 550px;
+  bottom: 150px;
+  left: 0;
+  z-index: 2;
+  max-width: 500px;
+  margin-right: auto;
+  margin-left: auto;
+  padding: 15px;
   text-align: justify;
   background: rgba(0, 0, 0, 0.7);
-  padding: 15px;
+
+  span {
+    font-weight: 300;
+  }
+  p span {
+    font-weight: bold;
+  }
 }
 
 @media (min-width: 997px) {
   .text {
-    margin-left: 0;
     left: 50px;
+    margin-left: 0;
   }
 }
 
@@ -36,24 +44,24 @@
 }
 
 .button {
+  display: inline-block;
+  min-height: 50px;
+  margin-top: 0.5rem;
+  margin-right: 0.5rem;
+  padding: 0.625em 2em;
+  color: #fff;
+  font-weight: 700;
   background-color: #dd2e57;
   border-width: 0;
-  color: #fff;
-  margin-right: 0.5rem;
-  margin-top: 0.5rem;
   border-radius: 0.1rem;
   cursor: pointer;
-  display: inline-block;
-  font-weight: 700;
-  padding: 0.625em 2em;
   transition:
     color 125ms,
     background-color 125ms,
     border-color 125ms;
-  min-height: 50px;
 }
 
 .button:hover {
-  background-color: #526cfe;
   color: #fff;
+  background-color: var(--ifm-color-primary);
 }

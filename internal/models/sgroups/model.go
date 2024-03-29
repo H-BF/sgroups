@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/H-BF/sgroups/internal/dict"
+	"github.com/H-BF/sgroups/pkg/option"
 
 	"github.com/H-BF/corlib/pkg/ranges"
 	"github.com/pkg/errors"
@@ -118,11 +119,21 @@ type (
 		UpdatedAt time.Time
 	}
 
+	// RuleAction terminal verdict action for rules
+	RuleAction uint8
+
+	// RulePriority represents rule priority i e relative placement pos in the rule list
+	RulePriority struct {
+		option.ValueOf[int16]
+	}
+
 	ruleT[T any] struct {
-		ID    T
-		Ports []SGRulePorts
-		Logs  bool
-		Trace bool
+		ID       T
+		Ports    []SGRulePorts
+		Logs     bool
+		Trace    bool
+		Action   RuleAction
+		Priority RulePriority
 	}
 
 	ruleID[T any] interface {
@@ -134,10 +145,11 @@ type (
 
 	// SgIcmpRule SG:ICMP default rule
 	SgIcmpRule struct {
-		Sg    string
-		Icmp  ICMP
-		Logs  bool
-		Trace bool
+		Sg     string
+		Icmp   ICMP
+		Logs   bool
+		Trace  bool
+		Action RuleAction
 	}
 
 	// SgIcmpRuleID SG:ICMP rule ID
@@ -148,11 +160,13 @@ type (
 
 	// SgSgIcmpRule SG-SG:ICMP default rule
 	SgSgIcmpRule struct {
-		SgFrom string
-		SgTo   string
-		Icmp   ICMP
-		Logs   bool
-		Trace  bool
+		SgFrom   string
+		SgTo     string
+		Icmp     ICMP
+		Logs     bool
+		Trace    bool
+		Action   RuleAction
+		Priority RulePriority
 	}
 
 	// SgSgIcmpRuleID SG-SG:ICMP rule ID
@@ -164,12 +178,14 @@ type (
 
 	// IESgSgIcmpRule <IN|E>GRESS:SG-SG:ICMP rule
 	IESgSgIcmpRule struct {
-		Traffic Traffic
-		SgLocal string
-		Sg      string
-		Icmp    ICMP
-		Logs    bool
-		Trace   bool
+		Traffic  Traffic
+		SgLocal  string
+		Sg       string
+		Icmp     ICMP
+		Logs     bool
+		Trace    bool
+		Action   RuleAction
+		Priority RulePriority
 	}
 
 	// IESgSgIcmpRuleID <IN|E>GRESS:SG-SG:ICMP rule ID
@@ -182,12 +198,14 @@ type (
 
 	// IECidrSgIcmpRule <IN|E>GRESS:CIDR-SG:ICMP rule
 	IECidrSgIcmpRule struct {
-		Traffic Traffic
-		CIDR    net.IPNet
-		SG      string
-		Icmp    ICMP
-		Logs    bool
-		Trace   bool
+		Traffic  Traffic
+		CIDR     net.IPNet
+		SG       string
+		Icmp     ICMP
+		Logs     bool
+		Trace    bool
+		Action   RuleAction
+		Priority RulePriority
 	}
 
 	// IECidrSgIcmpRuleID <IN|E>GRESS:CIDR-SG:ICMP rule ID
@@ -246,6 +264,17 @@ const (
 	ACCEPT
 )
 
+const (
+	// RA_UNDEF -
+	RA_UNDEF RuleAction = iota
+
+	// RA_DROP setups rule to drop packet
+	RA_DROP
+
+	// RA_ACCEPT setups rule to accept packet
+	RA_ACCEPT
+)
+
 // NewPortRarnges is a port rarnges constructor
 func NewPortRarnges() PortRanges {
 	return ranges.NewMultiRange(PortRangeFactory)
@@ -287,6 +316,25 @@ func (a *ChainDefaultAction) FromString(s string) error {
 		*a = DROP
 	case "accept":
 		*a = ACCEPT
+	default:
+		return errors.WithMessage(fmt.Errorf("unknown value '%s'", s), api)
+	}
+	return nil
+}
+
+// String impl Stringer
+func (a RuleAction) String() string {
+	return [...]string{"undef", "drop", "accept"}[a]
+}
+
+// FromString init from string
+func (a *RuleAction) FromString(s string) error {
+	const api = "RuleAction/FromString"
+	switch strings.ToLower(s) {
+	case "drop":
+		*a = RA_DROP
+	case "accept":
+		*a = RA_ACCEPT
 	default:
 		return errors.WithMessage(fmt.Errorf("unknown value '%s'", s), api)
 	}
@@ -393,7 +441,9 @@ func (rule ruleT[T]) IsEq(other ruleT[T]) bool {
 	return any(rule.ID).(ruleID[T]).IsEq(other.ID) &&
 		AreRulePortsEq(rule.Ports, other.Ports) &&
 		rule.Logs == other.Logs &&
-		rule.Trace == other.Trace
+		rule.Trace == other.Trace &&
+		rule.Action == other.Action &&
+		rule.Priority.IsEq(other.Priority)
 }
 
 // IsEq -
@@ -437,6 +487,7 @@ func (o SgIcmpRuleID) String() string {
 func (o SgIcmpRule) IsEq(other SgIcmpRule) bool {
 	return o.Logs == other.Logs &&
 		o.Trace == other.Trace &&
+		o.Action == other.Action &&
 		o.Sg == other.Sg &&
 		o.Icmp.IsEq(other.Icmp)
 }
@@ -453,6 +504,8 @@ func (o SgIcmpRule) ID() SgIcmpRuleID {
 func (o SgSgIcmpRule) IsEq(other SgSgIcmpRule) bool {
 	return o.Logs == other.Logs &&
 		o.Trace == other.Trace &&
+		o.Action == other.Action &&
+		o.Priority.IsEq(other.Priority) &&
 		o.SgFrom == other.SgFrom &&
 		o.Icmp.IsEq(other.Icmp)
 }
@@ -483,7 +536,9 @@ func (o IESgSgIcmpRule) IsEq(other IESgSgIcmpRule) bool {
 		o.Sg == other.Sg &&
 		o.Icmp.IsEq(other.Icmp) &&
 		o.Logs == other.Logs &&
-		o.Trace == other.Trace
+		o.Trace == other.Trace &&
+		o.Action == other.Action &&
+		o.Priority.IsEq(other.Priority)
 }
 
 // ID -
@@ -516,7 +571,9 @@ func (o IECidrSgIcmpRule) IsEq(other IECidrSgIcmpRule) bool {
 		cidrIsEq &&
 		o.SG == other.SG &&
 		o.Logs == other.Logs &&
-		o.Trace == other.Trace
+		o.Trace == other.Trace &&
+		o.Action == other.Action &&
+		o.Priority.IsEq(other.Priority)
 }
 
 // ID -
@@ -611,4 +668,11 @@ func (o IESgSgRuleIdentity) String() string {
 func (o ICMP) IsEq(other ICMP) bool {
 	return o.IPv == other.IPv &&
 		o.Types.Eq(&other.Types)
+}
+
+// IsEq -
+func (o RulePriority) IsEq(other RulePriority) bool {
+	return o.ValueOf.IsEq(other.ValueOf, func(a, b int16) bool {
+		return a == b
+	})
 }

@@ -48,6 +48,26 @@ func TestValidate_Traffic(t *testing.T) {
 	}
 }
 
+func TestValidate_RuleAction(t *testing.T) {
+	cases := []struct {
+		x    RuleAction
+		fail bool
+	}{
+		{RA_DROP, false},
+		{RA_ACCEPT, false},
+		{RuleAction(100), true},
+	}
+	for i := range cases {
+		c := cases[i]
+		e := c.x.Validate()
+		if !c.fail {
+			require.NoErrorf(t, e, "test case #%v", i)
+		} else {
+			require.Errorf(t, e, "test case #%v", i)
+		}
+	}
+}
+
 func TestValidate_Network(t *testing.T) {
 	nnw := func(s string) net.IPNet {
 		_, ret, e := net.ParseCIDR(s)
@@ -276,7 +296,7 @@ func Test_Validate_IECidrSgIcmpRule(t *testing.T) {
 		c := cases[i]
 		_, cidr, err := net.ParseCIDR(c.cidr)
 		require.NoError(t, err)
-		rule := IECidrSgIcmpRule{INGRESS, *cidr, "sg1", ICMP{IPv: uint8(c.ipv)}, false, false}
+		rule := IECidrSgIcmpRule{INGRESS, *cidr, "sg1", ICMP{IPv: uint8(c.ipv)}, false, false, RA_DROP, RulePriority{}}
 		e := rule.Validate()
 		if !c.fail {
 			require.NoErrorf(t, e, "test case #%v failed", i)

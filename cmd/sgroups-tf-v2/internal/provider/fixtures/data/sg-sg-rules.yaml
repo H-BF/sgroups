@@ -83,7 +83,8 @@ cases:
               s = "1000-2000"
             }
           ]
-          logs = true
+          logs    = true
+          action  = "ACCEPT"
         }
         "udp:sg(group3)sg(group4)" = {
           transport = "udp"
@@ -95,7 +96,8 @@ cases:
               s = "15000-16000"
             }
           ]
-          logs = true
+          logs    = true
+          action  = "DROP"
         }
       }
     }
@@ -112,7 +114,8 @@ cases:
         ],
         "sgFrom": "group1",
         "sgTo": "group2",
-        "transport": "TCP"
+        "transport": "TCP",
+        "action": "ACCEPT"
       }
     - |
       {
@@ -125,7 +128,8 @@ cases:
         ],
         "sgFrom": "group3",
         "sgTo": "group4",
-        "transport": "UDP"
+        "transport": "UDP",
+        "action": "DROP"
       }
 - name: "change-first-and-delete-second"
   tf-config: |
@@ -141,7 +145,8 @@ cases:
               s = "3000-4000"
             }
           ]
-          logs = false
+          logs    = false
+          action  = "DROP"
         }
       }
     }
@@ -158,7 +163,8 @@ cases:
         ],
         "sgFrom": "group1",
         "sgTo": "group2",
-        "transport": "TCP"
+        "transport": "TCP",
+        "action": "DROP"
       }
   not-expected-backend:
     sg-sg-rules:
@@ -173,5 +179,6 @@ cases:
         ],
         "sgFrom": "group3",
         "sgTo": "group4",
-        "transport": "UDP"
+        "transport": "UDP",
+        "action": "DROP"
       }

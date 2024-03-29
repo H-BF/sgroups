@@ -83,7 +83,8 @@ cases:
               s = "1000-2000"
             }
           ]
-          logs = true
+          logs    = true
+          action  = "ACCEPT"
         }
       }
     }
@@ -100,7 +101,8 @@ cases:
         ],
         "sgFrom": "group1",
         "sgTo": "group2",
-        "transport": "TCP"
+        "transport": "TCP",
+        "action": "ACCEPT"
       }
 - name: "add another rule with empty list for ports"
   tf-config: |
@@ -116,14 +118,16 @@ cases:
               s = "3000-4000"
             }
           ]
-          logs = false
+          logs    = false
+          action  = "ACCEPT"
         }
         "udp:sg(group3)sg(group4)" = {
           transport = "udp"
           sg_from = "group3"
           sg_to = "group4"
           ports = []
-          logs = true
+          logs    = true
+          action  = "DROP"
         }
       }
     }
@@ -140,7 +144,8 @@ cases:
         ],
         "sgFrom": "group1",
         "sgTo": "group2",
-        "transport": "TCP"
+        "transport": "TCP",
+        "action": "ACCEPT"
       }
     - |
       {
@@ -148,5 +153,6 @@ cases:
         "ports": [],
         "sgFrom": "group3",
         "sgTo": "group4",
-        "transport": "UDP"
+        "transport": "UDP",
+        "action": "DROP"
       }

@@ -21,6 +21,8 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
   <li>`items.$ruleName.trace` - {DICTIONARY.trace.short}</li>
   <li>`items.$ruleName.ip_v` - {DICTIONARY.icmpV.short}</li>
   <li>`items.$ruleName.type` - {DICTIONARY.icmpTypes.short}</li>
+  <li>`items.$ruleName.action` - {DICTIONARY.action.short}</li>
+  <li>`items.$ruleName.priority` - {DICTIONARY.priority.short}</li>
 </ul>
 
 <div className="scrollable-x">
@@ -154,10 +156,30 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
       <tr>
         <td>items.$ruleName.type</td>
         <td>да</td>
-        <td>Strng[]</td>
+        <td>String[]</td>
         <td>null</td>
         <td className="green center"></td>
         <td className="green center"></td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>items.$ruleName.action</td>
+        <td>да</td>
+        <td>
+          <nobr>Enum("ACCEPT", "DROP")</nobr>
+        </td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>items.$ruleName.priority</td>
+        <td>нет</td>
+        <td>Integer</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
         <td className="green center">✔</td>
       </tr>
     </tbody>
@@ -195,7 +217,10 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         `items.$ruleName.type[]`:
         <Restrictions data={RESTRICTIONS.icmpType} />
     </li>
-
+    <li>
+        `items.$ruleName.priority`:
+        <Restrictions data={RESTRICTIONS.priority} />
+    </li>
 </ul>
 
 <h4 className="custom-heading">Пример использования</h4>
@@ -205,7 +230,8 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
     values = {[
         { label: "TCP", value: "tcp" },
         { label: "UDP", value: "udp" },
-        { label: "ICMP", value: "icmp" }
+        { label: "ICMP4", value: "icmp4" },
+        { label: "ICMP6", value: "icmp6" },
     ]}
 >
     <TabItem value="tcp">
@@ -213,22 +239,25 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
             <div className="child-block">
                 <h4 className="center">Ingress</h4>
 
+
                 ```hcl
                 resource "sgroups_cidr_rules" "rules" {
-                    items = {
+                  items = {
                     "tcp:cidr(10.0.0.0/8)sg(sg-example)ingress" = {
-                        traffic     = "ingress"
-                        transport   = "tcp"
-                        sg_name     = "sg-example"
-                        cidr        = "10.0.0.0/8"
-                        ports = [{
+                      traffic     = "ingress"
+                      logs        = true
+                      trace       = true
+                      sg_name     = "sg-local-example"
+                      cidr        = "10.0.0.0/8"
+                      transport   = "tcp"
+                      ports = [{
                         d = "80"
                         s = ""
-                        }]
-                        logs  = false
-                        trace = false
+                      }]
+                      action      = "ACCEPT"
+                      priority    = 300
                     }
-                    }
+                  }
                 }
                 ```
 
@@ -240,20 +269,22 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
 
                 ```hcl
                 resource "sgroups_cidr_rules" "rules" {
-                    items = {
+                  items = {
                     "tcp:cidr(10.0.0.0/8)sg(sg-example)egress" = {
-                        traffic     = "egress"
-                        transport   = "tcp"
-                        sg_name     = "sg-example"
-                        cidr        = "10.0.0.0/8"
-                        ports = [{
+                      traffic     = "egress"
+                      logs        = true
+                      trace       = true
+                      sg_name     = "sg-local-example"
+                      cidr        = "10.0.0.0/8"
+                      transport   = "tcp"
+                      ports = [{
                         d = "80"
                         s = ""
-                        }]
-                        logs  = false
-                        trace = false
+                      }]
+                      action      = "ACCEPT"
+                      priority    = 300
                     }
-                    }
+                  }
                 }
                 ```
 
@@ -270,20 +301,22 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
 
                 ```hcl
                 resource "sgroups_cidr_rules" "rules" {
-                    items = {
+                  items = {
                     "udp:cidr(10.0.0.0/8)sg(sg-example)ingress" = {
-                        traffic     = "ingress"
-                        transport   = "udp"
-                        sg_name     = "sg-example"
-                        cidr        = "10.0.0.0/8"
-                        ports = [{
+                      traffic     = "ingress"
+                      logs        = true
+                      trace       = true
+                      sg_name     = "sg-local-example"
+                      cidr        = "10.0.0.0/8"
+                      transport   = "udp"
+                      ports = [{
                         d = "80"
                         s = ""
-                        }]
-                        logs  = false
-                        trace = false
+                      }]
+                      action      = "ACCEPT"
+                      priority    = 300
                     }
-                    }
+                  }
                 }
                 ```
 
@@ -291,55 +324,52 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
             </div>
             <div className="child-block">
                 <h4 className="center">Egress</h4>
+
+
                 ```hcl
                 resource "sgroups_cidr_rules" "rules" {
-                    items = {
+                  items = {
                     "udp:cidr(10.0.0.0/8)sg(sg-example)egress" = {
-                        traffic     = "egress"
-                        transport   = "udp"
-                        sg_name     = "sg-example"
-                        cidr        = "10.0.0.0/8"
-                        ports = [{
+                      traffic     = "egress"
+                      logs        = true
+                      trace       = true
+                      sg_name     = "sg-local-example"
+                      cidr        = "10.0.0.0/8"
+                      transport   = "udp"
+                      ports = [{
                         d = "80"
                         s = ""
-                        }]
-                        logs  = false
-                        trace = false
+                      }]
+                      action      = "ACCEPT"
+                      priority    = 300
                     }
-                    }
+                  }
                 }
                 ```
             </div>
         </div>
     </TabItem>
 
-    <TabItem value="icmp">
+    <TabItem value="icmp4">
         <div className="parent-div">
             <div className="child-block">
                 <h4 className="center">Ingress</h4>
 
                 ```hcl
                 resource "sgroups_cidr_icmp_rules" "rules" {
-                    items = {
+                  items = {
                     "icmp4:cidr(10.0.0.0/8)sg(sg-example)ingress" = {
-                        logs    = true
-                        trace   = true
-                        sg_name = sg-example
-                        cidr    = 10.0.0.0/8
-                        ip_v    = IPv4
-                        type    = [0,8]
-                        traffic = ingress
+                      traffic     = "ingress"
+                      logs        = true
+                      trace       = true
+                      sg_name     = "sg-local-example"
+                      cidr        = "10.0.0.0/8"
+                      ip_v        = "IPv4"
+                      type        = [0,8]
+                      action      = "ACCEPT"
+                      priority    = 200
                     }
-                    "icmp6:cidr(10.0.0.0/8)sg(sg-example)ingress" = {
-                        logs    = true
-                        trace   = true
-                        sg_name = sg-example
-                        cidr    = 10.0.0.0/8
-                        ip_v    = IPv6
-                        type    = [0,8]
-                        traffic = ingress
-                    }
-                    }
+                  }
                 }
                 ```
 
@@ -351,30 +381,72 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
 
                 ```hcl
                 resource "sgroups_cidr_icmp_rules" "rules" {
-                    items = {
+                  items = {
                     "icmp4:cidr(10.0.0.0/8)sg(sg-example)egress" = {
-                        logs    = true
-                        trace   = true
-                        sg_name = sg-example
-                        cidr    = 10.0.0.0/8
-                        ip_v    = IPv4
-                        type    = [0,8]
-                        traffic = egress
+                      traffic     = "egress"
+                      logs        = true
+                      trace       = true
+                      sg_name     = "sg-local-example"
+                      cidr        = "10.0.0.0/8"
+                      ip_v        = "IPv4"
+                      type        = [0,8]
+                      action      = "ACCEPT"
+                      priority    = 200
                     }
-                    "icmp6:cidr(10.0.0.0/8)sg(sg-example)egress" = {
-                        logs    = true
-                        trace   = true
-                        sg_name = sg-example
-                        cidr    = 10.0.0.0/8
-                        ip_v    = IPv6
-                        type    = [0,8]
-                        traffic = egress
+                  }
+                }
+                ```
+            </div>
+        </div>
+    </TabItem>
+
+
+    <TabItem value="icmp6">
+        <div className="parent-div">
+            <div className="child-block">
+                <h4 className="center">Ingress</h4>
+
+                ```hcl
+                resource "sgroups_cidr_icmp_rules" "rules" {
+                  items = {
+                    "icmp6:cidr(::ffff:a00:0/104)sg(sg-example)ingress" = {
+                      traffic     = "ingress"
+                      logs        = true
+                      trace       = true
+                      sg_name     = "sg-local-example"
+                      cidr        = "::ffff:a00:0/104"
+                      ip_v        = "IPv6"
+                      type        = [0,8]
+                      action      = "ACCEPT"
+                      priority    = 200
                     }
-                    }
+                  }
                 }
                 ```
 
 
+            </div>
+            <div className="child-block">
+                <h4 className="center">Egress</h4>
+
+
+                ```hcl
+                resource "sgroups_cidr_icmp_rules" "rules" {
+                  items = {
+                    "icmp6:cidr(::ffff:a00:0/104)sg(sg-example)egress" = {
+                      traffic     = "egress"
+                      logs        = true
+                      trace       = true
+                      sg_name     = "sg-local-example"
+                      cidr        = "::ffff:a00:0/104"
+                      ip_v        = "IPv6"
+                      type        = [0,8]
+                      action      = "ACCEPT"
+                      priority    = 200
+                    }
+                  }
+                }
+                ```
             </div>
         </div>
     </TabItem>

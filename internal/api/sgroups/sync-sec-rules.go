@@ -1,6 +1,9 @@
 package sgroups
 
 import (
+	"fmt"
+	"math"
+
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 
@@ -23,6 +26,10 @@ type sgRuleIdentity struct {
 
 type networkTransport struct {
 	*model.NetworkTransport
+}
+
+type rulePriority struct {
+	*model.RulePriority
 }
 
 func (nt networkTransport) from(src common.Networks_NetIP_Transport) error {
@@ -64,13 +71,36 @@ func (r sgRule) from(src *sg.Rule) error {
 	err := sgRuleIdentity{SGRuleIdentity: &r.ID}.
 		from(src)
 	if err == nil {
+		err = rulePriority{&r.Priority}.from(src.GetPriority())
+	}
+	if err == nil {
 		r.Logs = src.GetLogs()
 		var p rulePorts
+		err = ruleAction{&r.Action}.from(src.GetAction())
+		if err != nil {
+			return err
+		}
 		if err = p.from(src.GetPorts()); err == nil {
 			r.Ports = p
 		}
 	}
 	return err
+}
+
+func (p rulePriority) from(src *sg.RulePriority) error {
+	switch t := src.GetValue().(type) {
+	case *sg.RulePriority_Some:
+		if !(math.MinInt16 <= t.Some && t.Some <= math.MaxInt16) {
+			return errors.Errorf("rule priority (%v) is out of range [%v, %v]",
+				t.Some, math.MinInt16, math.MaxInt16)
+		}
+		p.Set(int16(t.Some))
+	case nil:
+		p.Unset()
+	default:
+		return fmt.Errorf("unsupported rule-priority value(%v)", t)
+	}
+	return nil
 }
 
 var syncSGRules = syncAlg[model.SGRule, *sg.Rule]{

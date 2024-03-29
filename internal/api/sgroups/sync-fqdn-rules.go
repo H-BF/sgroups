@@ -31,7 +31,14 @@ func (r sgFqdnRule) from(src *sg.FqdnRule) error {
 	err := sgFqdnRuleIdentity{FQDNRuleIdentity: &r.ID}.
 		from(src)
 	if err == nil {
+		err = rulePriority{&r.Priority}.from(src.GetPriority())
+	}
+	if err == nil {
 		r.Logs = src.GetLogs()
+		err = ruleAction{RuleAction: &r.Action}.from(src.GetAction())
+		if err != nil {
+			return err
+		}
 		var p rulePorts
 		if err = p.from(src.GetPorts()); err == nil {
 			r.Ports = p

@@ -79,8 +79,9 @@ cases:
           traffic = "ingress"
           type = [0, 2, 255]
           ip_v = "IPv4"
-          logs = true
-          trace = true
+          logs    = true
+          trace   = true
+          action  = "ACCEPT"
         }
         "icmp6:sg-local(group3)sg(group4)egress" = {
           sg_local = "group3"
@@ -88,8 +89,9 @@ cases:
           traffic = "egress"
           type = [10, 30, 54]
           ip_v = "IPv6"
-          logs = true
-          trace = true
+          logs    = true
+          trace   = true
+          action  = "DROP"
         }
       }
     }
@@ -105,7 +107,8 @@ cases:
         "SgLocal": "group1",
         "logs": true,
         "trace": true,
-        "traffic": "Ingress"
+        "traffic": "Ingress",
+        "action": "ACCEPT"
       }
     - |
       {
@@ -117,7 +120,8 @@ cases:
         "SgLocal": "group3",
         "logs": true,
         "trace": true,
-        "traffic": "Egress"
+        "traffic": "Egress",
+        "action": "DROP"
       }
 - name: "change first and delete second"
   tf-config: |
@@ -129,8 +133,9 @@ cases:
           traffic = "ingress"
           type = [1,2,3]
           ip_v = "IPv4"
-          logs = false
-          trace = false
+          logs    = false
+          trace   = false
+          action  = "DROP"
         }
       }
     }
@@ -146,7 +151,8 @@ cases:
         "SgLocal": "group1",
         "logs": false,
         "trace": false,
-        "traffic": "Ingress"
+        "traffic": "Ingress",
+        "action": "DROP"
       }
   not-expected-backend:
     ie-sg-sg-icmp-rules:
@@ -160,5 +166,6 @@ cases:
         "SgLocal": "group3",
         "logs": true,
         "trace": true,
-        "traffic": "Egress"
+        "traffic": "Egress",
+        "action": "DROP"
       }

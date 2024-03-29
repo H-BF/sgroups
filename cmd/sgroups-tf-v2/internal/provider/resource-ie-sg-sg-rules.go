@@ -43,6 +43,8 @@ type (
 		Ports     types.List   `tfsdk:"ports"`
 		Logs      types.Bool   `tfsdk:"logs"`
 		Trace     types.Bool   `tfsdk:"trace"`
+		Action    types.String `tfsdk:"action"`
+		Priority  RulePriority `tfsdk:"priority"`
 	}
 
 	ieSgSgRuleKey struct {
@@ -69,7 +71,7 @@ func (item ieSgSgRule) Key() *ieSgSgRuleKey {
 	}
 }
 
-func (i ieSgSgRule) Attributes() map[string]schema.Attribute {
+func (item ieSgSgRule) Attributes() map[string]schema.Attribute {
 	return map[string]schema.Attribute{
 		"transport": schema.StringAttribute{
 			Description: "IP-L4 proto <tcp|udp>",
@@ -113,6 +115,12 @@ func (i ieSgSgRule) Attributes() map[string]schema.Attribute {
 			Computed:    true,
 			Default:     booldefault.StaticBool(false),
 		},
+		"action": schema.StringAttribute{
+			Description: "Rule action on packets in chain",
+			Required:    true,
+			Validators:  []validator.String{actionValidator},
+		},
+		rulePriorityAttrLabel: rulePriorityAttr(),
 	}
 }
 
@@ -134,7 +142,9 @@ func (item ieSgSgRule) IsDiffer(ctx context.Context, other ieSgSgRule) bool { //
 		item.Sg.Equal(other.Sg) &&
 		item.Logs.Equal(other.Logs) &&
 		item.Trace.Equal(other.Trace) &&
-		model.AreRulePortsEq(itemModelPorts, otherModelPorts))
+		item.Action.Equal(other.Action) &&
+		model.AreRulePortsEq(itemModelPorts, otherModelPorts) &&
+		item.Priority.Equal(other.Priority))
 }
 
 func readIESgSgRules(ctx context.Context, state NamedResources[ieSgSgRule], client *sgAPI.Client) (NamedResources[ieSgSgRule], diag.Diagnostics) {
@@ -167,6 +177,12 @@ func readIESgSgRules(ctx context.Context, state NamedResources[ieSgSgRule], clie
 		}
 		k := it.Key().String()
 		if _, ok := state.Items[k]; ok { //nolint:dupl
+			if p, d := rulePriorityFromProto(rule.GetPriority()); d != nil {
+				diags.Append(d)
+				break
+			} else {
+				it.Priority = p
+			}
 			accPorts := []AccessPorts{}
 			for _, p := range rule.GetPorts() {
 				accPorts = append(accPorts, AccessPorts{
@@ -176,9 +192,13 @@ func readIESgSgRules(ctx context.Context, state NamedResources[ieSgSgRule], clie
 			}
 			portsList, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: AccessPorts{}.AttrTypes()}, accPorts)
 			diags.Append(d...)
+			if d.HasError() {
+				break
+			}
 			it.Ports = portsList
 			it.Logs = types.BoolValue(rule.GetLogs())
 			it.Trace = types.BoolValue(rule.GetTrace())
+			it.Action = types.StringValue(rule.GetAction().String())
 			newState.Items[k] = it
 		}
 	}

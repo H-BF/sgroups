@@ -34,6 +34,16 @@ func traffic2proto(src model.Traffic) (common.Traffic, error) {
 	return 0, errors.Errorf("bad traffic value (%v)", src)
 }
 
+func ruleAction2proto(src model.RuleAction) (sg.RuleAction, error) {
+	switch src {
+	case model.RA_DROP:
+		return sg.RuleAction_DROP, nil
+	case model.RA_ACCEPT:
+		return sg.RuleAction_ACCEPT, nil
+	}
+	return 0, errors.Errorf("bad rule action value (%v)", src)
+}
+
 func sgAccPorts2proto(src []model.SGRulePorts) ([]*sg.AccPorts, error) {
 	ret := make([]*sg.AccPorts, 0, len(src))
 	for _, p := range src {
@@ -49,6 +59,16 @@ func sgAccPorts2proto(src []model.SGRulePorts) ([]*sg.AccPorts, error) {
 	return ret, nil
 }
 
+func priority2proto(src model.RulePriority) *sg.RulePriority {
+	var ret sg.RulePriority
+	if pri, ok := src.Maybe(); ok {
+		ret.Value = &sg.RulePriority_Some{
+			Some: int32(pri),
+		}
+	}
+	return &ret
+}
+
 func sgRule2proto(src model.SGRule) (*sg.Rule, error) {
 	var ret sg.Rule
 	if t, e := netTranport2proto(src.ID.Transport); e != nil {
@@ -59,7 +79,11 @@ func sgRule2proto(src model.SGRule) (*sg.Rule, error) {
 	ret.Logs = src.Logs
 	ret.SgFrom = src.ID.SgFrom
 	ret.SgTo = src.ID.SgTo
+	ret.Priority = priority2proto(src.Priority)
 	var e error
+	if ret.Action, e = ruleAction2proto(src.Action); e != nil {
+		return &ret, e
+	}
 	ret.Ports, e = sgAccPorts2proto(src.Ports)
 	return &ret, e
 }
@@ -78,7 +102,11 @@ func sgFqdnRule2proto(src model.FQDNRule) (*sg.FqdnRule, error) {
 	ret.Logs = src.Logs
 	ret.SgFrom = src.ID.SgFrom
 	ret.FQDN = src.ID.FqdnTo.String()
+	ret.Priority = priority2proto(src.Priority)
 	var e error
+	if ret.Action, e = ruleAction2proto(src.Action); e != nil {
+		return &ret, e
+	}
 	ret.Ports, e = sgAccPorts2proto(src.Ports)
 	return &ret, e
 }
@@ -102,7 +130,9 @@ func sgIcmpRule2proto(src model.SgIcmpRule) (*sg.SgIcmpRule, error) {
 		ret.ICMP.Types = append(ret.ICMP.Types, uint32(t))
 		return true
 	})
-	return &ret, nil
+	var e error
+	ret.Action, e = ruleAction2proto(src.Action)
+	return &ret, e
 }
 
 func sgSgIcmpRule2proto(src model.SgSgIcmpRule) (*sg.SgSgIcmpRule, error) {
@@ -113,6 +143,7 @@ func sgSgIcmpRule2proto(src model.SgSgIcmpRule) (*sg.SgSgIcmpRule, error) {
 	ret.Trace = src.Trace
 	ret.SgFrom = src.SgFrom
 	ret.SgTo = src.SgTo
+	ret.Priority = priority2proto(src.Priority)
 	switch src.Icmp.IPv {
 	case model.IPv4:
 		ret.ICMP.IPv = common.IpAddrFamily_IPv4
@@ -125,7 +156,9 @@ func sgSgIcmpRule2proto(src model.SgSgIcmpRule) (*sg.SgSgIcmpRule, error) {
 		ret.ICMP.Types = append(ret.ICMP.Types, uint32(t))
 		return true
 	})
-	return &ret, nil
+	var e error
+	ret.Action, e = ruleAction2proto(src.Action)
+	return &ret, e
 }
 
 func ieSgSgIcmpRule2proto(src model.IESgSgIcmpRule) (*sg.IESgSgIcmpRule, error) {
@@ -152,7 +185,9 @@ func ieSgSgIcmpRule2proto(src model.IESgSgIcmpRule) (*sg.IESgSgIcmpRule, error) 
 		ret.ICMP.Types = append(ret.ICMP.Types, uint32(t))
 		return true
 	})
-	return ret, nil
+	ret.Priority = priority2proto(src.Priority)
+	ret.Action, e = ruleAction2proto(src.Action)
+	return ret, e
 }
 
 func cidrSgRule2proto(src model.IECidrSgRule) (*sg.CidrSgRule, error) {
@@ -172,7 +207,9 @@ func cidrSgRule2proto(src model.IECidrSgRule) (*sg.CidrSgRule, error) {
 	if ret.Ports, e = sgAccPorts2proto(src.Ports); e != nil {
 		return nil, e
 	}
-	return ret, nil
+	ret.Priority = priority2proto(src.Priority)
+	ret.Action, e = ruleAction2proto(src.Action)
+	return ret, e
 }
 
 func cidrSgIcmpRule2proto(src model.IECidrSgIcmpRule) (*sg.CidrSgIcmpRule, error) {
@@ -199,7 +236,9 @@ func cidrSgIcmpRule2proto(src model.IECidrSgIcmpRule) (*sg.CidrSgIcmpRule, error
 		ret.ICMP.Types = append(ret.ICMP.Types, uint32(t))
 		return true
 	})
-	return ret, nil
+	ret.Priority = priority2proto(src.Priority)
+	ret.Action, e = ruleAction2proto(src.Action)
+	return ret, e
 }
 
 func sgSgRule2proto(src model.IESgSgRule) (*sg.SgSgRule, error) {
@@ -219,7 +258,9 @@ func sgSgRule2proto(src model.IESgSgRule) (*sg.SgSgRule, error) {
 	if ret.Ports, e = sgAccPorts2proto(src.Ports); e != nil {
 		return nil, e
 	}
-	return ret, nil
+	ret.Priority = priority2proto(src.Priority)
+	ret.Action, e = ruleAction2proto(src.Action)
+	return ret, e
 }
 
 func (srv *sgService) GetRules(ctx context.Context, req *sg.GetRulesReq) (resp *sg.RulesResp, err error) {

@@ -42,6 +42,8 @@ type (
 		Ports     types.List   `tfsdk:"ports"`
 		Logs      types.Bool   `tfsdk:"logs"`
 		// TODO: add Trace param
+		Action   types.String `tfsdk:"action"`
+		Priority RulePriority `tfsdk:"priority"`
 	}
 
 	sgSgRuleKey struct {
@@ -82,7 +84,9 @@ func (item sgSgRule) IsDiffer(ctx context.Context, other sgSgRule) bool { //noli
 		item.SgFrom.Equal(other.SgFrom) &&
 		item.SgTo.Equal(other.SgTo) &&
 		item.Logs.Equal(other.Logs) &&
-		model.AreRulePortsEq(itemModelPorts, otherModelPorts))
+		item.Action.Equal(other.Action) &&
+		model.AreRulePortsEq(itemModelPorts, otherModelPorts) &&
+		item.Priority.Equal(other.Priority))
 }
 
 func (item sgSgRule) Attributes() map[string]schema.Attribute { //nolint:dupl
@@ -119,6 +123,12 @@ func (item sgSgRule) Attributes() map[string]schema.Attribute { //nolint:dupl
 			},
 			PlanModifiers: []planmodifier.List{ListAccessPortsModifier()},
 		},
+		"action": schema.StringAttribute{
+			Description: "Rule action on packets in chain",
+			Required:    true,
+			Validators:  []validator.String{actionValidator},
+		},
+		rulePriorityAttrLabel: rulePriorityAttr(),
 	}
 }
 
@@ -151,16 +161,26 @@ func readSgSgRules(ctx context.Context, state NamedResources[sgSgRule], client *
 			})
 		}
 		portsList, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: AccessPorts{}.AttrTypes()}, accPorts)
-		diags.Append(d...)
+		if len(d) > 0 {
+			diags.Append(d...)
+			break
+		}
 		it := sgSgRule{
 			Transport: types.StringValue(strings.ToLower(sgRule.GetTransport().String())),
 			SgFrom:    types.StringValue(sgRule.GetSgFrom()),
 			SgTo:      types.StringValue(sgRule.GetSgTo()),
 			Logs:      types.BoolValue(sgRule.GetLogs()),
 			Ports:     portsList,
+			Action:    types.StringValue(sgRule.GetAction().String()),
 		}
 		k := it.Key().String()
 		if _, ok := state.Items[k]; ok {
+			if p, d := rulePriorityFromProto(sgRule.GetPriority()); d != nil {
+				diags.Append(d)
+				break
+			} else {
+				it.Priority = p
+			}
 			newState.Items[k] = it
 		}
 	}

@@ -143,8 +143,7 @@ import { DICTIONARY } from '@site/src/constants/dictionary.ts'
         <td>
           <div className="text-justify">
             <i>
-              * Так как данное правило используется для проверки типа трафика то переход на другую цепочку правил
-              происходит только с помощью goto.
+              $NftRuleVerdict определяет действие, которое будет применено к пакету в соответсвии с правилом. Это поле может принимать значение `accept` или `drop` в зависимости от указанного в правиле.
             </i>
           </div>
           <i>Подробнее: [Verdict statement](/tech-docs/to-nft/nftables/verdict-statement)</i>

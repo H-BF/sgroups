@@ -46,6 +46,8 @@ type (
 		IpVersion types.String `tfsdk:"ip_v"`
 		Logs      types.Bool   `tfsdk:"logs"`
 		Trace     types.Bool   `tfsdk:"trace"`
+		Action    types.String `tfsdk:"action"`
+		Priority  RulePriority `tfsdk:"priority"`
 	}
 
 	cidrSgIcmpRuleKey struct {
@@ -127,6 +129,12 @@ func (item cidrSgIcmpRule) Attributes() map[string]schema.Attribute {
 			Computed:    true,
 			Default:     booldefault.StaticBool(false),
 		},
+		"action": schema.StringAttribute{
+			Description: "Rule action on packets in chain",
+			Required:    true,
+			Validators:  []validator.String{actionValidator},
+		},
+		rulePriorityAttrLabel: rulePriorityAttr(),
 	}
 }
 
@@ -143,14 +151,16 @@ func (item cidrSgIcmpRule) icmp2Proto(ctx context.Context, diags *diag.Diagnosti
 }
 
 // IsDiffer -
-func (item cidrSgIcmpRule) IsDiffer(_ context.Context, other cidrSgIcmpRule) bool {
+func (item cidrSgIcmpRule) IsDiffer(_ context.Context, other cidrSgIcmpRule) bool { //nolint:dupl
 	return !(item.Traffic.Equal(other.Traffic) &&
 		item.Cidr.Equal(other.Cidr) &&
 		item.SgName.Equal(other.SgName) &&
 		item.Type.Equal(other.Type) &&
 		item.IpVersion.Equal(other.IpVersion) &&
 		item.Logs.Equal(other.Logs) &&
-		item.Trace.Equal(other.Trace))
+		item.Trace.Equal(other.Trace) &&
+		item.Action.Equal(other.Action) &&
+		item.Priority.Equal(other.Priority))
 }
 
 func readCidrSgIcmpRules(
@@ -170,6 +180,7 @@ func readCidrSgIcmpRules(
 			ToSlice(&req.Sg)
 		if resp, err = client.FindCidrSgIcmpRules(ctx, req); err != nil {
 			diags.AddError("read cidr-sg icmp rules", err.Error())
+			return newState, diags
 		}
 	}
 
@@ -182,14 +193,21 @@ func readCidrSgIcmpRules(
 		}
 		k := it.Key().String()
 		if _, ok := state.Items[k]; ok {
+			if p, d := rulePriorityFromProto(icmpRule.GetPriority()); d != nil {
+				diags.Append(d)
+				break
+			} else {
+				it.Priority = p
+			}
 			typeSet, d := types.SetValueFrom(ctx, types.Int64Type, icmpRule.ICMP.GetTypes())
 			diags.Append(d...)
 			if d.HasError() {
-				return newState, diags
+				break
 			}
 			it.Type = typeSet
 			it.Logs = types.BoolValue(icmpRule.GetLogs())
 			it.Trace = types.BoolValue(icmpRule.GetTrace())
+			it.Action = types.StringValue(icmpRule.GetAction().String())
 			newState.Items[k] = it
 		}
 	}

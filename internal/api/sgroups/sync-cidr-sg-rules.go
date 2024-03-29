@@ -23,6 +23,10 @@ type traffic struct {
 	*model.Traffic
 }
 
+type ruleAction struct {
+	*model.RuleAction
+}
+
 func (t traffic) from(src common.Traffic) error {
 	switch src {
 	case common.Traffic_Egress:
@@ -31,6 +35,20 @@ func (t traffic) from(src common.Traffic) error {
 		*t.Traffic = model.INGRESS
 	default:
 		return errors.Errorf("unsupported TRAFFIC value(%v)", src)
+	}
+	return nil
+}
+
+func (a ruleAction) from(src sg.RuleAction) error {
+	switch src {
+	case sg.RuleAction_UNDEF:
+		*a.RuleAction = model.RA_UNDEF
+	case sg.RuleAction_DROP:
+		*a.RuleAction = model.RA_DROP
+	case sg.RuleAction_ACCEPT:
+		*a.RuleAction = model.RA_ACCEPT
+	default:
+		return errors.Errorf("unsupported rule action value(%v)", src)
 	}
 	return nil
 }
@@ -64,7 +82,13 @@ func (r cidrSgRule) from(src *sg.CidrSgRule) error {
 	}
 	r.Logs = src.GetLogs()
 	r.Trace = src.GetTrace()
-	e = ((*rulePorts)(&r.Ports)).from(src.GetPorts())
+	e = ruleAction{&r.Action}.from(src.GetAction())
+	if e == nil {
+		e = ((*rulePorts)(&r.Ports)).from(src.GetPorts())
+		if e == nil {
+			e = rulePriority{&r.Priority}.from(src.GetPriority())
+		}
+	}
 	return e
 }
 

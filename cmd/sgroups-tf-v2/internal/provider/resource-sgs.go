@@ -72,9 +72,8 @@ func (item sgItem) Attributes() map[string]schema.Attribute {
 			Default:     stringdefault.StaticString(protos.SecGroup_DROP.String()),
 			Validators: []validator.String{
 				stringvalidator.OneOf(
-					protos.SecGroup_ACCEPT.String(),
 					protos.SecGroup_DROP.String(),
-					protos.SecGroup_DEFAULT.String()),
+					protos.SecGroup_ACCEPT.String()),
 			},
 		},
 		"networks": schema.SetAttribute{

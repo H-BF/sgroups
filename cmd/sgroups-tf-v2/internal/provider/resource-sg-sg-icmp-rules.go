@@ -44,6 +44,8 @@ type (
 		IpVersion types.String `tfsdk:"ip_v"`
 		Logs      types.Bool   `tfsdk:"logs"`
 		Trace     types.Bool   `tfsdk:"trace"`
+		Action    types.String `tfsdk:"action"`
+		Priority  RulePriority `tfsdk:"priority"`
 	}
 
 	sgSgIcmpRuleKey struct {
@@ -76,7 +78,9 @@ func (item sgSgIcmpRule) IsDiffer(ctx context.Context, other sgSgIcmpRule) bool 
 		item.Type.Equal(other.Type) &&
 		item.IpVersion.Equal(other.IpVersion) &&
 		item.Logs.Equal(other.Logs) &&
-		item.Trace.Equal(other.Trace))
+		item.Trace.Equal(other.Trace) &&
+		item.Action.Equal(other.Action) &&
+		item.Priority.Equal(other.Priority))
 }
 
 func (item sgSgIcmpRule) Attributes() map[string]schema.Attribute {
@@ -118,6 +122,12 @@ func (item sgSgIcmpRule) Attributes() map[string]schema.Attribute {
 			Computed:    true,
 			Default:     booldefault.StaticBool(false),
 		},
+		"action": schema.StringAttribute{
+			Description: "Rule action on packets in chain",
+			Required:    true,
+			Validators:  []validator.String{actionValidator},
+		},
+		rulePriorityAttrLabel: rulePriorityAttr(),
 	}
 }
 
@@ -172,9 +182,16 @@ func readSgSgIcmpRules(
 			IpVersion: types.StringValue(icmpRule.ICMP.GetIPv().String()),
 			Logs:      types.BoolValue(icmpRule.GetLogs()),
 			Trace:     types.BoolValue(icmpRule.GetTrace()),
+			Action:    types.StringValue(icmpRule.Action.String()),
 		}
 		k := it.Key().String()
 		if _, ok := state.Items[k]; ok {
+			if p, d := rulePriorityFromProto(icmpRule.GetPriority()); d != nil {
+				diags.Append(d)
+				break
+			} else {
+				it.Priority = p
+			}
 			newState.Items[k] = it
 		}
 	}

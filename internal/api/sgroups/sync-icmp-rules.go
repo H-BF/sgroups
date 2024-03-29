@@ -51,7 +51,7 @@ func (r proto2SgIcmpRule) from(src *sg.SgIcmpRule) error {
 		}
 		r.Icmp.Types.Put(uint8(n))
 	}
-	return nil
+	return ruleAction{&r.Action}.from(src.GetAction())
 }
 
 func (r proto2SgSgIcmpRule) from(src *sg.SgSgIcmpRule) error {
@@ -76,7 +76,11 @@ func (r proto2SgSgIcmpRule) from(src *sg.SgSgIcmpRule) error {
 		}
 		r.Icmp.Types.Put(uint8(n))
 	}
-	return nil
+	e := ruleAction{&r.Action}.from(src.GetAction())
+	if e == nil {
+		e = rulePriority{&r.Priority}.from(src.GetPriority())
+	}
+	return e
 }
 
 func (r proto2IESgSgIcmpRule) from(src *sg.IESgSgIcmpRule) error {
@@ -107,7 +111,11 @@ func (r proto2IESgSgIcmpRule) from(src *sg.IESgSgIcmpRule) error {
 		}
 		r.Icmp.Types.Put(uint8(n))
 	}
-	return nil
+	e = ruleAction{&r.Action}.from(src.GetAction())
+	if e == nil {
+		e = rulePriority{&r.Priority}.from(src.GetPriority())
+	}
+	return e
 }
 
 func (r proto2CidrSgIcmpRule) from(src *sg.CidrSgIcmpRule) error {
@@ -146,7 +154,11 @@ func (r proto2CidrSgIcmpRule) from(src *sg.CidrSgIcmpRule) error {
 		}
 		r.Icmp.Types.Put(uint8(n))
 	}
-	return nil
+	e = ruleAction{&r.Action}.from(src.GetAction())
+	if e == nil {
+		e = rulePriority{&r.Priority}.from(src.GetPriority())
+	}
+	return e
 }
 
 var syncSgIcmpRule = syncAlg[model.SgIcmpRule, *sg.SgIcmpRule]{
