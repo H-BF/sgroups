@@ -403,7 +403,7 @@ func (o *SgSgIcmpRule) FromModel(m sgm.SgSgIcmpRule) error {
 }
 
 // ToModel -
-func (o IESgSgIcmpRule) ToModel() (ret sgm.IESgSgIcmpRule, err error) {
+func (o IESgSgIcmpRule) ToModel() (ret sgm.IESgSgIcmpRule, err error) { //nolint:dupl
 	ret.SgLocal = o.SgLocal
 	ret.Sg = o.Sg
 	ret.Logs = o.Logs
@@ -420,7 +420,7 @@ func (o IESgSgIcmpRule) ToModel() (ret sgm.IESgSgIcmpRule, err error) {
 }
 
 // FromModel -
-func (o *IESgSgIcmpRule) FromModel(m sgm.IESgSgIcmpRule) error {
+func (o *IESgSgIcmpRule) FromModel(m sgm.IESgSgIcmpRule) error { //nolint:dupl
 	o.SgLocal = m.SgLocal
 	o.Sg = m.Sg
 	o.Logs = m.Logs
@@ -502,7 +502,7 @@ func (o IECidrSgRule) ToModel() (ret sgm.IECidrSgRule, err error) {
 }
 
 // FromModel -
-func (o *IECidrSgIcmpRule) FromModel(m sgm.IECidrSgIcmpRule) error {
+func (o *IECidrSgIcmpRule) FromModel(m sgm.IECidrSgIcmpRule) error { //nolint:dupl
 	o.CIDR = m.CIDR
 	o.SG = m.SG
 	o.Logs = m.Logs
@@ -518,7 +518,7 @@ func (o *IECidrSgIcmpRule) FromModel(m sgm.IECidrSgIcmpRule) error {
 }
 
 // ToModel -
-func (o IECidrSgIcmpRule) ToModel() (ret sgm.IECidrSgIcmpRule, err error) {
+func (o IECidrSgIcmpRule) ToModel() (ret sgm.IECidrSgIcmpRule, err error) { //nolint:dupl
 	ret.CIDR = o.CIDR
 	ret.SG = o.SG
 	ret.Logs = o.Logs
