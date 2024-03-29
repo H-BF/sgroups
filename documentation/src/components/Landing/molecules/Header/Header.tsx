@@ -5,7 +5,7 @@ export const Header: FC = () => (
   <div className={styles.container}>
     <div className={styles.text}>
       <h1>
-        Host Based NGFW - SGroups
+      SGroups - Host Based NGFW
       </h1>
       <h2>
       <span>Будущее безопасной сети</span>
