@@ -15,12 +15,16 @@
   bottom: 150px;
   left: 0;
   z-index: 2;
-  max-width: 550px;
+  max-width: 500px;
   margin-right: auto;
   margin-left: auto;
   padding: 15px;
   text-align: justify;
   background: rgba(0, 0, 0, 0.7);
+
+  span {
+    font-weight: 300;
+  }
 }
 
 @media (min-width: 997px) {
