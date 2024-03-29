@@ -5,11 +5,14 @@ export const Header: FC = () => (
   <div className={styles.container}>
     <div className={styles.text}>
       <h1>
-        Host Based NGFW - <span>будущее безопасной сети</span>
+        Host Based NGFW - SGroups
       </h1>
+      <h2>
+      <span>Будущее безопасной сети</span>
+      </h2>
+      
       <p>
-        Создавайте защищенные сети в вашей организации за пару минут, используя сетевую микросегментацию, основанную на
-        <span> SGroups</span>
+        Создавайте защищенные сети в вашей организации за пару минут, используя весь функционал <span>sgroups</span> для сетевой микросегментации.
       </p>
       <a href="/sgroups/info/introduction/">
         <button className={styles.button} type="button">
