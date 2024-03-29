@@ -25,6 +25,9 @@
   span {
     font-weight: 300;
   }
+  p span {
+    font-weight: bold;
+  }
 }
 
 @media (min-width: 997px) {
