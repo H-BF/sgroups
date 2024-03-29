@@ -4,7 +4,7 @@ import styles from './styles.module.css'
 export const Header: FC = () => (
   <div className={styles.container}>
     <div className={styles.text}>
-      <h1>Firewall, который работает</h1>
+      <h1>Host Based NGFW - будущее безопасной сети</h1>
       <p>
         Создавайте защищенные сети в вашей организации за пару минут, используя сетевую микросегментацию, основанную на
         S.Groups
