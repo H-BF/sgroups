@@ -21,13 +21,14 @@
   padding: 15px;
   text-align: justify;
   background: rgba(0, 0, 0, 0.7);
+}
 
-  span {
-    font-weight: 300;
-  }
-  p span {
-    font-weight: bold;
-  }
+.text span {
+  font-weight: 300;
+}
+
+.text p span {
+  font-weight: bold;
 }
 
 @media (min-width: 997px) {
@@ -43,7 +44,7 @@
   }
 }
 
-.button {
+.buttonHolder button {
   display: inline-block;
   min-height: 50px;
   margin-top: 0.5rem;
@@ -55,13 +56,10 @@
   border-width: 0;
   border-radius: 0.1rem;
   cursor: pointer;
-  transition:
-    color 125ms,
-    background-color 125ms,
-    border-color 125ms;
+  transition: all 125ms;
 }
 
-.button:hover {
+.buttonHolder button:hover {
   color: #fff;
   background-color: var(--ifm-color-primary);
 }
