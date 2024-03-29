@@ -569,11 +569,11 @@ func (gp *jobGroup) populateOutSgFqdnRules(sg *cases.SG) {
 						return nil
 					}
 					if daddr != nil {
-						bt.log.Debugf("add fqdn rule '%s' with '%s' strategy into '%s'/'%s' for addr-set '%s'",
-							rule.ID.FqdnTo, string(bt.fqdnStrategy), bt.table.Name, targetChName, daddrSetName)
+						bt.log.Debugf("add fqdn rule '%s' with '%s' strategy into '%s'/'%s' for addr-set '%s' with priority(%v)",
+							rule.ID.FqdnTo, string(bt.fqdnStrategy), bt.table.Name, targetChName, daddrSetName, pri)
 					} else {
-						bt.log.Debugf("add fqdn rule '%s' with '%s' strategy into '%s'/'%s'",
-							rule.ID.FqdnTo, string(bt.fqdnStrategy), bt.table.Name, targetChName)
+						bt.log.Debugf("add fqdn rule '%s' with '%s' strategy into '%s'/'%s' with priority(%v)",
+							rule.ID.FqdnTo, string(bt.fqdnStrategy), bt.table.Name, targetChName, pri)
 					}
 					r := beginRule()
 					if strategy&useDNS != 0 {
@@ -653,10 +653,10 @@ func (gp *jobGroup) populateInOutSgIcmpRules(dir direction, sg *cases.SG) {
 			chnApplyTo := bt.chains.At(targetChName)
 			addrSet := bt.addrsets.At(addrSetName)
 			if addrSet != nil && chnApplyTo != nil {
-				bt.log.Debugf("add %s-sg-icmp%v-rule for addr-set '%s' into '%s'/'%s'",
+				bt.log.Debugf("add %s-sg-icmp%v-rule for addr-set '%s' into '%s'/'%s' with priority(%v)",
 					tern(isIN, "in", "out"),
 					tern(rule.Icmp.IPv == model.IPv6, "6", ""),
-					addrSetName, targetChName, bt.table.Name)
+					addrSetName, targetChName, bt.table.Name, pri)
 				rb := beginRule().metaNFTRACE(rule.Trace)
 				rb = tern(isIN, rb.saddr, rb.daddr)(int(rule.Icmp.IPv)).
 					inSet(addrSet).
@@ -696,12 +696,13 @@ func (gp *jobGroup) populateSgIeSgIcmpRules(dir direction, sg *cases.SG) {
 			chnApplyTo := bt.chains.At(targetSGchName)
 			addrSet := bt.addrsets.At(addrSetName)
 			if chnApplyTo != nil && addrSet != nil {
-				bt.log.Debugf("add %s(%s)-%sgress-%s(%s)-icmp%v rule for addr-set '%s' into '%s'/'%s'",
+				bt.log.Debugf("add %s(%s)-%sgress-%s(%s)-icmp%v rule for addr-set '%s' into '%s'/'%s' with priority(%v)",
 					tern(isIN, "sg", "sgLocal"), rule.Sg,
 					tern(isIN, "in", "e"),
 					tern(isIN, "sgLocal", "sg"), rule.SgLocal,
 					tern(rule.Icmp.IPv == model.IPv6, "6", ""),
-					addrSetName, targetSGchName, bt.table.Name)
+					addrSetName, targetSGchName, bt.table.Name,
+					pri)
 				rb := beginRule().metaNFTRACE(rule.Trace)
 				rb = tern(isIN, rb.saddr, rb.daddr)(int(rule.Icmp.IPv)).
 					inSet(addrSet).
@@ -737,12 +738,13 @@ func (gp *jobGroup) populateIeCidrSgIcmpRules(dir direction, sg *cases.SG) {
 			chnApplyTo := bt.chains.At(targetSGchName)
 			addrSet := bt.addrsets.At(addrSetName)
 			if chnApplyTo != nil && addrSet != nil {
-				bt.log.Debugf("add cidr(%s)-sg(%s)-icmp-%sgress-rule for addr-set '%s' into '%s'/'%s'",
+				bt.log.Debugf("add cidr(%s)-sg(%s)-icmp-%sgress-rule for addr-set '%s' into '%s'/'%s' with priority(%v)",
 					&rule.CIDR,
 					rule.SG,
 					tern(isIN, "in", "e"),
 					addrSetName,
-					bt.table.Name, targetSGchName)
+					bt.table.Name, targetSGchName,
+					pri)
 			}
 			rb := beginRule().
 				metaNFTRACE(rule.Trace).
@@ -848,8 +850,8 @@ func (gp *jobGroup) populateInOutSgIeSgRules(dir direction, sg *cases.SG) {
 					if chnApplyTo == nil || addrSet == nil {
 						return nil
 					}
-					bt.log.Debugf("add '%s' rule for accports(%s) into '%s'/'%s'",
-						rule.ID, ports, bt.table.Name, targetSGchName)
+					bt.log.Debugf("add '%s' rule for accports(%s) into '%s'/'%s' with priority(%v)",
+						rule.ID, ports, bt.table.Name, targetSGchName, pri)
 
 					rb := beginRule().metaNFTRACE(details.trace)
 					sd := tern(isIN, sli(ports.S, ports.D), sli(ports.D, ports.S))
@@ -890,8 +892,8 @@ func (gp *jobGroup) populateInOutCidrSgRules(dir direction, sg *cases.SG) {
 		for i := range details.accports {
 			ports := details.accports[i]
 			gp.addJob(pri, api, func(tx *Tx) error {
-				bt.log.Debugf("add '%s' rule into '%s'/'%s'",
-					rule.ID, bt.table.Name, targetSGchName)
+				bt.log.Debugf("add '%s' rule into '%s'/'%s' with priority(%v)",
+					rule.ID, bt.table.Name, targetSGchName, pri)
 				chnApplyTo := bt.chains.At(targetSGchName)
 				if chnApplyTo == nil {
 					return nil
