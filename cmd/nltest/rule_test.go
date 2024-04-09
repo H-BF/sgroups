@@ -11,6 +11,27 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+var (
+	sgDmySet = map[string]*nft.Set{
+		"NetIPv4-sg-dmy1": {
+			Name:      "NetIPv4-sg-dmy1",
+			Anonymous: false,
+		},
+	}
+	sgDmyEls = map[string][]nft.SetElement{
+		"NetIPv4-sg-dmy1": {
+			{
+				Key:         []byte{10, 10, 0, 0},
+				IntervalEnd: true,
+			},
+			{
+				Key:         []byte{10, 10, 1, 0},
+				IntervalEnd: false,
+			},
+		},
+	}
+)
+
 func TestNl2rule(t *testing.T) {
 	cases := []struct {
 		nlRule   *nft.Rule
@@ -21,61 +42,47 @@ func TestNl2rule(t *testing.T) {
 	}{
 		// ip saddr 192.168.10.11 counter packets 5 bytes 1000 drop
 		{
-			nlRule:   createNlRuleWithAddrCmp(OffsetV4Saddr, []byte{192, 168, 10, 11}, expr.VerdictDrop),
+			nlRule:   B().withAddrCmp(OffsetV4Saddr, []byte{192, 168, 10, 11}).build(expr.VerdictDrop),
 			wantRule: createWantedRule([]string{"192.168.10.11"}, nil, nil, nil, "drop"),
 		},
 
 		// ip saddr adc6:ef93::1 counter packets 5 bytes 1000 jump somewhere
 		{
-			nlRule: createNlRuleWithAddrCmp(OffsetV6Saddr,
-				[]byte{173, 198, 239, 147, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}, expr.VerdictJump),
+			nlRule: B().
+				withAddrCmp(OffsetV6Saddr, []byte{173, 198, 239, 147, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}).
+				build(expr.VerdictJump),
 			wantRule: createWantedRule([]string{"adc6:ef93::1"}, nil, nil, nil, "policy"),
 		},
 
 		// ip daddr @NetIPv4-sg-dmy1 counter packets 5 bytes 1000 accept
 		{
-			nlRule: createNlRuleWithAddrLookup(OffsetV4Daddr, "NetIPv4-sg-dmy1", expr.VerdictAccept),
-			sets: map[string]*nft.Set{
-				"NetIPv4-sg-dmy1": {
-					Name:      "NetIPv4-sg-dmy1",
-					Anonymous: false,
-				},
-			},
-			setEls: map[string][]nft.SetElement{
-				"NetIPv4-sg-dmy1": {
-					{
-						Key:         []byte{10, 10, 0, 0},
-						IntervalEnd: true,
-					},
-					{
-						Key:         []byte{10, 10, 1, 0},
-						IntervalEnd: false,
-					},
-				},
-			},
+			nlRule:   B().withAddrLookup(OffsetV4Daddr, "NetIPv4-sg-dmy1").build(expr.VerdictAccept),
+			sets:     sgDmySet,
+			setEls:   sgDmyEls,
 			wantRule: createWantedRule(nil, []string{"@NetIPv4-sg-dmy1"}, nil, nil, "accept"),
 		},
 
 		// tcp dport 20-40 counter packets 5 bytes 1000 accept
 		{
-			nlRule: createNlRuleWithPortsCmp(
-				OffsetDport,
-				[]expr.Any{
-					&expr.Cmp{
-						Op:   expr.CmpOpGte,
-						Data: []byte{0, 20},
-					},
-					&expr.Cmp{
-						Op:   expr.CmpOpLte,
-						Data: []byte{0, 40},
-					}},
-				expr.VerdictAccept),
+			nlRule: B().
+				withPortsCmp(
+					OffsetDport,
+					[]expr.Any{
+						&expr.Cmp{
+							Op:   expr.CmpOpGte,
+							Data: []byte{0, 20},
+						},
+						&expr.Cmp{
+							Op:   expr.CmpOpLte,
+							Data: []byte{0, 40},
+						}}).
+				build(expr.VerdictAccept),
 			wantRule: createWantedRule(nil, nil, nil, []string{"20", "40"}, "accept"),
 		},
 
 		// tcp sport { 1, 2, 3, 1000 } counter packets 5 bytes 1000 drop
 		{
-			nlRule: createNlRuleWithPortsLookup(OffsetSport, "__set0", expr.VerdictDrop),
+			nlRule: B().withPortsLookup(OffsetSport, "__set0").build(expr.VerdictDrop),
 			// non interval set like nft cli do it
 			sets: map[string]*nft.Set{
 				"__set0": {
@@ -104,7 +111,7 @@ func TestNl2rule(t *testing.T) {
 
 		// tcp sport { 80, 90 } counter packets 5 bytes 1000 accept
 		{
-			nlRule: createNlRuleWithPortsLookup(OffsetSport, "__set1", expr.VerdictAccept),
+			nlRule: B().withPortsLookup(OffsetSport, "__set1").build(expr.VerdictAccept),
 			// interval set like sgroups do it
 			sets: map[string]*nft.Set{
 				"__set1": {
@@ -153,6 +160,21 @@ func TestNl2rule(t *testing.T) {
 			},
 			wantRule: createWantedRule(nil, nil, nil, nil, "drop"),
 		},
+
+		// ip saddr @NetIPv4-sg-dmy1 tcp sport 777 tcp dport 555 counter packets 5 bytes 1000 drop
+		{
+			nlRule: B().withAddrLookup(OffsetV4Saddr, "NetIPv4-sg-dmy1").
+				withPortsCmp(OffsetSport, []expr.Any{
+					&expr.Cmp{Op: expr.CmpOpEq, Data: []byte{3, 9}},
+				}).
+				withPortsCmp(OffsetDport, []expr.Any{
+					&expr.Cmp{Op: expr.CmpOpEq, Data: []byte{2, 43}},
+				}).
+				build(expr.VerdictDrop),
+			sets:     sgDmySet,
+			setEls:   sgDmyEls,
+			wantRule: createWantedRule([]string{"@NetIPv4-sg-dmy1"}, nil, []string{"777"}, []string{"555"}, "drop"),
+		},
 	}
 
 	for i, c := range cases {
@@ -164,6 +186,153 @@ func TestNl2rule(t *testing.T) {
 		}
 		require.Equalf(t, c.wantRule, got, "TestNl2rule: testcase %d got rule differs from wanted", i)
 	}
+}
+
+type nlRuleBuilder struct {
+	exprs         []expr.Any
+	havePortsMeta bool
+}
+
+func B() *nlRuleBuilder {
+	return &nlRuleBuilder{}
+}
+
+func (b *nlRuleBuilder) build(verdict expr.VerdictKind) *nft.Rule {
+	t := &nft.Table{
+		Name:   "main",
+		Use:    0,
+		Flags:  0,
+		Family: nft.TableFamilyINet,
+	}
+	b.exprs = append(b.exprs,
+		createCounter(1000, 5),
+		&expr.Verdict{
+			Kind: verdict,
+		},
+	)
+	return &nft.Rule{
+		Table: t,
+		Chain: &nft.Chain{
+			Name:     "main-chain",
+			Table:    t,
+			Hooknum:  nil,
+			Priority: nil,
+			Type:     nft.ChainTypeFilter,
+			Policy:   nil,
+			Handle:   0,
+		},
+		Position: 0,
+		Handle:   0,
+		Flags:    0,
+		Exprs:    b.exprs,
+		UserData: nil,
+	}
+}
+
+func (b *nlRuleBuilder) withAddrCmp(addrOffset uint32, ip net.IP) *nlRuleBuilder {
+	metaCmp := expr.Cmp{
+		Op:   expr.CmpOpEq,
+		Data: []byte{unix.NFPROTO_IPV4},
+	}
+	payload := expr.Payload{
+		OperationType: expr.PayloadLoad,
+		Base:          expr.PayloadBaseNetworkHeader,
+		Offset:        addrOffset,
+	}
+	switch addrOffset {
+	case OffsetV4Saddr:
+		metaCmp.Data = []byte{unix.NFPROTO_IPV4}
+	case OffsetV4Daddr:
+		metaCmp.Data = []byte{unix.NFPROTO_IPV4}
+	case OffsetV6Saddr:
+		metaCmp.Data = []byte{unix.NFPROTO_IPV6}
+	case OffsetV6Daddr:
+		metaCmp.Data = []byte{unix.NFPROTO_IPV6}
+	}
+	b.exprs = append(b.exprs,
+		&expr.Meta{
+			Key: expr.MetaKeyNFPROTO,
+		},
+		&metaCmp,
+		&payload,
+		&expr.Cmp{
+			Op:   expr.CmpOpEq,
+			Data: ip,
+		},
+	)
+	return b
+}
+
+func (b *nlRuleBuilder) withAddrLookup(addrOffset uint32, setName string) *nlRuleBuilder {
+	metaCmp := expr.Cmp{
+		Op: expr.CmpOpEq,
+	}
+	payload := expr.Payload{
+		OperationType: expr.PayloadLoad,
+		Base:          expr.PayloadBaseNetworkHeader,
+		Offset:        addrOffset,
+		Len:           0, // TODO
+	}
+	switch addrOffset {
+	case OffsetV4Saddr:
+		metaCmp.Data = []byte{unix.NFPROTO_IPV4}
+	case OffsetV4Daddr:
+		metaCmp.Data = []byte{unix.NFPROTO_IPV4}
+	case OffsetV6Saddr:
+		metaCmp.Data = []byte{unix.NFPROTO_IPV6}
+	case OffsetV6Daddr:
+		metaCmp.Data = []byte{unix.NFPROTO_IPV6}
+	}
+	b.exprs = append(b.exprs,
+		&expr.Meta{Key: expr.MetaKeyNFPROTO},
+		&metaCmp,
+		&payload,
+		&expr.Lookup{SetName: setName},
+	)
+	return b
+}
+
+func (b *nlRuleBuilder) addPortsMeta() *nlRuleBuilder {
+	// adds ports meta once
+	if !b.havePortsMeta {
+		b.exprs = append(b.exprs,
+			&expr.Meta{Key: expr.MetaKeyL4PROTO},
+			&expr.Cmp{
+				Op:   expr.CmpOpEq,
+				Data: []byte{unix.IPPROTO_TCP},
+			},
+		)
+		b.havePortsMeta = true
+	}
+	return b
+}
+
+func (b *nlRuleBuilder) withPortsCmp(portOffset uint32, portCmps []expr.Any) *nlRuleBuilder {
+	b.addPortsMeta()
+	b.exprs = append(b.exprs,
+		&expr.Payload{
+			OperationType: expr.PayloadLoad,
+			Base:          expr.PayloadBaseTransportHeader,
+			Offset:        portOffset,
+			Len:           2,
+		},
+	)
+	b.exprs = append(b.exprs, portCmps...)
+	return b
+}
+
+func (b *nlRuleBuilder) withPortsLookup(portOffset uint32, setName string) *nlRuleBuilder {
+	b.addPortsMeta()
+	b.exprs = append(b.exprs,
+		&expr.Payload{
+			OperationType: expr.PayloadLoad,
+			Base:          expr.PayloadBaseTransportHeader,
+			Offset:        portOffset,
+			Len:           2,
+		},
+		&expr.Lookup{SetName: setName},
+	)
+	return b
 }
 
 func createNlRule(exprs []expr.Any) *nft.Rule {
@@ -190,115 +359,6 @@ func createNlRule(exprs []expr.Any) *nft.Rule {
 		Exprs:    exprs,
 		UserData: nil,
 	}
-}
-
-func createNlRuleWithAddrCmp(addrOffset uint32, ip net.IP, verdict expr.VerdictKind) *nft.Rule {
-	metaCmp := expr.Cmp{
-		Op:   expr.CmpOpEq,
-		Data: []byte{unix.NFPROTO_IPV4},
-	}
-	payload := expr.Payload{
-		OperationType: expr.PayloadLoad,
-		Base:          expr.PayloadBaseNetworkHeader,
-		Offset:        addrOffset,
-		Len:           0, // TODO
-	}
-	switch addrOffset {
-	case OffsetV4Saddr:
-		metaCmp.Data = []byte{unix.NFPROTO_IPV4}
-	case OffsetV4Daddr:
-		metaCmp.Data = []byte{unix.NFPROTO_IPV4}
-	case OffsetV6Saddr:
-		metaCmp.Data = []byte{unix.NFPROTO_IPV6}
-	case OffsetV6Daddr:
-		metaCmp.Data = []byte{unix.NFPROTO_IPV6}
-
-	}
-	return createNlRule([]expr.Any{
-		&expr.Meta{
-			Key: expr.MetaKeyNFPROTO,
-		},
-		&metaCmp,
-		&payload,
-		&expr.Cmp{
-			Op:   expr.CmpOpEq,
-			Data: ip,
-		},
-		createCounter(1000, 5),
-		&expr.Verdict{
-			Kind: verdict,
-		},
-	})
-}
-
-func createNlRuleWithAddrLookup(addrOffset uint32, setName string, verdict expr.VerdictKind) *nft.Rule {
-	metaCmp := expr.Cmp{
-		Op: expr.CmpOpEq,
-	}
-	payload := expr.Payload{
-		OperationType: expr.PayloadLoad,
-		Base:          expr.PayloadBaseNetworkHeader,
-		Offset:        addrOffset,
-		Len:           0, // TODO
-	}
-	switch addrOffset {
-	case OffsetV4Saddr:
-		metaCmp.Data = []byte{unix.NFPROTO_IPV4}
-	case OffsetV4Daddr:
-		metaCmp.Data = []byte{unix.NFPROTO_IPV4}
-	case OffsetV6Saddr:
-		metaCmp.Data = []byte{unix.NFPROTO_IPV6}
-	case OffsetV6Daddr:
-		metaCmp.Data = []byte{unix.NFPROTO_IPV6}
-	}
-	return createNlRule([]expr.Any{
-		&expr.Meta{Key: expr.MetaKeyNFPROTO},
-		&metaCmp,
-		&payload,
-		&expr.Lookup{SetName: "NetIPv4-sg-dmy1"},
-		createCounter(1000, 5),
-		&expr.Verdict{Kind: verdict},
-	})
-}
-
-func createNlRuleWithPortsCmp(portOffset uint32, portCmps []expr.Any, verdict expr.VerdictKind) *nft.Rule {
-	rule := createNlRule([]expr.Any{
-		&expr.Meta{Key: expr.MetaKeyL4PROTO},
-		&expr.Cmp{
-			Op:   expr.CmpOpEq,
-			Data: []byte{unix.IPPROTO_TCP},
-		},
-		&expr.Payload{
-			OperationType: expr.PayloadLoad,
-			Base:          expr.PayloadBaseTransportHeader,
-			Offset:        portOffset,
-			Len:           2,
-		},
-	})
-	rule.Exprs = append(rule.Exprs, portCmps...)
-	rule.Exprs = append(rule.Exprs,
-		createCounter(1000, 5),
-		&expr.Verdict{Kind: verdict})
-	return rule
-}
-
-func createNlRuleWithPortsLookup(portOffset uint32, setName string, verdict expr.VerdictKind) *nft.Rule {
-	return createNlRule([]expr.Any{
-		&expr.Meta{Key: expr.MetaKeyL4PROTO},
-		&expr.Cmp{
-			Op:   expr.CmpOpEq,
-			Data: []byte{unix.IPPROTO_TCP},
-		},
-		&expr.Payload{
-			OperationType: expr.PayloadLoad,
-			Base:          expr.PayloadBaseTransportHeader,
-			Offset:        portOffset,
-			Len:           2,
-		},
-		&expr.Lookup{SetName: setName},
-		createCounter(1000, 5),
-		&expr.Verdict{Kind: verdict},
-	})
 }
 
 func createNlRuleWithNftraceAndIcmp(setName string, verdict expr.VerdictKind) *nft.Rule {
