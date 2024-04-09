@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	logger.SetLevel(zap.DebugLevel)
+	logger.SetLevel(zap.InfoLevel)
 	reg := prometheus.NewPedanticRegistry()
 	//reg.MustRegister(
 	//	collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
@@ -26,7 +26,7 @@ func main() {
 	if err != nil {
 		logger.Fatalf(ctx, "nl conn err: %v", err)
 	}
-	prometheus.WrapRegistererWithPrefix("", reg).MustRegister(&nftCollector{ctx, conn})
+	prometheus.WrapRegistererWithPrefix("", reg).MustRegister(&nftCollector{ctx, conn, "./collector-dump.log"})
 
 	logger.Info(ctx, "starting on :9630/")
 	http.Handle("/", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))

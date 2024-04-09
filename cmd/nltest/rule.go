@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	"strconv"
+	"strings"
 
 	"github.com/H-BF/corlib/logger"
 	nft "github.com/google/nftables"
@@ -41,7 +42,7 @@ type Counter struct {
 }
 
 func nl2rule(ctx context.Context, nlRule *nft.Rule, setMapping map[string]*nft.Set, setElements map[string][]nft.SetElement) (nftablesRule, error) {
-	formatRule(nlRule)
+	logger.Debug(ctx, formatRule(nlRule))
 
 	r := nftablesRule{
 		Chain:   nlRule.Chain.Name,
@@ -54,9 +55,8 @@ func nl2rule(ctx context.Context, nlRule *nft.Rule, setMapping map[string]*nft.S
 
 	parserCtx := newParserCtx(ctx, &r, setMapping, setElements)
 
-	parserCtx.debug = true // TODO: turn off me
-
 	for _, e := range nlRule.Exprs {
+		// TODO: parse rule comments
 		switch v := e.(type) {
 		case *expr.Counter:
 			if r.Counter != nil {
@@ -132,17 +132,14 @@ func (r *nftablesRule) String() string {
 		r.Chain, r.Table, r.Family, r.Comment, r.Action, r.Handle, r.Interfaces.Input, r.Interfaces.Output, r.Addresses.Source, r.Addresses.Destination, r.Ports.Source, r.Ports.Destination, r.Counter)
 }
 
-func formatRule(r *nft.Rule) {
-	fmt.Printf("    rule: Position=%d, Handle=%d, Flags=0x%X, UserData=%v, Exprs=[",
+func formatRule(r *nft.Rule) string {
+	var b strings.Builder
+	_, _ = fmt.Fprintf(&b, "nft rule: Position=%d, Handle=%d, Flags=0x%X, UserData=%v, Exprs=[",
 		r.Position, r.Handle, r.Flags, r.UserData)
-
 	for _, e := range r.Exprs {
-		switch v := e.(type) {
-		case *expr.Counter:
-			fmt.Printf(" Counter{Bytes: %d, Packets: %d},", v.Bytes, v.Packets)
-		default:
-			fmt.Printf(" Any{Type: %T, value: %+v},", e, e)
-		}
+		_, _ = fmt.Fprintf(&b, " Any{Type: %T, value: %+v},", e, e)
+
 	}
-	fmt.Println("]")
+	_, _ = fmt.Fprintln(&b, "]")
+	return b.String()
 }

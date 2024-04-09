@@ -274,9 +274,6 @@ func (m *matchPorts) parseMeta(meta *expr.Meta) {
 }
 
 func (m *matchPorts) parseCmp(cmp *expr.Cmp) {
-	// TODO: разобраться в какой стейт переходить после обработки всех `cmp`, т.к.
-	// после dport/sport могут следовать sport/dport без мета (а может с мета - надо проверить)
-
 	var port = binary.BigEndian.Uint16(cmp.Data)
 	*m.ports = append(*m.ports, strconv.FormatUint(uint64(port), 10))
 	if cmp.Op == expr.CmpOpEq || cmp.Op == expr.CmpOpLt || cmp.Op == expr.CmpOpLte {
@@ -289,7 +286,6 @@ func (m *matchPorts) parsePayload(payload *expr.Payload) {
 }
 
 func (m *matchPorts) parseLookup(lookup *expr.Lookup) {
-	// TODO: same as `matchPorts.parseCmp`
 	defer func() {
 		m.pctx.setState(m.nextState(m.pctx))
 	}()

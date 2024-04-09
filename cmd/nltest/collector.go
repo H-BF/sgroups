@@ -2,17 +2,20 @@ package main
 
 import (
 	"context"
+	"os"
 	"strconv"
 	"strings"
 
 	"github.com/H-BF/corlib/logger"
 	"github.com/google/nftables"
 	"github.com/prometheus/client_golang/prometheus"
+	"go.uber.org/zap"
 )
 
 type nftCollector struct {
 	ctx  context.Context
 	conn *nftables.Conn
+	dump string
 }
 
 func (c *nftCollector) Describe(ch chan<- *prometheus.Desc) {
@@ -26,7 +29,7 @@ func (c *nftCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *nftCollector) Collect(ch chan<- prometheus.Metric) {
-	if err := collect(c.ctx, ch, c.conn); err != nil {
+	if err := collect(c.ctx, ch, c.conn, c.dump); err != nil {
 		logger.Errorf(c.ctx, "failed get metrics from netlink: %v", err)
 		ch <- prometheus.MustNewConstMetric(upDesc, prometheus.GaugeValue, 0)
 	} else {
@@ -34,7 +37,7 @@ func (c *nftCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func collect(ctx context.Context, ch chan<- prometheus.Metric, conn *nftables.Conn) error {
+func collect(ctx context.Context, ch chan<- prometheus.Metric, conn *nftables.Conn, dump string) error {
 	tables, err := conn.ListTables()
 	if err != nil {
 		return err
@@ -49,6 +52,20 @@ func collect(ctx context.Context, ch chan<- prometheus.Metric, conn *nftables.Co
 	if err != nil {
 		return err
 	}
+
+	// for case when problems with collecting :'
+	if len(dump) != 0 {
+		file, err := os.OpenFile(dump, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			_ = file.Close()
+		}()
+		ctx = logger.ToContext(ctx, logger.NewWithSink(zap.NewAtomicLevelAt(zap.DebugLevel), file))
+	}
+
+	logger.Debug(ctx, "collect started")
 
 	for i := range tables {
 		t := tables[i]
@@ -95,7 +112,7 @@ func collect(ctx context.Context, ch chan<- prometheus.Metric, conn *nftables.Co
 				logger.Debugf(ctx, "get set elements [table:%s, set:%s] err: %v", t.Name, set.Name, err)
 				continue
 			}
-			logger.Debugf(ctx, "TODO: remove me Set{%+v} elements: %+v", set, elements)
+			logger.Debugf(ctx, "Set{%+v} elements: %+v", set, elements)
 			setElements[set.Name] = elements
 			setMapping[set.Name] = set
 		}
@@ -143,6 +160,8 @@ func collect(ctx context.Context, ch chan<- prometheus.Metric, conn *nftables.Co
 			family,
 		)
 	}
+
+	logger.Debug(ctx, "collect finished")
 
 	return nil
 }
