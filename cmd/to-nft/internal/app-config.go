@@ -43,6 +43,7 @@ extapi:
 
 telemetry:
   useragent: "string"
+  nft-collector-dump-file: "string"
   endpoint: 127.0.0.1:5000
   metrics:
     enable: true
@@ -121,6 +122,8 @@ const (
 	UserAgent config.ValueT[string] = "telemetry/useragent"
 	// ProfileEnable available at /debug/pprof/index
 	ProfileEnable config.ValueT[bool] = "telemetry/profile/enable"
+	// NftablesCollectorDumpFile allows dump debug info from nftables-collector, if empty dumping will be disabled
+	NftablesCollectorDumpFile config.ValueT[string] = "telemetry/nft-collector-dump-file"
 )
 
 type FqdnRulesStrategy string

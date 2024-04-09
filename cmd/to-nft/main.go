@@ -70,6 +70,7 @@ func main() { //nolint:gocyclo
 		config.WithDefValue{Key: HealthcheckEnable, Val: true},
 		config.WithDefValue{Key: UserAgent, Val: ""},
 		config.WithDefValue{Key: ProfileEnable, Val: true},
+		config.WithDefValue{Key: NftablesCollectorDumpFile, Val: ""},
 	)
 	if err != nil {
 		logger.Fatal(ctx, err)

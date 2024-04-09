@@ -5,8 +5,10 @@ import (
 	"os"
 
 	"github.com/H-BF/sgroups/internal/app"
+	nftablescollector "github.com/H-BF/sgroups/internal/nftables-collector"
 	"github.com/H-BF/sgroups/pkg/atomic"
 
+	"github.com/google/nftables"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -41,6 +43,13 @@ func SetupMetrics(ctx context.Context) error {
 		return nil
 	}
 
+	nlConn, err := nftables.New()
+	if err != nil {
+		return err
+	}
+
+	dumpFile := NftablesCollectorDumpFile.MustValue(ctx)
+
 	hostname, err := os.Hostname()
 	if err != nil {
 		return err
@@ -53,6 +62,7 @@ func SetupMetrics(ctx context.Context) error {
 	am.init(labels)
 	metricsOpt := app.AddMetrics{
 		Metrics: []prometheus.Collector{
+			&nftablescollector.NftCollector{Ctx: ctx, Conn: nlConn, Dump: dumpFile},
 			app.NewHealthcheckMetric(labels),
 			am.appliedConfigCount,
 			am.errorCount,
