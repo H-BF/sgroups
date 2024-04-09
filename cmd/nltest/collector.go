@@ -45,6 +45,11 @@ func collect(ctx context.Context, ch chan<- prometheus.Metric, conn *nftables.Co
 		return err
 	}
 
+	rules, err := conn.GetAllRules()
+	if err != nil {
+		return err
+	}
+
 	for i := range tables {
 		t := tables[i]
 		family := family2str(t.Family)
@@ -100,30 +105,17 @@ func collect(ctx context.Context, ch chan<- prometheus.Metric, conn *nftables.Co
 			c := chains[i]
 			if c.Table.Name == t.Name && c.Table.Family == t.Family {
 				tableChains++
-				rules, err := conn.GetRules(t, c) // TODO: change to Vadim's `GetAllRules`
-				if err != nil {
-					logger.Debugf(ctx, "get rules [table: %s, chain: %s] err: %v", t.Name, c.Name, err)
-					continue
-				}
 
-				for i := range rules {
-					if true {
+				chainRules := 0
+				for _, rule := range rules {
+					if rule.Table.Name == t.Name && rule.Table.Family == t.Family && rule.Chain.Name == c.Name {
+						chainRules++
 
-						r, err := nl2rule(ctx, rules[i], setMapping, setElements)
+						r, err := nl2rule(ctx, rule, setMapping, setElements)
 						if err != nil {
 							logger.Debugf(ctx, "nl rule [table:%s, chain:%s] conversion err: %v",
 								t.Name, c.Name, err)
 							continue
-						}
-
-						// TODO: delete me
-						if false {
-							if r.Counter == nil {
-								r.Counter = &Counter{
-									Bytes:   666,
-									Packets: 666,
-								}
-							}
 						}
 
 						if r.Counter != nil {
@@ -135,7 +127,7 @@ func collect(ctx context.Context, ch chan<- prometheus.Metric, conn *nftables.Co
 				ch <- prometheus.MustNewConstMetric(
 					chainRulesDesc,
 					prometheus.GaugeValue,
-					float64(len(rules)),
+					float64(chainRules),
 					c.Name,
 					family,
 					t.Name,

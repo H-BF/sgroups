@@ -17,6 +17,7 @@ package nftables
 import (
 	"encoding/binary"
 	"fmt"
+	"unsafe"
 
 	"github.com/google/nftables/binaryutil"
 	"github.com/google/nftables/expr"
@@ -57,6 +58,45 @@ type Rule struct {
 // Deprecated: use GetRules instead.
 func (cc *Conn) GetRule(t *Table, c *Chain) ([]*Rule, error) {
 	return cc.GetRules(t, c)
+}
+
+// GetAllRules returns  all available rules.
+func (cc *Conn) GetAllRules() ([]*Rule, error) {
+	conn, closer, err := cc.netlinkConn()
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = closer() }()
+
+	message := netlink.Message{
+		Header: netlink.Header{
+			Type:  netlink.HeaderType((unix.NFNL_SUBSYS_NFTABLES << 8) | unix.NFT_MSG_GETRULE),
+			Flags: netlink.Request | netlink.Dump,
+		},
+		Data: extraHeader(uint8(unix.NFPROTO_UNSPEC), 0),
+	}
+
+	msgs, err := conn.Execute(message)
+	if err != nil {
+		return nil, err
+	}
+
+	var rules []*Rule
+
+	for _, m := range msgs {
+		if got, want := m.Header.Type, ruleHeaderType; got != want {
+			return nil, fmt.Errorf("unexpected header type: got %v, want %v", got, want)
+		}
+		nfg := (*unix.Nfgenmsg)(unsafe.Pointer(&m.Data[0]))
+
+		r, err := ruleFromMsg(TableFamily(nfg.Nfgen_family), m)
+		if err != nil {
+			return nil, err
+		}
+		rules = append(rules, r)
+	}
+
+	return rules, nil
 }
 
 // GetRules returns the rules in the specified table and chain.
