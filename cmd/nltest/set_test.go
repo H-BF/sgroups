@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
+	"testing"
+
 	nft "github.com/google/nftables"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestSetElems2Nets(t *testing.T) {
@@ -43,13 +43,12 @@ func TestSetElems2Nets(t *testing.T) {
 		},
 	}
 
-	for i, c := range cases {
+	for _, c := range cases {
 		nets, err := setElems2Nets(c.setElems)
-		if err != nil && !c.err {
-			t.Fatalf("TestSetElems2Nets[case %d] not expected err: %v", i, err)
-		}
-		if c.err && err == nil {
-			t.Fatalf("Tododo")
+		if !c.err {
+			require.NoError(t, err)
+		} else {
+			require.Error(t, err)
 		}
 		require.ElementsMatch(t, nets, c.expected)
 	}
@@ -94,7 +93,6 @@ func TestFindCommonLongestMask(t *testing.T) {
 		} else {
 			require.Error(t, err)
 		}
-		fmt.Println("************")
 		require.Equal(t, c.expected, mask)
 	}
 }
