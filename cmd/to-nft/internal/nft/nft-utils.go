@@ -2,6 +2,7 @@ package nft
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"math/rand"
 	"net"
@@ -11,6 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/H-BF/sgroups/cmd/to-nft/internal"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
 	"github.com/H-BF/corlib/pkg/backoff"
@@ -58,7 +60,10 @@ func init() {
 }
 
 func (nameUtils) genMainTableName() string {
-	return fmt.Sprintf("%s-%v", MainTablePrefix, nextUnixEpochInSeconds())
+	if !internal.ExitOnSuccess.MustValue(context.Background()) {
+		return fmt.Sprintf("%s-%v", MainTablePrefix, nextUnixEpochInSeconds())
+	}
+	return fmt.Sprintf("%s-000000", MainTablePrefix)
 }
 
 func (nameUtils) isLikeMainTableName(s string) bool {
