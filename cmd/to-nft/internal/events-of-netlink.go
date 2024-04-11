@@ -57,12 +57,12 @@ func (w *NetlinkEventSource) Run(ctx context.Context) error {
 	var neverRun bool
 	w.runOnce.Do(func() {
 		neverRun = true
+		w.stopped = make(chan struct{})
 	})
 	if !neverRun {
 		return fmt.Errorf("%s: it has been run or closed yet", job)
 	}
 	log := logger.FromContext(ctx).Named(job)
-	w.stopped = make(chan struct{})
 	log.Info("start")
 	defer func() {
 		log.Info("stop")

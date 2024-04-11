@@ -45,7 +45,7 @@ type (
 		stopped       chan struct{}
 		onceClose     sync.Once
 		onceRun       sync.Once
-		que           *queue.FIFO
+		que           queue.FIFO[DomainAddresses]
 		activeQueries struct {
 			sync.Mutex
 			closed bool
@@ -61,7 +61,7 @@ func NewDnsRefresher(sbj observer.Subject) *DnsRefresher {
 	ret := DnsRefresher{
 		subject: sbj,
 		sema:    make(chan struct{}, semaphoreCap),
-		que:     queue.NewFIFO(),
+		que:     queue.NewFIFO[DomainAddresses](),
 	}
 	for i := 0; i < cap(ret.sema); i++ {
 		ret.sema <- struct{}{}
@@ -103,14 +103,16 @@ func (rf *DnsRefresher) Run(ctx context.Context) (err error) {
 	const job = "dns-refresher"
 
 	var doRun bool
-	rf.onceRun.Do(func() { doRun = true })
+	rf.onceRun.Do(func() {
+		doRun = true
+		rf.stopped = make(chan struct{})
+	})
 	if !doRun {
 		return errors.Errorf("%s: it has been run or closed yet", job)
 	}
 
 	log := logger.FromContext(ctx).Named(job)
 	log.Info("start")
-	rf.stopped = make(chan struct{})
 	defer func() {
 		close(rf.stopped)
 		log.Info("stop")
@@ -120,23 +122,20 @@ func (rf *DnsRefresher) Run(ctx context.Context) (err error) {
 		case <-ctx.Done():
 			log.Info("will exit cause it has canceled")
 			return ctx.Err()
-		case raw, ok := <-events:
+		case ev, ok := <-events:
 			if !ok {
 				log.Infof("will exit cause it has closed")
 				return nil
 			}
-			switch ev := raw.(type) {
-			case DomainAddresses:
-				log1 := log.WithField("domain", ev.FQDN).WithField("IPv", ev.IpVersion)
-				if e := ev.DnsAnswer.Err; e != nil {
-					log1.Errorw("resolved", "error", jsonview.Stringer(e))
-				} else {
-					log1.Debugw("resolved",
-						"TTL", jsonview.Stringer(ev.DnsAnswer.TTL.Round(time.Second)),
-						"IP(s)", ev.DnsAnswer.IPs)
-				}
-				rf.subject.Notify(ev)
+			log1 := log.WithField("domain", ev.FQDN).WithField("IPv", ev.IpVersion)
+			if e := ev.DnsAnswer.Err; e != nil {
+				log1.Errorw("resolved", "error", jsonview.Stringer(e))
+			} else {
+				log1.Debugw("resolved",
+					"TTL", jsonview.Stringer(ev.DnsAnswer.TTL.Round(time.Second)),
+					"IP(s)", ev.DnsAnswer.IPs)
 			}
+			rf.subject.Notify(ev)
 		}
 	}
 }
