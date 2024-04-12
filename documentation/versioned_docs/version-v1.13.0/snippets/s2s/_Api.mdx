@@ -1,0 +1,599 @@
+import Tabs from '@theme/Tabs'
+import TabItem from '@theme/TabItem'
+import { Restrictions } from '@site/src/components/commonBlocks/Restrictions'
+import { DICTIONARY } from '@site/src/constants/dictionary.ts'
+import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
+import { FancyboxDiagram } from '@site/src/components/commonBlocks/FancyboxDiagram'
+import { RESPOND_CODES } from '@site/src/constants/errorCodes.tsx'
+import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
+
+#### Входные параметры
+
+<ul>
+  <li>`$node.rules[]` - {DICTIONARY.rules.short}</li>
+  <li>`$node.rules[].sgFrom` - {DICTIONARY.sg.short}</li>
+  <li>`$node.rules[].sgTo` - {DICTIONARY.sg.short}</li>
+  <li>`$node.rules[].logs` - {DICTIONARY.log.short}</li>
+  <li>`$node.rules[].trace` - {DICTIONARY.trace.short}</li>
+  <li>`$node.rules[].ports` - {DICTIONARY.ports.short}</li>
+  <li>`$node.rules[].ports[].d` - {DICTIONARY.dstPorts.short}</li>
+  <li>`$node.rules[].ports[].s` - {DICTIONARY.srcPorts.short}</li>
+  <li>`$node.rules[].transport` - {DICTIONARY.transport.short}</li>
+  <li>`$node.rules[].ICMP` - {DICTIONARY.apiIcmp.short}</li>
+  <li>`$node.rules[].ICMP.IPv` - {DICTIONARY.icmpV.short}</li>
+  <li>`$node.rules[].ICMP.Types` - {DICTIONARY.icmpTypes.short}</li>
+  <li>`$node.rules[].action` - {DICTIONARY.action.short}</li>
+  <li>`$node.rules[].priority` - {DICTIONARY.priorityst.short}</li>
+  <li>`$node.rules[].priority.some` - {DICTIONARY.priority.short}</li>
+  <li>`syncOp` - {DICTIONARY.syncOp.short}</li>
+</ul>
+
+<div className="scrollable-x">
+  <table>
+    <caption>Области применения полей относительно используемого протокола</caption>
+    <thead>
+      <tr>
+        <th rowSpan="2">название</th>
+        <th rowSpan="2">обязательность</th>
+        <th rowSpan="2">тип данных</th>
+        <th rowSpan="2">значение по умолчанию</th>
+        <th colSpan="3">transport*</th>
+      </tr>
+      <tr>
+        <th>TCP</th>
+        <th>UDP</th>
+        <th>ICMP</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>$node.rules[]</td>
+        <td>да</td>
+        <td>Object[]</td>
+        <td>null</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].sgFrom</td>
+        <td>да</td>
+        <td>String</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].sgTo</td>
+        <td>да</td>
+        <td>String</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].logs</td>
+        <td>нет</td>
+        <td>Boolean</td>
+        <td>false</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].trace</td>
+        <td>нет</td>
+        <td>Boolean</td>
+        <td>false</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].ports</td>
+        <td>нет</td>
+        <td>Object[]</td>
+        <td>null</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center"></td>
+      </tr>
+      <tr>
+        <td>$node.rules[].ports[].d</td>
+        <td>нет</td>
+        <td>String</td>
+        <td>null</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center"></td>
+      </tr>
+      <tr>
+        <td>$node.rules[].ports[].s</td>
+        <td>нет</td>
+        <td>String</td>
+        <td>null</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center"></td>
+      </tr>
+      <tr>
+        <td>$node.rules[].transport</td>
+        <td>нет</td>
+        <td>Enum("TCP", "UDP")</td>
+        <td>TCP</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center"></td>
+      </tr>
+      <tr>
+        <td>$node.rules[].ICMP</td>
+        <td>да</td>
+        <td>Object</td>
+        <td></td>
+        <td className="green center"></td>
+        <td className="green center"></td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].ICMP.IPv</td>
+        <td>да</td>
+        <td>Enum("IPv4", "IPv6")</td>
+        <td></td>
+        <td className="green center"></td>
+        <td className="green center"></td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].ICMP.Types</td>
+        <td>нет</td>
+        <td>String[]</td>
+        <td>[]</td>
+        <td className="green center"></td>
+        <td className="green center"></td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].action</td>
+        <td>да</td>
+        <td>
+          <nobr>Enum("UNDEF", "ACCEPT", "DROP")</nobr>
+        </td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].priority</td>
+        <td>нет</td>
+        <td>Object</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>$node.rules[].priority.some</td>
+        <td>нет</td>
+        <td>Integer</td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+      <tr>
+        <td>syncOp</td>
+        <td>да</td>
+        <td>
+          <nobr>Enum("Delete", "Upsert", "FullSync")</nobr>
+        </td>
+        <td></td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+        <td className="green center">✔</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<h4 className="custom-heading">Ограничения</h4>
+
+<ul>
+  <li>
+    `sgSgRules.rules[].sgFrom`:
+    <Restrictions data={RESTRICTIONS.name} />
+  </li>
+  <li>
+    `sgSgRules.rules[].sgTo`:
+    <Restrictions data={RESTRICTIONS.name} />
+  </li>
+  <li>
+    `sgSgRules.rules[].ports[].d`:
+    <Restrictions data={RESTRICTIONS.dstPorts} />
+  </li>
+  <li>
+    `sgSgRules.rules[].ports[].s`:
+    <Restrictions data={RESTRICTIONS.srcPorts} />
+  </li>
+  <li>
+    `sgSgRules.rules[].ICMP.Types[]`:
+    <Restrictions data={RESTRICTIONS.icmpType} />
+  </li>
+</ul>
+
+#### Пример использования
+
+<Tabs
+    defaltValue = "tcp"
+    values = {[
+        { label: "TCP", value: "tcp" },
+        { label: "UDP", value: "udp" },
+        { label: "ICMP4", value: "icmp4" },
+        { label: "ICMP6", value: "icmp6" },
+    ]}
+>
+    <TabItem value="tcp">
+        ```bash
+        curl '127.0.0.1:9007/v1/sync' \
+        --header 'Content-Type: application/json' \
+        --data '{
+          "sgRules": {
+            "rules": [{
+              "sgFrom": "sg-local-example",
+              "sgTo": "sg-example",
+              "logs": true,
+              "trace": true,
+              "ports": [{
+                "d": "443,80",
+                "s": "64231"
+              }],
+              "transport": "TCP",
+              "action": "ACCEPT",
+              "priority": {
+                "some": -200
+              }
+            }]
+          },
+          "syncOp": "Upsert"
+        }'
+        ```
+
+        <h4 className="custom-heading">Выходные параметры</h4>
+
+        <div className="scrollable-x">
+          <table>
+            <thead>
+              <tr>
+                <th>название</th>
+                <th>тип данных</th>
+                <th>описание</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>-</td>
+                <td>Object</td>
+                <td>в случае успеха возвращается пустое тело</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4 className="custom-heading">Возможные ошибки API</h4>
+
+        <Codes data = {RESPOND_CODES.invalid_argument} />
+        <Codes data = {RESPOND_CODES.not_found} />
+
+        <h4 className="custom-heading">Диаграмма последовательности</h4>
+        <FancyboxDiagram>
+
+        ```mermaid
+        sequenceDiagram
+        participant user as User
+        participant server as Server
+        participant db as Database
+
+        user->>server: Добавить IE-SG-SG правило
+
+        alt Ошибка в запросе
+            server-->>user: Показать ошибку в запросе
+        end
+
+        server->>db: Отправить запрос
+        db->>db: Проверка входящего запроса
+
+        alt Нет такого значения имени SG(sg и/или sg_local)
+            db-->>server: Ответ с ошибкой
+            server-->>user: Показать ошибку в запросе
+        end
+
+        alt Пересечение значений source портов
+            db-->>server: Ответ с ошибкой
+            server-->>user: Показать ошибку в запросе
+        end
+
+        db->>db: Сохранить данные о IE-SG-SG в БД
+
+        db-->>server: Ответ с успешно добавленным новым IE-SG-SG правилом
+        server-->>user: Успешно добавленное новое IE-SG-SG правило
+        ```
+
+        </FancyboxDiagram>
+    </TabItem>
+    <TabItem value="udp">
+        ```bash
+        curl '127.0.0.1:9007/v1/sync' \
+        --header 'Content-Type: application/json' \
+        --data '{
+          "sgRules": {
+            "rules": [{
+              "sgFrom": "sg-local-example",
+              "sgTo": "sg-example",
+              "logs": true,
+              "trace": true,
+              "ports": [{
+                "d": "443,80",
+                "s": "64231"
+              }],
+              "transport": "UDP",
+              "action": "ACCEPT",
+              "priority": {
+                "some": -200
+              }
+            }]
+          },
+          "syncOp": "Upsert"
+        }'
+        ```
+
+        <h4 className="custom-heading">Выходные параметры</h4>
+
+        <div className="scrollable-x">
+          <table>
+            <thead>
+              <tr>
+                <th>название</th>
+                <th>тип данных</th>
+                <th>описание</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>-</td>
+                <td>Object</td>
+                <td>в случае успеха возвращается пустое тело</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4 className="custom-heading">Возможные ошибки API</h4>
+
+        <Codes data = {RESPOND_CODES.invalid_argument} />
+        <Codes data = {RESPOND_CODES.not_found} />
+
+        <h4 className="custom-heading">Диаграмма последовательности</h4>
+        <FancyboxDiagram>
+
+        ```mermaid
+        sequenceDiagram
+        participant user as User
+        participant server as Server
+        participant db as Database
+
+        user->>server: Добавить IE-SG-SG правило
+
+        alt Ошибка в запросе
+            server-->>user: Показать ошибку в запросе
+        end
+
+        server->>db: Отправить запрос
+        db->>db: Проверка входящего запроса
+
+        alt Нет такого значения имени SG(sg и/или sg_local)
+            db-->>server: Ответ с ошибкой
+            server-->>user: Показать ошибку в запросе
+        end
+
+        alt Пересечение значений source портов
+            db-->>server: Ответ с ошибкой
+            server-->>user: Показать ошибку в запросе
+        end
+
+        db->>db: Сохранить данные о IE-SG-SG в БД
+
+        db-->>server: Ответ с успешно добавленным новым IE-SG-SG правилом
+        server-->>user: Успешно добавленное новое IE-SG-SG правило
+        ```
+
+        </FancyboxDiagram>
+    </TabItem>
+    <TabItem value="icmp4">
+        ```bash
+        curl '127.0.0.1:9007/v1/sync' \
+        --header 'Content-Type: application/json' \
+        --data '{
+          "sgSgIcmpRules": {
+            "rules": [{
+              "SgFrom": "sg-local-example",
+              "SgTo": "sg-example",
+              "logs": true,
+              "trace": true
+              "ICMP": {
+                "IPv": "IPv4",
+                "Types": [0,8]
+              },
+              "action": "ACCEPT",
+              "priority": {
+                "some": -300
+              }
+            }]
+          },
+          "syncOp": "Upsert"
+        }'
+        ```
+
+        <h4 className="custom-heading">Выходные параметры</h4>
+
+        <div className="scrollable-x">
+          <table>
+            <thead>
+              <tr>
+                <th>название</th>
+                <th>тип данных</th>
+                <th>описание</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>-</td>
+                <td>Object</td>
+                <td>в случае успеха возвращается пустое тело</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4 className="custom-heading">Возможные ошибки API</h4>
+
+        <Codes data = {RESPOND_CODES.invalid_argument} />
+        <Codes data = {RESPOND_CODES.not_found} />
+
+        <h4 className="custom-heading">Диаграмма последовательности</h4>
+        <FancyboxDiagram>
+
+        ```mermaid
+        sequenceDiagram
+        participant user as User
+        participant server as Server
+        participant db as Database
+
+        user->>server: Добавить IE-SG-SG правило
+
+        alt Ошибка в запросе
+            server-->>user: Показать ошибку в запросе
+        end
+
+        server->>db: Отправить запрос
+        db->>db: Проверка входящего запроса
+
+        alt Нет такого значения имени SG(sg и/или sg_local)
+            db-->>server: Ответ с ошибкой
+            server-->>user: Показать ошибку в запросе
+        end
+
+        alt Некорректное значение кода ICMP
+            db-->>server: Ответ с ошибкой
+            server-->>user: Показать ошибку в запросе
+        end
+
+        alt Некорректное значение IPv
+            db-->>server: Ответ с ошибкой
+            server-->>user: Показать ошибку в запросе
+        end
+
+        db->>db: Сохранить данные о IE-SG-SG в БД
+
+        db-->>server: Ответ с успешно добавленным новым IE-SG-SG правилом
+        server-->>user: Успешно добавленное новое IE-SG-SG правило
+        ```
+
+        </FancyboxDiagram>
+    </TabItem>
+
+    <TabItem value="icmp6">
+        ```bash
+        curl '127.0.0.1:9007/v1/sync' \
+        --header 'Content-Type: application/json' \
+        --data '{
+          "sgSgIcmpRules": {
+            "rules": [{
+              "SgFrom": "sg-local-example",
+              "SgTo": "sg-example",
+              "logs": true,
+              "trace": true
+              "ICMP": {
+                "IPv": "IPv6",
+                "Types": [0,8]
+              },
+              "action": "ACCEPT",
+              "priority": {
+                "some": -300
+              }
+            }]
+          },
+          "syncOp": "Upsert"
+        }'
+        ```
+
+        <h4 className="custom-heading">Выходные параметры</h4>
+
+        <div className="scrollable-x">
+          <table>
+            <thead>
+              <tr>
+                <th>название</th>
+                <th>тип данных</th>
+                <th>описание</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>-</td>
+                <td>Object</td>
+                <td>в случае успеха возвращается пустое тело</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4 className="custom-heading">Возможные ошибки API</h4>
+
+        <Codes data = {RESPOND_CODES.invalid_argument} />
+        <Codes data = {RESPOND_CODES.not_found} />
+
+        <h4 className="custom-heading">Диаграмма последовательности</h4>
+        <FancyboxDiagram>
+
+        ```mermaid
+        sequenceDiagram
+        participant user as User
+        participant server as Server
+        participant db as Database
+
+        user->>server: Добавить IE-SG-SG правило
+
+        alt Ошибка в запросе
+            server-->>user: Показать ошибку в запросе
+        end
+
+        server->>db: Отправить запрос
+        db->>db: Проверка входящего запроса
+
+        alt Нет такого значения имени SG(sg и/или sg_local)
+            db-->>server: Ответ с ошибкой
+            server-->>user: Показать ошибку в запросе
+        end
+
+        alt Некорректное значение кода ICMP
+            db-->>server: Ответ с ошибкой
+            server-->>user: Показать ошибку в запросе
+        end
+
+        alt Некорректное значение IPv
+            db-->>server: Ответ с ошибкой
+            server-->>user: Показать ошибку в запросе
+        end
+
+        db->>db: Сохранить данные о IE-SG-SG в БД
+
+        db-->>server: Ответ с успешно добавленным новым IE-SG-SG правилом
+        server-->>user: Успешно добавленное новое IE-SG-SG правило
+        ```
+
+        </FancyboxDiagram>
+    </TabItem>
+
+</Tabs>
