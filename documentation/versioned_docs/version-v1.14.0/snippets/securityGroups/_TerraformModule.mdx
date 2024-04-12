@@ -3,7 +3,7 @@ import { DICTIONARY } from '@site/src/constants/dictionary.ts'
 import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
 
 <div className="paragraph">
-  <p>{DICTIONARY.terraformModule.full}</p>
+  <p>{DICTIONARY['v1.13.0'].terraformModule.full}</p>
 </div>
 <div className="paragraph">
   Далее везде в документе подразумевается что все места, содержащие переменную `$transport` подразумевается одно из двух
@@ -53,13 +53,13 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
       </tr>
       <tr>
         <td>default_rules.access.default.logs</td>
-        <td>{DICTIONARY.log.short}</td>
+        <td>{DICTIONARY['v1.13.0'].log.short}</td>
         <td>Boolean</td>
         <td>false</td>
       </tr>
       <tr>
         <td>default_rules.access.default.trace</td>
-        <td>{DICTIONARY.trace.short}</td>
+        <td>{DICTIONARY['v1.13.0'].trace.short}</td>
         <td>Boolean</td>
         <td>false</td>
       </tr>
@@ -84,25 +84,25 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
       </tr>
       <tr>
         <td>default_rules.access.$transport.logs</td>
-        <td>{DICTIONARY.log.short}</td>
+        <td>{DICTIONARY['v1.13.0'].log.short}</td>
         <td>Boolean</td>
         <td>false</td>
       </tr>
       <tr>
         <td>default_rules.access.$transport.trace</td>
-        <td>{DICTIONARY.trace.short}</td>
+        <td>{DICTIONARY['v1.13.0'].trace.short}</td>
         <td>Boolean</td>
         <td>false</td>
       </tr>
       <tr>
         <td>default_rules.access.$transport.type[]</td>
-        <td>{DICTIONARY.icmpTypes.short}</td>
+        <td>{DICTIONARY['v1.13.0'].icmpTypes.short}</td>
         <td>Integer[]</td>
         <td>[]</td>
       </tr>
       <tr>
         <td>default_rules.access.$transport.action</td>
-        <td>{DICTIONARY.action.short}</td>
+        <td>{DICTIONARY['v1.13.0'].action.short}</td>
         <td>Enum("ACCEPT", "DROP")</td>
         <td>`ACCEPT`</td>
       </tr>
@@ -115,19 +115,19 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
 <ul>
   <li>
     `name`:
-    <Restrictions data={RESTRICTIONS.name} />
+    <Restrictions data={RESTRICTIONS['v1.13.0'].name} />
   </li>
   <li>
     `cidrs[]`:
-    <Restrictions data={RESTRICTIONS.cidrSet} />
+    <Restrictions data={RESTRICTIONS['v1.13.0'].cidrSet} />
   </li>
   <li>
     `default_rules.access.icmp.type`:
-    <Restrictions data={RESTRICTIONS.icmpType} />
+    <Restrictions data={RESTRICTIONS['v1.13.0'].icmpType} />
   </li>
   <li>
     `default_rules.access.icmp6.type`:
-    <Restrictions data={RESTRICTIONS.icmpType} />
+    <Restrictions data={RESTRICTIONS['v1.13.0'].icmpType} />
   </li>
 </ul>
 

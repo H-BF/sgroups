@@ -5,24 +5,24 @@ import { DICTIONARY } from '@site/src/constants/dictionary.ts'
 import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
 
 <div className="paragraph">
-  <p>{DICTIONARY.terraformResource.full}</p>
+  <p>{DICTIONARY['v1.13.0'].terraformResource.full}</p>
 </div>
 <ul>
   <li>`items` - список ресурсов создаваемые terraform ресурсом. </li>
   <li>`items.$ruleName` - уникальное имя создаваемого ресурса.</li>
-  <li>`items.$ruleName.traffic` - {DICTIONARY.traffic.short}</li>
-  <li>`items.$ruleName.transport` - {DICTIONARY.transport.short}</li>
-  <li>`items.$ruleName.cidr` - {DICTIONARY.cidrSet.short}</li>
-  <li>`items.$ruleName.sg_name` - {DICTIONARY.sgLocal.short}</li>
-  <li>`items.$ruleName.ports` - {DICTIONARY.ports.short}</li>
-  <li>`items.$ruleName.ports[].d` - {DICTIONARY.dstPorts.short}</li>
-  <li>`items.$ruleName.ports[].s` - {DICTIONARY.srcPorts.short}</li>
-  <li>`items.$ruleName.logs` - {DICTIONARY.log.short}</li>
-  <li>`items.$ruleName.trace` - {DICTIONARY.trace.short}</li>
-  <li>`items.$ruleName.ip_v` - {DICTIONARY.icmpV.short}</li>
-  <li>`items.$ruleName.type` - {DICTIONARY.icmpTypes.short}</li>
-  <li>`items.$ruleName.action` - {DICTIONARY.action.short}</li>
-  <li>`items.$ruleName.priority` - {DICTIONARY.priority.short}</li>
+  <li>`items.$ruleName.traffic` - {DICTIONARY['v1.13.0'].traffic.short}</li>
+  <li>`items.$ruleName.transport` - {DICTIONARY['v1.13.0'].transport.short}</li>
+  <li>`items.$ruleName.cidr` - {DICTIONARY['v1.13.0'].cidrSet.short}</li>
+  <li>`items.$ruleName.sg_name` - {DICTIONARY['v1.13.0'].sgLocal.short}</li>
+  <li>`items.$ruleName.ports` - {DICTIONARY['v1.13.0'].ports.short}</li>
+  <li>`items.$ruleName.ports[].d` - {DICTIONARY['v1.13.0'].dstPorts.short}</li>
+  <li>`items.$ruleName.ports[].s` - {DICTIONARY['v1.13.0'].srcPorts.short}</li>
+  <li>`items.$ruleName.logs` - {DICTIONARY['v1.13.0'].log.short}</li>
+  <li>`items.$ruleName.trace` - {DICTIONARY['v1.13.0'].trace.short}</li>
+  <li>`items.$ruleName.ip_v` - {DICTIONARY['v1.13.0'].icmpV.short}</li>
+  <li>`items.$ruleName.type` - {DICTIONARY['v1.13.0'].icmpTypes.short}</li>
+  <li>`items.$ruleName.action` - {DICTIONARY['v1.13.0'].action.short}</li>
+  <li>`items.$ruleName.priority` - {DICTIONARY['v1.13.0'].priority.short}</li>
 </ul>
 
 <div className="scrollable-x">
@@ -189,38 +189,38 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
 <h4 className="custom-heading">Ограничения</h4>
 
 <ul>
-    <li>
-        `items`:
-        <Restrictions data={RESTRICTIONS.items} />
-    </li>
-    <li>
-        `items.$ruleName`:
-        <Restrictions data={RESTRICTIONS.itemsRuleName_s2c_ie} />
-    </li>
-    <li>
-        `items.$ruleName.sg_name`:
-        <Restrictions data={RESTRICTIONS.items} />
-    </li>
-    <li>
-        `items.$ruleName.cidr`:
-        <Restrictions data={RESTRICTIONS.cidr} />
-    </li>
-    <li>
-        `items.$ruleName.ports[].s`:
-        <Restrictions data={RESTRICTIONS.srcPorts} />
-    </li>
-    <li>
-        `items.$ruleName.ports[].d`:
-        <Restrictions data={RESTRICTIONS.dstPorts} />
-    </li>
-    <li>
-        `items.$ruleName.type[]`:
-        <Restrictions data={RESTRICTIONS.icmpType} />
-    </li>
-    <li>
-        `items.$ruleName.priority`:
-        <Restrictions data={RESTRICTIONS.priority} />
-    </li>
+  <li>
+    `items`:
+    <Restrictions data={RESTRICTIONS['v1.13.0'].items} />
+  </li>
+  <li>
+    `items.$ruleName`:
+    <Restrictions data={RESTRICTIONS['v1.13.0'].itemsRuleName_s2c_ie} />
+  </li>
+  <li>
+    `items.$ruleName.sg_name`:
+    <Restrictions data={RESTRICTIONS['v1.13.0'].items} />
+  </li>
+  <li>
+    `items.$ruleName.cidr`:
+    <Restrictions data={RESTRICTIONS['v1.13.0'].cidr} />
+  </li>
+  <li>
+    `items.$ruleName.ports[].s`:
+    <Restrictions data={RESTRICTIONS['v1.13.0'].srcPorts} />
+  </li>
+  <li>
+    `items.$ruleName.ports[].d`:
+    <Restrictions data={RESTRICTIONS['v1.13.0'].dstPorts} />
+  </li>
+  <li>
+    `items.$ruleName.type[]`:
+    <Restrictions data={RESTRICTIONS['v1.13.0'].icmpType} />
+  </li>
+  <li>
+    `items.$ruleName.priority`:
+    <Restrictions data={RESTRICTIONS['v1.13.0'].priority} />
+  </li>
 </ul>
 
 <h4 className="custom-heading">Пример использования</h4>
@@ -238,7 +238,6 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         <div className="parent-div">
             <div className="child-block">
                 <h4 className="center">Ingress</h4>
-
 
                 ```hcl
                 resource "sgroups_cidr_rules" "rules" {

@@ -5,25 +5,25 @@ import { DICTIONARY } from '@site/src/constants/dictionary.ts'
 import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
 
 <div className="paragraph">
-  <p>{DICTIONARY.terraformModule.full}</p>
+  <p>{DICTIONARY['v1.13.0'].terraformModule.full}</p>
 </div>
 <div className="paragraph">
   Далее везде в документе подразумевается что все места, содержащие переменную `$traffic`, могут принять значениe:
   `Egress`. Аналогчично для `$transport` подразумевается одно из двух значений: `tcp`, `udp`.
 </div>
 <ul>
-  <li>`rules` - {DICTIONARY.rules.short}</li>
-  <li>`rules.$traffic[]` - {DICTIONARY.traffic.short}</li>
-  <li>`rules.$traffic[].fqdnSet[]` - {DICTIONARY.fqdnSet.short}</li>
-  {/* <li>`rules.$traffic[].access.protocols[]` - {DICTIONARY.l7ProtocolList.short}</li> */}
-  <li>`rules.$traffic[].access.$transport` - {DICTIONARY.transport.short}</li>
-  <li>`rules.$traffic[].access.$transport.action` - {DICTIONARY.action.short}</li>
-  <li>`rules.$traffic[].access.$transport.priority` - {DICTIONARY.priority.short}</li>
-  <li>`rules.$traffic[].access.$transport.log` - {DICTIONARY.log.short}</li>
-  <li>`rules.$traffic[].access.$transport.trace` - {DICTIONARY.trace.short}</li>
-  <li>`rules.$traffic[].access.$transport.ports[].description` - {DICTIONARY.description.short}</li>
-  <li>`rules.$traffic[].access.$transport.ports[].ports_to[]` - {DICTIONARY.dstPorts.short}</li>
-  <li>`rules.$traffic[].access.$transport.ports[].ports_from[]` - {DICTIONARY.srcPorts.short}</li>
+  <li>`rules` - {DICTIONARY['v1.13.0'].rules.short}</li>
+  <li>`rules.$traffic[]` - {DICTIONARY['v1.13.0'].traffic.short}</li>
+  <li>`rules.$traffic[].fqdnSet[]` - {DICTIONARY['v1.13.0'].fqdnSet.short}</li>
+  {/* <li>`rules.$traffic[].access.protocols[]` - {DICTIONARY['v1.13.0'].l7ProtocolList.short}</li> */}
+  <li>`rules.$traffic[].access.$transport` - {DICTIONARY['v1.13.0'].transport.short}</li>
+  <li>`rules.$traffic[].access.$transport.action` - {DICTIONARY['v1.13.0'].action.short}</li>
+  <li>`rules.$traffic[].access.$transport.priority` - {DICTIONARY['v1.13.0'].priority.short}</li>
+  <li>`rules.$traffic[].access.$transport.log` - {DICTIONARY['v1.13.0'].log.short}</li>
+  <li>`rules.$traffic[].access.$transport.trace` - {DICTIONARY['v1.13.0'].trace.short}</li>
+  <li>`rules.$traffic[].access.$transport.ports[].description` - {DICTIONARY['v1.13.0'].description.short}</li>
+  <li>`rules.$traffic[].access.$transport.ports[].ports_to[]` - {DICTIONARY['v1.13.0'].dstPorts.short}</li>
+  <li>`rules.$traffic[].access.$transport.ports[].ports_from[]` - {DICTIONARY['v1.13.0'].srcPorts.short}</li>
 </ul>
 
 <div className="scrollable-x">
@@ -137,27 +137,27 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
 <ul>
   <li>
     `name`:
-    <Restrictions data={RESTRICTIONS.name} />
+    <Restrictions data={RESTRICTIONS['v1.13.0'].name} />
   </li>
   <li>
     `rules.$traffic[].fqdnSet`:
-    <Restrictions data={RESTRICTIONS.fqdnSet} />
+    <Restrictions data={RESTRICTIONS['v1.13.0'].fqdnSet} />
   </li>
   {/* <li>
     `rules.$traffic[].protocols[]`:
-    <Restrictions data={RESTRICTIONS.protocols} />
+    <Restrictions data={RESTRICTIONS['v1.13.0'].protocols} />
   </li> */}
   <li>
     `rules.$traffic[].access.$transport.priority`:
-    <Restrictions data={RESTRICTIONS.priority} />
+    <Restrictions data={RESTRICTIONS['v1.13.0'].priority} />
   </li>
   <li>
     `rules.$traffic[].access.$transport.ports[].ports_to[]`:
-    <Restrictions data={RESTRICTIONS.dstPorts} />
+    <Restrictions data={RESTRICTIONS['v1.13.0'].dstPorts} />
   </li>
   <li>
     `rules.$traffic[].access.$transport.ports[].ports_from[]`:
-    <Restrictions data={RESTRICTIONS.srcPorts} />
+    <Restrictions data={RESTRICTIONS['v1.13.0'].srcPorts} />
   </li>
 </ul>
 

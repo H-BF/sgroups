@@ -10,23 +10,23 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
 #### Входные параметры
 
 <ul>
-  <li>`$node.rules[]` - {DICTIONARY.rules.short}</li>
-  <li>`$node.rules[].Sg` - {DICTIONARY.sg.short}</li>
-  <li>`$node.rules[].SgLocal` - {DICTIONARY.sgLocal.short}</li>
-  <li>`$node.rules[].logs` - {DICTIONARY.log.short}</li>
-  <li>`$node.rules[].trace` - {DICTIONARY.trace.short}</li>
-  <li>`$node.rules[].ports` - {DICTIONARY.ports.short}</li>
-  <li>`$node.rules[].ports[].d` - {DICTIONARY.dstPorts.short}</li>
-  <li>`$node.rules[].ports[].s` - {DICTIONARY.srcPorts.short}</li>
-  <li>`$node.rules[].traffic` - {DICTIONARY.traffic.short}</li>
-  <li>`$node.rules[].transport` - {DICTIONARY.transport.short}</li>
-  <li>`$node.rules[].ICMP` - {DICTIONARY.apiIcmp.short}</li>
-  <li>`$node.rules[].ICMP.IPv` - {DICTIONARY.icmpV.short}</li>
-  <li>`$node.rules[].ICMP.Types` - {DICTIONARY.icmpTypes.short}</li>
-  <li>`$node.rules[].action` - {DICTIONARY.action.short}</li>
-  <li>`$node.rules[].priority` - {DICTIONARY.priorityst.short}</li>
-  <li>`$node.rules[].priority.some` - {DICTIONARY.priority.short}</li>
-  <li>`syncOp` - {DICTIONARY.syncOp.short}</li>
+  <li>`$node.rules[]` - {DICTIONARY['v1.13.0'].rules.short}</li>
+  <li>`$node.rules[].Sg` - {DICTIONARY['v1.13.0'].sg.short}</li>
+  <li>`$node.rules[].SgLocal` - {DICTIONARY['v1.13.0'].sgLocal.short}</li>
+  <li>`$node.rules[].logs` - {DICTIONARY['v1.13.0'].log.short}</li>
+  <li>`$node.rules[].trace` - {DICTIONARY['v1.13.0'].trace.short}</li>
+  <li>`$node.rules[].ports` - {DICTIONARY['v1.13.0'].ports.short}</li>
+  <li>`$node.rules[].ports[].d` - {DICTIONARY['v1.13.0'].dstPorts.short}</li>
+  <li>`$node.rules[].ports[].s` - {DICTIONARY['v1.13.0'].srcPorts.short}</li>
+  <li>`$node.rules[].traffic` - {DICTIONARY['v1.13.0'].traffic.short}</li>
+  <li>`$node.rules[].transport` - {DICTIONARY['v1.13.0'].transport.short}</li>
+  <li>`$node.rules[].ICMP` - {DICTIONARY['v1.13.0'].apiIcmp.short}</li>
+  <li>`$node.rules[].ICMP.IPv` - {DICTIONARY['v1.13.0'].icmpV.short}</li>
+  <li>`$node.rules[].ICMP.Types` - {DICTIONARY['v1.13.0'].icmpTypes.short}</li>
+  <li>`$node.rules[].action` - {DICTIONARY['v1.13.0'].action.short}</li>
+  <li>`$node.rules[].priority` - {DICTIONARY['v1.13.0'].priorityst.short}</li>
+  <li>`$node.rules[].priority.some` - {DICTIONARY['v1.13.0'].priority.short}</li>
+  <li>`syncOp` - {DICTIONARY['v1.13.0'].syncOp.short}</li>
 </ul>
 
 <div className="scrollable-x">
@@ -213,23 +213,23 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
 <ul>
   <li>
     `sgSgRules.rules[].Sg`:
-    <Restrictions data={RESTRICTIONS.name} />
+    <Restrictions data={RESTRICTIONS['v1.13.0'].name} />
   </li>
   <li>
     `sgSgRules.rules[].SgLocal`:
-    <Restrictions data={RESTRICTIONS.name} />
+    <Restrictions data={RESTRICTIONS['v1.13.0'].name} />
   </li>
   <li>
     `sgSgRules.rules[].ports[].ports_to[]`:
-    <Restrictions data={RESTRICTIONS.dstPorts} />
+    <Restrictions data={RESTRICTIONS['v1.13.0'].dstPorts} />
   </li>
   <li>
     `sgSgRules.rules[].ports[].ports_from[]`:
-    <Restrictions data={RESTRICTIONS.srcPorts} />
+    <Restrictions data={RESTRICTIONS['v1.13.0'].srcPorts} />
   </li>
   <li>
     `sgSgRules.rules[].ICMP.Types[]`:
-    <Restrictions data={RESTRICTIONS.icmpType} />
+    <Restrictions data={RESTRICTIONS['v1.13.0'].icmpType} />
   </li>
 </ul>
 
@@ -331,8 +331,8 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
 
         <h4 className="custom-heading">Возможные ошибки API</h4>
 
-        <Codes data = {RESPOND_CODES.invalid_argument} />
-        <Codes data = {RESPOND_CODES.not_found} />
+        <Codes data = {RESPOND_CODES['v1.13.0'].invalid_argument} />
+        <Codes data = {RESPOND_CODES['v1.13.0'].not_found} />
 
         <h4 className="custom-heading">Диаграмма последовательности</h4>
 
@@ -458,8 +458,8 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
 
         <h4 className="custom-heading">Возможные ошибки API</h4>
 
-        <Codes data = {RESPOND_CODES.invalid_argument} />
-        <Codes data = {RESPOND_CODES.not_found} />
+        <Codes data = {RESPOND_CODES['v1.13.0'].invalid_argument} />
+        <Codes data = {RESPOND_CODES['v1.13.0'].not_found} />
 
         <h4 className="custom-heading">Диаграмма последовательности</h4>
 
@@ -583,8 +583,8 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
 
         <h4 className="custom-heading">Возможные ошибки API</h4>
 
-        <Codes data = {RESPOND_CODES.invalid_argument} />
-        <Codes data = {RESPOND_CODES.not_found} />
+        <Codes data = {RESPOND_CODES['v1.13.0'].invalid_argument} />
+        <Codes data = {RESPOND_CODES['v1.13.0'].not_found} />
 
         <h4 className="custom-heading">Диаграмма последовательности</h4>
 
@@ -714,8 +714,8 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
 
         <h4 className="custom-heading">Возможные ошибки API</h4>
 
-        <Codes data = {RESPOND_CODES.invalid_argument} />
-        <Codes data = {RESPOND_CODES.not_found} />
+        <Codes data = {RESPOND_CODES['v1.13.0'].invalid_argument} />
+        <Codes data = {RESPOND_CODES['v1.13.0'].not_found} />
 
         <h4 className="custom-heading">Диаграмма последовательности</h4>
 

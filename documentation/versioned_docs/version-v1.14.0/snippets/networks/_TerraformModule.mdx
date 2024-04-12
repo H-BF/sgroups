@@ -3,7 +3,7 @@ import { DICTIONARY } from '@site/src/constants/dictionary.ts'
 import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
 
 <div className="paragraph">
-  <p>{DICTIONARY.terraformModule.full}</p>
+  <p>{DICTIONARY['v1.13.0'].terraformModule.full}</p>
 </div>
 
 <div className="scrollable-x">
@@ -38,11 +38,11 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
 <ul>
   <li>
     `name`:
-    <Restrictions data={RESTRICTIONS.name} />
+    <Restrictions data={RESTRICTIONS['v1.13.0'].name} />
   </li>
   <li>
     `cidrs[]`:
-    <Restrictions data={RESTRICTIONS.cidrSet} />
+    <Restrictions data={RESTRICTIONS['v1.13.0'].cidrSet} />
   </li>
 </ul>
 

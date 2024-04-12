@@ -4,3 +4,5 @@ export type TDefinition = {
 }
 
 export type TDictionary = Record<string, TDefinition>
+
+export type TVersionedDictionary = Record<string, TDictionary>

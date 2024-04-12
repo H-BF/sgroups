@@ -3,11 +3,11 @@ import { DICTIONARY } from '@site/src/constants/dictionary.ts'
 import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
 
 <div className="paragraph">
-  <p>{DICTIONARY.terraformResource.full}</p>
+  <p>{DICTIONARY['v1.13.0'].terraformResource.full}</p>
 </div>
 <div className="paragraph">
   Далее везде в документе подразумевается что все места, содержащие переменную `$transport` (
-  {DICTIONARY.transport.short}) подразумевается одно из двух значений: `icmp`, `icmp6`.
+  {DICTIONARY['v1.13.0'].transport.short}) подразумевается одно из двух значений: `icmp`, `icmp6`.
 </div>
 
 <div className="scrollable-x">
@@ -52,13 +52,13 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         <td>items.key.logs</td>
         <td>нет</td>
         <td>Boolean</td>
-        <td>{DICTIONARY.log.short}</td>
+        <td>{DICTIONARY['v1.13.0'].log.short}</td>
       </tr>
       <tr>
         <td>items.key.trace</td>
         <td>нет</td>
         <td>Boolean</td>
-        <td>{DICTIONARY.trace.short}</td>
+        <td>{DICTIONARY['v1.13.0'].trace.short}</td>
       </tr>
       <tr>
         <td>items.key.default_action</td>
@@ -81,25 +81,25 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
         <td>items.key.$transport.logs</td>
         <td>нет</td>
         <td>Boolean</td>
-        <td>{DICTIONARY.log.short}</td>
+        <td>{DICTIONARY['v1.13.0'].log.short}</td>
       </tr>
       <tr>
         <td>items.key.$transport.trace</td>
         <td>нет</td>
         <td>Boolean</td>
-        <td>{DICTIONARY.trace.short}</td>
+        <td>{DICTIONARY['v1.13.0'].trace.short}</td>
       </tr>
       <tr>
         <td>items.key.$transport.type[]</td>
         <td>да</td>
         <td>String[]</td>
-        <td>{DICTIONARY.icmpTypes.short}</td>
+        <td>{DICTIONARY['v1.13.0'].icmpTypes.short}</td>
       </tr>
       <tr>
         <td>items.key.$transport.action</td>
         <td>да</td>
         <td>Enum("ACCEPT", "DROP")</td>
-        <td>{DICTIONARY.action.short}</td>
+        <td>{DICTIONARY['v1.13.0'].action.short}</td>
       </tr>
     </tbody>
   </table>
@@ -110,27 +110,27 @@ import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
 <ul>
   <li>
     `items`:
-    <Restrictions data={RESTRICTIONS.items} />
+    <Restrictions data={RESTRICTIONS['v1.13.0'].items} />
   </li>
   <li>
     `items.key`:
-    <Restrictions data={RESTRICTIONS.itemsRuleName_sg} />
+    <Restrictions data={RESTRICTIONS['v1.13.0'].itemsRuleName_sg} />
   </li>
   <li>
     `items.key.name`:
-    <Restrictions data={RESTRICTIONS.name} />
+    <Restrictions data={RESTRICTIONS['v1.13.0'].name} />
   </li>
   <li>
     `items.key.networks`:
-    <Restrictions data={RESTRICTIONS.cidr} />
+    <Restrictions data={RESTRICTIONS['v1.13.0'].cidr} />
   </li>
   <li>
     `items.key.icmp.type`:
-    <Restrictions data={RESTRICTIONS.icmpType} />
+    <Restrictions data={RESTRICTIONS['v1.13.0'].icmpType} />
   </li>
   <li>
     `items.key.icmp6.type`:
-    <Restrictions data={RESTRICTIONS.icmpType} />
+    <Restrictions data={RESTRICTIONS['v1.13.0'].icmpType} />
   </li>
 </ul>
 

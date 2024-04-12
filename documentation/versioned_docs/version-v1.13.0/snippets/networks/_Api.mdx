@@ -8,11 +8,11 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
 #### Входные параметры
 
 <ul>
-  <li>`networks[]` - {DICTIONARY.networks.short}</li>
+  <li>`networks[]` - {DICTIONARY['v1.13.0'].networks.short}</li>
   <li>`networks[].name` - название подсети.</li>
   <li>`networks[].network` - объект содержащий CIDR подсети</li>
-  <li>`networks[].network.CIDR` - {DICTIONARY.cidr.short}</li>
-  <li>`syncOp` - {DICTIONARY.syncOp.short}</li>
+  <li>`networks[].network.CIDR` - {DICTIONARY['v1.13.0'].cidr.short}</li>
+  <li>`syncOp` - {DICTIONARY['v1.13.0'].syncOp.short}</li>
 </ul>
 
 <div className="scrollable-x">
@@ -65,11 +65,11 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
 <ul>
   <li>
     `networks.networks[].name`:
-    <Restrictions data={RESTRICTIONS.name} />
+    <Restrictions data={RESTRICTIONS['v1.13.0'].name} />
   </li>
   <li>
     `networks.networks[].network.CIDR`:
-    <Restrictions data={RESTRICTIONS.cidr} />
+    <Restrictions data={RESTRICTIONS['v1.13.0'].cidr} />
   </li>
 </ul>
 
@@ -114,8 +114,8 @@ curl '127.0.0.1:9007/v1/sync' \
 
 <h4 className="custom-heading">Возможные ошибки API</h4>
 
-<Codes data = {RESPOND_CODES.invalid_argument} />
-<Codes data = {RESPOND_CODES.not_found} />
+<Codes data={RESPOND_CODES['v1.13.0'].invalid_argument} />
+<Codes data={RESPOND_CODES['v1.13.0'].not_found} />
 
 <h4 className="custom-heading">Диаграмма последовательности</h4>
 
