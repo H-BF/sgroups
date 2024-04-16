@@ -40,7 +40,7 @@ extapi:
 	  sync-status:
         interval: 20s #mandatory
         push: true
-	  use-json-codec: <true:false> # = false by default
+      use-json-codec: <true|false> # = false by default
 
 telemetry:
   useragent: "string"
