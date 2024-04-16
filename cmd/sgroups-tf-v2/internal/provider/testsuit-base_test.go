@@ -11,6 +11,7 @@ import (
 	"time"
 
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
+	g "github.com/H-BF/sgroups/internal/grpc"
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 
 	pkgNet "github.com/H-BF/corlib/pkg/net"
@@ -18,12 +19,6 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/stretchr/testify/suite"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-)
-
-const (
-	serverAddrEnv = "SGROUPS_ADDRESS"
 )
 
 type (
@@ -49,23 +44,18 @@ func (sui *baseResourceTests) SetupSuite() {
 	if dl, ok := sui.T().Deadline(); ok {
 		sui.ctx, sui.ctxCancel = context.WithDeadline(sui.ctx, dl)
 	}
-
 	sui.runBackendServer()
-	os.Setenv(serverAddrEnv, sui.servAddr)
 
 	sui.providerConfig = `
-		provider "sgroups" {
-			address = ` + sui.servAddr + `
-		}
-		`
-
-	con, err := grpc.DialContext(sui.ctx,
-		sui.servAddr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithBlock())
-
-	sui.sgClient = sgAPI.NewClient(con)
+provider "sgroups" {
+	address = ` + fmt.Sprintf("%q", sui.servAddr) + `
+	dial_duration = "15s"
+	use_json_codec = true
+}
+`
+	con, err := g.ClientFromAddress(sui.servAddr).New(sui.ctx)
 	sui.Require().NoError(err)
+	sui.sgClient = sgAPI.NewClient(con)
 
 	os.Setenv("TF_ACC", "1")
 	sui.providerFactories = map[string]func() (tfprotov6.ProviderServer, error){

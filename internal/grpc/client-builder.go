@@ -1,7 +1,8 @@
-package grpc_client
+package grpc
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"os"
 	"time"
@@ -16,16 +17,20 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/encoding"
 )
 
-// FromAddress  builder for 'grpc' client conn
-func FromAddress(addr string) clientConnBuilder {
+// ClientFromAddress  builder for 'grpc' client conn
+func ClientFromAddress(addr string) clientConnBuilder {
 	return clientConnBuilder{addr: addr}
 }
 
 type (
 	// Backoff is an alias to backoff.Backoff
 	Backoff = backoff.Backoff
+
+	// Codec is a type alias to grpc/encoding.Codec
+	Codec = encoding.Codec
 
 	// TransportCredentials is an alias to credentials.TransportCredentials
 	TransportCredentials = credentials.TransportCredentials
@@ -37,6 +42,7 @@ type (
 		maxRetries     uint
 		creds          TransportCredentials
 		userAgent      string
+		defCallCodec   Codec
 	}
 )
 
@@ -64,6 +70,24 @@ func (bld clientConnBuilder) WithRetriesBackoff(b backoff.Backoff) clientConnBui
 // WithUserAgent add user-agent into query metagata
 func (bld clientConnBuilder) WithUserAgent(userAgent string) clientConnBuilder {
 	bld.userAgent = userAgent
+	return bld
+}
+
+// WithDefaultCodec set default call grpc codec
+func (bld clientConnBuilder) WithDefaultCodec(codec Codec) clientConnBuilder {
+	bld.defCallCodec = codec
+	return bld
+}
+
+// WithDefaultCodecByName set default call grpc codec from its name
+func (bld clientConnBuilder) WithDefaultCodecByName(codecName string) clientConnBuilder {
+	c := encoding.GetCodec(codecName)
+	if c == nil {
+		panic(
+			fmt.Errorf("grpc codec '%s' is not registered", codecName),
+		)
+	}
+	bld.defCallCodec = c
 	return bld
 }
 
@@ -137,6 +161,11 @@ func (bld clientConnBuilder) New(ctx context.Context) (*grpc.ClientConn, error) 
 		grpc.WithChainUnaryInterceptor(
 			append(unaryInterceptors, hostNameInterceptors.ClientUnary())...),
 	)
+	if c := bld.defCallCodec; c != nil {
+		dialOpts = append(dialOpts,
+			grpc.WithDefaultCallOptions(grpc.ForceCodec(c)),
+		)
+	}
 	c, err = grpc.DialContext(ctx, endpoint, dialOpts...)
 	return c, errors.WithMessage(err, api)
 }

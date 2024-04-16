@@ -45,7 +45,7 @@ func (sui *sgSgRulesTests) testSgSgRulesFromFixtureFilename(name string) resourc
 		nonExpectedBackend := tc.NonExpected.SgSgRules.Decode()
 
 		resourceTestCase.Steps = append(resourceTestCase.Steps, resource.TestStep{
-			Config: tc.TfConfig,
+			Config: sui.providerConfig + "\n" + tc.TfConfig,
 			Check: func(_ *terraform.State) error {
 				if len(expectedBackend)+len(nonExpectedBackend) > 0 {
 					allRules := sui.listAllSgRules()

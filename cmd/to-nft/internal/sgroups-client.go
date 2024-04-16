@@ -6,7 +6,7 @@ import (
 
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
 	"github.com/H-BF/sgroups/internal/config"
-	grpc_client "github.com/H-BF/sgroups/internal/grpc-client"
+	grpc_client "github.com/H-BF/sgroups/internal/grpc"
 
 	"github.com/pkg/errors"
 )
@@ -33,9 +33,12 @@ func NewSGClient(ctx context.Context) (*SGClient, error) {
 	if err != nil {
 		return nil, errors.WithMessage(err, api)
 	}
-	bld := grpc_client.FromAddress(addr).
+	bld := grpc_client.ClientFromAddress(addr).
 		WithDialDuration(dialDuration).
 		WithUserAgent(UserAgent.MustValue(ctx))
+	if SGroupsUseJsonCodec.MustValue(ctx) {
+		bld = bld.WithDefaultCodecByName(grpc_client.JsonCodecName)
+	}
 	var c SGClient
 	if c, err = sgAPI.NewClosableClient(ctx, bld); err != nil {
 		return nil, err

@@ -40,6 +40,7 @@ extapi:
 	  sync-status:
         interval: 20s #mandatory
         push: true
+	  use-json-codec: <true:false> # = false by default
 
 telemetry:
   useragent: "string"
@@ -110,6 +111,8 @@ const (
 	SGroupsSyncStatusInterval config.ValueT[time.Duration] = "extapi/svc/sgroups/sync-status/interval"
 	//SGroupsSyncStatusPush use push model of 'sync-status'
 	SGroupsSyncStatusPush config.ValueT[bool] = "extapi/svc/sgroups/sync-status/push"
+	// SGroupsUseJsonCodec use GRPC+JSON codec instead of GRPC+PROTO
+	SGroupsUseJsonCodec config.ValueT[bool] = "extapi/svc/sgroups/use-json-codec"
 
 	// TelemetryEndpoint server endpoint
 	TelemetryEndpoint config.ValueT[string] = "telemetry/endpoint"

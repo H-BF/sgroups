@@ -46,7 +46,7 @@ func (sui *sgsTests) makeTestSgsFromFixtureFilename(name string) resource.TestCa
 		nonExpectedBackendIcmps := tc.NonExpected.SgIcmpRules.Decode()
 
 		resourceTestCase.Steps = append(resourceTestCase.Steps, resource.TestStep{
-			Config: tc.TfConfig,
+			Config: sui.providerConfig + "\n" + tc.TfConfig,
 			Check: func(_ *terraform.State) error {
 				if len(expectedBackendGroups)+len(nonExpectedBackendGroups) > 0 {
 					allSgs := sui.listAllSgs()

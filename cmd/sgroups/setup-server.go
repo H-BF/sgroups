@@ -5,6 +5,7 @@ import (
 
 	"github.com/H-BF/sgroups/internal/api/sgroups"
 	"github.com/H-BF/sgroups/internal/app"
+	_ "github.com/H-BF/sgroups/internal/grpc"
 
 	"github.com/H-BF/corlib/server"
 	"github.com/H-BF/corlib/server/interceptors"

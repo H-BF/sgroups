@@ -6,7 +6,7 @@ import (
 	"time"
 
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
-	grpcc "github.com/H-BF/sgroups/internal/grpc-client"
+	grpcc "github.com/H-BF/sgroups/internal/grpc"
 
 	pkgNet "github.com/H-BF/corlib/pkg/net"
 	"github.com/hashicorp/go-cty/cty"
@@ -87,7 +87,7 @@ func SGroupsConfigure(ctx context.Context, d *schema.ResourceData) (interface{},
 		}
 		connDuration = d
 	}
-	c, err := grpcc.FromAddress(addr).
+	c, err := grpcc.ClientFromAddress(addr).
 		WithDialDuration(connDuration).
 		New(ctx)
 	if err != nil {

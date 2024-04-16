@@ -1,4 +1,4 @@
-package main
+package grpc
 
 import (
 	"fmt"
@@ -7,6 +7,9 @@ import (
 	jsonpb "google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
+
+// JsonCodecName -
+const JsonCodecName = "json"
 
 func init() {
 	cod := jsonCodec{
@@ -18,7 +21,7 @@ func init() {
 			AllowPartial: true,
 		},
 	}
-	encoding.RegisterCodec(cod) //register 'grpc-json' codec
+	encoding.RegisterCodec(cod) //register 'grpc+json' codec
 }
 
 type jsonCodec struct {
@@ -28,7 +31,7 @@ type jsonCodec struct {
 
 // Name - impl grpc/encoding.Codec
 func (jsonCodec) Name() string {
-	return "json"
+	return JsonCodecName
 }
 
 // Marshal - impl grpc/encoding.Codec
