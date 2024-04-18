@@ -7,8 +7,9 @@ import (
 	"net"
 	"time"
 
-	pkgNet "github.com/H-BF/corlib/pkg/net"
+	"github.com/H-BF/sgroups/internal/patterns"
 
+	pkgNet "github.com/H-BF/corlib/pkg/net"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -36,6 +37,19 @@ func IsEndpoint() validator.String {
 		validateFn: func(s string) error {
 			_, err := pkgNet.ParseEndpoint(s)
 			return err
+		},
+	}
+}
+
+// IsPath -
+func IsPath() validator.String {
+	return stringValidator{
+		validatorBase: validatorBase{
+			description: "value must a valid PATH",
+		},
+		validateFn: func(s string) error {
+			var p patterns.Path
+			return p.Set(s)
 		},
 	}
 }

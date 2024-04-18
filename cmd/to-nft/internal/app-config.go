@@ -41,6 +41,7 @@ extapi:
         interval: 20s #mandatory
         push: true
       use-json-codec: <true|false> # = false by default
+      api-path-prefix: "a/b/c" # = is not set by default
 
 telemetry:
   useragent: "string"
@@ -113,6 +114,8 @@ const (
 	SGroupsSyncStatusPush config.ValueT[bool] = "extapi/svc/sgroups/sync-status/push"
 	// SGroupsUseJsonCodec use GRPC+JSON codec instead of GRPC+PROTO
 	SGroupsUseJsonCodec config.ValueT[bool] = "extapi/svc/sgroups/use-json-codec"
+	// SGroupsAPIpathPrefix add path prefix when call SGROUPS API - is not set by default
+	SGroupsAPIpathPrefix config.ValueT[string] = "extapi/svc/sgroups/api-path-prefix"
 
 	// TelemetryEndpoint server endpoint
 	TelemetryEndpoint config.ValueT[string] = "telemetry/endpoint"

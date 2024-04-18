@@ -34,9 +34,10 @@ type sgroupsProvider struct {
 }
 
 type providerConfig struct {
-	Address      types.String `tfsdk:"address"`
-	DialDuration types.String `tfsdk:"dial_duration"`
-	UseJsonCodec types.Bool   `tfsdk:"use_json_codec"`
+	Address          types.String `tfsdk:"address"`
+	UseAPIPathPrefix types.String `tfsdk:"api_path_prefix"`
+	DialDuration     types.String `tfsdk:"dial_duration"`
+	UseJsonCodec     types.Bool   `tfsdk:"use_json_codec"`
 }
 
 func (s *sgroupsProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -65,6 +66,13 @@ func (s *sgroupsProvider) Schema(_ context.Context, _ provider.SchemaRequest, re
 				Optional:    true,
 				Description: "Use GRPC-JSON codec to call 'SGROUPS' service",
 			},
+			"api_path_prefix": schema.StringAttribute{
+				Optional:    true,
+				Description: "'SGROUPS' service API path prefix",
+				Validators: []validator.String{
+					validators.IsPath(),
+				},
+			},
 		},
 	}
 }
@@ -85,6 +93,9 @@ func (s *sgroupsProvider) Configure(ctx context.Context, req provider.ConfigureR
 	}
 	if config.UseJsonCodec.ValueBool() {
 		clientBuilder = clientBuilder.WithDefaultCodecByName(client.JsonCodecName)
+	}
+	if s := config.UseAPIPathPrefix.ValueString(); len(s) > 0 {
+		clientBuilder = clientBuilder.WithPathPrefix(s)
 	}
 
 	c, err := clientBuilder.New(ctx)

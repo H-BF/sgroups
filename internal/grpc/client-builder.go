@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path"
 	"time"
 
 	grpc_client "github.com/H-BF/corlib/client/grpc"
 	"github.com/H-BF/corlib/pkg/backoff"
 	netPkg "github.com/H-BF/corlib/pkg/net"
+	"github.com/H-BF/sgroups/internal/patterns"
+
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -43,6 +46,12 @@ type (
 		creds          TransportCredentials
 		userAgent      string
 		defCallCodec   Codec
+		pathPrefix     string
+	}
+
+	nonRootPathClientConn struct {
+		ClientConn
+		pathPrefix string
 	}
 )
 
@@ -91,15 +100,21 @@ func (bld clientConnBuilder) WithDefaultCodecByName(codecName string) clientConn
 	return bld
 }
 
+// WithPathPrefix -
+func (bld clientConnBuilder) WithPathPrefix(p string) clientConnBuilder {
+	bld.pathPrefix = p
+	return bld
+}
+
 // NewConn makes new grpc client conn && ipml 'ClientConnProvider'
-func (bld clientConnBuilder) New(ctx context.Context) (*grpc.ClientConn, error) {
+func (bld clientConnBuilder) New(ctx context.Context) (ClientConn, error) {
 	const api = "grpc/new-client-conn"
 
 	var (
 		err                error
 		endpoint           string
 		dialOpts           []grpc.DialOption
-		c                  *grpc.ClientConn
+		c                  ClientConn
 		streamInterceptors []grpc.StreamClientInterceptor
 		unaryInterceptors  []grpc.UnaryClientInterceptor
 	)
@@ -166,8 +181,21 @@ func (bld clientConnBuilder) New(ctx context.Context) (*grpc.ClientConn, error) 
 			grpc.WithDefaultCallOptions(grpc.ForceCodec(c)),
 		)
 	}
-	c, err = grpc.DialContext(ctx, endpoint, dialOpts...)
-	return c, errors.WithMessage(err, api)
+	if c, err = grpc.DialContext(ctx, endpoint, dialOpts...); err != nil {
+		return nil, errors.WithMessage(err, api)
+	}
+	var p patterns.Path
+	if err = p.Set(bld.pathPrefix); err != nil {
+		_ = c.Close()
+		return nil, errors.WithMessage(err, api)
+	}
+	if !p.IsEmpty() {
+		c = &nonRootPathClientConn{
+			ClientConn: c,
+			pathPrefix: p.String(),
+		}
+	}
+	return c, nil
 }
 
 func (bld *clientConnBuilder) endpoint() (string, error) {
@@ -185,4 +213,20 @@ func (bld *clientConnBuilder) endpoint() (string, error) {
 		return bld.addr, nil
 	}
 	return "", errors.WithMessagef(err, "bad address (%s)", bld.addr)
+}
+
+// Invoke -
+func (cc *nonRootPathClientConn) Invoke(ctx context.Context, method string, args any, reply any, opts ...grpc.CallOption) error {
+	meth := cc.path(method)
+	return cc.ClientConn.Invoke(ctx, meth, args, reply, opts...)
+}
+
+// NewStream -
+func (cc *nonRootPathClientConn) NewStream(ctx context.Context, desc *grpc.StreamDesc, method string, opts ...grpc.CallOption) (grpc.ClientStream, error) {
+	meth := cc.path(method)
+	return cc.ClientConn.NewStream(ctx, desc, meth, opts...)
+}
+
+func (cc *nonRootPathClientConn) path(name string) string {
+	return path.Join(cc.pathPrefix, name)
 }
