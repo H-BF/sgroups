@@ -7,36 +7,42 @@ import (
 	"time"
 )
 
+type FIFO[T any] interface {
+	Reader() <-chan T
+	Put(v ...T) bool
+	Close() error
+}
+
 // NewFIFO -
-func NewFIFO() *FIFO {
-	ret := &FIFO{
+func NewFIFO[T any]() *typedFIFO[T] {
+	ret := &typedFIFO[T]{
 		data:    list.New(),
 		close:   make(chan struct{}),
 		stopped: make(chan struct{}),
-		ch:      make(chan any),
+		ch:      make(chan T),
 		cv:      sync.NewCond(new(sync.Mutex)),
 	}
 	go ret.run()
 	return ret
 }
 
-// FIFO -
-type FIFO struct {
+// typedFIFO -
+type typedFIFO[T any] struct {
 	data      *list.List
 	close     chan struct{}
 	stopped   chan struct{}
-	ch        chan any
+	ch        chan T
 	cv        *sync.Cond
 	closeOnce sync.Once
 }
 
 // Reader -
-func (que *FIFO) Reader() <-chan any {
+func (que *typedFIFO[T]) Reader() <-chan T {
 	return que.ch
 }
 
 // Put -
-func (que *FIFO) Put(v ...any) (ok bool) {
+func (que *typedFIFO[T]) Put(v ...T) (ok bool) {
 	que.cv.L.Lock()
 	defer func() {
 		que.cv.L.Unlock()
@@ -54,7 +60,7 @@ func (que *FIFO) Put(v ...any) (ok bool) {
 }
 
 // Close -
-func (que *FIFO) Close() error {
+func (que *typedFIFO[T]) Close() error {
 	stopped := que.stopped
 	cv := que.cv
 	cl := que.close
@@ -75,7 +81,7 @@ func (que *FIFO) Close() error {
 	return nil
 }
 
-func (que *FIFO) run() {
+func (que *typedFIFO[T]) run() {
 	defer func() {
 		close(que.ch)
 		close(que.stopped)
@@ -92,13 +98,13 @@ func (que *FIFO) run() {
 			select {
 			case <-que.close:
 				closed = true
-			case que.ch <- v:
+			case que.ch <- v.(T):
 			}
 		}
 	}
 }
 
-func (que *FIFO) fetch() (v any, ok bool) {
+func (que *typedFIFO[T]) fetch() (v any, ok bool) {
 	que.cv.L.Lock()
 	defer que.cv.L.Unlock()
 	data := que.data

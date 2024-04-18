@@ -6,7 +6,7 @@ import (
 
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
 	"github.com/H-BF/sgroups/internal/config"
-	grpc_client "github.com/H-BF/sgroups/internal/grpc-client"
+	grpc_client "github.com/H-BF/sgroups/internal/grpc"
 
 	"github.com/pkg/errors"
 )
@@ -15,12 +15,16 @@ import (
 type SGClient = sgAPI.ClosableClient
 
 // NewSGClient makes 'sgroups' API client
-func NewSGClient(ctx context.Context) (*SGClient, error) {
+func NewSGClient(ctx context.Context) (ret *SGClient, err error) {
 	const api = "NewSGClient"
+
+	defer func() {
+		err = errors.WithMessage(err, api)
+	}()
 
 	addr, err := SGroupsAddress.Value(ctx)
 	if err != nil {
-		return nil, errors.WithMessage(err, api)
+		return nil, err
 	}
 	var dialDuration time.Duration
 	dialDuration, err = SGroupsDialDuration.Value(ctx)
@@ -31,11 +35,21 @@ func NewSGClient(ctx context.Context) (*SGClient, error) {
 		}
 	}
 	if err != nil {
-		return nil, errors.WithMessage(err, api)
+		return nil, err
 	}
-	bld := grpc_client.FromAddress(addr).
+	bld := grpc_client.ClientFromAddress(addr).
 		WithDialDuration(dialDuration).
 		WithUserAgent(UserAgent.MustValue(ctx))
+	if v, e := SGroupsUseJsonCodec.Value(ctx); e == nil && v {
+		bld = bld.WithDefaultCodecByName(grpc_client.JsonCodecName)
+	} else if !errors.Is(e, config.ErrNotFound) {
+		return nil, e
+	}
+	if o, e := SGroupsAPIpathPrefix.Value(ctx); e == nil {
+		bld = bld.WithPathPrefix(o)
+	} else if !errors.Is(e, config.ErrNotFound) {
+		return nil, e
+	}
 	var c SGClient
 	if c, err = sgAPI.NewClosableClient(ctx, bld); err != nil {
 		return nil, err

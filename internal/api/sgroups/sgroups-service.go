@@ -2,8 +2,11 @@ package sgroups
 
 import (
 	"context"
+	"fmt"
 	"net/url"
+	"path"
 
+	"github.com/H-BF/sgroups/internal/patterns"
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 
 	"github.com/H-BF/corlib/server"
@@ -16,19 +19,37 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// SGroupsServiceOpt -
+type SGroupsServiceOpt interface {
+	apply(*sgService)
+}
+
 // NewSGroupsService creates service
-func NewSGroupsService(ctx context.Context, r registry.Registry) server.APIService {
-	return &sgService{
+func NewSGroupsService(ctx context.Context, r registry.Registry, opts ...SGroupsServiceOpt) server.APIService {
+	ret := &sgService{
 		appCtx: ctx,
 		reg:    r,
 	}
+	for _, o := range opts {
+		o.apply(ret)
+	}
+	return ret
 }
 
-type sgService struct {
-	appCtx context.Context
-	reg    registry.Registry
+// WithAPIpathPrefixes -
+func WithAPIpathPrefixes(pp ...string) SGroupsServiceOpt {
+	return sgSrvFuncOpt(func(ss *sgService) {
+		ss.pathPrefixes = append(ss.pathPrefixes, pp...)
+	})
+}
 
+type sgSrvFuncOpt func(*sgService)
+
+type sgService struct {
 	sg.UnimplementedSecGroupServiceServer
+	appCtx       context.Context
+	reg          registry.Registry
+	pathPrefixes []string
 }
 
 var (
@@ -50,7 +71,26 @@ func (srv *sgService) Description() grpc.ServiceDesc {
 
 // RegisterGRPC impl server.APIService
 func (srv *sgService) RegisterGRPC(_ context.Context, s *grpc.Server) error {
-	sg.RegisterSecGroupServiceServer(s, srv)
+	desc := srv.Description()
+	s.RegisterService(&desc, srv)
+	if len(srv.pathPrefixes) > 0 {
+		flt := map[string]struct{}{}
+		var p patterns.Path
+		for _, pt := range srv.pathPrefixes {
+			if e := p.Set(pt); e != nil {
+				return fmt.Errorf("SgService: register GRPC API with additional path prefix: %v", e)
+			}
+			if !p.IsEmpty() {
+				ss := p.String()
+				if _, seen := flt[ss]; !seen {
+					flt[ss] = struct{}{}
+					desc1 := desc
+					desc1.ServiceName = path.Join(ss, desc.ServiceName)
+					s.RegisterService(&desc1, srv)
+				}
+			}
+		}
+	}
 	return nil
 }
 
@@ -91,4 +131,8 @@ func correctError(err error) error {
 		}
 	}
 	return err
+}
+
+func (f sgSrvFuncOpt) apply(srv *sgService) {
+	f(srv)
 }

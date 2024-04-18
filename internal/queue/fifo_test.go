@@ -8,7 +8,7 @@ import (
 )
 
 func Test_FIFO(t *testing.T) {
-	f := NewFIFO()
+	f := NewFIFO[any]()
 	r := f.Reader()
 	rd := func() (ret any) {
 		select {

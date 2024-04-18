@@ -1,14 +1,18 @@
-package grpc_client
+package grpc
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"os"
+	"path"
 	"time"
 
 	grpc_client "github.com/H-BF/corlib/client/grpc"
 	"github.com/H-BF/corlib/pkg/backoff"
 	netPkg "github.com/H-BF/corlib/pkg/net"
+	"github.com/H-BF/sgroups/internal/patterns"
+
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
@@ -16,16 +20,20 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/encoding"
 )
 
-// FromAddress  builder for 'grpc' client conn
-func FromAddress(addr string) clientConnBuilder {
+// ClientFromAddress  builder for 'grpc' client conn
+func ClientFromAddress(addr string) clientConnBuilder {
 	return clientConnBuilder{addr: addr}
 }
 
 type (
 	// Backoff is an alias to backoff.Backoff
 	Backoff = backoff.Backoff
+
+	// Codec is a type alias to grpc/encoding.Codec
+	Codec = encoding.Codec
 
 	// TransportCredentials is an alias to credentials.TransportCredentials
 	TransportCredentials = credentials.TransportCredentials
@@ -37,6 +45,13 @@ type (
 		maxRetries     uint
 		creds          TransportCredentials
 		userAgent      string
+		defCallCodec   Codec
+		pathPrefix     string
+	}
+
+	nonRootPathClientConn struct {
+		ClientConn
+		pathPrefix string
 	}
 )
 
@@ -67,15 +82,39 @@ func (bld clientConnBuilder) WithUserAgent(userAgent string) clientConnBuilder {
 	return bld
 }
 
+// WithDefaultCodec set default call grpc codec
+func (bld clientConnBuilder) WithDefaultCodec(codec Codec) clientConnBuilder {
+	bld.defCallCodec = codec
+	return bld
+}
+
+// WithDefaultCodecByName set default call grpc codec from its name
+func (bld clientConnBuilder) WithDefaultCodecByName(codecName string) clientConnBuilder {
+	c := encoding.GetCodec(codecName)
+	if c == nil {
+		panic(
+			fmt.Errorf("grpc codec '%s' is not registered", codecName),
+		)
+	}
+	bld.defCallCodec = c
+	return bld
+}
+
+// WithPathPrefix -
+func (bld clientConnBuilder) WithPathPrefix(p string) clientConnBuilder {
+	bld.pathPrefix = p
+	return bld
+}
+
 // NewConn makes new grpc client conn && ipml 'ClientConnProvider'
-func (bld clientConnBuilder) New(ctx context.Context) (*grpc.ClientConn, error) {
+func (bld clientConnBuilder) New(ctx context.Context) (ClientConn, error) {
 	const api = "grpc/new-client-conn"
 
 	var (
 		err                error
 		endpoint           string
 		dialOpts           []grpc.DialOption
-		c                  *grpc.ClientConn
+		c                  ClientConn
 		streamInterceptors []grpc.StreamClientInterceptor
 		unaryInterceptors  []grpc.UnaryClientInterceptor
 	)
@@ -137,8 +176,26 @@ func (bld clientConnBuilder) New(ctx context.Context) (*grpc.ClientConn, error) 
 		grpc.WithChainUnaryInterceptor(
 			append(unaryInterceptors, hostNameInterceptors.ClientUnary())...),
 	)
-	c, err = grpc.DialContext(ctx, endpoint, dialOpts...)
-	return c, errors.WithMessage(err, api)
+	if c := bld.defCallCodec; c != nil {
+		dialOpts = append(dialOpts,
+			grpc.WithDefaultCallOptions(grpc.ForceCodec(c)),
+		)
+	}
+	if c, err = grpc.DialContext(ctx, endpoint, dialOpts...); err != nil {
+		return nil, errors.WithMessage(err, api)
+	}
+	var p patterns.Path
+	if err = p.Set(bld.pathPrefix); err != nil {
+		_ = c.Close()
+		return nil, errors.WithMessage(err, api)
+	}
+	if !p.IsEmpty() {
+		c = &nonRootPathClientConn{
+			ClientConn: c,
+			pathPrefix: p.String(),
+		}
+	}
+	return c, nil
 }
 
 func (bld *clientConnBuilder) endpoint() (string, error) {
@@ -156,4 +213,20 @@ func (bld *clientConnBuilder) endpoint() (string, error) {
 		return bld.addr, nil
 	}
 	return "", errors.WithMessagef(err, "bad address (%s)", bld.addr)
+}
+
+// Invoke -
+func (cc *nonRootPathClientConn) Invoke(ctx context.Context, method string, args any, reply any, opts ...grpc.CallOption) error {
+	meth := cc.path(method)
+	return cc.ClientConn.Invoke(ctx, meth, args, reply, opts...)
+}
+
+// NewStream -
+func (cc *nonRootPathClientConn) NewStream(ctx context.Context, desc *grpc.StreamDesc, method string, opts ...grpc.CallOption) (grpc.ClientStream, error) {
+	meth := cc.path(method)
+	return cc.ClientConn.NewStream(ctx, desc, meth, opts...)
+}
+
+func (cc *nonRootPathClientConn) path(name string) string {
+	return path.Join(cc.pathPrefix, name)
 }

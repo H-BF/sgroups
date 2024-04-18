@@ -33,7 +33,7 @@ func (sui *networksTests) TestNetworks() {
 		expectedBackendNws := tc.Expected.Networks.Decode()
 		nonExpectedBackendNws := tc.NonExpected.Networks.Decode()
 		resourceTestCase.Steps = append(resourceTestCase.Steps, resource.TestStep{
-			Config: tc.TfConfig,
+			Config: sui.providerConfig + "\n" + tc.TfConfig,
 			Check: func(_ *terraform.State) error {
 				if len(expectedBackendNws)+len(nonExpectedBackendNws) > 0 {
 					allNws := sui.listAllNetworks()

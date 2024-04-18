@@ -2,9 +2,12 @@ package main
 
 import (
 	"context"
+	"errors"
 
 	"github.com/H-BF/sgroups/internal/api/sgroups"
 	"github.com/H-BF/sgroups/internal/app"
+	"github.com/H-BF/sgroups/internal/config"
+	_ "github.com/H-BF/sgroups/internal/grpc"
 
 	"github.com/H-BF/corlib/server"
 	"github.com/H-BF/corlib/server/interceptors"
@@ -27,7 +30,13 @@ const (
 )
 
 func setupSgServer(ctx context.Context) (*server.APIServer, error) {
-	srv := sgroups.NewSGroupsService(ctx, getAppRegistry())
+	var sgSrvOpts []sgroups.SGroupsServiceOpt
+	if o, e := ServerAPIpathPrefix.Value(ctx); e == nil {
+		sgSrvOpts = append(sgSrvOpts, sgroups.WithAPIpathPrefixes(o))
+	} else if !errors.Is(e, config.ErrNotFound) {
+		return nil, e
+	}
+	srv := sgroups.NewSGroupsService(ctx, getAppRegistry(), sgSrvOpts...)
 	doc, err := sgroups.SecGroupSwaggerUtil.GetSpec()
 	if err != nil {
 		return nil, err
@@ -77,5 +86,6 @@ func setupSgServer(ctx context.Context) (*server.APIServer, error) {
 		opts = append(opts, server.WithHttpHandler("/"+HandleHealthcheck, app.HcHandler{}))
 	}
 	opts = append(opts, server.WithHttpHandler("/"+HandleDebug, app.PProfHandler()))
+
 	return server.NewAPIServer(opts...)
 }

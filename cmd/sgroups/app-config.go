@@ -19,6 +19,7 @@ healthcheck:
 server:
   endpoint: tcp://127.0.0.1:9006
   graceful-shutdown: 30s
+  api-path-prefix: "static/path/prefix" #is empty by default
 
 storage:
   type: internal | postgres
@@ -35,6 +36,9 @@ const (
 
 	// ServerGracefulShutdown graceful shutdown period
 	ServerGracefulShutdown config.ValueT[time.Duration] = "server/graceful-shutdown"
+
+	// ServerAPIpathPrefix is a path api prefix
+	ServerAPIpathPrefix config.ValueT[string] = "server/api-path-prefix"
 
 	// MetricsEnable enable api metrics
 	MetricsEnable config.ValueT[bool] = "metrics/enable"

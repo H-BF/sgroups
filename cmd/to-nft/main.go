@@ -55,6 +55,7 @@ func main() { //nolint:gocyclo
 		config.WithDefValue{Key: SGroupsAddress, Val: "tcp://127.0.0.1:9000"},
 		config.WithDefValue{Key: SGroupsSyncStatusInterval, Val: "10s"},
 		config.WithDefValue{Key: SGroupsSyncStatusPush, Val: false},
+		config.WithDefValue{Key: SGroupsUseJsonCodec, Val: false},
 		//DNS group
 		config.WithDefValue{Key: DnsNameservers, Val: `["8.8.8.8"]`},
 		config.WithDefValue{Key: DnsProto, Val: "udp"},

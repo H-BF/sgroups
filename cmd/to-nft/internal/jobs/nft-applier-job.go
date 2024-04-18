@@ -23,7 +23,7 @@ func NewNftApplierJob(proc nft.NfTablesProcessor, client internal.SGClient, opts
 	ret := &NftApplierJob{
 		nftProcessor: proc,
 		client:       client,
-		que:          queue.NewFIFO(),
+		que:          queue.NewFIFO[DomainAddresses](),
 	}
 	ret.trigger2apply.sgn = make(chan struct{}, 1)
 	for _, o := range opts {
@@ -46,7 +46,7 @@ type NftApplierJob struct {
 	netNS         string
 	client        internal.SGClient
 	nftProcessor  nft.NfTablesProcessor
-	que           *queue.FIFO
+	que           queue.FIFO[DomainAddresses]
 	stopped       chan struct{}
 	onceRun       sync.Once
 	onceClose     sync.Once
@@ -89,12 +89,14 @@ func (jb *NftApplierJob) Run(ctx context.Context) (err error) {
 	const job = "nft-applier"
 
 	var neverRun bool
-	jb.onceRun.Do(func() { neverRun = true })
+	jb.onceRun.Do(func() {
+		neverRun = true
+		jb.stopped = make(chan struct{})
+	})
 	if !neverRun {
 		return fmt.Errorf("%s: it has been run or closed yet", job)
 	}
 
-	jb.stopped = make(chan struct{})
 	log := logger.FromContext(ctx).Named(job)
 	log.Info("start")
 	defer func() {
@@ -124,15 +126,12 @@ func (jb *NftApplierJob) Run(ctx context.Context) (err error) {
 				tr.Unlock()
 				err = jb.doApply(ctx)
 			}
-		case raw, ok := <-que:
+		case o, ok := <-que:
 			if !ok {
 				log.Info("will exit cause it has closed")
 				return nil
 			}
-			switch o := raw.(type) {
-			case DomainAddresses:
-				err = jb.handleDomainAddressesEvent(ctx, o)
-			}
+			err = jb.handleDomainAddressesEvent(ctx, o)
 		}
 		if err != nil {
 			log.Error(err)

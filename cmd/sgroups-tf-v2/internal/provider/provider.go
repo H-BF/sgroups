@@ -2,12 +2,11 @@ package provider
 
 import (
 	"context"
-	"os"
 	"time"
 
 	"github.com/H-BF/sgroups/cmd/sgroups-tf-v2/internal/validators"
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
-	client "github.com/H-BF/sgroups/internal/grpc-client"
+	client "github.com/H-BF/sgroups/internal/grpc"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -17,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
+// Factory -
 func Factory(version string) func() provider.Provider {
 	return func() provider.Provider {
 		return &sgroupsProvider{
@@ -34,8 +34,10 @@ type sgroupsProvider struct {
 }
 
 type providerConfig struct {
-	Address      types.String `tfsdk:"address"`
-	DialDuration types.String `tfsdk:"dial_duration"`
+	Address          types.String `tfsdk:"address"`
+	UseAPIPathPrefix types.String `tfsdk:"api_path_prefix"`
+	DialDuration     types.String `tfsdk:"dial_duration"`
+	UseJsonCodec     types.Bool   `tfsdk:"use_json_codec"`
 }
 
 func (s *sgroupsProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -47,7 +49,7 @@ func (s *sgroupsProvider) Schema(_ context.Context, _ provider.SchemaRequest, re
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"address": schema.StringAttribute{
-				Optional:    true,
+				Required:    true,
 				Description: "'SGROUPS' service address",
 				Validators: []validator.String{
 					validators.IsEndpoint(),
@@ -58,6 +60,17 @@ func (s *sgroupsProvider) Schema(_ context.Context, _ provider.SchemaRequest, re
 				Description: "'SGROUPS' service dial max duration",
 				Validators: []validator.String{
 					validators.IsDuration(),
+				},
+			},
+			"use_json_codec": schema.BoolAttribute{
+				Optional:    true,
+				Description: "Use GRPC-JSON codec to call 'SGROUPS' service",
+			},
+			"api_path_prefix": schema.StringAttribute{
+				Optional:    true,
+				Description: "'SGROUPS' service API path prefix",
+				Validators: []validator.String{
+					validators.IsPath(),
 				},
 			},
 		},
@@ -73,23 +86,19 @@ func (s *sgroupsProvider) Configure(ctx context.Context, req provider.ConfigureR
 		return
 	}
 
-	var address string
-	var dialDuration string
-	if v := config.Address.ValueString(); v != "" {
-		address = v
-	} else {
-		address = lookupEnvWithDefault("SGROUPS_ADDRESS", "tcp://127.0.0.1:9000")
+	clientBuilder := client.ClientFromAddress(config.Address.ValueString())
+	dialDuration := config.DialDuration.ValueString()
+	if connDuration, _ := time.ParseDuration(dialDuration); connDuration > 0 {
+		clientBuilder = clientBuilder.WithDialDuration(connDuration)
 	}
-	if v := config.DialDuration.ValueString(); v != "" {
-		dialDuration = v
-	} else {
-		dialDuration = lookupEnvWithDefault("SGROUPS_DIAL_DURATION", "10s")
+	if config.UseJsonCodec.ValueBool() {
+		clientBuilder = clientBuilder.WithDefaultCodecByName(client.JsonCodecName)
 	}
-	connDuration, _ := time.ParseDuration(dialDuration)
+	if s := config.UseAPIPathPrefix.ValueString(); len(s) > 0 {
+		clientBuilder = clientBuilder.WithPathPrefix(s)
+	}
 
-	c, err := client.FromAddress(address).
-		WithDialDuration(connDuration).
-		New(ctx)
+	c, err := clientBuilder.New(ctx)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"create sgroups client",
@@ -119,12 +128,4 @@ func (s *sgroupsProvider) Resources(_ context.Context) []func() resource.Resourc
 		NewIESgSgRulesResource,
 		NewIESgSgIcmpRulesResource,
 	}
-}
-
-func lookupEnvWithDefault(key, defaultValue string) string {
-	value, ok := os.LookupEnv(key)
-	if !ok {
-		value = defaultValue
-	}
-	return value
 }
