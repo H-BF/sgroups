@@ -42,7 +42,7 @@ func NewSGClient(ctx context.Context) (ret *SGClient, err error) {
 		WithUserAgent(UserAgent.MustValue(ctx))
 	if v, e := SGroupsUseJsonCodec.Value(ctx); e == nil && v {
 		bld = bld.WithDefaultCodecByName(grpc_client.JsonCodecName)
-	} else if !errors.Is(e, config.ErrNotFound) {
+	} else if e != nil && !errors.Is(e, config.ErrNotFound) {
 		return nil, e
 	}
 	if o, e := SGroupsAPIpathPrefix.Value(ctx); e == nil {
