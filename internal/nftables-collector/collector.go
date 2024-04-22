@@ -19,15 +19,26 @@ type NftCollector struct {
 	Dump string
 }
 
+var _ prometheus.Collector = (*NftCollector)(nil)
+
 // Describe - implement `prometheus.Collector`
 func (c *NftCollector) Describe(ch chan<- *prometheus.Desc) {
-	ch <- upDesc
-	ch <- counterBytesDesc
-	ch <- counterPacketsDesc
-	ch <- tableChainsDesc
-	ch <- chainRulesDesc
-	ch <- ruleBytesDesc
-	ch <- rulePacketsDesc
+	descs := []*prometheus.Desc{
+		upDesc,
+		counterBytesDesc,
+		counterPacketsDesc,
+		tableChainsDesc,
+		chainRulesDesc,
+		ruleBytesDesc,
+		rulePacketsDesc,
+	}
+	for i := range descs {
+		select {
+		case <-c.Ctx.Done():
+			return
+		case ch <- descs[i]:
+		}
+	}
 }
 
 // Collect - implement `prometheus.Collector`

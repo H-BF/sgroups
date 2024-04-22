@@ -3,9 +3,10 @@ package nftables_collector
 import (
 	"context"
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus"
 	"strconv"
 	"strings"
+
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/H-BF/corlib/logger"
 	nft "github.com/google/nftables"
@@ -42,6 +43,7 @@ type Counter struct {
 }
 
 func nl2rule(ctx context.Context, nlRule *nft.Rule, setMapping map[string]*nft.Set, setElements map[string][]nft.SetElement) (nftablesRule, error) {
+	/// -------------------------------------------- ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ ----- адов говнокод
 	logger.Debug(ctx, formatRule(nlRule))
 
 	r := nftablesRule{

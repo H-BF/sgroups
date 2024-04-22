@@ -2,6 +2,7 @@ package nftables_collector
 
 import (
 	"context"
+
 	nft "github.com/google/nftables"
 	"github.com/google/nftables/expr"
 )
@@ -11,14 +12,17 @@ type exprParserCtx struct {
 	rule  *nftablesRule
 	state parserState
 	debug bool // enable this for development purposes to see then method not implemented on certain state
+	/// ^^^^^ Иван  WTF bro?!
 
 	setMapping  map[string]*nft.Set
 	setElements map[string][]nft.SetElement
 
 	idleState parserState
+	//^^^^^^^^^^^^^ ----- что это такое?
 }
 
 func newParserCtx(ctx context.Context, rule *nftablesRule, setMapping map[string]*nft.Set, setElements map[string][]nft.SetElement) *exprParserCtx {
+	// ----------------------------------------------------- ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ --- говнокод
 	ret := &exprParserCtx{
 		ctx:         ctx,
 		rule:        rule,
