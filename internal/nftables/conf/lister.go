@@ -4,6 +4,7 @@
 package conf
 
 import (
+	"context"
 	nftlib "github.com/google/nftables"
 )
 
@@ -30,4 +31,8 @@ var _ Lister = (*listerFromConn)(nil)
 
 func (lst listerFromConn) GetRules(chn *nftlib.Chain) ([]*nftlib.Rule, error) {
 	return lst.Conn.GetRules(chn.Table, chn)
+}
+
+func (lst listerFromConn) Fetch(_ context.Context) (StateOfNFTables, error) {
+	return LoadState(lst)
 }

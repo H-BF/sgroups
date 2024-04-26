@@ -2,12 +2,15 @@ package internal
 
 import (
 	"context"
+	"go.uber.org/zap"
 	"os"
 
 	"github.com/H-BF/sgroups/internal/app"
-	nftablescollector "github.com/H-BF/sgroups/internal/nftables-collector"
+	nfmetrics "github.com/H-BF/sgroups/internal/nftables/collector"
+	"github.com/H-BF/sgroups/internal/nftables/conf"
 	"github.com/H-BF/sgroups/pkg/atomic"
 
+	"github.com/H-BF/corlib/logger"
 	"github.com/google/nftables"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -48,7 +51,17 @@ func SetupMetrics(ctx context.Context) error {
 		return err
 	}
 
+	var log logger.TypeOfLogger
 	dumpFile := NftablesCollectorDumpFile.MustValue(ctx)
+	if len(dumpFile) != 0 {
+		file, err := os.OpenFile(dumpFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			return err
+		}
+		log = logger.NewWithSink(zap.NewAtomicLevelAt(zap.DebugLevel), file)
+	} else {
+		log = logger.New(zap.NewAtomicLevelAt(zap.InfoLevel))
+	}
 
 	hostname, err := os.Hostname()
 	if err != nil {
@@ -62,7 +75,9 @@ func SetupMetrics(ctx context.Context) error {
 	am.init(labels)
 	metricsOpt := app.AddMetrics{
 		Metrics: []prometheus.Collector{
-			&nftablescollector.NftCollector{Ctx: ctx, Conn: nlConn, Dump: dumpFile},
+			nfmetrics.NewCollector(ctx, conf.ListerFromConn(nlConn),
+				nfmetrics.WithLogger(log),
+				nfmetrics.WithMinFrequency(NftablesCollectorMinFrequency.MustValue(ctx))),
 			app.NewHealthcheckMetric(labels),
 			am.appliedConfigCount,
 			am.errorCount,

@@ -45,7 +45,9 @@ extapi:
 
 telemetry:
   useragent: "string"
-  nft-collector-dump-file: "string"
+  nft-collector:
+	min-frequency: 1s
+	dump-file: "string"
   endpoint: 127.0.0.1:5000
   metrics:
     enable: true
@@ -128,8 +130,10 @@ const (
 	UserAgent config.ValueT[string] = "telemetry/useragent"
 	// ProfileEnable available at /debug/pprof/index
 	ProfileEnable config.ValueT[bool] = "telemetry/profile/enable"
+	// NftablesCollectorMinFrequency states how often to update cache with nft metrics
+	NftablesCollectorMinFrequency config.ValueT[time.Duration] = "telemetry/nft-collector/min-frequency"
 	// NftablesCollectorDumpFile allows dump debug info from nftables-collector, if empty dumping will be disabled
-	NftablesCollectorDumpFile config.ValueT[string] = "telemetry/nft-collector-dump-file"
+	NftablesCollectorDumpFile config.ValueT[string] = "telemetry/nft-collector/dump-file"
 )
 
 type FqdnRulesStrategy string

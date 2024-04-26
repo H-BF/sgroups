@@ -12,7 +12,7 @@ import (
 )
 
 // NewCollector - impl prometheus.Collector
-func NewCollector(ctx context.Context, p NFTConfReader, opts ...Opt) *nftCollector {
+func NewCollector(ctx context.Context, p NFTConfReader, opts ...Opt) prometheus.Collector {
 	const (
 		minFreq = time.Second
 	)
@@ -120,9 +120,7 @@ func (c *nftCollector) gather() (ret []prometheus.Metric) {
 			c.logErr("nftables fetch state: %v", err)
 			v = 0
 		}
-		_ = cnf
-		// ^^^^^^^^ --------  call fill_func(cnf, &mets)
-		//TODO: написать соотв парсер-филер
+		fillFromState(cnf, &mets, c.log)
 		c.cached.at = &at
 		c.cached.metrics = append(
 			mets, prometheus.MustNewConstMetric(upDesc, prometheus.GaugeValue, v),
