@@ -71,6 +71,9 @@ func main() { //nolint:gocyclo
 		config.WithDefValue{Key: HealthcheckEnable, Val: true},
 		config.WithDefValue{Key: UserAgent, Val: ""},
 		config.WithDefValue{Key: ProfileEnable, Val: true},
+
+		//authn group
+		config.WithDefValue{Key: SGroupsAuthnType, Val: config.AuthnTypeNONE},
 	)
 	if err != nil {
 		logger.Fatal(ctx, err)

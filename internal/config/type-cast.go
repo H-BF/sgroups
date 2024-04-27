@@ -23,7 +23,8 @@ type KnownValueTypes interface {
 		~int16 | ~uint16 |
 		~int8 | ~uint8 |
 		~float32 | ~float64 |
-		~string | ~bool
+		~string | ~bool |
+		~[]string
 }
 
 func typeCast[T any](in any, ret *T) error {
@@ -125,4 +126,6 @@ func init() {
 
 	regTypeCastFunc(typeCastIP)
 	regTypeCastFunc(typeCastIPSlice)
+
+	regTypeCastFunc(typeCastSliceT[string])
 }

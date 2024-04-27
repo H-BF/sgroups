@@ -42,6 +42,15 @@ extapi:
         push: true
       use-json-codec: <true|false> # = false by default
       api-path-prefix: "a/b/c" # = is not set by default
+	  authn:
+	    type: <none|tls> # 'none' is ny default
+		tls:
+		  key-file: "key-file.pem"
+		  cert-file: "cert-file.pem"
+		  server:
+		    verify: <true|false> # false is by default
+			name: "server-name" # is not present by default
+			ca-files: ["file1.pem", "file2.pem", ...] # is not present by default
 
 telemetry:
   useragent: "string"
@@ -104,6 +113,7 @@ const (
 	// ServicesDefDialDuration default dial duraton to conect a service [optional]
 	ServicesDefDialDuration config.ValueT[time.Duration] = "extapi/svc/def-daial-duration"
 
+	//                         -= extapi/svc/ SGROUPS =-
 	//SGroupsAddress service address [mandatory]
 	SGroupsAddress config.ValueT[string] = "extapi/svc/sgroups/address"
 	//SGroupsDialDuration sgroups service dial duration [optional]
@@ -117,6 +127,20 @@ const (
 	// SGroupsAPIpathPrefix add path prefix when call SGROUPS API - is not set by default
 	SGroupsAPIpathPrefix config.ValueT[string] = "extapi/svc/sgroups/api-path-prefix"
 
+	//                         -= extapi/svc/ SGROUPS/AUTHN =-
+	SGroupsAuthnType config.AuthnTypeSelector = "extapi/svc/sgroups/authn/type"
+	//                         -= extapi/svc/ SGROUPS/AUTHN/TLS =-
+	// SGroupsTLScertFile client cert file
+	SGroupsTLScertFile config.TLScertFile = "extapi/svc/sgroups/authn/tls/sert-file"
+	// SGroupsTLSprivKeyFile client private key
+	SGroupsTLSprivKeyFile config.TLScertFile = "extapi/svc/sgroups/authn/tls/key-file"
+	// SGroupsTLSserverVerify if true we need verify server host or IPs
+	SGroupsTLSserverVerify config.ValueT[bool] = "extapi/svc/sgroups/authn/tls/server/verify"
+	// SGroupsTLSserverName server hostname we need to verify - not set by default
+	SGroupsTLSserverName config.TLSverifysServerName = "extapi/svc/sgroups/authn/tls/server/verify"
+	// SGroupsTLSserverCAs server CA files
+	SGroupsTLSserverCAs config.TLScaFiles = "extapi/svc/sgroups/authn/tls/server/ca-files"
+
 	// TelemetryEndpoint server endpoint
 	TelemetryEndpoint config.ValueT[string] = "telemetry/endpoint"
 	// MetricsEnable enable api metrics
@@ -127,6 +151,9 @@ const (
 	UserAgent config.ValueT[string] = "telemetry/useragent"
 	// ProfileEnable available at /debug/pprof/index
 	ProfileEnable config.ValueT[bool] = "telemetry/profile/enable"
+
+	//             -= AUTHN =-
+
 )
 
 type FqdnRulesStrategy string
