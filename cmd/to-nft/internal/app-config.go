@@ -37,20 +37,20 @@ extapi:
     sgroups:
       dial-duration: 3s #override default-connect-tmo
       address: tcp://127.0.0.1:9006
-	  sync-status:
+      sync-status:
         interval: 20s #mandatory
         push: true
       use-json-codec: <true|false> # = false by default
       api-path-prefix: "a/b/c" # = is not set by default
-	  authn:
-	    type: <none|tls> # 'none' is ny default
-		tls:
-		  key-file: "key-file.pem"
-		  cert-file: "cert-file.pem"
-		  server:
-		    verify: <true|false> # false is by default
-			name: "server-name" # is not present by default
-			ca-files: ["file1.pem", "file2.pem", ...] # is not present by default
+      authn:
+        type: <none|tls> # 'none' is by default
+        tls:
+          key-file: "key-file.pem"
+          cert-file: "cert-file.pem"
+            server:
+              verify: <true|false> # false is by default
+              name: "server-name" # is not present by default
+              ca-files: ["file1.pem", "file2.pem", ...] # is not present by default
 
 telemetry:
   useragent: "string"
@@ -131,7 +131,7 @@ const (
 	SGroupsAuthnType config.AuthnTypeSelector = "extapi/svc/sgroups/authn/type"
 	//                         -= extapi/svc/ SGROUPS/AUTHN/TLS =-
 	// SGroupsTLScertFile client cert file
-	SGroupsTLScertFile config.TLScertFile = "extapi/svc/sgroups/authn/tls/sert-file"
+	SGroupsTLScertFile config.TLScertFile = "extapi/svc/sgroups/authn/tls/cert-file"
 	// SGroupsTLSprivKeyFile client private key
 	SGroupsTLSprivKeyFile config.TLScertFile = "extapi/svc/sgroups/authn/tls/key-file"
 	// SGroupsTLSserverVerify if true we need verify server host or IPs
@@ -151,9 +151,6 @@ const (
 	UserAgent config.ValueT[string] = "telemetry/useragent"
 	// ProfileEnable available at /debug/pprof/index
 	ProfileEnable config.ValueT[bool] = "telemetry/profile/enable"
-
-	//             -= AUTHN =-
-
 )
 
 type FqdnRulesStrategy string
