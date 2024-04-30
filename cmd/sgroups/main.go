@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/H-BF/sgroups/internal/app"
 	"github.com/H-BF/sgroups/internal/config"
 
@@ -72,13 +75,14 @@ func main() {
 	logger.Info(ctx, "-= BYE =-")
 }
 
-/*//
 func init() {
-	const pre = `./../../bin`
-	os.Setenv("SG_AUTHN_TYPE", string(config.AuthnTypeTLS))
-	os.Setenv("SG_AUTHN_TLS_KEY-FILE", fmt.Sprintf("%s/tls/server-key.pem", pre))
-	os.Setenv("SG_AUTHN_TLS_CERT-FILE", fmt.Sprintf("%s/tls/server-cert.pem", pre))
-	os.Setenv("SG_AUTHN_TLS_CLIENT_CA-FILES", fmt.Sprintf(`["%s/tls/ca-cert.pem"]`, pre))
-	os.Setenv("SG_AUTHN_TLS_CLIENT_VERIFY", string(config.TLSclientSkipVerify))
+	if true {
+		//const pre = `./../../bin`
+		const pre = `.`
+		os.Setenv("SG_AUTHN_TYPE", string(config.AuthnTypeTLS))
+		os.Setenv("SG_AUTHN_TLS_KEY-FILE", fmt.Sprintf("%s/tls/server-key.pem", pre))
+		os.Setenv("SG_AUTHN_TLS_CERT-FILE", fmt.Sprintf("%s/tls/server-cert.pem", pre))
+		//os.Setenv("SG_AUTHN_TLS_CLIENT_CA-FILES", fmt.Sprintf(`["%s/tls/ca-cert.pem"]`, pre))
+		os.Setenv("SG_AUTHN_TLS_CLIENT_VERIFY", string(config.TLSclientSkipVerify))
+	}
 }
-*/

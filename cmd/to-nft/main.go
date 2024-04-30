@@ -25,6 +25,19 @@ import (
 	"go.uber.org/zap"
 )
 
+func init() {
+	if false {
+		//TODO: REMOVE THIS
+		os.Setenv("NFT_NETNS", "ns1")
+		//os.Setenv("NFT_FQDN-RULES_STRATEGY", "ndpi")
+	}
+	if true {
+		os.Setenv("NFT_EXTAPI_SVC_SGROUPS_AUTHN_TYPE", "tls")
+		os.Setenv("NFT_EXTAPI_SVC_SGROUPS_AUTHN_TLS_SERVER_VERIFY", "false")
+		os.Setenv("NFT_EXTAPI_SVC_SGROUPS_SYNC-STATUS_PUSH", "true")
+	}
+}
+
 func main() { //nolint:gocyclo
 	flag.Parse()
 	SetupContext()
@@ -32,13 +45,6 @@ func main() { //nolint:gocyclo
 	ctx := app.Context()
 	logger.SetLevel(zap.InfoLevel)
 	logger.Info(ctx, "-= HELLO =-")
-
-	if false {
-		//TODO: REMOVE THIS
-		os.Setenv("NFT_NETNS", "ns1")
-		//os.Setenv("NFT_FQDN-RULES_STRATEGY", "ndpi")
-	}
-
 	err := config.InitGlobalConfig(
 		config.WithAcceptEnvironment{EnvPrefix: "NFT"},
 		config.WithSourceFile{FileName: ConfigFile},

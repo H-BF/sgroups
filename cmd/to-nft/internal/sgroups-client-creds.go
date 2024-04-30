@@ -28,26 +28,27 @@ func makeSgroupsClientCreds(ctx context.Context) (creds credentials.TransportCre
 	case config.AuthnTypeTLS:
 		keyFilename, e1 := SGroupsTLSprivKeyFile.Value(ctx)
 		certFilename, e2 := SGroupsTLScertFile.Value(ctx)
+		var skipCerts bool
 		if errors.Is(e1, config.ErrNotFound) && errors.Is(e2, config.ErrNotFound) {
-			break
-		}
-		if err = multierr.Combine(e1, e2); err != nil {
+			skipCerts = true
+		} else if err = multierr.Combine(e1, e2); err != nil {
 			return nil, err
 		}
-		var cert tls.Certificate
-		if cert, err = tls.LoadX509KeyPair(certFilename, keyFilename); err != nil {
-			return nil, errors.WithMessagef(err, "on construct client key('%s')/cert('%s') pair",
-				keyFilename, certFilename,
-			)
+		tlsConf := new(tls.Config)
+		if !skipCerts {
+			var cert tls.Certificate
+			if cert, err = tls.LoadX509KeyPair(certFilename, keyFilename); err != nil {
+				return nil, errors.WithMessagef(err, "on construct client key('%s')/cert('%s') pair",
+					keyFilename, certFilename,
+				)
+			}
+			tlsConf.Certificates = append(tlsConf.Certificates, cert)
 		}
 		var verifyServer bool
 		if verifyServer, err = SGroupsTLSserverVerify.Value(ctx); err != nil {
 			return nil, err
 		}
-		tlsConf := &tls.Config{
-			Certificates:       []tls.Certificate{cert},
-			InsecureSkipVerify: !verifyServer,
-		}
+		tlsConf.InsecureSkipVerify = !verifyServer
 		if verifyServer {
 			if tlsConf.ServerName, err = SGroupsTLSserverName.Value(ctx); err != nil && !errors.Is(err, config.ErrNotFound) {
 				return nil, err
