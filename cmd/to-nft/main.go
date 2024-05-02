@@ -33,7 +33,10 @@ func init() {
 	}
 	if false {
 		os.Setenv("NFT_EXTAPI_SVC_SGROUPS_AUTHN_TYPE", "tls")
-		os.Setenv("NFT_EXTAPI_SVC_SGROUPS_AUTHN_TLS_SERVER_VERIFY", "false")
+		os.Setenv("NFT_EXTAPI_SVC_SGROUPS_AUTHN_TLS_SERVER_VERIFY", "true")
+		os.Setenv("NFT_EXTAPI_SVC_SGROUPS_AUTHN_TLS_SERVER_CA-FILES", `["./tls/ca-cert.pem"]`)
+		os.Setenv("NFT_EXTAPI_SVC_SGROUPS_AUTHN_TLS_SERVER_NAME", "serv0")
+
 		os.Setenv("NFT_EXTAPI_SVC_SGROUPS_SYNC-STATUS_PUSH", "true")
 	}
 }

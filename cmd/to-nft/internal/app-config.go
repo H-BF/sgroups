@@ -137,7 +137,7 @@ const (
 	// SGroupsTLSserverVerify if true we need verify server host or IPs
 	SGroupsTLSserverVerify config.ValueT[bool] = "extapi/svc/sgroups/authn/tls/server/verify"
 	// SGroupsTLSserverName server hostname we need to verify - not set by default
-	SGroupsTLSserverName config.TLSverifysServerName = "extapi/svc/sgroups/authn/tls/server/verify"
+	SGroupsTLSserverName config.TLSverifysServerName = "extapi/svc/sgroups/authn/tls/server/name"
 	// SGroupsTLSserverCAs server CA files
 	SGroupsTLSserverCAs config.TLScaFiles = "extapi/svc/sgroups/authn/tls/server/ca-files"
 
