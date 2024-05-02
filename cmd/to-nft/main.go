@@ -31,7 +31,7 @@ func init() {
 		os.Setenv("NFT_NETNS", "ns1")
 		//os.Setenv("NFT_FQDN-RULES_STRATEGY", "ndpi")
 	}
-	if true {
+	if false {
 		os.Setenv("NFT_EXTAPI_SVC_SGROUPS_AUTHN_TYPE", "tls")
 		os.Setenv("NFT_EXTAPI_SVC_SGROUPS_AUTHN_TLS_SERVER_VERIFY", "false")
 		os.Setenv("NFT_EXTAPI_SVC_SGROUPS_SYNC-STATUS_PUSH", "true")

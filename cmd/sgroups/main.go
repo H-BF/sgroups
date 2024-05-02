@@ -76,7 +76,7 @@ func main() {
 }
 
 func init() {
-	if true {
+	if false {
 		//const pre = `./../../bin`
 		const pre = `.`
 		os.Setenv("SG_AUTHN_TYPE", string(config.AuthnTypeTLS))
