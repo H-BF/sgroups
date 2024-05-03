@@ -71,8 +71,7 @@ func main() { //nolint:gocyclo
 		config.WithDefValue{Key: HealthcheckEnable, Val: true},
 		config.WithDefValue{Key: UserAgent, Val: ""},
 		config.WithDefValue{Key: ProfileEnable, Val: true},
-		config.WithDefValue{Key: NftablesCollectorMinFrequency, Val: "1s"},
-		config.WithDefValue{Key: NftablesCollectorDumpFile, Val: ""},
+		config.WithDefValue{Key: NftablesCollectorMinFrequency, Val: "10s"},
 	)
 	if err != nil {
 		logger.Fatal(ctx, err)

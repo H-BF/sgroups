@@ -2,8 +2,8 @@ package internal
 
 import (
 	"context"
-	"go.uber.org/zap"
 	"os"
+	"time"
 
 	"github.com/H-BF/sgroups/internal/app"
 	nfmetrics "github.com/H-BF/sgroups/internal/nftables/collector"
@@ -12,6 +12,7 @@ import (
 
 	"github.com/H-BF/corlib/logger"
 	"github.com/google/nftables"
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -45,24 +46,6 @@ func SetupMetrics(ctx context.Context) error {
 	if !MetricsEnable.MustValue(ctx) {
 		return nil
 	}
-
-	nlConn, err := nftables.New()
-	if err != nil {
-		return err
-	}
-
-	var log logger.TypeOfLogger
-	dumpFile := NftablesCollectorDumpFile.MustValue(ctx)
-	if len(dumpFile) != 0 {
-		file, err := os.OpenFile(dumpFile, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-		if err != nil {
-			return err
-		}
-		log = logger.NewWithSink(zap.NewAtomicLevelAt(zap.DebugLevel), file)
-	} else {
-		log = logger.New(zap.NewAtomicLevelAt(zap.InfoLevel))
-	}
-
 	hostname, err := os.Hostname()
 	if err != nil {
 		return err
@@ -75,16 +58,18 @@ func SetupMetrics(ctx context.Context) error {
 	am.init(labels)
 	metricsOpt := app.AddMetrics{
 		Metrics: []prometheus.Collector{
-			nfmetrics.NewCollector(ctx, conf.ListerFromConn(nlConn),
-				nfmetrics.WithLogger(log),
-				nfmetrics.WithMinFrequency(NftablesCollectorMinFrequency.MustValue(ctx))),
 			app.NewHealthcheckMetric(labels),
 			am.appliedConfigCount,
 			am.errorCount,
 		},
 	}
-	err = app.SetupMetrics(metricsOpt)
-	if err == nil {
+	err = ifNetfilterMetricsCollector(ctx, "nftables-metrics", func(c prometheus.Collector) {
+		metricsOpt.Metrics = append(metricsOpt.Metrics, c)
+	})
+	if err != nil {
+		return errors.WithMessage(err, "on setup 'nftables' metrics collector")
+	}
+	if err = app.SetupMetrics(metricsOpt); err == nil {
 		agentMetricsHolder.Store(am, nil)
 	}
 	return err
@@ -119,4 +104,25 @@ func (am *AgentMetrics) ObserveError(errSource string) {
 // ObserveApplyConfig -
 func (am *AgentMetrics) ObserveApplyConfig() {
 	am.appliedConfigCount.Inc()
+}
+
+func ifNetfilterMetricsCollector(ctx context.Context, logSource string, cons func(prometheus.Collector)) error {
+	nlConn, err := nftables.New()
+	if err != nil {
+		return err
+	}
+	log := logger.FromContext(ctx)
+	if len(logSource) > 0 {
+		log = log.Named(logSource)
+	}
+	var minRefreshInterval time.Duration
+	if minRefreshInterval, err = NftablesCollectorMinFrequency.Value(ctx); err != nil {
+		return err
+	}
+	ret := nfmetrics.NewCollector(ctx, conf.ListerFromConn(nlConn),
+		nfmetrics.WithLogger(log),
+		nfmetrics.WithMinFrequency(minRefreshInterval),
+	)
+	cons(ret)
+	return nil
 }

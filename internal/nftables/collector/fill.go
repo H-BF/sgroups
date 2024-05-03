@@ -9,79 +9,115 @@ import (
 	hlp "github.com/H-BF/sgroups/internal/nftables/helpers"
 	"github.com/H-BF/sgroups/internal/nftables/parser"
 
-	"github.com/H-BF/corlib/logger"
 	nftlib "github.com/google/nftables"
 	"github.com/prometheus/client_golang/prometheus"
+	"golang.org/x/sys/unix"
 )
 
-func fillFromState(cnf conf.StateOfNFTables, mets *[]prometheus.Metric, log *logger.TypeOfLogger) {
+func state2MetricsView(cnf conf.StateOfNFTables) (mets []prometheus.Metric, err error) {
+	var excludedTables dkt.HSet[conf.NfTableKey]
 	cnf.Tables.Iterate(func(tKey conf.NfTableKey, t *nftlib.Table) bool {
+		if t.Flags&unix.NFT_TABLE_F_DORMANT != 0 {
+			excludedTables.Put(tKey)
+			return true
+		}
 		family := hlp.TableFamily2S(t.Family)
-		var tableChains int
-
-		if chains, ok := cnf.Chains.Get(tKey); ok {
-			tableChains = chains.Len()
-		}
-		if metric, err := prometheus.NewConstMetric(tableChainsDesc,
+		chains := cnf.Chains.At(tKey)
+		metric, e := prometheus.NewConstMetric(tableChainsDesc,
 			prometheus.GaugeValue,
-			float64(tableChains),
+			float64(chains.Len()),
 			t.Name,
-			family); err == nil {
-			*mets = append(*mets, metric)
-		}
-		return true
+			family,
+		)
+		err = e
+		mets = append(mets, metric)
+		return e == nil
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	cnf.Objects.Iterate(func(tKey conf.NfTableKey, tObjs []nftlib.Obj) bool {
+		if excludedTables.Contains(tKey) {
+			return true
+		}
+		family := hlp.TableFamily2S(tKey.TableFamily)
 		for i := range tObjs {
-			if namedCounter, ok := tObjs[i].(*nftlib.CounterObj); ok {
-				family := hlp.TableFamily2S(namedCounter.Table.Family)
-				if metric, err := prometheus.NewConstMetric(counterBytesDesc,
+			if namedCounter, _ := tObjs[i].(*nftlib.CounterObj); namedCounter != nil {
+				metric, e := prometheus.NewConstMetric(counterBytesDesc,
 					prometheus.CounterValue,
 					float64(namedCounter.Bytes),
 					namedCounter.Name,
-					namedCounter.Table.Name,
-					family); err == nil {
-					*mets = append(*mets, metric)
+					tKey.Name,
+					family,
+				)
+				if e != nil {
+					err = e
+					return false
 				}
-				if metric, err := prometheus.NewConstMetric(counterPacketsDesc,
+				mets = append(mets, metric)
+
+				metric, e = prometheus.NewConstMetric(counterPacketsDesc,
 					prometheus.CounterValue,
 					float64(namedCounter.Packets),
 					namedCounter.Name,
-					namedCounter.Table.Name,
-					family); err == nil {
-					*mets = append(*mets, metric)
+					tKey.Name,
+					family,
+				)
+				if e != nil {
+					err = e
+					return false
 				}
+				mets = append(mets, metric)
 			}
 		}
 		return true
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	cnf.Chains.Iterate(func(tKey conf.NfTableKey, tChains dkt.HDict[conf.NfChainKey, conf.NfChain]) bool {
+		if excludedTables.Contains(tKey) {
+			return true
+		}
 		tChains.Iterate(func(cKey conf.NfChainKey, c conf.NfChain) bool {
 			for _, rule := range c.Rules {
-				if parsedRule, err := parser.From(rule, cnf.Sets.At(tKey), log); err == nil {
-					*mets = append(*mets, metricsFromRule(parsedRule)...)
+				parsedRule, e := parser.From(rule, cnf.Sets.At(tKey), nil)
+				if e != nil {
+					err = e
+					return false
 				}
+				var m []prometheus.Metric
+				if m, e = metricsFromRule(parsedRule); e != nil {
+					err = e
+					return false
+				}
+				mets = append(mets, m...)
 			}
-
-			if metric, err := prometheus.NewConstMetric(chainRulesDesc,
+			metric, e := prometheus.NewConstMetric(chainRulesDesc,
 				prometheus.GaugeValue,
 				float64(len(c.Rules)),
 				c.Name,
 				hlp.TableFamily2S(c.Table.Family),
 				c.Table.Name,
 				strconv.FormatUint(c.Handle, 10),
-			); err == nil {
-				*mets = append(*mets, metric)
+			)
+			if e == nil {
+				mets = append(mets, metric)
 			}
-			return true
+			err = e
+			return e == nil
 		})
-		return true
+		return err == nil
 	})
+	if err != nil {
+		mets = nil
+	}
+	return mets, err
 }
 
-func metricsFromRule(parsedRule *parser.Rule) (mets []prometheus.Metric) {
+func metricsFromRule(parsedRule *parser.Rule) (mets []prometheus.Metric, err error) {
 	if parsedRule.Counter != nil {
 		inputInterfaces := arrayToTag(parsedRule.Interfaces.Input)
 		outputInterfaces := arrayToTag(parsedRule.Interfaces.Output)
@@ -90,7 +126,7 @@ func metricsFromRule(parsedRule *parser.Rule) (mets []prometheus.Metric) {
 		sourcePorts := arrayToTag(parsedRule.Ports.Source)
 		destinationPorts := arrayToTag(parsedRule.Ports.Destination)
 
-		if metric, err := prometheus.NewConstMetric(
+		metric, err := prometheus.NewConstMetric(
 			ruleBytesDesc,
 			prometheus.CounterValue,
 			parsedRule.Counter.Bytes,
@@ -106,10 +142,12 @@ func metricsFromRule(parsedRule *parser.Rule) (mets []prometheus.Metric) {
 			parsedRule.Comment,
 			parsedRule.Action,
 			parsedRule.Handle,
-		); err == nil {
-			mets = append(mets, metric)
+		)
+		if err != nil {
+			return nil, err
 		}
-		if metric, err := prometheus.NewConstMetric(
+		mets = append(mets, metric)
+		metric, err = prometheus.NewConstMetric(
 			rulePacketsDesc,
 			prometheus.CounterValue,
 			parsedRule.Counter.Packets,
@@ -125,11 +163,13 @@ func metricsFromRule(parsedRule *parser.Rule) (mets []prometheus.Metric) {
 			parsedRule.Comment,
 			parsedRule.Action,
 			parsedRule.Handle,
-		); err == nil {
-			mets = append(mets, metric)
+		)
+		if err != nil {
+			return nil, err
 		}
+		mets = append(mets, metric)
 	}
-	return mets
+	return mets, nil
 }
 
 func arrayToTag(values []string) string {

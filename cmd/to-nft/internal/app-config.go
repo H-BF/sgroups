@@ -132,8 +132,6 @@ const (
 	ProfileEnable config.ValueT[bool] = "telemetry/profile/enable"
 	// NftablesCollectorMinFrequency states how often to update cache with nft metrics
 	NftablesCollectorMinFrequency config.ValueT[time.Duration] = "telemetry/nft-collector/min-frequency"
-	// NftablesCollectorDumpFile allows dump debug info from nftables-collector, if empty dumping will be disabled
-	NftablesCollectorDumpFile config.ValueT[string] = "telemetry/nft-collector/dump-file"
 )
 
 type FqdnRulesStrategy string

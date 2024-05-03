@@ -2,13 +2,14 @@ package parser
 
 import (
 	"errors"
+	"strconv"
+
 	"github.com/H-BF/corlib/logger"
 	dkt "github.com/H-BF/sgroups/internal/dict"
 	"github.com/H-BF/sgroups/internal/nftables/conf"
 	hlp "github.com/H-BF/sgroups/internal/nftables/helpers"
 	"github.com/google/nftables"
 	"github.com/google/nftables/expr"
-	"strconv"
 )
 
 // Rule - parsed chain rule
@@ -40,6 +41,7 @@ type Counter struct {
 }
 
 func From(nfRule *nftables.Rule, sets dkt.HDict[string, conf.NfSet], log *logger.TypeOfLogger) (*Rule, error) {
+	//                                                               ^^^^^^^ убираем отсюда логер и ничего туту не логирум
 	r := Rule{
 		Chain:   nfRule.Chain.Name,
 		Family:  hlp.TableFamily2S(nfRule.Table.Family),
@@ -81,14 +83,7 @@ func From(nfRule *nftables.Rule, sets dkt.HDict[string, conf.NfSet], log *logger
 		case *expr.Meta:
 			parserCtx.parseMeta(v)
 		default:
-			debug(log, "*** Any{Type: %T}", e)
 		}
 	}
 	return &r, nil
-}
-
-func debug(log *logger.TypeOfLogger, fmtMsg string, args ...any) {
-	if log != nil {
-		log.Debugf(fmtMsg, args...)
-	}
 }

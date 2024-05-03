@@ -24,6 +24,7 @@ func setElems2Nets(setElems []nft.SetElement) ([]string, error) {
 			}
 			if len(interval) != 0 {
 				return nil, errors.New("two consecutive elements with IntervalEnd=true")
+				//          ^^^^^^^^ выносим в отд переменную
 			}
 			interval = el.Key
 			continue

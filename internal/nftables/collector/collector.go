@@ -108,7 +108,7 @@ func (c *nftCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func (c *nftCollector) gather() (ret []prometheus.Metric) {
+func (c *nftCollector) gather() []prometheus.Metric {
 	c.cached.Lock()
 	defer c.cached.Unlock()
 	if c.cached.at == nil || time.Since(*c.cached.at) >= c.minRefreshFreq {
@@ -117,17 +117,18 @@ func (c *nftCollector) gather() (ret []prometheus.Metric) {
 		var mets []prometheus.Metric
 		cnf, err := c.nftConfProvider.Fetch(c.ctx)
 		if err != nil {
-			c.logErr("nftables fetch state: %v", err)
+			c.logErr("on fetch 'nftables' state: %v", err)
 			v = 0
+		} else if mets, err = state2MetricsView(cnf); err != nil {
+			c.logErr("on construct metrics view: %v", err)
+			v, mets = 0, nil
 		}
-		fillFromState(cnf, &mets, c.log)
 		c.cached.at = &at
 		c.cached.metrics = append(
 			mets, prometheus.MustNewConstMetric(upDesc, prometheus.GaugeValue, v),
 		)
 	}
-	ret = c.cached.metrics
-	return ret
+	return c.cached.metrics
 }
 
 func (c *nftCollector) logErr(fmtMsg string, args ...any) {
