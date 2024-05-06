@@ -10,7 +10,6 @@ import (
 
 	hlp "github.com/H-BF/sgroups/internal/nftables/helpers"
 
-	nft "github.com/google/nftables"
 	"github.com/google/nftables/expr"
 	"golang.org/x/sys/unix"
 )
@@ -49,7 +48,7 @@ func (i idleState) parseMeta(meta *expr.Meta) {
 	case expr.MetaKeyIIFNAME:
 	case expr.MetaKeyOIFNAME:
 	default:
-		i.pctx.debug("unexpected Meta Key: %s", hlp.MetaKey2S(meta.Key))
+		//i.pctx.debug("unexpected Meta Key: %s", hlp.MetaKey2S(meta.Key))
 		// ^^^^^^ не логируем а отправляем внятную ошибку
 	}
 }
@@ -77,7 +76,7 @@ func (p parseNFProto) parseMeta(_ *expr.Meta) {
 func (p parseNFProto) parseCmp(cmp *expr.Cmp) {
 	if len(cmp.Data) != 1 {
 		p.pctx.setState(idleState{p.pctx})
-		p.pctx.debug("nfproto wrong bytes count: %d", len(cmp.Data))
+		//p.pctx.debug("nfproto wrong bytes count: %d", len(cmp.Data))
 		// ^^^^^^ не логируем а отправляем внятную ошибку
 		return
 	}
@@ -88,7 +87,7 @@ func (p parseNFProto) parseCmp(cmp *expr.Cmp) {
 		p.pctx.setState(parseAddr{p.pctx, net.IPv6len})
 	default:
 		p.pctx.setState(idleState{p.pctx})
-		p.pctx.debug("unexpected NFPROTO family: %s", hlp.TableFamily2S(nft.TableFamily(cmp.Data[0])))
+		//p.pctx.debug("unexpected NFPROTO family: %s", hlp.TableFamily2S(nft.TableFamily(cmp.Data[0])))
 		// ^^^^^^ не логируем а отправляем внятную ошибку
 	}
 }
@@ -112,7 +111,7 @@ func (p parseL4Proto) parseMeta(_ *expr.Meta) {
 func (p parseL4Proto) parseCmp(cmp *expr.Cmp) {
 	if len(cmp.Data) != 1 {
 		p.pctx.setState(idleState{p.pctx})
-		p.pctx.debug("l4proto wrong bytes count: %d", len(cmp.Data))
+		//p.pctx.debug("l4proto wrong bytes count: %d", len(cmp.Data))
 		return
 	}
 	switch cmp.Data[0] {
@@ -121,11 +120,11 @@ func (p parseL4Proto) parseCmp(cmp *expr.Cmp) {
 	case unix.IPPROTO_ICMP, unix.IPPROTO_ICMPV6:
 		// TODO: if we load `meta nftrace set 1 icmp type 100 drop` by nft cli then rule.Exprs will be differ
 		p.pctx.setState(&skipICMP{pctx: p.pctx})
-		p.pctx.debug("skiping icmp expressions")
+		//p.pctx.debug("skiping icmp expressions")
 		// ^^^^^^ не логируем а отправляем внятную ошибку
 	default:
 		p.pctx.setState(idleState{p.pctx})
-		p.pctx.debug("unexpected L4PROTO family: %v", cmp.Data)
+		//p.pctx.debug("unexpected L4PROTO family: %v", cmp.Data)
 		// ^^^^^^ не логируем а отправляем внятную ошибку
 	}
 }
@@ -184,7 +183,7 @@ func (p parseAddr) parseCmp(_ *expr.Cmp) {
 func (p parseAddr) parsePayload(payload *expr.Payload) {
 	if payload.Base != expr.PayloadBaseNetworkHeader {
 		p.pctx.setState(idleState{p.pctx})
-		p.pctx.debug("payload trying parse IP from wrong header")
+		//p.pctx.debug("payload trying parse IP from wrong header")
 		// ^^^^^^ не логируем а отправляем внятную ошибку
 		return
 	}
@@ -196,7 +195,7 @@ func (p parseAddr) parsePayload(payload *expr.Payload) {
 		case hlp.OffsetDAddrV4:
 			p.pctx.setState(matchAddr{p.pctx, p.ipVersion, &p.pctx.rule.Addresses.Destination})
 		default:
-			p.pctx.debug("unknown payload offset for ipv4 addr: %d", payload.Offset)
+			//p.pctx.debug("unknown payload offset for ipv4 addr: %d", payload.Offset)
 		}
 	case net.IPv6len:
 		switch payload.Offset {
@@ -205,7 +204,7 @@ func (p parseAddr) parsePayload(payload *expr.Payload) {
 		case hlp.OffsetDAddrV6:
 			p.pctx.setState(matchAddr{p.pctx, p.ipVersion, &p.pctx.rule.Addresses.Destination})
 		default:
-			p.pctx.debug("unknown payload offset for ipv6 addr: %d", payload.Offset)
+			//p.pctx.debug("unknown payload offset for ipv6 addr: %d", payload.Offset)
 			// ^^^^^^ не логируем а отправляем внятную ошибку
 		}
 	}
@@ -246,7 +245,7 @@ func (m matchAddr) parseLookup(lookup *expr.Lookup) {
 
 	set, ok := m.pctx.setsState.Get(lookup.SetName)
 	if !ok {
-		m.pctx.error("set not found: %s", lookup.SetName)
+		//m.pctx.error("set not found: %s", lookup.SetName)
 		// ^^^^^^ не логируем а отправляем внятную ошибку
 		return
 	}
@@ -257,7 +256,7 @@ func (m matchAddr) parseLookup(lookup *expr.Lookup) {
 
 	nets, err := setElems2Nets(set.Elements)
 	if err != nil {
-		m.pctx.debug("Lookup parse err: %v", err)
+		//m.pctx.debug("Lookup parse err: %v", err)
 		// ^^^^^^ не логируем а отправляем внятную ошибку
 	} else {
 		*m.arr = append(*m.arr, nets...)
@@ -314,7 +313,7 @@ func (m *matchPorts) parseLookup(lookup *expr.Lookup) {
 	}()
 	set, ok := m.pctx.setsState.Get(lookup.SetName)
 	if !ok {
-		m.pctx.error("set not found: %s", lookup.SetName)
+		//m.pctx.error("set not found: %s", lookup.SetName)
 		// ^^^^^^ не логируем а отправляем внятную ошибку
 		return
 	}
@@ -332,7 +331,7 @@ func (m *matchPorts) parseLookup(lookup *expr.Lookup) {
 		for _, el := range els {
 			if !el.IntervalEnd {
 				if len(interval) != 0 {
-					m.pctx.error("element with IntervalEnd=true not found")
+					//m.pctx.error("element with IntervalEnd=true not found")
 					// ^^^^^^ не логируем а отправляем внятную ошибку
 					break
 				}
@@ -380,7 +379,7 @@ func (m maybeMorePorts) parseLookup(_ *expr.Lookup) {
 func portsPayload(pctx *exprParserCtx, payload *expr.Payload, nextStateCb func(p *exprParserCtx) parserState) {
 	if payload.Base != expr.PayloadBaseTransportHeader {
 		pctx.setState(idleState{pctx})
-		pctx.error("payload trying parse ports from wrong header")
+		//pctx.error("payload trying parse ports from wrong header")
 		// ^^^^^^ не логируем а отправляем внятную ошибку
 		return
 	}
@@ -390,7 +389,7 @@ func portsPayload(pctx *exprParserCtx, payload *expr.Payload, nextStateCb func(p
 	case hlp.OffsetDPort:
 		pctx.setState(&matchPorts{pctx, &pctx.rule.Ports.Destination, nextStateCb})
 	default:
-		pctx.debug("unknown payload offset for ports: %d", payload.Offset)
+		//pctx.debug("unknown payload offset for ports: %d", payload.Offset)
 		// ^^^^^^ не логируем тут а отправляем внятную ошибку
 	}
 }

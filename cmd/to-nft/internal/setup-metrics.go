@@ -106,7 +106,7 @@ func (am *AgentMetrics) ObserveApplyConfig() {
 	am.appliedConfigCount.Inc()
 }
 
-func ifNetfilterMetricsCollector(ctx context.Context, logSource string, cons func(prometheus.Collector)) error {
+func ifNetfilterMetricsCollector(ctx context.Context, logSource string, consumer func(prometheus.Collector)) error {
 	nlConn, err := nftables.New()
 	if err != nil {
 		return err
@@ -123,6 +123,6 @@ func ifNetfilterMetricsCollector(ctx context.Context, logSource string, cons fun
 		nfmetrics.WithLogger(log),
 		nfmetrics.WithMinFrequency(minRefreshInterval),
 	)
-	cons(ret)
+	consumer(ret)
 	return nil
 }

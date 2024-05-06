@@ -6,8 +6,8 @@ import (
 
 	dkt "github.com/H-BF/sgroups/internal/dict"
 	"github.com/H-BF/sgroups/internal/nftables/conf"
+	"github.com/H-BF/sgroups/internal/nftables/conf/view"
 	hlp "github.com/H-BF/sgroups/internal/nftables/helpers"
-	"github.com/H-BF/sgroups/internal/nftables/parser"
 
 	nftlib "github.com/google/nftables"
 	"github.com/prometheus/client_golang/prometheus"
@@ -83,13 +83,13 @@ func state2MetricsView(cnf conf.StateOfNFTables) (mets []prometheus.Metric, err 
 		}
 		tChains.Iterate(func(cKey conf.NfChainKey, c conf.NfChain) bool {
 			for _, rule := range c.Rules {
-				parsedRule, e := parser.From(rule, cnf.Sets.At(tKey), nil)
+				ruleView, e := view.From(rule, cnf.Sets.At(tKey))
 				if e != nil {
 					err = e
 					return false
 				}
 				var m []prometheus.Metric
-				if m, e = metricsFromRule(parsedRule); e != nil {
+				if m, e = metricsFromRule(ruleView); e != nil {
 					err = e
 					return false
 				}
@@ -117,31 +117,31 @@ func state2MetricsView(cnf conf.StateOfNFTables) (mets []prometheus.Metric, err 
 	return mets, err
 }
 
-func metricsFromRule(parsedRule *parser.Rule) (mets []prometheus.Metric, err error) {
-	if parsedRule.Counter != nil {
-		inputInterfaces := arrayToTag(parsedRule.Interfaces.Input)
-		outputInterfaces := arrayToTag(parsedRule.Interfaces.Output)
-		sourceAddresses := arrayToTag(parsedRule.Addresses.Source)
-		destinationAddresses := arrayToTag(parsedRule.Addresses.Destination)
-		sourcePorts := arrayToTag(parsedRule.Ports.Source)
-		destinationPorts := arrayToTag(parsedRule.Ports.Destination)
+func metricsFromRule(ruleView *view.RuleView) (mets []prometheus.Metric, err error) {
+	if ruleView.Counter != nil {
+		inputInterfaces := arrayToTag(ruleView.Interfaces.Input)
+		outputInterfaces := arrayToTag(ruleView.Interfaces.Output)
+		sourceAddresses := arrayToTag(ruleView.Addresses.Source)
+		destinationAddresses := arrayToTag(ruleView.Addresses.Destination)
+		sourcePorts := arrayToTag(ruleView.Ports.Source)
+		destinationPorts := arrayToTag(ruleView.Ports.Destination)
 
 		metric, err := prometheus.NewConstMetric(
 			ruleBytesDesc,
 			prometheus.CounterValue,
-			parsedRule.Counter.Bytes,
-			parsedRule.Chain,
-			parsedRule.Family,
-			parsedRule.Table,
+			ruleView.Counter.Bytes,
+			ruleView.Chain,
+			ruleView.Family,
+			ruleView.Table,
 			inputInterfaces,
 			outputInterfaces,
 			sourceAddresses,
 			destinationAddresses,
 			sourcePorts,
 			destinationPorts,
-			parsedRule.Comment,
-			parsedRule.Action,
-			parsedRule.Handle,
+			ruleView.Comment,
+			ruleView.Action,
+			ruleView.Handle,
 		)
 		if err != nil {
 			return nil, err
@@ -150,19 +150,19 @@ func metricsFromRule(parsedRule *parser.Rule) (mets []prometheus.Metric, err err
 		metric, err = prometheus.NewConstMetric(
 			rulePacketsDesc,
 			prometheus.CounterValue,
-			parsedRule.Counter.Packets,
-			parsedRule.Chain,
-			parsedRule.Family,
-			parsedRule.Table,
+			ruleView.Counter.Packets,
+			ruleView.Chain,
+			ruleView.Family,
+			ruleView.Table,
 			inputInterfaces,
 			outputInterfaces,
 			sourceAddresses,
 			destinationAddresses,
 			sourcePorts,
 			destinationPorts,
-			parsedRule.Comment,
-			parsedRule.Action,
-			parsedRule.Handle,
+			ruleView.Comment,
+			ruleView.Action,
+			ruleView.Handle,
 		)
 		if err != nil {
 			return nil, err
