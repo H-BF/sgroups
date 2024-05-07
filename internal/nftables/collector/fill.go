@@ -83,7 +83,7 @@ func state2MetricsView(cnf conf.StateOfNFTables) (mets []prometheus.Metric, err 
 		}
 		tChains.Iterate(func(cKey conf.NfChainKey, c conf.NfChain) bool {
 			for _, rule := range c.Rules {
-				ruleView, e := view.From(rule, cnf.Sets.At(tKey))
+				ruleView, e := view.NewRuleView(rule, cnf.Sets.At(tKey))
 				if e != nil {
 					err = e
 					return false
@@ -118,6 +118,12 @@ func state2MetricsView(cnf conf.StateOfNFTables) (mets []prometheus.Metric, err 
 }
 
 func metricsFromRule(ruleView *view.RuleView) (mets []prometheus.Metric, err error) {
+	arrayToTag := func(values []string) string {
+		if len(values) == 0 {
+			return "any"
+		}
+		return strings.Join(values, ",")
+	}
 	if ruleView.Counter != nil {
 		inputInterfaces := arrayToTag(ruleView.Interfaces.Input)
 		outputInterfaces := arrayToTag(ruleView.Interfaces.Output)
@@ -170,11 +176,4 @@ func metricsFromRule(ruleView *view.RuleView) (mets []prometheus.Metric, err err
 		mets = append(mets, metric)
 	}
 	return mets, nil
-}
-
-func arrayToTag(values []string) string {
-	if len(values) == 0 {
-		return "any"
-	}
-	return strings.Join(values, ",")
 }

@@ -21,6 +21,7 @@ type RuleView struct {
 		Destination []string
 	}
 	*Counter
+	//^^^^^^ тут лучше вместо *Counter исп  Counter option.ValueOf[Counter]
 }
 
 type Counter struct {

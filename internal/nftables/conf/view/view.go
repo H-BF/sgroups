@@ -12,13 +12,10 @@ import (
 	"github.com/google/nftables/expr"
 )
 
-func From(nfRule *nftables.Rule, sets dkt.HDict[string, conf.NfSet]) (*RuleView, error) {
+func NewRuleView(nfRule *nftables.Rule, sets dkt.HDict[string, conf.NfSet]) (*RuleView, error) {
 	visitor := newViewVisitor(nfRule)
-	if err := visitor.visit(sets); err != nil {
-		return nil, err
-	}
-
-	return visitor.view, nil
+	err := visitor.visit(sets)
+	return visitor.view, err
 }
 
 // для этой задачи анализ очередного Expression не может быть выполнен без учета предыдущих элементов, таким образом
@@ -33,7 +30,7 @@ type viewVisitor struct {
 }
 
 func newViewVisitor(nfRule *nftables.Rule) viewVisitor {
-	view := RuleView{
+	view := &RuleView{
 		Chain:   nfRule.Chain.Name,
 		Family:  hlp.TableFamily2S(nfRule.Table.Family),
 		Table:   nfRule.Table.Name,
@@ -41,7 +38,7 @@ func newViewVisitor(nfRule *nftables.Rule) viewVisitor {
 		Action:  "policy",
 		Handle:  strconv.FormatUint(nfRule.Handle, 10),
 	}
-	return viewVisitor{initialVisitor{&view}, &view, nfRule}
+	return viewVisitor{initialVisitor{view}, view, nfRule}
 }
 
 func (v *viewVisitor) visit(sets dkt.HDict[string, conf.NfSet]) error {

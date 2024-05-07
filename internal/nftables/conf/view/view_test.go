@@ -178,7 +178,7 @@ func TestFrom(t *testing.T) {
 	}
 
 	for i, c := range cases {
-		got, err := From(c.nlRule, c.setsConf)
+		got, err := NewRuleView(c.nlRule, c.setsConf)
 		if !c.err {
 			require.NoErrorf(t, err, "TestNl2rule: testcase %d failed", i)
 		} else {
