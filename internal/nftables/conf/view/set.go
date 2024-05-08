@@ -15,6 +15,10 @@ var (
 	errBadInterval          = errors.New("two consecutive elements with IntervalEnd=true")
 )
 
+const (
+	bitsByte = 8
+)
+
 func setElems2Nets(setElems []nft.SetElement) ([]string, error) {
 	var res []string
 	var interval []byte
@@ -47,7 +51,7 @@ func netFromTwoIP(start, end net.IP) (string, error) {
 	sInt, eInt := iplib.IPToBigint(start), iplib.IPToBigint(end)
 	var res big.Int
 	if res.Sub(eInt, sInt).Int64() == 1 { // there is host address
-		return net.IP(start).String(), nil
+		return start.String(), nil
 	}
 	// otherwise there is subnet
 	mask, err := findCommonLongestMask(start, end)
@@ -56,7 +60,7 @@ func netFromTwoIP(start, end net.IP) (string, error) {
 	}
 	newNet := net.IPNet{
 		IP:   start,
-		Mask: net.CIDRMask(mask, len(start)*8),
+		Mask: net.CIDRMask(mask, len(start)*bitsByte),
 	}
 	return newNet.String(), nil
 }
@@ -72,7 +76,7 @@ func findCommonLongestMask(a, b net.IP) (int, error) {
 		xor := a[i] ^ b[i]
 		commonPrefix := bits.LeadingZeros8(xor)
 		ret += commonPrefix
-		if commonPrefix != 8 {
+		if commonPrefix != bitsByte {
 			break
 		}
 	}

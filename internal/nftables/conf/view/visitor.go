@@ -35,9 +35,9 @@ var _ ruleExprVisitor = (*initialVisitor)(nil)
 func (i initialVisitor) visitMeta(meta *expr.Meta) (ruleExprVisitor, error) {
 	switch meta.Key {
 	case expr.MetaKeyNFPROTO:
-		return nfProtoVisitor{i.view}, nil
+		return nfProtoVisitor(i), nil
 	case expr.MetaKeyL4PROTO:
-		return l4ProtoVisitor{i.view}, nil
+		return l4ProtoVisitor(i), nil
 	case expr.MetaKeyIIFNAME:
 	case expr.MetaKeyOIFNAME:
 	default:
@@ -109,12 +109,12 @@ func (p l4ProtoVisitor) visitCmp(cmp *expr.Cmp) (ruleExprVisitor, error) {
 	}
 	switch cmp.Data[0] {
 	case unix.IPPROTO_TCP, unix.IPPROTO_UDP:
-		return detectPortsVisitor{p.view}, nil
+		return detectPortsVisitor(p), nil
 	case unix.IPPROTO_ICMP, unix.IPPROTO_ICMPV6:
 		// TODO: if we load `meta nftrace set 1 icmp type 100 drop` by nft cli then rule.Exprs will be differ
 		return skipICMPVisitor{view: p.view}, nil
 	default:
-		return initialVisitor{p.view}, nil
+		return initialVisitor(p), nil
 	}
 }
 
@@ -260,7 +260,7 @@ func (p detectPortsVisitor) visitCmp(_ *expr.Cmp) (ruleExprVisitor, error) {
 
 func (p detectPortsVisitor) visitPayload(payload *expr.Payload) (ruleExprVisitor, error) {
 	return portsPayload(payload, p.view, func() ruleExprVisitor {
-		return maybeMorePortsVisitor{p.view}
+		return maybeMorePortsVisitor(p)
 	})
 }
 
@@ -352,7 +352,7 @@ func (m maybeMorePortsVisitor) visitCmp(_ *expr.Cmp) (ruleExprVisitor, error) {
 
 func (m maybeMorePortsVisitor) visitPayload(payload *expr.Payload) (ruleExprVisitor, error) {
 	return portsPayload(payload, m.view, func() ruleExprVisitor {
-		return initialVisitor{m.view}
+		return initialVisitor(m)
 	})
 }
 

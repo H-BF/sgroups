@@ -5,6 +5,7 @@ package conf
 
 import (
 	"context"
+
 	nftlib "github.com/google/nftables"
 )
 
