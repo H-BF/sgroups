@@ -7,6 +7,7 @@ import (
 	dkt "github.com/H-BF/sgroups/internal/dict"
 	"github.com/H-BF/sgroups/internal/nftables/conf"
 	hlp "github.com/H-BF/sgroups/internal/nftables/helpers"
+	"github.com/H-BF/sgroups/pkg/option"
 
 	"github.com/google/nftables"
 	"github.com/google/nftables/expr"
@@ -18,11 +19,6 @@ func NewRuleView(nfRule *nftables.Rule, sets dkt.HDict[string, conf.NfSet]) (*Ru
 	return visitor.view, err
 }
 
-// для этой задачи анализ очередного Expression не может быть выполнен без учета предыдущих элементов, таким образом
-// нужно анализировать их группами
-// решением будет использовать два паттерна: Посетитель и Состояние
-// viewVisitor реализует этот подход, проходя по коллекции и переключая свое состояние на основании
-// возвращенного значения из конкретной реализации Посетителя
 type viewVisitor struct {
 	delegate ruleExprVisitor
 	view     *RuleView
@@ -46,12 +42,14 @@ func (v *viewVisitor) visit(sets dkt.HDict[string, conf.NfSet]) error {
 		// TODO: extract rule comments
 		switch value := e.(type) {
 		case *expr.Counter:
-			if v.view.Counter != nil {
+			if _, ok := v.view.Counter.Maybe(); ok {
 				return errors.New("counter already exists")
 			}
-			v.view.Counter = new(Counter)
-			v.view.Counter.Bytes = float64(value.Bytes)
-			v.view.Counter.Packets = float64(value.Packets)
+			counter := Counter{
+				Bytes:   float64(value.Bytes),
+				Packets: float64(value.Packets),
+			}
+			v.view.Counter = option.MustNewOption(counter)
 		case *expr.Lookup:
 			if err := v.visitLookup(value, sets); err != nil {
 				return err

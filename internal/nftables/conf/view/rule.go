@@ -1,5 +1,7 @@
 package view
 
+import "github.com/H-BF/sgroups/pkg/option"
+
 // RuleView - view of rule from netlink
 type RuleView struct {
 	Chain      string
@@ -20,8 +22,7 @@ type RuleView struct {
 		Source      []string
 		Destination []string
 	}
-	*Counter
-	//^^^^^^ тут лучше вместо *Counter исп  Counter option.ValueOf[Counter]
+	Counter option.ValueOf[Counter]
 }
 
 type Counter struct {

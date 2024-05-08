@@ -124,7 +124,7 @@ func metricsFromRule(ruleView *view.RuleView) (mets []prometheus.Metric, err err
 		}
 		return strings.Join(values, ",")
 	}
-	if ruleView.Counter != nil {
+	if counter, ok := ruleView.Counter.Maybe(); ok {
 		inputInterfaces := arrayToTag(ruleView.Interfaces.Input)
 		outputInterfaces := arrayToTag(ruleView.Interfaces.Output)
 		sourceAddresses := arrayToTag(ruleView.Addresses.Source)
@@ -135,7 +135,7 @@ func metricsFromRule(ruleView *view.RuleView) (mets []prometheus.Metric, err err
 		metric, err := prometheus.NewConstMetric(
 			ruleBytesDesc,
 			prometheus.CounterValue,
-			ruleView.Counter.Bytes,
+			counter.Bytes,
 			ruleView.Chain,
 			ruleView.Family,
 			ruleView.Table,
@@ -156,7 +156,7 @@ func metricsFromRule(ruleView *view.RuleView) (mets []prometheus.Metric, err err
 		metric, err = prometheus.NewConstMetric(
 			rulePacketsDesc,
 			prometheus.CounterValue,
-			ruleView.Counter.Packets,
+			counter.Packets,
 			ruleView.Chain,
 			ruleView.Family,
 			ruleView.Table,

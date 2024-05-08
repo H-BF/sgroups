@@ -7,6 +7,7 @@ import (
 	dkt "github.com/H-BF/sgroups/internal/dict"
 	"github.com/H-BF/sgroups/internal/nftables/conf"
 	hlp "github.com/H-BF/sgroups/internal/nftables/helpers"
+	"github.com/H-BF/sgroups/pkg/option"
 
 	nft "github.com/google/nftables"
 	"github.com/google/nftables/expr"
@@ -433,9 +434,9 @@ func createWantedRule(aSrc, aDest, pSrc, pDest []string, action string) *RuleVie
 			Source:      pSrc,
 			Destination: pDest,
 		},
-		Counter: &Counter{
+		Counter: option.MustNewOption(Counter{
 			Bytes:   1000,
 			Packets: 5,
-		},
+		}),
 	}
 }
