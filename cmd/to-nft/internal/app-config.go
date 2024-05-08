@@ -47,7 +47,6 @@ telemetry:
   useragent: "string"
   nft-collector:
 	min-frequency: 1s
-	dump-file: "string"
   endpoint: 127.0.0.1:5000
   metrics:
     enable: true
