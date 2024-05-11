@@ -42,7 +42,7 @@ jobs:
           context: .
           file: ./Dockerfile.sgroups
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/sgroups:${{ github.head_ref || github.ref_name }}-${{ steps.short-sha.outputs.sha }}
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/sgroups.server:${{ github.head_ref || github.ref_name }}-${{ steps.short-sha.outputs.sha }}
 
       - name: Build and push terraform
         uses: docker/build-push-action@v5
