@@ -77,6 +77,9 @@ func main() {
 
 func init() {
 	if false {
+		os.Setenv("SG_SERVER_API-PATH-PREFIX", "/abc")
+	}
+	if false {
 		//const pre = `./../../bin`
 		const pre = `.`
 		os.Setenv("SG_AUTHN_TYPE", string(config.AuthnTypeTLS))
