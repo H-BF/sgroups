@@ -11,7 +11,7 @@ func Test_Path(t *testing.T) {
 		src   string
 		valid bool
 	}
-	cases := []item{
+	cases := [...]item{
 		{"", true},
 		{" ", false},
 		{".", false},
@@ -19,17 +19,17 @@ func Test_Path(t *testing.T) {
 		{"...", false},
 		{".../", false},
 		{"/.../", false},
-		{"/.x../", false},
+		{"/.x../", true},
 		{".x../", true},
-		{"/", false},
+		{"/", true},
 		{"a", true},
 		{" a", false},
 		{"a ", false},
-		{"/a", false},
+		{"/a", true},
 		{"a/", true},
-		{"/a/", false},
+		{"/a/", true},
 		{"a/b", true},
-		{"/a/b", false},
+		{"/a/b", true},
 		{"a/b/", true},
 		{"a//b/", false},
 		{`a/\b/`, false},

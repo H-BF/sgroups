@@ -9,10 +9,10 @@ import (
 	"sort"
 	"strconv"
 
-	dkt "github.com/H-BF/sgroups/internal/dict"
 	"github.com/H-BF/sgroups/internal/nftables/conf"
 	hlp "github.com/H-BF/sgroups/internal/nftables/helpers"
 
+	dkt "github.com/H-BF/corlib/pkg/dict"
 	nft "github.com/google/nftables"
 	"github.com/google/nftables/expr"
 	"golang.org/x/sys/unix"

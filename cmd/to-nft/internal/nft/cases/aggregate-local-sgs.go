@@ -6,13 +6,13 @@ import (
 	"sort"
 	"sync"
 
-	sgAPI "github.com/H-BF/protos/pkg/api/sgroups"
 	conv "github.com/H-BF/sgroups/internal/api/sgroups"
-	"github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
+	"github.com/H-BF/corlib/pkg/dict"
 	"github.com/H-BF/corlib/pkg/parallel"
 	"github.com/H-BF/corlib/pkg/slice"
+	sgAPI "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/c-robinson/iplib"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"

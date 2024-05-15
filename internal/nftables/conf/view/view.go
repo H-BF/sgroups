@@ -4,11 +4,11 @@ import (
 	"errors"
 	"strconv"
 
-	dkt "github.com/H-BF/sgroups/internal/dict"
 	"github.com/H-BF/sgroups/internal/nftables/conf"
 	hlp "github.com/H-BF/sgroups/internal/nftables/helpers"
 	"github.com/H-BF/sgroups/pkg/option"
 
+	dkt "github.com/H-BF/corlib/pkg/dict"
 	"github.com/google/nftables"
 	"github.com/google/nftables/expr"
 )

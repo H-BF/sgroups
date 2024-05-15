@@ -9,6 +9,7 @@ import (
 	grpc_client "github.com/H-BF/sgroups/internal/grpc"
 
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/credentials"
 )
 
 // SGClient is an alias to 'sgAPI.ClosableClient'
@@ -37,8 +38,13 @@ func NewSGClient(ctx context.Context) (ret *SGClient, err error) {
 	if err != nil {
 		return nil, err
 	}
+	var creds credentials.TransportCredentials
+	if creds, err = makeSgroupsClientCreds(ctx); err != nil {
+		return nil, err
+	}
 	bld := grpc_client.ClientFromAddress(addr).
 		WithDialDuration(dialDuration).
+		WithCreds(creds).
 		WithUserAgent(UserAgent.MustValue(ctx))
 	if v, e := SGroupsUseJsonCodec.Value(ctx); e == nil && v {
 		bld = bld.WithDefaultCodecByName(grpc_client.JsonCodecName)

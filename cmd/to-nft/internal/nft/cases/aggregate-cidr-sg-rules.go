@@ -3,11 +3,11 @@ package cases
 import (
 	"context"
 
-	sgAPI "github.com/H-BF/protos/pkg/api/sgroups"
 	conv "github.com/H-BF/sgroups/internal/api/sgroups"
-	"github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
+	"github.com/H-BF/corlib/pkg/dict"
+	sgAPI "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/pkg/errors"
 )
 
