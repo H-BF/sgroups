@@ -14,11 +14,11 @@ import (
 	"github.com/H-BF/sgroups/cmd/to-nft/internal"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
 	"github.com/H-BF/sgroups/internal/config"
-	di "github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
 	"github.com/H-BF/corlib/logger"
 	"github.com/H-BF/corlib/pkg/backoff"
+	di "github.com/H-BF/corlib/pkg/dict"
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/c-robinson/iplib"
 	nftLib "github.com/google/nftables"

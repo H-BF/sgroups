@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
+
+	"github.com/H-BF/corlib/pkg/dict"
 	"github.com/stretchr/testify/suite"
 )
 

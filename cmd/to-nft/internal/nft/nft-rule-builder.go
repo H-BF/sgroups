@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"net"
 
-	di "github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
+	di "github.com/H-BF/corlib/pkg/dict"
 	"github.com/c-robinson/iplib"
 	nftLib "github.com/google/nftables"
 	. "github.com/google/nftables/binaryutil"

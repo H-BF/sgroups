@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
-	"github.com/H-BF/sgroups/internal/dict"
 
+	"github.com/H-BF/corlib/pkg/dict"
 	"github.com/H-BF/protos/pkg/api/common"
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/hashicorp/terraform-plugin-framework/diag"

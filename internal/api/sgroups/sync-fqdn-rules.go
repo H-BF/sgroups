@@ -1,10 +1,10 @@
 package sgroups
 
 import (
-	"github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 
+	"github.com/H-BF/corlib/pkg/dict"
 	sg "github.com/H-BF/protos/pkg/api/sgroups"
 )
 

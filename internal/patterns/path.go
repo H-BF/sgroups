@@ -32,7 +32,7 @@ func (p Path) IsEmpty() bool {
 
 // Set assigns value
 func (p *Path) Set(s string) error {
-	if !rePathValidator.MatchString(s) || reDots.MatchString(s) {
+	if !rePathValidator.MatchString(s) {
 		return ErrBadPath{V: s}
 	}
 	if n := len(s); n > 0 && s[n-1] == '/' {
@@ -44,6 +44,5 @@ func (p *Path) Set(s string) error {
 }
 
 var (
-	rePathValidator = regexp.MustCompile(`^(([^\s/\\]+)/?)*$`)
-	reDots          = regexp.MustCompile(`(?:^|[/\\])\.{1,}(?:[/\\]|$)`)
+	rePathValidator = regexp.MustCompile(`^/?((?:\.*[^\s\\/\.]+\.*)+/?)*$`)
 )

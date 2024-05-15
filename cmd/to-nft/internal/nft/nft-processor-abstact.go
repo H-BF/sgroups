@@ -8,12 +8,12 @@ import (
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
 	"github.com/H-BF/sgroups/internal/config"
-	"github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
+
+	"github.com/H-BF/corlib/pkg/dict"
+	"github.com/c-robinson/iplib"
 	nftlib "github.com/google/nftables"
 	"github.com/pkg/errors"
-
-	"github.com/c-robinson/iplib"
 	uuid "github.com/satori/go.uuid"
 )
 

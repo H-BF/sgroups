@@ -106,6 +106,12 @@ func (bld clientConnBuilder) WithPathPrefix(p string) clientConnBuilder {
 	return bld
 }
 
+// WithCreds -
+func (bld clientConnBuilder) WithCreds(creds credentials.TransportCredentials) clientConnBuilder {
+	bld.creds = creds
+	return bld
+}
+
 // NewConn makes new grpc client conn && ipml 'ClientConnProvider'
 func (bld clientConnBuilder) New(ctx context.Context) (ClientConn, error) {
 	const api = "grpc/new-client-conn"
@@ -113,7 +119,6 @@ func (bld clientConnBuilder) New(ctx context.Context) (ClientConn, error) {
 	var (
 		err                error
 		endpoint           string
-		dialOpts           []grpc.DialOption
 		c                  ClientConn
 		streamInterceptors []grpc.StreamClientInterceptor
 		unaryInterceptors  []grpc.UnaryClientInterceptor
@@ -122,10 +127,13 @@ func (bld clientConnBuilder) New(ctx context.Context) (ClientConn, error) {
 	if endpoint, err = bld.endpoint(); err != nil {
 		return nil, errors.WithMessage(err, api)
 	}
-	if bld.creds == nil {
-		bld.creds = insecure.NewCredentials()
+	creds := bld.creds
+	if creds == nil {
+		creds = insecure.NewCredentials()
 	}
-	dialOpts = append(dialOpts, grpc.WithTransportCredentials(bld.creds))
+	dialOpts := []grpc.DialOption{
+		grpc.WithTransportCredentials(creds),
+	}
 	if dialDuration := bld.dialDuration; dialDuration <= 0 {
 		dialOpts = append(dialOpts, grpc.WithReturnConnectionError())
 	} else {

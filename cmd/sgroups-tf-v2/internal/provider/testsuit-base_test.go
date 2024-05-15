@@ -50,9 +50,23 @@ func (sui *baseResourceTests) SetupSuite() {
 provider "sgroups" {
 	address = ` + fmt.Sprintf("%q", sui.servAddr) + `
 	dial_duration = "15s"
-	use_json_codec = true
+	use_json_codec = true	
 }
 `
+	/*// maybe test later
+		authn = {
+			tls = {
+				cert = {
+					key_file = "./../../../../bin/tls/server-key.pem"
+					cert_file = "./../../../../bin/tls/server-cert.pem"
+				}
+				server_verify = {
+					server_name = "srv1"
+					root_ca_files = ["./../../../../bin/tls/ca-cert.pem"]
+				}
+			}
+	    }
+	*/
 	con, err := g.ClientFromAddress(sui.servAddr).New(sui.ctx)
 	sui.Require().NoError(err)
 	sui.sgClient = sgAPI.NewClient(con)

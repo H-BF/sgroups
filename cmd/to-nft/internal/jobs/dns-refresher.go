@@ -7,13 +7,13 @@ import (
 	"time"
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal"
-	"github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
-	"github.com/H-BF/sgroups/internal/queue"
 
 	"github.com/H-BF/corlib/logger"
+	"github.com/H-BF/corlib/pkg/dict"
 	"github.com/H-BF/corlib/pkg/jsonview"
 	"github.com/H-BF/corlib/pkg/patterns/observer"
+	"github.com/H-BF/corlib/pkg/queue"
 	"github.com/c-robinson/iplib"
 	"github.com/pkg/errors"
 )

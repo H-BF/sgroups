@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"errors"
 
 	"github.com/H-BF/sgroups/internal/api/sgroups"
 	"github.com/H-BF/sgroups/internal/app"
@@ -13,6 +12,7 @@ import (
 	"github.com/H-BF/corlib/server/interceptors"
 	serverPrometheusMetrics "github.com/H-BF/corlib/server/metrics/prometheus"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -87,5 +87,17 @@ func setupSgServer(ctx context.Context) (*server.APIServer, error) {
 	}
 	opts = append(opts, server.WithHttpHandler("/"+HandleDebug, app.PProfHandler()))
 
+	err = whenAuthn(ctx, func(at authnType) error {
+		switch a := at.(type) {
+		case authnTLS:
+			opts = append(opts, server.WithTLS(a.conf))
+		default:
+			return errors.Errorf("unsupported autn '%T'", a)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
 	return server.NewAPIServer(opts...)
 }

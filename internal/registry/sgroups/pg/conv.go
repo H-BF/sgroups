@@ -4,11 +4,10 @@ import (
 	"math"
 	"strings"
 
-	"github.com/H-BF/sgroups/internal/dict"
 	sgm "github.com/H-BF/sgroups/internal/models/sgroups"
 
+	"github.com/H-BF/corlib/pkg/dict"
 	"github.com/H-BF/corlib/pkg/ranges"
-
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/pkg/errors"
 )

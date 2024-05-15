@@ -3,3 +3,4 @@ vendor
 .vscode
 bin
 deploy/rpm/artifacts
+test.*.yaml

@@ -5,8 +5,8 @@ import (
 	"regexp"
 	"unsafe"
 
+	"github.com/H-BF/corlib/pkg/dict"
 	"github.com/H-BF/corlib/pkg/ranges"
-	"github.com/H-BF/sgroups/internal/dict"
 	oz "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/pkg/errors"
 )

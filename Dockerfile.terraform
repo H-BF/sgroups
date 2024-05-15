@@ -1,0 +1,35 @@
+# first build stage
+# by default uses alpine-based image
+# golang 1.20
+# alpine 3.17
+# arch linux/amd64
+FROM golang:1.20-alpine3.17 as builder
+
+# copy all source code for build
+WORKDIR /src
+COPY . .
+
+# install updates and build executable
+RUN apk upgrade --no-cache && \
+    apk add make && \
+    make sgroups-tf-v2 platform=linux/amd64
+
+# alpine 3.17
+# arch linux/amd64
+FROM alpine:3.17
+
+# create user other than root and install updated
+RUN addgroup -g 101 app && \
+    adduser -H -u 101 -G app -s /bin/sh -D app && \
+    apk update --no-cache && \
+    apk upgrade --no-cache 
+
+# place all necessary executables and other files into /app directory
+WORKDIR /app/
+RUN mkdir -p /app/bin
+COPY --from=builder --chown=app:app /src/bin/ /app/bin/
+
+# run container as new non-root user
+USER app
+
+CMD ["/app/bin/sgroups"]
