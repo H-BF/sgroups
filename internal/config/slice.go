@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func typeCastSliceT[T any](data any) ([]T, error) {
+func typeCastSliceT[T any](data any) ([]T, error) { //nolint:dupl
 	var ret []T
 	var err error
 	switch v := data.(type) {

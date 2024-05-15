@@ -168,7 +168,7 @@ func (s *sgroupsProvider) Configure(ctx context.Context, req provider.ConfigureR
 		if !(raw.TLS.IsNull() || raw.TLS.IsUnknown()) {
 			di = raw.TLS.As(ctx, &tlsConf, basetypes.ObjectAsOptions{})
 			if !di.HasError() {
-				creds, di = tlsConf.creads(ctx)
+				creds, di = tlsConf.creds(ctx)
 			}
 		}
 		if di.HasError() {
@@ -257,9 +257,9 @@ func (s *sgroupsProvider) tlsAuthnSchema() schema.Attribute {
 	}
 }
 
-func (tlsc tlsAuthnCongig) creads(ctx context.Context) (creds client.TransportCredentials, diags diag.Diagnostics) {
+func (tlsc tlsAuthnCongig) creds(ctx context.Context) (creds client.TransportCredentials, diags diag.Diagnostics) {
 	tlsConf := tls.Config{
-		InsecureSkipVerify: true,
+		InsecureSkipVerify: true, //nolint:gosec
 	}
 	var di diag.Diagnostics
 	if crt := tlsc.Cert; !(crt.IsNull() || crt.IsUnknown()) {

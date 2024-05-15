@@ -14,7 +14,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func makeSgroupsClientCreds(ctx context.Context) (creds credentials.TransportCredentials, err error) {
+func makeSgroupsClientCreds(ctx context.Context) (creds credentials.TransportCredentials, err error) { //nolint:gocyclo
 	defer func() {
 		err = errors.WithMessage(err, "make SGroups client creds")
 	}()
