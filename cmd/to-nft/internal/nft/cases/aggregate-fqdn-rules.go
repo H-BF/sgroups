@@ -4,12 +4,12 @@ import (
 	"context"
 	"sync"
 
-	"github.com/H-BF/corlib/pkg/parallel"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal"
 	conv "github.com/H-BF/sgroups/internal/api/sgroups"
-	"github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
+	"github.com/H-BF/corlib/pkg/dict"
+	"github.com/H-BF/corlib/pkg/parallel"
 	sgAPI "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/pkg/errors"

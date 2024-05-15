@@ -8,8 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/H-BF/sgroups/internal/dict"
 	"github.com/H-BF/sgroups/pkg/atomic"
+
+	"github.com/H-BF/corlib/pkg/dict"
 )
 
 // NewDomainAddressQuerierCache -

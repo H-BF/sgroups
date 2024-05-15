@@ -8,7 +8,6 @@ require (
 	github.com/ahmetb/go-linq/v3 v3.2.0
 	github.com/c-robinson/iplib v1.0.6
 	github.com/cenkalti/backoff/v4 v4.1.3
-	github.com/emirpasic/gods v1.18.1
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/google/nftables v0.3.3
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
@@ -32,7 +31,6 @@ require (
 	github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df
 	go.uber.org/multierr v1.8.0
 	go.uber.org/zap v1.22.0
-	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842
 	golang.org/x/sys v0.20.0
 	golang.org/x/text v0.15.0
 	google.golang.org/grpc v1.62.1
@@ -59,6 +57,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cloudflare/circl v1.3.3 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/go-chi/chi v1.5.4 // indirect
@@ -134,6 +133,7 @@ require (
 	go.opentelemetry.io/proto/otlp v0.18.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	golang.org/x/crypto v0.23.0 // indirect
+	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842 // indirect
 	golang.org/x/mod v0.17.0 // indirect
 	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect

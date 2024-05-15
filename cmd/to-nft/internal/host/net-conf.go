@@ -6,9 +6,9 @@ import (
 	"net"
 	"sort"
 
-	"github.com/H-BF/sgroups/internal/dict"
 	"github.com/H-BF/sgroups/pkg/nl"
 
+	"github.com/H-BF/corlib/pkg/dict"
 	"github.com/H-BF/corlib/pkg/slice"
 	"github.com/c-robinson/iplib"
 )

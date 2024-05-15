@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/host"
-	"github.com/H-BF/sgroups/internal/dict"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
 	"github.com/H-BF/corlib/logger"
+	"github.com/H-BF/corlib/pkg/dict"
 	"github.com/pkg/errors"
 )
 

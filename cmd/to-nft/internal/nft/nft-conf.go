@@ -6,8 +6,7 @@ package nft
 import (
 	"fmt"
 
-	dkt "github.com/H-BF/sgroups/internal/dict"
-
+	dkt "github.com/H-BF/corlib/pkg/dict"
 	"github.com/ahmetb/go-linq/v3"
 	nftlib "github.com/google/nftables"
 	"github.com/pkg/errors"

@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/H-BF/sgroups/internal/dict"
 	"github.com/H-BF/sgroups/pkg/option"
 
+	"github.com/H-BF/corlib/pkg/dict"
 	"github.com/H-BF/corlib/pkg/ranges"
 	"github.com/pkg/errors"
 )

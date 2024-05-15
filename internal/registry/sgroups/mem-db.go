@@ -3,8 +3,7 @@ package sgroups
 import (
 	"sync"
 
-	"github.com/H-BF/sgroups/internal/dict"
-
+	"github.com/H-BF/corlib/pkg/dict"
 	"github.com/hashicorp/go-memdb"
 	"github.com/pkg/errors"
 )
