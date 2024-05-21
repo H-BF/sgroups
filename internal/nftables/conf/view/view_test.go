@@ -79,7 +79,7 @@ func TestFrom(t *testing.T) {
 							Data: []byte{0, 40},
 						}}).
 				build(expr.VerdictAccept),
-			want: createWantedRule(nil, nil, nil, []string{"20", "40"}, "accept"),
+			want: createWantedRule(nil, nil, nil, []string{"20-40"}, "accept"),
 		},
 
 		// tcp sport { 1, 2, 3, 1000 } counter packets 5 bytes 1000 drop
@@ -141,6 +141,50 @@ func TestFrom(t *testing.T) {
 				},
 			}),
 			want: createWantedRule(nil, nil, []string{"80", "90"}, nil, "accept"),
+		},
+
+		// udp sport 5000 udp dport { 15000-20000, 28000 } counter packets 5 bytes 1000 drop
+		{
+			nlRule: B().
+				withPortsCmp(
+					hlp.OffsetSPort,
+					[]expr.Any{
+						&expr.Cmp{
+							Op:   expr.CmpOpEq,
+							Data: []byte{19, 136},
+						}}).
+				withPortsLookup(hlp.OffsetDPort, "__set").
+				build(expr.VerdictDrop),
+			setsConf: setDictFromMap(map[string]conf.NfSet{
+				"__set": {
+					Set: &nft.Set{
+						Name:      "__set",
+						Anonymous: true,
+						Interval:  true,
+					},
+					Elements: []nft.SetElement{
+						{
+							Key:         []byte{109, 97},
+							IntervalEnd: true,
+						},
+						{
+							Key: []byte{109, 96},
+						},
+						{
+							Key:         []byte{78, 33},
+							IntervalEnd: true,
+						},
+						{
+							Key: []byte{58, 152},
+						},
+						{
+							Key:         []byte{0, 0},
+							IntervalEnd: true,
+						},
+					},
+				},
+			}),
+			want: createWantedRule(nil, nil, []string{"5000"}, []string{"15000-20000", "28000"}, "drop"),
 		},
 
 		// meta nftrace set 1 icmp type { 100 } counter packets 5 bytes 1000 log level debug flags ip options drop

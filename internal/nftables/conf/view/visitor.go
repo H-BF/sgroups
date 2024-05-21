@@ -271,18 +271,26 @@ func (p detectPortsVisitor) visitLookup(_ *expr.Lookup, _ dkt.HDict[string, conf
 type matchPortsVisitor struct {
 	view      *RuleView
 	ports     *[]string
+	rangeVal  string
 	nextState func() ruleExprVisitor
 }
 
 var _ ruleExprVisitor = (*matchPortsVisitor)(nil)
 
-func (m matchPortsVisitor) visitMeta(_ *expr.Meta) (ruleExprVisitor, error) {
+func (m *matchPortsVisitor) visitMeta(_ *expr.Meta) (ruleExprVisitor, error) {
 	return nil, errors.New("unexpected Meta in matchPortsVisitor")
 }
 
-func (m matchPortsVisitor) visitCmp(cmp *expr.Cmp) (ruleExprVisitor, error) {
+func (m *matchPortsVisitor) visitCmp(cmp *expr.Cmp) (ruleExprVisitor, error) {
 	var port = binary.BigEndian.Uint16(cmp.Data)
-	*m.ports = append(*m.ports, strconv.FormatUint(uint64(port), 10))
+	switch cmp.Op {
+	case expr.CmpOpGt, expr.CmpOpGte: // start of range - don't append to view and looking for next Cmp with end of range
+		m.rangeVal = strconv.FormatUint(uint64(port), 10)
+	case expr.CmpOpLt, expr.CmpOpLte: // end of range
+		*m.ports = append(*m.ports, fmt.Sprintf("%s-%s", m.rangeVal, strconv.FormatUint(uint64(port), 10))) // append only at end of range
+	case expr.CmpOpEq:
+		*m.ports = append(*m.ports, strconv.FormatUint(uint64(port), 10))
+	}
 
 	// after Cmp can follow one more Cmp here check it
 	if cmp.Op == expr.CmpOpEq || cmp.Op == expr.CmpOpLt || cmp.Op == expr.CmpOpLte {
@@ -291,11 +299,11 @@ func (m matchPortsVisitor) visitCmp(cmp *expr.Cmp) (ruleExprVisitor, error) {
 	return m, nil
 }
 
-func (m matchPortsVisitor) visitPayload(_ *expr.Payload) (ruleExprVisitor, error) {
+func (m *matchPortsVisitor) visitPayload(_ *expr.Payload) (ruleExprVisitor, error) {
 	return nil, errors.New("unexpected Payload in matchPortsVisitor")
 }
 
-func (m matchPortsVisitor) visitLookup(lookup *expr.Lookup, setsState dkt.HDict[string, conf.NfSet]) (ruleExprVisitor, error) {
+func (m *matchPortsVisitor) visitLookup(lookup *expr.Lookup, setsState dkt.HDict[string, conf.NfSet]) (ruleExprVisitor, error) {
 	set, ok := setsState.Get(lookup.SetName)
 	if !ok {
 		return nil, fmt.Errorf("set not found: %s", lookup.SetName)
@@ -311,6 +319,10 @@ func (m matchPortsVisitor) visitLookup(lookup *expr.Lookup, setsState dkt.HDict[
 		sort.Slice(els, func(i, j int) bool {
 			return bytes.Compare(els[i].Key, els[j].Key) < 0
 		})
+		if els[0].Key[0] == 0 && els[0].Key[1] == 0 {
+			// skip zero element
+			els = els[1:]
+		}
 		for _, el := range els {
 			if !el.IntervalEnd {
 				if len(interval) != 0 {
@@ -320,10 +332,14 @@ func (m matchPortsVisitor) visitLookup(lookup *expr.Lookup, setsState dkt.HDict[
 				continue
 			}
 			var port = binary.BigEndian.Uint16(interval)
-			*m.ports = append(*m.ports, strconv.FormatUint(uint64(port), 10))
 			var portEnd = binary.BigEndian.Uint16(el.Key)
 			if portEnd-port > 1 {
-				*m.ports = append(*m.ports, strconv.FormatUint(uint64(portEnd-1), 10))
+				portRange := fmt.Sprintf("%s-%s",
+					strconv.FormatUint(uint64(port), 10),
+					strconv.FormatUint(uint64(portEnd-1), 10))
+				*m.ports = append(*m.ports, portRange)
+			} else {
+				*m.ports = append(*m.ports, strconv.FormatUint(uint64(port), 10))
 			}
 			interval = nil
 		}
@@ -366,9 +382,9 @@ func portsPayload(payload *expr.Payload, view *RuleView, nextStateCb func() rule
 	}
 	switch payload.Offset {
 	case hlp.OffsetSPort:
-		return matchPortsVisitor{view, &view.Ports.Source, nextStateCb}, nil
+		return &matchPortsVisitor{view, &view.Ports.Source, "", nextStateCb}, nil
 	case hlp.OffsetDPort:
-		return matchPortsVisitor{view, &view.Ports.Destination, nextStateCb}, nil
+		return &matchPortsVisitor{view, &view.Ports.Destination, "", nextStateCb}, nil
 	default:
 		return nil, fmt.Errorf("unknown payload offset for ports: %d", payload.Offset)
 	}
