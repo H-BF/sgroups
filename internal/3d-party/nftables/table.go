@@ -185,7 +185,7 @@ func tableFromMsg(msg netlink.Message) (*Table, error) {
 		case unix.NFTA_TABLE_NAME:
 			t.Name = ad.String()
 		case unix.NFTA_TABLE_USE:
-			t.Use = ad.Uint32()
+			t.Use = binaryutil.BigEndian.Uint32(ad.Bytes())
 		case unix.NFTA_TABLE_FLAGS:
 			if t.Flags = ad.Uint32(); t.Flags != 0 { //это адов костыль
 				f0 := binaryutil.NativeEndian.Uint32(binaryutil.BigEndian.PutUint32(unix.NFT_TABLE_F_DORMANT))

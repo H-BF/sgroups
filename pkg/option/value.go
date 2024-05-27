@@ -10,6 +10,13 @@ type ValueOf[T any] struct {
 	some bool
 }
 
+func MustNewOption[T any](v T) ValueOf[T] {
+	return ValueOf[T]{
+		v:    v,
+		some: true,
+	}
+}
+
 // IsNone -
 func (val *ValueOf[_]) IsNone() bool {
 	return !val.some
