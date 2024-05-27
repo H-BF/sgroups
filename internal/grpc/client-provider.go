@@ -3,14 +3,11 @@ package grpc
 import (
 	"context"
 
-	"google.golang.org/grpc"
+	inner "github.com/H-BF/corlib/client/grpc"
 )
 
-// ClientConn - grpc client connection
-type ClientConn interface {
-	grpc.ClientConnInterface
-	Close() error
-}
+// ClientConn is a type alias
+type ClientConn = inner.ClientConn
 
 // ConnProvider grpc client conn provider
 type ConnProvider interface {

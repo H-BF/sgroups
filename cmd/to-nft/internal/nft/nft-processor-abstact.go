@@ -118,7 +118,7 @@ func (ns UpdateFqdnNetsets) Apply(ctx context.Context, rules *AppliedRules) erro
 	}
 	defer tx.Close()
 	var nftConf NFTablesConf
-	if err = nftConf.Load(tx.Conn); err != nil {
+	if nftConf, err = NFTconfLoad(tx.Conn); err != nil {
 		return err
 	}
 	targetTable := NfTableKey{

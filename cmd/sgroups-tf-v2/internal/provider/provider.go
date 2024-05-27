@@ -257,7 +257,7 @@ func (s *sgroupsProvider) tlsAuthnSchema() schema.Attribute {
 	}
 }
 
-func (tlsc tlsAuthnCongig) creds(ctx context.Context) (creds client.TransportCredentials, diags diag.Diagnostics) {
+func (tlsc tlsAuthnCongig) creds(ctx context.Context) (creds credentials.TransportCredentials, diags diag.Diagnostics) {
 	tlsConf := tls.Config{
 		InsecureSkipVerify: true, //nolint:gosec
 	}
