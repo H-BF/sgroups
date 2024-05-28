@@ -88,7 +88,13 @@ func (ld *LocalData) nonLocalSGs() []SgName {
 // IsEq checks wether this object is equal the other one
 // here we compare only rules and networks
 func (ld *LocalData) IsEq(other LocalData) bool {
-	eq := ld.SG2SGRules.IsEq(other.SG2SGRules)
+	eq := ld.LocalSGs.IsEq(other.LocalSGs)
+	if eq {
+		eq = ld.SG2SGRules.IsEq(other.SG2SGRules)
+	}
+	if eq {
+		eq = ld.Networks.IsEq(other.Networks)
+	}
 	if eq {
 		eq = ld.SG2FQDNRules.IsEq(other.SG2FQDNRules)
 	}
@@ -106,9 +112,6 @@ func (ld *LocalData) IsEq(other LocalData) bool {
 	}
 	if eq {
 		eq = ld.SgIeSgRules.IsEq(other.SgIeSgRules)
-	}
-	if eq {
-		eq = ld.Networks.IsEq(other.Networks)
 	}
 	if eq {
 		eq = ld.IECidrSgIcmpRules.IsEq(other.IECidrSgIcmpRules)
