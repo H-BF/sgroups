@@ -3,7 +3,7 @@ package internal
 import (
 	"context"
 
-	"github.com/H-BF/sgroups/pkg/atomic"
+	"github.com/H-BF/corlib/pkg/atomic"
 )
 
 // GetDnsResolver -

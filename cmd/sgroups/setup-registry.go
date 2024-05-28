@@ -6,8 +6,8 @@ import (
 
 	"github.com/H-BF/sgroups/internal/app"
 	appdb "github.com/H-BF/sgroups/internal/registry/sgroups"
-	"github.com/H-BF/sgroups/pkg/atomic"
 
+	"github.com/H-BF/corlib/pkg/atomic"
 	"github.com/pkg/errors"
 )
 

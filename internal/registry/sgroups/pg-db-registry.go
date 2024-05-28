@@ -8,8 +8,8 @@ import (
 
 	"github.com/H-BF/sgroups/internal/patterns"
 	"github.com/H-BF/sgroups/internal/registry/sgroups/pg"
-	atm "github.com/H-BF/sgroups/pkg/atomic"
 
+	atm "github.com/H-BF/corlib/pkg/atomic"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pkg/errors"

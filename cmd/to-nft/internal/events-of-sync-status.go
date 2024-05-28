@@ -7,9 +7,9 @@ import (
 
 	sgAPI "github.com/H-BF/protos/pkg/api/sgroups"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
-	"github.com/H-BF/sgroups/pkg/atomic"
 
 	"github.com/H-BF/corlib/logger"
+	"github.com/H-BF/corlib/pkg/atomic"
 	"github.com/H-BF/corlib/pkg/patterns/observer"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"

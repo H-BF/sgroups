@@ -8,9 +8,9 @@ import (
 	"github.com/H-BF/sgroups/internal/app"
 	nfmetrics "github.com/H-BF/sgroups/internal/nftables/collector"
 	"github.com/H-BF/sgroups/internal/nftables/conf"
-	"github.com/H-BF/sgroups/pkg/atomic"
 
 	"github.com/H-BF/corlib/logger"
+	"github.com/H-BF/corlib/pkg/atomic"
 	"github.com/google/nftables"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"

@@ -1,8 +1,7 @@
 package patterns
 
 import (
-	"github.com/H-BF/sgroups/pkg/atomic"
-
+	"github.com/H-BF/corlib/pkg/atomic"
 	"github.com/H-BF/corlib/pkg/patterns/observer"
 )
 

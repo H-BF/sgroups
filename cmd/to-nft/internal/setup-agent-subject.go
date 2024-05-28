@@ -3,8 +3,7 @@ package internal
 import (
 	"sync"
 
-	"github.com/H-BF/sgroups/pkg/atomic"
-
+	"github.com/H-BF/corlib/pkg/atomic"
 	"github.com/H-BF/corlib/pkg/patterns/observer"
 	"github.com/H-BF/corlib/pkg/signals"
 )

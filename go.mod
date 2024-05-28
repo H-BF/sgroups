@@ -3,7 +3,7 @@ module github.com/H-BF/sgroups
 go 1.20
 
 require (
-	github.com/H-BF/corlib v0.0.11
+	github.com/H-BF/corlib v0.0.12
 	github.com/H-BF/protos v0.12.0
 	github.com/ahmetb/go-linq/v3 v3.2.0
 	github.com/c-robinson/iplib v1.0.6

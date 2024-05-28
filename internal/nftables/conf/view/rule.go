@@ -1,6 +1,6 @@
 package view
 
-import "github.com/H-BF/sgroups/pkg/option"
+import "github.com/H-BF/corlib/pkg/option"
 
 // RuleView - view of rule from netlink
 type RuleView struct {
