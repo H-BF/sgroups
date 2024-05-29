@@ -44,14 +44,17 @@ import TabItem from '@theme/TabItem'
         #### Сборка
         Перед сборкой необходимо склонировать репозиторий
 
-        ```bash
-        export VERSION=1.9.1
-        git clone https://github.com/H-BF/sgroups
-        cd sgroups
-        git fetch --tags --all
-        git checkout tags/v${VERSION}
-        make .install-goose
-        ```
+        <CodeBlock language="bash">
+
+{`export VERSION=${getVersionFromPath()}
+git clone https://github.com/H-BF/sgroups
+cd sgroups
+git fetch --tags --all
+git checkout tags/v$\{VERSION}
+make .install-goose
+`}
+
+        </CodeBlock>
 
         <div className="paragraph">
             После сборки, скомпилированный бинарный файл будет доступен в папке `./bin/goose` в корне репозитория (не путать с `/bin`,

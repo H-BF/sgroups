@@ -36,6 +36,12 @@ const config: Config = {
             (process.env.DOC_INCLUDE_CURRENT_VERSION &&
               process.env.DOC_INCLUDE_CURRENT_VERSION.toLowerCase() === 'true') ||
             false,
+          versions: {
+            'v1.14.0': {
+              label: 'v1.14.0',
+              path: 'v1.14.0',
+            },
+          },
         },
         blog: false,
         pages: {

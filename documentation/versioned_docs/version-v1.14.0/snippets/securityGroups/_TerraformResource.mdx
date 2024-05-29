@@ -1,0 +1,163 @@
+import { Restrictions } from '@site/src/components/commonBlocks/Restrictions'
+import { DICTIONARY } from '@site/src/constants/dictionary.ts'
+import { RESTRICTIONS } from '@site/src/constants/restrictions.tsx'
+
+<div className="paragraph">
+  <p>{DICTIONARY['v1.13.0'].terraformResource.full}</p>
+</div>
+<div className="paragraph">
+  Далее везде в документе подразумевается что все места, содержащие переменную `$transport` (
+  {DICTIONARY['v1.13.0'].transport.short}) подразумевается одно из двух значений: `icmp`, `icmp6`.
+</div>
+
+<div className="scrollable-x">
+  <table>
+    <thead>
+      <tr>
+        <th>название</th>
+        <th>обязательность</th>
+        <th>тип данных</th>
+        <th>доп. описание</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>items</td>
+        <td>да</td>
+        <td>Object</td>
+        <td>Cписок ресурсов создаваемые terraform ресурсом.</td>
+      </tr>
+      <tr>
+        <td>items.key</td>
+        <td>да</td>
+        <td>String</td>
+        <td>Уникальный ключ блока items.</td>
+      </tr>
+      <tr>
+        <td>items.key.name</td>
+        <td>да</td>
+        <td>String</td>
+        <td>Имя Security Group.</td>
+      </tr>
+      <tr>
+        <td>items.key.networks</td>
+        <td>да</td>
+        <td>String[]</td>
+        <td>
+          Список содержащий имена подсетей которые включены в указанную группу безопасности. Т.к. описывается
+          имплементация Terrafom module в Terraform resource то имя Networks совпадает с CIDR хотя им не является.
+        </td>
+      </tr>
+      <tr>
+        <td>items.key.logs</td>
+        <td>нет</td>
+        <td>Boolean</td>
+        <td>{DICTIONARY['v1.13.0'].log.short}</td>
+      </tr>
+      <tr>
+        <td>items.key.trace</td>
+        <td>нет</td>
+        <td>Boolean</td>
+        <td>{DICTIONARY['v1.13.0'].trace.short}</td>
+      </tr>
+      <tr>
+        <td>items.key.default_action</td>
+        <td>да</td>
+        <td>Enum("DROP", "ACCEPT")</td>
+        <td>
+          Определяет действие по умолчанию для пакетов, не соответствующих ни одному из установленных правил в цепочке.
+        </td>
+      </tr>
+      <tr>
+        <td>items.key.$transport</td>
+        <td>да</td>
+        <td>Object</td>
+        <td>
+          Структура, описывающая взаимодействие с ICMP-трафиком по умолчанию. Для обработки ICMP-трафика добавляется
+          соответствующее правило в начало цепочки.
+        </td>
+      </tr>
+      <tr>
+        <td>items.key.$transport.logs</td>
+        <td>нет</td>
+        <td>Boolean</td>
+        <td>{DICTIONARY['v1.13.0'].log.short}</td>
+      </tr>
+      <tr>
+        <td>items.key.$transport.trace</td>
+        <td>нет</td>
+        <td>Boolean</td>
+        <td>{DICTIONARY['v1.13.0'].trace.short}</td>
+      </tr>
+      <tr>
+        <td>items.key.$transport.type[]</td>
+        <td>да</td>
+        <td>String[]</td>
+        <td>{DICTIONARY['v1.13.0'].icmpTypes.short}</td>
+      </tr>
+      <tr>
+        <td>items.key.$transport.action</td>
+        <td>да</td>
+        <td>Enum("ACCEPT", "DROP")</td>
+        <td>{DICTIONARY['v1.13.0'].action.short}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+#### Ограничения
+
+<ul>
+  <li>
+    `items`:
+    <Restrictions data={RESTRICTIONS['v1.13.0'].items} />
+  </li>
+  <li>
+    `items.key`:
+    <Restrictions data={RESTRICTIONS['v1.13.0'].itemsRuleName_sg} />
+  </li>
+  <li>
+    `items.key.name`:
+    <Restrictions data={RESTRICTIONS['v1.13.0'].name} />
+  </li>
+  <li>
+    `items.key.networks`:
+    <Restrictions data={RESTRICTIONS['v1.13.0'].cidr} />
+  </li>
+  <li>
+    `items.key.icmp.type`:
+    <Restrictions data={RESTRICTIONS['v1.13.0'].icmpType} />
+  </li>
+  <li>
+    `items.key.icmp6.type`:
+    <Restrictions data={RESTRICTIONS['v1.13.0'].icmpType} />
+  </li>
+</ul>
+
+#### Пример использования
+
+```hcl
+resource "sgroups_groups" "groups" {
+    items = {
+        key = {
+            name           = "sg-example"
+            networks       = ["10.0.0.0/24", "11.0.0.0/24"]
+            logs           = true
+            trace          = true
+            default_action = "ACCEPT"
+            icmp = {
+                logs = true
+                trace = true
+                type = [0, 8]
+                action = "DROP"
+            }
+            icmp6 = {
+                logs = true
+                trace = true
+                type = [0, 8]
+                action = "DROP"
+            }
+        }
+    }
+}
+```

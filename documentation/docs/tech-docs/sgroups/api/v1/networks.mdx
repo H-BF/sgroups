@@ -20,7 +20,7 @@ import { DICTIONARY } from '@site/src/constants/dictionary.ts'
 #### Входные параметры
 
 <ul>
-  <li>`neteworkNames[]` - {DICTIONARY.networkNames.short}</li>
+  <li>`neteworkNames[]` - {DICTIONARY['v1.13.0'].networkNames.short}</li>
 </ul>
 
 <div className="scrollable-x">
@@ -57,10 +57,10 @@ curl '127.0.0.1:9007/v1/list/networks' \
 <h4 className="custom-heading">Выходные параметры</h4>
 
 <ul>
-  <li>`$node.networks[]` - {DICTIONARY.rules.short}</li>
-  <li>`$node.networks[].name` - {DICTIONARY.nw.short}</li>
-  <li>`$node.networks[].network` - {DICTIONARY.networkObject.short}</li>
-  <li>`$node.networks[].network.CIDR` - {DICTIONARY.networks.short}</li>
+  <li>`$node.networks[]` - {DICTIONARY['v1.13.0'].rules.short}</li>
+  <li>`$node.networks[].name` - {DICTIONARY['v1.13.0'].nw.short}</li>
+  <li>`$node.networks[].network` - {DICTIONARY['v1.13.0'].networkObject.short}</li>
+  <li>`$node.networks[].network.CIDR` - {DICTIONARY['v1.13.0'].networks.short}</li>
 </ul>
 
 <div className="scrollable-x">
@@ -107,8 +107,8 @@ curl '127.0.0.1:9007/v1/list/networks' \
 
 <h4 className="custom-heading">Возможные ошибки API</h4>
 
-<Codes data={RESPOND_CODES.internal} />
-<Codes data={RESPOND_CODES.not_found} />
+<Codes data={RESPOND_CODES['v1.13.0'].internal} />
+<Codes data={RESPOND_CODES['v1.13.0'].not_found} />
 
 <h4 className="custom-heading">Диаграмма последовательности</h4>
 

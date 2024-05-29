@@ -20,7 +20,7 @@ import { DICTIONARY } from '@site/src/constants/dictionary.ts'
 #### Входные параметры
 
 <ul>
-  <li>`sg[]` - {DICTIONARY.sgroupSet.short}</li>
+  <li>`sg[]` - {DICTIONARY['v1.13.0'].sgroupSet.short}</li>
 </ul>
 
 <div className="scrollable-x">
@@ -57,14 +57,14 @@ curl '127.0.0.1:9007/v1/sg-icmp/rules' \
 <h4 className="custom-heading">Выходные параметры</h4>
 
 <ul>
-  <li>`$node.rules[]` - {DICTIONARY.rules.short}</li>
-  <li>`$node.rules[].Sg` - {DICTIONARY.sg.short}</li>
-  <li>`$node.rules[].logs` - {DICTIONARY.log.short}</li>
-  <li>`$node.rules[].trace` - {DICTIONARY.trace.short}</li>
-  <li>`$node.rules[].ICMP` - {DICTIONARY.apiIcmp.short}</li>
-  <li>`$node.rules[].ICMP.IPv` - {DICTIONARY.icmpV.short}</li>
-  <li>`$node.rules[].ICMP.Types[]` - {DICTIONARY.icmpTypes.short}</li>
-  <li>`$node.rules[].action` - {DICTIONARY.action.short}</li>
+  <li>`$node.rules[]` - {DICTIONARY['v1.13.0'].rules.short}</li>
+  <li>`$node.rules[].Sg` - {DICTIONARY['v1.13.0'].sg.short}</li>
+  <li>`$node.rules[].logs` - {DICTIONARY['v1.13.0'].log.short}</li>
+  <li>`$node.rules[].trace` - {DICTIONARY['v1.13.0'].trace.short}</li>
+  <li>`$node.rules[].ICMP` - {DICTIONARY['v1.13.0'].apiIcmp.short}</li>
+  <li>`$node.rules[].ICMP.IPv` - {DICTIONARY['v1.13.0'].icmpV.short}</li>
+  <li>`$node.rules[].ICMP.Types[]` - {DICTIONARY['v1.13.0'].icmpTypes.short}</li>
+  <li>`$node.rules[].action` - {DICTIONARY['v1.13.0'].action.short}</li>
 </ul>
 
 <div className="scrollable-x">
@@ -131,8 +131,8 @@ curl '127.0.0.1:9007/v1/sg-icmp/rules' \
 
 <h4 className="custom-heading">Возможные ошибки API</h4>
 
-<Codes data={RESPOND_CODES.internal} />
-<Codes data={RESPOND_CODES.not_found} />
+<Codes data={RESPOND_CODES['v1.13.0'].internal} />
+<Codes data={RESPOND_CODES['v1.13.0'].not_found} />
 
 <h4 className="custom-heading">Диаграмма последовательности</h4>
 
