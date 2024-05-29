@@ -1,5 +1,5 @@
 ---
-id: address-sg
+id: security-groups
 ---
 
 import { FancyboxDiagram } from '@site/src/components/commonBlocks/FancyboxDiagram'
@@ -7,9 +7,12 @@ import { RESPOND_CODES } from '@site/src/constants/errorCodes.tsx'
 import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
 import { DICTIONARY } from '@site/src/constants/dictionary.ts'
 
-# GET /v1/\{address\}/sg
+# POST /v1/list/security-groups
 
-<div className="text-justify">Этот метод отображает Security Group по IP или CIDR входящей в нее подсети.</div>
+<div className="text-justify">
+  Этот метод отображает список сетей (networks) и действия по умолчанию, в соответствии с указанным списком имен
+  Security Groups.
+</div>
 
 <div className="text-justify">
   Более подробно по организации БД можно посмотреть [здесь](../../database.mdx#tbl_network) и
@@ -19,9 +22,7 @@ import { DICTIONARY } from '@site/src/constants/dictionary.ts'
 #### Входные параметры
 
 <ul>
-  <li>
-    `{address}` - {DICTIONARY.cidr.short}
-  </li>
+  <li>`sgNames[]` - {DICTIONARY.sgroupSet.short}</li>
 </ul>
 
 <div className="scrollable-x">
@@ -36,30 +37,34 @@ import { DICTIONARY } from '@site/src/constants/dictionary.ts'
     </thead>
     <tbody>
       <tr>
-        <td>\{address\}</td>
+        <td>sgNames[]</td>
         <td>да</td>
-        <td>String</td>
+        <td>Object[]</td>
         <td></td>
       </tr>
-      </tbody>
+    </tbody>
   </table>
 </div>
 
 <h4 className="custom-heading">Пример использования</h4>
 
 ```bash
-curl '127.0.0.1:9007/v1/10.150.0.224/sg' \
---header 'Content-Type: application/json'
+curl '127.0.0.1:9007/v1/list/security-groups' \
+--header 'Content-Type: application/json' \
+--data '{
+    "sgNames": ["sg-example"]
+}'
 ```
 
 <h4 className="custom-heading">Выходные параметры</h4>
 
 <ul>
-  <li>`$node.name` - {DICTIONARY.sg.short}</li>
-  <li>`$node.logs` - {DICTIONARY.log.short}</li>
-  <li>`$node.trace` - {DICTIONARY.trace.short}</li>
-  <li>`$node.networks` - {DICTIONARY.networkNames.short}</li>
-  <li>`$node.defaultAction` - {DICTIONARY.defaultAction.short}</li>
+  <li>`$node.groups[]` - {DICTIONARY.rules.short}</li>
+  <li>`$node.groups[].name` - {DICTIONARY.sg.short}</li>
+  <li>`$node.groups[].logs` - {DICTIONARY.log.short}</li>
+  <li>`$node.groups[].trace` - {DICTIONARY.trace.short}</li>
+  <li>`$node.groups[].networks` - {DICTIONARY.networks.short}</li>
+  <li>`$node.groups[].defaultAction` - {DICTIONARY.apiIcmp.short}</li>
 </ul>
 
 <div className="scrollable-x">
@@ -72,23 +77,27 @@ curl '127.0.0.1:9007/v1/10.150.0.224/sg' \
     </thead>
     <tbody>
       <tr>
-        <td>$node.name</td>
-        <td>String</td>
-      </tr>
-      <tr>
-        <td>$node.logs</td>
-        <td>Boolean</td>
-      </tr>
-      <tr>
-        <td>$node.trace</td>
-        <td>Boolean</td>
-      </tr>
-      <tr>
-        <td>$node.networks</td>
+        <td>$node.groups[]</td>
         <td>Object[]</td>
       </tr>
       <tr>
-        <td>$node.defaultAction</td>
+        <td>$node.groups[].name</td>
+        <td>String</td>
+      </tr>
+      <tr>
+        <td>$node.groups[].logs</td>
+        <td>Boolean</td>
+      </tr>
+      <tr>
+        <td>$node.groups[].trace</td>
+        <td>Boolean</td>
+      </tr>
+      <tr>
+        <td>$node.groups[].networks</td>
+        <td>Object[]</td>
+      </tr>
+      <tr>
+        <td>$node.groups[].defaultAction</td>
         <td>String</td>
       </tr>
     </tbody>
@@ -99,17 +108,18 @@ curl '127.0.0.1:9007/v1/10.150.0.224/sg' \
 
 ```bash
 {
-    "name": "sg-example",
-    "logs": false,
-    "trace": false,
-    "network": ["network-example"],
-    "defaultAction": "DROP"
+    "groups": [{
+        "name": "sg-example",
+        "logs": "true",
+        "trace": "true",
+        "networks": ["network-example"],
+        "defaultAction": "DROP"
+    }]
 }
 ```
 
 <h4 className="custom-heading">Возможные ошибки API</h4>
 
-<Codes data={RESPOND_CODES.invalid_argument} />
 <Codes data={RESPOND_CODES.not_found} />
 
 <h4 className="custom-heading">Диаграмма последовательности</h4>
@@ -122,7 +132,7 @@ participant user as User
 participant server as Server
 participant db as Database
 
-user->>server: Отобразить SG по IP или CIDR
+user->>server: Отобразить список Security Group
 
 alt Ошибка в запросе
     server-->>user: Показать ошибку в запросе
@@ -131,13 +141,13 @@ end
 server->>db: Отправить запрос
 db->>db: Проверка входящего запроса
 
-alt Возникла ошибка при некорректном вводе IP или CIDR
+alt Указано некорректное значение существующего параметра
     db-->>server: Ответ с ошибкой
     server-->>user: Показать ошибку в запросе
 end
 
-db-->>server: Ответ с SG по указаному IP или CIDR соответствующий запросу
-server-->>user: Список доступных сетей связанных с SG соответствующий запросу
+db-->>server: Ответ со списком Security Group соответствующий запросу
+server-->>user: Список доступных сетей соответствующий запросу
 ```
 
 </FancyboxDiagram>

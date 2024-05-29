@@ -1,0 +1,256 @@
+{
+  "informationSidebar": [
+    {
+      "type": "doc",
+      "label": "Введение",
+      "id": "info/introduction"
+    },
+    {
+      "type": "doc",
+      "label": "Выбор инструмента",
+      "id": "info/toolset"
+    },
+    {
+      "type": "doc",
+      "label": "Терминология",
+      "id": "info/terminology"
+    }
+  ],
+  "techDocs": [
+    {
+      "type": "doc",
+      "label": "Компоненты",
+      "id": "tech-docs/components"
+    },
+    {
+      "type": "doc",
+      "label": "Требования",
+      "id": "tech-docs/installation-system-requirements"
+    },
+    {
+      "type": "category",
+      "label": "HBF-агент",
+      "collapsed": false,
+      "items": [
+        {
+          "type": "doc",
+          "label": "Установка",
+          "id": "tech-docs/to-nft/installation-agent"
+        },
+        {
+          "type": "doc",
+          "label": "Мониторинг",
+          "id": "tech-docs/to-nft/monitoring"
+        },
+        {
+          "type": "doc",
+          "label": "Настройка TLS",
+          "id": "tech-docs/to-nft/tls-configuration-agent"
+        },
+        {
+          "type": "category",
+          "label": "Nftables",
+          "items": [
+            {
+              "type": "doc",
+              "label": "IPSet",
+              "id": "tech-docs/to-nft/nftables/ipset"
+            },
+            {
+              "type": "doc",
+              "label": "Chains",
+              "id": "tech-docs/to-nft/nftables/chains"
+            },
+            {
+              "type": "doc",
+              "label": "Verdict statement",
+              "id": "tech-docs/to-nft/nftables/verdict-statement"
+            },
+            {
+              "type": "doc",
+              "label": "Icmp-дескрипторы",
+              "id": "tech-docs/to-nft/nftables/icmp-desciptions"
+            },
+            {
+              "type": "doc",
+              "label": "Config Base Rules",
+              "id": "tech-docs/to-nft/nftables/config-base-rules"
+            },
+            {
+              "type": "doc",
+              "label": "Приоритет правил",
+              "id": "tech-docs/to-nft/nftables/rules-priority"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "category",
+      "label": "HBF-сервер",
+      "collapsed": false,
+      "items": [
+        {
+          "type": "doc",
+          "label": "Установка",
+          "id": "tech-docs/sgroups/installation-server"
+        },
+        {
+          "type": "doc",
+          "label": "Миграция",
+          "id": "tech-docs/sgroups/goose"
+        },
+        {
+          "type": "doc",
+          "label": "Мониторинг",
+          "id": "tech-docs/sgroups/monitoring"
+        },
+        {
+          "type": "doc",
+          "label": "Настройка TLS",
+          "id": "tech-docs/sgroups/tls-configuration-server"
+        },
+        {
+          "type": "doc",
+          "label": "Описание базы данных",
+          "id": "tech-docs/sgroups/database"
+        },
+        {
+          "type": "category",
+          "label": "API",
+          "items": [
+            {
+              "type": "doc",
+              "label": "POST /v1/sync",
+              "id": "tech-docs/sgroups/api/v1/sync"
+            },
+            {
+              "type": "doc",
+              "label": "POST /v1/list/security-groups",
+              "id": "tech-docs/sgroups/api/v1/security-groups"
+            },
+            {
+              "type": "doc",
+              "label": "GET /v1/{address}/sg",
+              "id": "tech-docs/sgroups/api/v1/address-sg"
+            },
+            {
+              "type": "doc",
+              "label": "POST /v1/list/networks",
+              "id": "tech-docs/sgroups/api/v1/networks"
+            },
+            {
+              "type": "doc",
+              "label": "GET /v1/sg/{sgName}/subnets",
+              "id": "tech-docs/sgroups/api/v1/subnets"
+            },
+            {
+              "type": "doc",
+              "label": "POST /v1/sg-sg-icmp/rules",
+              "id": "tech-docs/sgroups/api/v1/sg-sg-icmp-rules"
+            },
+            {
+              "type": "doc",
+              "label": "POST /v1/sg-icmp/rules",
+              "id": "tech-docs/sgroups/api/v1/sg-icmp-rules"
+            },
+            {
+              "type": "doc",
+              "label": "POST /v1/rules",
+              "id": "tech-docs/sgroups/api/v1/rules"
+            },
+            {
+              "type": "doc",
+              "label": "POST /v1/fqdn/rules",
+              "id": "tech-docs/sgroups/api/v1/fqdn-rules"
+            },
+            {
+              "type": "doc",
+              "label": "POST /v1/cidr-sg/rules",
+              "id": "tech-docs/sgroups/api/v1/cidr-sg-rules"
+            },
+            {
+              "type": "doc",
+              "label": "POST /v1/cidr-sg-icmp/rules",
+              "id": "tech-docs/sgroups/api/v1/cidr-sg-icmp-rules"
+            },
+            {
+              "type": "doc",
+              "label": "POST v1/ie-sg-sg/rules",
+              "id": "tech-docs/sgroups/api/v1/ie-sg-sg-rules"
+            },
+            {
+              "type": "doc",
+              "label": "POST v1/ie-sg-sg-icmp/rules",
+              "id": "tech-docs/sgroups/api/v1/ie-sg-sg-icmp-rules"
+            },
+            {
+              "type": "doc",
+              "label": "GET /v1/sync/status",
+              "id": "tech-docs/sgroups/api/v1/status"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "category",
+      "label": "Terraform",
+      "collapsed": false,
+      "items": [
+        {
+          "type": "doc",
+          "label": "Установка провайдера",
+          "id": "tech-docs/terraform/provider-terraform"
+        },
+        {
+          "type": "doc",
+          "label": "Запуск",
+          "id": "tech-docs/terraform/spec-terraform"
+        },
+        {
+          "type": "doc",
+          "label": "Настройка TLS",
+          "id": "tech-docs/terraform/tls-configuration-terraform"
+        }
+      ]
+    },
+    {
+      "type": "category",
+      "label": "Конфигурация  ресурсов",
+      "collapsed": false,
+      "items": [
+        {
+          "type": "doc",
+          "label": "Networks",
+          "id": "tech-docs/rule-configuration/networks"
+        },
+        {
+          "type": "doc",
+          "label": "Security Groups",
+          "id": "tech-docs/rule-configuration/security-groups"
+        },
+        {
+          "type": "doc",
+          "label": "Sgroup to Sgroup",
+          "id": "tech-docs/rule-configuration/s2s"
+        },
+        {
+          "type": "doc",
+          "label": "Sgroup to Sgroup (I/E)",
+          "id": "tech-docs/rule-configuration/s2s-ie"
+        },
+        {
+          "type": "doc",
+          "label": "Sgroup to CIDR (I/E)",
+          "id": "tech-docs/rule-configuration/s2c-ie"
+        },
+        {
+          "type": "doc",
+          "label": "Sgroup to FQDN (E)",
+          "id": "tech-docs/rule-configuration/s2f-e"
+        }
+      ]
+    }
+  ]
+}
