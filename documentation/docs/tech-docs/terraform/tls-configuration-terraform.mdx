@@ -1,0 +1,83 @@
+---
+id: tls-configuration-terraform
+---
+
+import Tabs from '@theme/Tabs'
+import TabItem from '@theme/TabItem'
+
+# Установка
+
+<div>
+  Настройка TLS (Transport Layer Security) на hbf-агенте (terraform) обеспечивает шифрование трафика между сервером и клиентом,
+  что повышает безопасность передаваемых данных. В этой документации описан процесс настройки TLS на hbf-агенте (terraform), включая
+  использование предоставленного конфигурационного файла.
+</div>
+
+<div>
+  Прежде чем приступить к настройке TLS, убедитесь, что у вас есть:
+  <ul>
+    <li>Установленный hbf-агент (terraform)</li>
+    <li>Включен и настроен TLS на hbf-сервере</li>
+    <li>Сертификат SSL и соответствующий приватный ключ. Если у вас их нет, вы можете получить их у сертификационного
+    центра (CA) или создать самоподписанный сертификат для тестовых целей.</li>
+  </ul>
+</div>
+
+## Шаги по настройке TLS
+
+<div>
+  Создайте директорию для хранения ваших сертификатов и ключей, если она еще не существует:
+
+```bash
+sudo mkdir -p /etc/ssl/certs
+sudo mkdir -p /etc/ssl/private
+```
+</div>
+
+<div>
+  Скопируйте ваш сертификат и приватный ключ в соответствующие директории. Например:
+
+```bash
+sudo cp /path/to/your/cert-file.pem /etc/ssl/certs/
+sudo cp /path/to/your/key-file.pem /etc/ssl/private/
+```
+</div>
+
+<div>
+  Откройте файл конфигурации hbf-агента (terraform) для редактирования:
+
+```bash
+sudo nano /etc/cmd/sgroups-tf-v2/internal/provider/provider.go
+```
+  Далее необходимо настроить секцию для TLS:
+
+ ```bash
+provider "sgroups" {
+	authn = {
+		tls = {
+			cert = {
+				key_file = "/etc/ssl/private/key-file.pem"
+				cert_file = "/etc/ssl/certs/cert-file.pem"
+			}
+			server_verify = {
+				server_name = "server-name"
+				root_ca_files = ["file1.pem", "file2.pem", ...]
+			}
+		}
+	}
+}
+```
+<p>В случае если сертификат клиента не проверяются, то значения для `key-file` и `cert-file` можно не указывать.</p>
+
+<p>В случае если требуется наличие сертификата, то необходимо указать значения в `key-file` и `cert-file` актуальных сертификатов и ключей.</p>
+
+<p>Для подключения режима mTLS необходимо указать все 4 поля `key-file`, `cert-file`, `server_name`, `root_ca_files`.</p>
+
+<p>`key-file` - Необходимо указать полный путь `/etc/ssl/private/key-file.pem`  или относительный путь `./../key-file.pem` с названием файла ключа.</p>
+
+<p>`cert-file` - Необходимо указать полный путь `/etc/ssl/certs/cert-file.pem`  или относительный путь `./../cert-file.pem` с названием файла сертификата.</p>
+
+<p>`server_name` - При включенном режиме проверки сертификата сервера mTLS необходимо указать имя сервера.</p>
+
+<p>`root_ca_files` - При включенном режиме проверки сертификата сервера mTLS необходимо перечислить список certificates authorities с указанием относительного или полного пути к файлам.</p>
+</div>

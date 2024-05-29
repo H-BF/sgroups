@@ -16,6 +16,11 @@ export const sgroups = [
   },
   {
     type: 'doc',
+    label: 'Настройка TLS',
+    id: 'tech-docs/sgroups/tls-configuration-server',
+  },
+  {
+    type: 'doc',
     label: 'Описание базы данных',
     id: 'tech-docs/sgroups/database',
   },

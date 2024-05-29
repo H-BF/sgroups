@@ -10,6 +10,11 @@ export const toNft = [
     id: 'tech-docs/to-nft/monitoring',
   },
   {
+    type: 'doc',
+    label: 'Настройка TLS',
+    id: 'tech-docs/to-nft/tls-configuration-agent',
+  },
+  {
     type: 'category',
     label: 'Nftables',
     items: [
