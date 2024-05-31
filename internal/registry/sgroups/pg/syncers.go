@@ -338,7 +338,7 @@ func (o *syncObj[T, tFlt]) AddData(ctx context.Context, data ...T) error { //nol
 			if err := x.FromModel(v); err != nil {
 				return err
 			}
-			raw = append(raw, []any{x.SgFrom, x.FqndTo, x.Proto, x.Ports, x.Logs, x.NdpiProtocols, x.Action, x.Priority.Int2})
+			raw = append(raw, []any{x.SgFrom, x.FqndTo, x.Proto, x.Ports, x.Logs, x.Action, x.Priority.Int2})
 		case sgm.SgIcmpRule:
 			var x SgIcmpRule
 			if err := x.FromModel(v); err != nil {

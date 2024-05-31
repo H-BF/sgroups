@@ -201,9 +201,9 @@ func (sgsNws *SGsNetworks) Load(ctx context.Context, client SGClient, localSG SG
 	e := parallel.ExecAbstract(len(items), parallelism, func(i int) error {
 		sg := items[i].V
 		req := sgAPI.ListNetworksReq{
-			NeteworkNames: sg.Networks,
+			NetworkNames: sg.Networks,
 		}
-		if len(req.NeteworkNames) > 0 {
+		if len(req.NetworkNames) > 0 {
 			resp, err := client.ListNetworks(ctx, &req)
 			if err != nil {
 				return err

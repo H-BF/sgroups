@@ -36,8 +36,8 @@ func (srv *sgService) Sync(ctx context.Context, req *sg.SyncReq) (ret *emptypb.E
 	case *sg.SyncReq_Groups:
 		groups := sbj.Groups.GetGroups()
 		err = syncSecurityGroups(ctx, wr.SyncSecurityGroups, groups, ops)
-	case *sg.SyncReq_SgRules:
-		rules := sbj.SgRules.GetRules()
+	case *sg.SyncReq_SgSgRules:
+		rules := sbj.SgSgRules.GetRules()
 		err = syncSGRules(ctx, wr.SyncSGRules, rules, ops)
 	case *sg.SyncReq_FqdnRules:
 		rules := sbj.FqdnRules.GetRules()
@@ -48,17 +48,17 @@ func (srv *sgService) Sync(ctx context.Context, req *sg.SyncReq) (ret *emptypb.E
 	case *sg.SyncReq_SgSgIcmpRules:
 		rules := sbj.SgSgIcmpRules.GetRules()
 		err = syncSgSgIcmpRule(ctx, wr.SyncSgSgIcmpRules, rules, ops)
-	case *sg.SyncReq_CidrSgRules:
-		rules := sbj.CidrSgRules.GetRules()
+	case *sg.SyncReq_IeCidrSgRules:
+		rules := sbj.IeCidrSgRules.GetRules()
 		err = syncCidrSgRules(ctx, wr.SyncCidrSgRules, rules, ops)
-	case *sg.SyncReq_SgSgRules:
-		rules := sbj.SgSgRules.GetRules()
+	case *sg.SyncReq_IeSgSgRules:
+		rules := sbj.IeSgSgRules.GetRules()
 		err = syncSgSgRules(ctx, wr.SyncSgSgRules, rules, ops)
 	case *sg.SyncReq_IeSgSgIcmpRules:
 		rules := sbj.IeSgSgIcmpRules.GetRules()
 		err = syncIESgSgIcmpRule(ctx, wr.SyncIESgSgIcmpRules, rules, ops)
-	case *sg.SyncReq_CidrSgIcmpRules:
-		rules := sbj.CidrSgIcmpRules.GetRules()
+	case *sg.SyncReq_IeCidrSgIcmpRules:
+		rules := sbj.IeCidrSgIcmpRules.GetRules()
 		err = syncIECidrSgIcmpRule(ctx, wr.SyncCidrSgIcmpRules, rules, ops)
 	default:
 		err = status.Errorf(

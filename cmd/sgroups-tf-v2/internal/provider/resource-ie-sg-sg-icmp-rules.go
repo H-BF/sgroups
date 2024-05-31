@@ -178,7 +178,7 @@ func readIESgSgIcmpRules(
 		linq.From(state.Items).
 			SelectT(func(i linq.KeyValue) string {
 				return i.Value.(ieSgSgIcmpRule).Sg.ValueString()
-			}).Distinct().ToSlice(&req.Sg)
+			}).Distinct().ToSlice(&req.SG)
 		if resp, err = client.FindIESgSgIcmpRules(ctx, req); err != nil {
 			diags.AddError("read ie-sg-sg icmp rules", err.Error())
 			return newState, diags
@@ -189,7 +189,7 @@ func readIESgSgIcmpRules(
 		it := ieSgSgIcmpRule{
 			Traffic:   types.StringValue(strings.ToLower(icmpRule.GetTraffic().String())),
 			SgLocal:   types.StringValue(icmpRule.GetSgLocal()),
-			Sg:        types.StringValue(icmpRule.GetSg()),
+			Sg:        types.StringValue(icmpRule.GetSG()),
 			IpVersion: types.StringValue(icmpRule.ICMP.GetIPv().String()),
 		}
 		k := it.Key().String()

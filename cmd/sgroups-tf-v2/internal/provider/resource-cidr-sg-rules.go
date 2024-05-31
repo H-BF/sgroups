@@ -161,7 +161,7 @@ func readCidrRules(ctx context.Context, state NamedResources[cidrRule], client *
 		linq.From(state.Items).
 			SelectT(func(i linq.KeyValue) string {
 				return i.Value.(cidrRule).SgName.ValueString()
-			}).Distinct().ToSlice(&req.Sg)
+			}).Distinct().ToSlice(&req.SG)
 		if resp, err = client.FindCidrSgRules(ctx, &req); err != nil {
 			diags.AddError("read cidr-sg rules", err.Error())
 			return newState, diags

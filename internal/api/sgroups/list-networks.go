@@ -21,7 +21,7 @@ func (srv *sgService) ListNetworks(ctx context.Context, req *sg.ListNetworksReq)
 	}
 	defer reader.Close() //lint:nolint
 	var scope registry.Scope = registry.NoScope
-	if nws := req.GetNeteworkNames(); len(nws) > 0 {
+	if nws := req.GetNetworkNames(); len(nws) > 0 {
 		scope = registry.NetworkNames(nws...)
 	}
 	resp = new(sg.ListNetworksResp)

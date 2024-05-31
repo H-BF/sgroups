@@ -65,7 +65,7 @@ func (sui *cidrRulesTests) testCidrRulesFromFixtureFilename(name string) resourc
 }
 
 func (sui *cidrRulesTests) listAllCidrRules() []*protos.CidrSgRule {
-	resp, err := sui.sgClient.FindCidrSgRules(sui.ctx, &protos.FindCidrSgRulesReq{Sg: []string{}})
+	resp, err := sui.sgClient.FindCidrSgRules(sui.ctx, &protos.FindCidrSgRulesReq{SG: []string{}})
 	sui.Require().NoError(err)
 	return resp.GetRules()
 }

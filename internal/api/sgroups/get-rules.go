@@ -6,7 +6,6 @@ import (
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 
-	"github.com/H-BF/corlib/pkg/dict"
 	"github.com/H-BF/protos/pkg/api/common"
 	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/pkg/errors"
@@ -90,10 +89,6 @@ func sgRule2proto(src model.SGRule) (*sg.Rule, error) {
 
 func sgFqdnRule2proto(src model.FQDNRule) (*sg.FqdnRule, error) {
 	var ret sg.FqdnRule
-	src.NdpiProtocols.Iterate(func(p dict.StringCiKey) bool {
-		ret.Protocols = append(ret.Protocols, string(p))
-		return true
-	})
 	if t, e := netTranport2proto(src.ID.Transport); e != nil {
 		return nil, e
 	} else {
@@ -117,7 +112,7 @@ func sgIcmpRule2proto(src model.SgIcmpRule) (*sg.SgIcmpRule, error) {
 	}
 	ret.Logs = src.Logs
 	ret.Trace = src.Trace
-	ret.Sg = src.Sg
+	ret.SG = src.Sg
 	switch src.Icmp.IPv {
 	case model.IPv4:
 		ret.ICMP.IPv = common.IpAddrFamily_IPv4
@@ -163,7 +158,7 @@ func sgSgIcmpRule2proto(src model.SgSgIcmpRule) (*sg.SgSgIcmpRule, error) {
 
 func ieSgSgIcmpRule2proto(src model.IESgSgIcmpRule) (*sg.IESgSgIcmpRule, error) {
 	ret := &sg.IESgSgIcmpRule{
-		Sg:      src.Sg,
+		SG:      src.Sg,
 		SgLocal: src.SgLocal,
 		Logs:    src.Logs,
 		Trace:   src.Trace,
@@ -243,7 +238,7 @@ func cidrSgIcmpRule2proto(src model.IECidrSgIcmpRule) (*sg.CidrSgIcmpRule, error
 
 func sgSgRule2proto(src model.IESgSgRule) (*sg.SgSgRule, error) {
 	ret := &sg.SgSgRule{
-		Sg:      src.ID.Sg,
+		SG:      src.ID.Sg,
 		SgLocal: src.ID.SgLocal,
 		Logs:    src.Logs,
 		Trace:   src.Trace,

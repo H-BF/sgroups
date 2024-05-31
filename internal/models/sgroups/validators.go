@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"unsafe"
 
-	"github.com/H-BF/corlib/pkg/dict"
 	"github.com/H-BF/corlib/pkg/ranges"
 	oz "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/pkg/errors"
@@ -284,26 +283,6 @@ func (o IESgSgRuleIdentity) Validate() error {
 		oz.Field(&o.Traffic),
 		oz.Field(&o.SgLocal, oz.Required.Error(sgNameRequired), oz.Match(reCName)),
 		oz.Field(&o.Sg, oz.Required.Error(sgNameRequired), oz.Match(reCName)))
-}
-
-// Validate validate of FQDNRule
-func (o FQDNRule) Validate() error {
-	return oz.ValidateStruct(&o,
-		oz.Field(&o.ruleT),
-		oz.Field(&o.NdpiProtocols, oz.By(func(_ any) error {
-			const lim = 255
-			if n := o.NdpiProtocols.Len(); n > lim {
-				return errors.Errorf("protocols count is %v but it must be <= %v", n, lim)
-			}
-			var e error
-			o.NdpiProtocols.Iterate(func(k dict.StringCiKey) bool {
-				if len(k) == 0 || !reCName.MatchString(string(k)) {
-					e = errors.Errorf("bad protocol name '%v'", k)
-				}
-				return e == nil
-			})
-			return nil
-		})))
 }
 
 var (

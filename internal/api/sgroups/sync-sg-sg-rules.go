@@ -18,7 +18,7 @@ type (
 
 func (id sgSgRuleIdentity) from(src *sg.SgSgRule) error {
 	id.SgLocal = src.GetSgLocal()
-	id.Sg = src.GetSg()
+	id.Sg = src.GetSG()
 
 	e := traffic{Traffic: &id.Traffic}.from(src.GetTraffic())
 	if e != nil {

@@ -161,7 +161,7 @@ func readIESgSgRules(ctx context.Context, state NamedResources[ieSgSgRule], clie
 		linq.From(state.Items).
 			SelectT(func(i linq.KeyValue) string {
 				return i.Value.(ieSgSgRule).Sg.ValueString()
-			}).Distinct().ToSlice(&req.Sg)
+			}).Distinct().ToSlice(&req.SG)
 		if resp, err = client.FindSgSgRules(ctx, &req); err != nil {
 			diags.AddError("read ie-sg-sg rules", err.Error())
 			return newState, diags
@@ -173,7 +173,7 @@ func readIESgSgRules(ctx context.Context, state NamedResources[ieSgSgRule], clie
 			Transport: types.StringValue(strings.ToLower(rule.Transport.String())),
 			Traffic:   types.StringValue(strings.ToLower(rule.GetTraffic().String())),
 			SgLocal:   types.StringValue(rule.GetSgLocal()),
-			Sg:        types.StringValue(rule.GetSg()),
+			Sg:        types.StringValue(rule.GetSG()),
 		}
 		k := it.Key().String()
 		if _, ok := state.Items[k]; ok { //nolint:dupl

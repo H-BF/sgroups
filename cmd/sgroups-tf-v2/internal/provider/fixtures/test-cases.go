@@ -60,8 +60,8 @@ func (acc *AccTests) InitBackend(t *testing.T, c BackendClient) {
 		require.NoError(t, e)
 	}
 	if rules := acc.InitialBackend.SgSgRules; len(rules) > 0 {
-		req.Subject = &protos.SyncReq_SgRules{
-			SgRules: &protos.SyncSGRules{
+		req.Subject = &protos.SyncReq_SgSgRules{
+			SgSgRules: &protos.SyncSGRules{
 				Rules: rules.Decode(),
 			},
 		}

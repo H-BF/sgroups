@@ -31,7 +31,7 @@ type (
 )
 
 func (r proto2SgIcmpRule) from(src *sg.SgIcmpRule) error {
-	r.Sg = src.GetSg()
+	r.Sg = src.GetSG()
 	r.Logs = src.GetLogs()
 	r.Trace = src.GetTrace()
 	ipv := src.GetICMP().GetIPv()
@@ -85,7 +85,7 @@ func (r proto2SgSgIcmpRule) from(src *sg.SgSgIcmpRule) error {
 
 func (r proto2IESgSgIcmpRule) from(src *sg.IESgSgIcmpRule) error {
 	r.SgLocal = src.GetSgLocal()
-	r.Sg = src.GetSg()
+	r.Sg = src.GetSG()
 	r.Logs = src.GetLogs()
 	r.Trace = src.GetTrace()
 

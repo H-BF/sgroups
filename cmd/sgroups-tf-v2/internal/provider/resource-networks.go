@@ -67,7 +67,7 @@ func readNetworks(ctx context.Context, state NamedResources[networkItem], client
 
 		linq.From(state.Items).Select(func(i interface{}) interface{} {
 			return i.(linq.KeyValue).Value.(networkItem).Name.ValueString()
-		}).Distinct().ToSlice(&listReq.NeteworkNames)
+		}).Distinct().ToSlice(&listReq.NetworkNames)
 
 		listResp, err = client.ListNetworks(ctx, &listReq)
 		if err != nil {

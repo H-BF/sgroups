@@ -89,7 +89,7 @@ func (rules *SgIcmpRules) Load(ctx context.Context, client SGClient, locals SGs)
 
 	var req sgAPI.FindSgIcmpRulesReq
 	var resp *sgAPI.SgIcmpRulesResp
-	if req.Sg = locals.Names(); len(req.Sg) == 0 {
+	if req.SG = locals.Names(); len(req.SG) == 0 {
 		return nil
 	}
 	if resp, err = client.FindSgIcmpRules(ctx, &req); err != nil {

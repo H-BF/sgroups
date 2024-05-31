@@ -193,7 +193,7 @@ func (sui *sGroupServiceTests) newSgSgRule(
 	ports ...*api.AccPorts) *api.SgSgRule {
 	return &api.SgSgRule{
 		Transport: transport,
-		Sg:        sg.Name,
+		SG:        sg.Name,
 		SgLocal:   sgLocal.Name,
 		Traffic:   traffic,
 		Ports:     ports,
@@ -207,7 +207,7 @@ func (sui *sGroupServiceTests) newIESgSgIcmpRule(
 	ipv common.IpAddrFamily,
 ) *api.IESgSgIcmpRule {
 	return &api.IESgSgIcmpRule{
-		Sg:      sg.Name,
+		SG:      sg.Name,
 		SgLocal: sgLocal.Name,
 		Traffic: traffic,
 		ICMP:    &common.ICMP{IPv: ipv},
@@ -235,8 +235,8 @@ func (sui *sGroupServiceTests) newCidrSgIcmpRule(
 func (sui *sGroupServiceTests) syncRules(rules []*api.Rule, op api.SyncReq_SyncOp) {
 	req := api.SyncReq{
 		SyncOp: op,
-		Subject: &api.SyncReq_SgRules{
-			SgRules: &api.SyncSGRules{
+		Subject: &api.SyncReq_SgSgRules{
+			SgSgRules: &api.SyncSGRules{
 				Rules: rules,
 			},
 		},
@@ -248,8 +248,8 @@ func (sui *sGroupServiceTests) syncRules(rules []*api.Rule, op api.SyncReq_SyncO
 func (sui *sGroupServiceTests) syncSgSgRules(rules []*api.SgSgRule, op api.SyncReq_SyncOp) {
 	req := api.SyncReq{
 		SyncOp: op,
-		Subject: &api.SyncReq_SgSgRules{
-			SgSgRules: &api.SyncSgSgRules{
+		Subject: &api.SyncReq_IeSgSgRules{
+			IeSgSgRules: &api.SyncSgSgRules{
 				Rules: rules,
 			},
 		},
@@ -274,8 +274,8 @@ func (sui *sGroupServiceTests) syncIESgSgIcmpRules(rules []*api.IESgSgIcmpRule, 
 func (sui *sGroupServiceTests) syncCidrSgIcmpRules(rules []*api.CidrSgIcmpRule, op api.SyncReq_SyncOp) {
 	req := api.SyncReq{
 		SyncOp: op,
-		Subject: &api.SyncReq_CidrSgIcmpRules{
-			CidrSgIcmpRules: &api.SyncCidrSgIcmpRules{
+		Subject: &api.SyncReq_IeCidrSgIcmpRules{
+			IeCidrSgIcmpRules: &api.SyncCidrSgIcmpRules{
 				Rules: rules,
 			},
 		},
@@ -303,7 +303,7 @@ func (sui *sGroupServiceTests) sgSgRule2Id(rules ...*api.SgSgRule) []model.IESgS
 	for _, r := range rules {
 		var id model.IESgSgRuleIdentity
 		id.SgLocal = r.GetSgLocal()
-		id.Sg = r.GetSg()
+		id.Sg = r.GetSG()
 		err := (networkTransport{&id.Transport}).
 			from(r.GetTransport())
 		sui.Require().NoError(err)
@@ -319,7 +319,7 @@ func (sui *sGroupServiceTests) ieSgSgIcmpRule2Id(rules ...*api.IESgSgIcmpRule) [
 	for _, r := range rules {
 		var id model.IESgSgIcmpRuleID
 		id.SgLocal = r.GetSgLocal()
-		id.Sg = r.GetSg()
+		id.Sg = r.GetSG()
 		err := (traffic{&id.Traffic}).from(r.GetTraffic())
 		sui.Require().NoError(err)
 		ipv := r.GetICMP().GetIPv()

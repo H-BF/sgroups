@@ -66,7 +66,7 @@ func (sui *ieSgSgIcmpRulesTests) testIESgSgIcmpRulesFromFixtureFilename(name str
 func (sui *ieSgSgIcmpRulesTests) listAllRules() []*protos.IESgSgIcmpRule {
 	resp, err := sui.sgClient.FindIESgSgIcmpRules(sui.ctx, &protos.FindIESgSgIcmpRulesReq{
 		SgLocal: []string{},
-		Sg:      []string{},
+		SG:      []string{},
 	})
 	sui.Require().NoError(err)
 	return resp.GetRules()

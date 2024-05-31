@@ -73,7 +73,7 @@ func (sui *ieSgSgRulesTests) testIESgSgRulesFromFixtureFilename(name string) res
 func (sui *ieSgSgRulesTests) listAllRules() []*protos.SgSgRule {
 	resp, err := sui.sgClient.FindSgSgRules(sui.ctx, &protos.FindSgSgRulesReq{
 		SgLocal: []string{},
-		Sg:      []string{},
+		SG:      []string{},
 	})
 	sui.Require().NoError(err)
 	return resp.GetRules()

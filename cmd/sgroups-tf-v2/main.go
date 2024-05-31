@@ -13,7 +13,7 @@ import (
 
 var (
 	address = "registry.terraform.io/h-bf/sgroups"
-	version = "dev"
+	version = "v2"
 )
 
 func main() {

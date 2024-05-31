@@ -102,10 +102,7 @@ type (
 	SGRule = ruleT[SGRuleIdentity]
 
 	// FQDNRule rule for from SG to FQDN
-	FQDNRule struct {
-		ruleT[FQDNRuleIdentity]
-		NdpiProtocols dict.RBSet[dict.StringCiKey]
-	}
+	FQDNRule = ruleT[FQDNRuleIdentity]
 
 	// IECidrSgRule proto:CIDR:SG:[INGRESS|EGRESS] rule
 	IECidrSgRule = ruleT[IECidrSgRuleIdenity]
@@ -443,12 +440,6 @@ func (rule ruleT[T]) IsEq(other ruleT[T]) bool {
 		rule.Trace == other.Trace &&
 		rule.Action == other.Action &&
 		rule.Priority.IsEq(other.Priority)
-}
-
-// IsEq -
-func (rule FQDNRule) IsEq(other FQDNRule) bool {
-	return rule.ruleT.IsEq(other.ruleT) &&
-		rule.NdpiProtocols.Eq(&other.NdpiProtocols)
 }
 
 // String impl Stringer

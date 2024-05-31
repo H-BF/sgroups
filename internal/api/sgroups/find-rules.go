@@ -86,7 +86,7 @@ func (srv *sgService) FindSgIcmpRules(ctx context.Context, req *sg.FindSgIcmpRul
 	}
 	defer reader.Close() //lint:nolint
 	var sc registry.Scope = registry.NoScope
-	if sgs := req.GetSg(); len(sgs) > 0 {
+	if sgs := req.GetSG(); len(sgs) > 0 {
 		sc = registry.SG(sgs...)
 	}
 	resp = new(sg.SgIcmpRulesResp)
@@ -150,7 +150,7 @@ func (srv *sgService) FindIESgSgIcmpRules(ctx context.Context, req *sg.FindIESgS
 	if sgLocals := req.GetSgLocal(); len(sgLocals) > 0 {
 		scSgLocals = registry.SGLocal(sgLocals[0], sgLocals[1:]...)
 	}
-	if sgs := req.GetSg(); len(sgs) > 0 {
+	if sgs := req.GetSG(); len(sgs) > 0 {
 		scSgs = registry.SG(sgs...)
 	}
 
@@ -177,7 +177,7 @@ func (srv *sgService) FindCidrSgRules(ctx context.Context, req *sg.FindCidrSgRul
 	}
 	defer reader.Close() //lint:nolint
 	var sc registry.Scope = registry.NoScope
-	if sgs := req.GetSg(); len(sgs) > 0 {
+	if sgs := req.GetSG(); len(sgs) > 0 {
 		sc = registry.SG(sgs...)
 	}
 	resp = new(sg.CidrSgRulesResp)
@@ -202,7 +202,7 @@ func (srv *sgService) FindCidrSgIcmpRules(ctx context.Context, req *sg.FindCidrS
 	}
 	defer reader.Close() //lint:nolint
 	var sc registry.Scope = registry.NoScope
-	if sgs := req.GetSg(); len(sgs) > 0 {
+	if sgs := req.GetSG(); len(sgs) > 0 {
 		sc = registry.SG(sgs...)
 	}
 	resp = new(sg.CidrSgIcmpRulesResp)
@@ -229,7 +229,7 @@ func (srv *sgService) FindSgSgRules(ctx context.Context, req *sg.FindSgSgRulesRe
 	if sgLocals := req.GetSgLocal(); len(sgLocals) > 0 {
 		scSgLocals = registry.SGLocal(sgLocals[0], sgLocals[1:]...)
 	}
-	if sgs := req.GetSg(); len(sgs) > 0 {
+	if sgs := req.GetSG(); len(sgs) > 0 {
 		scSgs = registry.SG(sgs...)
 	}
 

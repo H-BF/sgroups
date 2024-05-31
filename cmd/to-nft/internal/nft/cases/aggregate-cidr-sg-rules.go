@@ -30,8 +30,8 @@ func (rules *CidrSgRules) Load(ctx context.Context, client SGClient, locals SGs)
 		err = errors.WithMessage(err, api)
 	}()
 
-	req := sgAPI.FindCidrSgRulesReq{Sg: locals.Names()}
-	if len(req.Sg) == 0 {
+	req := sgAPI.FindCidrSgRulesReq{SG: locals.Names()}
+	if len(req.SG) == 0 {
 		return nil
 	}
 	var resp *sgAPI.CidrSgRulesResp

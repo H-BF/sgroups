@@ -46,7 +46,7 @@ func (rules *IECidrSgIcmpRules) Load(ctx context.Context, client SGClient, local
 	if len(localSgNames) == 0 {
 		return nil
 	}
-	req := sgAPI.FindCidrSgIcmpRulesReq{Sg: localSgNames}
+	req := sgAPI.FindCidrSgIcmpRulesReq{SG: localSgNames}
 	var resp *sgAPI.CidrSgIcmpRulesResp
 	if resp, err = client.FindCidrSgIcmpRules(ctx, &req); err != nil {
 		return err
