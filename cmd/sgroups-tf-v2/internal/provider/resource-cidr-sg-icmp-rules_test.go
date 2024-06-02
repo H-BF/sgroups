@@ -64,7 +64,7 @@ func (sui *cidrSgIcmpRulesTests) testCidrSgIcmpRulesFromFixtureFilename(name str
 }
 
 func (sui *cidrSgIcmpRulesTests) listAllRules() []*protos.IECidrSgIcmpRule {
-	resp, err := sui.sgClient.FindCidrSgIcmpRules(sui.ctx, &protos.FindIECidrSgIcmpRulesReq{SG: []string{}})
+	resp, err := sui.sgClient.FindIECidrSgIcmpRules(sui.ctx, &protos.FindIECidrSgIcmpRulesReq{SG: []string{}})
 	sui.Require().NoError(err)
 	return resp.GetRules()
 }

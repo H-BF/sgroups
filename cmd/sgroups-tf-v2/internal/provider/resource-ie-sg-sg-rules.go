@@ -162,7 +162,7 @@ func readIESgSgRules(ctx context.Context, state NamedResources[ieSgSgRule], clie
 			SelectT(func(i linq.KeyValue) string {
 				return i.Value.(ieSgSgRule).Sg.ValueString()
 			}).Distinct().ToSlice(&req.SG)
-		if resp, err = client.FindSgSgRules(ctx, &req); err != nil {
+		if resp, err = client.FindIESgSgRules(ctx, &req); err != nil {
 			diags.AddError("read ie-sg-sg rules", err.Error())
 			return newState, diags
 		}

@@ -35,7 +35,7 @@ func (rules *CidrSgRules) Load(ctx context.Context, client SGClient, locals SGs)
 		return nil
 	}
 	var resp *sgAPI.IECidrSgRulesResp
-	if resp, err = client.FindCidrSgRules(ctx, &req); err != nil {
+	if resp, err = client.FindIECidrSgRules(ctx, &req); err != nil {
 		return err
 	}
 	for _, protoRule := range resp.GetRules() {

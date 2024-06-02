@@ -601,52 +601,7 @@ func (sui *sGroupServiceTests) Test_GetSgSubnets() {
 	}
 }
 
-func (sui *sGroupServiceTests) Test_GetRules() {
-	nw1 := sui.newNetwork("net1", "10.10.10.0/24")
-	nw2 := sui.newNetwork("net2", "20.20.20.0/24")
-	nw3 := sui.newNetwork("net3", "25.20.20.0/24")
-	sui.syncNetworks([]*api.Network{nw1, nw2, nw3}, api.SyncReq_FullSync)
-
-	sg1 := sui.newSG("sg1", nw1.Name)
-	sg2 := sui.newSG("sg2", nw2.Name)
-	sg3 := sui.newSG("sg3", nw3.Name)
-	sui.syncSGs([]*api.SecGroup{sg1, sg2, sg3}, api.SyncReq_FullSync)
-
-	r1 := sui.newRule(sg1, sg2, common.Networks_NetIP_TCP)
-	r2 := sui.newRule(sg1, sg3, common.Networks_NetIP_UDP)
-	r3 := sui.newRule(sg2, sg1, common.Networks_NetIP_UDP)
-	r4 := sui.newRule(sg2, sg3, common.Networks_NetIP_TCP)
-	sui.syncRules([]*api.SgSgRule{r1, r2, r3, r4}, api.SyncReq_FullSync)
-
-	tests := []struct {
-		from, to      string
-		shouldBeFound bool
-	}{
-		{"sg1", "sg2", true},
-		{"sg1", "sg3", true},
-
-		{"sg2", "sg1", true},
-		{"sg2", "sg3", true},
-
-		{"sg3", "sg1", false},
-		{"sg3", "sg2", false},
-	}
-
-	req := new(api.GetSgSgRulesReq)
-	for _, t := range tests {
-		req.SgFrom = t.from
-		req.SgTo = t.to
-		if resp, err := sui.srv.GetRules(sui.ctx, req); !t.shouldBeFound {
-			sui.Require().Error(err)
-			sui.Require().Equal(codes.NotFound, status.Code(err))
-		} else {
-			sui.Require().Equal(t.from, resp.GetRules()[0].GetSgFrom())
-			sui.Require().Equal(t.to, resp.GetRules()[0].GetSgTo())
-		}
-	}
-}
-
-func (sui *sGroupServiceTests) Test_FindRules() {
+func (sui *sGroupServiceTests) Test_FindSgSgRules() {
 	sg1 := sui.newSG("sg1")
 	sg2 := sui.newSG("sg2")
 	sg3 := sui.newSG("sg3")
@@ -695,7 +650,7 @@ func (sui *sGroupServiceTests) Test_FindRules() {
 	for _, t := range tests {
 		req.SgFrom = t.from
 		req.SgTo = t.to
-		resp, err := sui.srv.FindRules(sui.ctx, req)
+		resp, err := sui.srv.FindSgSgRules(sui.ctx, req)
 		sui.Require().NoError(err)
 		sui.Require().NotNil(resp)
 		g := got(resp.GetRules())

@@ -12,8 +12,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// FindRules impl SecGroupServiceServer
-func (srv *sgService) FindRules(ctx context.Context, req *sg.FindSgSgRulesReq) (resp *sg.SgSgRulesResp, err error) {
+// FindSgSgRules impl SecGroupServiceServer
+func (srv *sgService) FindSgSgRules(ctx context.Context, req *sg.FindSgSgRulesReq) (resp *sg.SgSgRulesResp, err error) {
 	defer func() {
 		err = correctError(err)
 	}()
@@ -166,8 +166,8 @@ func (srv *sgService) FindIESgSgIcmpRules(ctx context.Context, req *sg.FindIESgS
 	return resp, err
 }
 
-// FindCidrSgRules impl SecGroupServiceServer
-func (srv *sgService) FindCidrSgRules(ctx context.Context, req *sg.FindIECidrSgRulesReq) (resp *sg.IECidrSgRulesResp, err error) {
+// FindIECidrSgRules impl SecGroupServiceServer
+func (srv *sgService) FindIECidrSgRules(ctx context.Context, req *sg.FindIECidrSgRulesReq) (resp *sg.IECidrSgRulesResp, err error) {
 	defer func() {
 		err = correctError(err)
 	}()
@@ -191,8 +191,8 @@ func (srv *sgService) FindCidrSgRules(ctx context.Context, req *sg.FindIECidrSgR
 	return resp, err
 }
 
-// FindCidrSgIcmpRules -
-func (srv *sgService) FindCidrSgIcmpRules(ctx context.Context, req *sg.FindIECidrSgIcmpRulesReq) (resp *sg.IECidrSgIcmpRulesResp, err error) {
+// FindIECidrSgIcmpRules -
+func (srv *sgService) FindIECidrSgIcmpRules(ctx context.Context, req *sg.FindIECidrSgIcmpRulesReq) (resp *sg.IECidrSgIcmpRulesResp, err error) {
 	defer func() {
 		err = correctError(err)
 	}()
@@ -216,7 +216,7 @@ func (srv *sgService) FindCidrSgIcmpRules(ctx context.Context, req *sg.FindIECid
 	return resp, err
 }
 
-func (srv *sgService) FindSgSgRules(ctx context.Context, req *sg.FindIESgSgRulesReq) (resp *sg.IESgSgRulesResp, err error) {
+func (srv *sgService) FindIESgSgRules(ctx context.Context, req *sg.FindIESgSgRulesReq) (resp *sg.IESgSgRulesResp, err error) {
 	defer func() {
 		err = correctError(err)
 	}()

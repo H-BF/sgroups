@@ -40,7 +40,7 @@ func (rules *SG2SGRules) Load(ctx context.Context, client SGClient, locals SGs) 
 	}
 	for i := range reqs {
 		var resp *sgAPI.SgSgRulesResp
-		if resp, err = client.FindRules(ctx, &reqs[i]); err != nil {
+		if resp, err = client.FindSgSgRules(ctx, &reqs[i]); err != nil {
 			return err
 		}
 		for _, protoRule := range resp.GetRules() {

@@ -42,7 +42,7 @@ func (sui *cidrRulesTests) testCidrRulesFromFixtureFilename(name string) resourc
 			Config: sui.providerConfig + "\n" + tc.TfConfig,
 			Check: func(_ *terraform.State) error {
 				if len(expectedBackend)+len(nonExpectedBackend) > 0 {
-					allRules := sui.listAllCidrRules()
+					allRules := sui.listAllIECidrRules()
 					var checker fixtures.ExpectationsChecker[protos.IECidrSgRule, domain.IECidrSgRule]
 					checker.Init(allRules)
 
@@ -64,8 +64,8 @@ func (sui *cidrRulesTests) testCidrRulesFromFixtureFilename(name string) resourc
 	return resourceTestCase
 }
 
-func (sui *cidrRulesTests) listAllCidrRules() []*protos.IECidrSgRule {
-	resp, err := sui.sgClient.FindCidrSgRules(sui.ctx, &protos.FindIECidrSgRulesReq{SG: []string{}})
+func (sui *cidrRulesTests) listAllIECidrRules() []*protos.IECidrSgRule {
+	resp, err := sui.sgClient.FindIECidrSgRules(sui.ctx, &protos.FindIECidrSgRulesReq{SG: []string{}})
 	sui.Require().NoError(err)
 	return resp.GetRules()
 }

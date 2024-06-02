@@ -1,16 +1,11 @@
 package sgroups
 
 import (
-	"context"
-
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
-	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 
 	"github.com/H-BF/protos/pkg/api/common"
 	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/pkg/errors"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func netTranport2proto(src model.NetworkTransport) (common.Networks_NetIP_Transport, error) {
@@ -256,36 +251,4 @@ func sgSgRule2proto(src model.IESgSgRule) (*sg.IESgSgRule, error) {
 	ret.Priority = priority2proto(src.Priority)
 	ret.Action, e = ruleAction2proto(src.Action)
 	return ret, e
-}
-
-func (srv *sgService) GetRules(ctx context.Context, req *sg.GetSgSgRulesReq) (resp *sg.SgSgRulesResp, err error) {
-	defer func() {
-		err = correctError(err)
-	}()
-	var reader registry.Reader
-	if reader, err = srv.registryReader(ctx); err != nil {
-		return nil, err
-	}
-	defer reader.Close() //lint:nolint
-	resp = new(sg.SgSgRulesResp)
-	err = reader.ListSGRules(ctx, func(rule model.SGRule) error {
-		r, e := sgRule2proto(rule)
-		if e != nil {
-			return errors.WithMessagef(e, "on convert SGRule '%s' to proto", rule.ID)
-		}
-		resp.Rules = append(resp.Rules, r)
-		return nil
-	}, registry.And(
-		registry.SGFrom(req.GetSgFrom()), registry.SGTo(req.GetSgTo()),
-	))
-	if err != nil {
-		return nil,
-			status.Errorf(codes.Internal, "reason: %v", err)
-	}
-	if len(resp.GetRules()) == 0 {
-		return nil,
-			status.Errorf(codes.NotFound, "not found rules for from SG '%s' to SG '%s'",
-				req.GetSgFrom(), req.GetSgTo())
-	}
-	return resp, nil
 }

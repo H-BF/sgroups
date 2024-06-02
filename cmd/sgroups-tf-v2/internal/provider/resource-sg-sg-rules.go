@@ -147,7 +147,7 @@ func readSgSgRules(ctx context.Context, state NamedResources[sgSgRule], client *
 				return i.(linq.KeyValue).Value.(sgSgRule).SgTo.ValueString()
 			}).Distinct().ToSlice(&req.SgTo)
 		var err error
-		if resp, err = client.FindRules(ctx, &req); err != nil {
+		if resp, err = client.FindSgSgRules(ctx, &req); err != nil {
 			diags.AddError("read sg-sg-rules", err.Error())
 			return newState, diags
 		}

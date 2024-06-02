@@ -48,7 +48,7 @@ func (rules *SgIeSgRules) Load(ctx context.Context, client SGClient, locals SGs)
 	}
 	req := sgAPI.FindIESgSgRulesReq{SgLocal: localSgNames}
 	var resp *sgAPI.IESgSgRulesResp
-	if resp, err = client.FindSgSgRules(ctx, &req); err != nil {
+	if resp, err = client.FindIESgSgRules(ctx, &req); err != nil {
 		return err
 	}
 	for _, protoRule := range resp.GetRules() {

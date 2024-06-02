@@ -178,7 +178,7 @@ func readCidrSgIcmpRules(
 			}).
 			Distinct().
 			ToSlice(&req.SG)
-		if resp, err = client.FindCidrSgIcmpRules(ctx, req); err != nil {
+		if resp, err = client.FindIECidrSgIcmpRules(ctx, req); err != nil {
 			diags.AddError("read cidr-sg icmp rules", err.Error())
 			return newState, diags
 		}
