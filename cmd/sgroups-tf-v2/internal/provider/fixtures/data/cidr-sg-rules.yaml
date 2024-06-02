@@ -66,7 +66,7 @@ cases:
       }
     }
   expected-backend:
-    cidr-sg-rules:
+    ie-cidr-sg-rules:
     - |
       {
         "CIDR": "10.0.0.0/24",
@@ -121,7 +121,7 @@ cases:
       }
     }
   expected-backend:
-    cidr-sg-rules:
+    ie-cidr-sg-rules:
     - |
       {
         "CIDR": "10.0.0.0/24",
@@ -139,7 +139,7 @@ cases:
         "action": "DROP"
       }
   not-expected-backend:
-    cidr-sg-rules:
+    ie-cidr-sg-rules:
     - |
       {
         "CIDR": "20.0.0.0/24",

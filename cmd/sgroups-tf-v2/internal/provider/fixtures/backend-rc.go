@@ -13,10 +13,10 @@ type (
 	// BackendRC -
 	BackendRC interface {
 		protos.Network | protos.SecGroup |
-			protos.Rule | protos.FqdnRule |
+			protos.SgSgRule | protos.FqdnRule |
 			protos.SgIcmpRule | protos.SgSgIcmpRule |
-			protos.CidrSgRule | protos.CidrSgIcmpRule |
-			protos.SgSgRule | protos.IESgSgIcmpRule
+			protos.IECidrSgRule | protos.IECidrSgIcmpRule |
+			protos.IESgSgRule | protos.IESgSgIcmpRule
 	}
 
 	// BackendRcList -
@@ -24,16 +24,16 @@ type (
 
 	// BackendState -
 	BackendState struct {
-		Networks        BackendRcList[protos.Network]        `yaml:"networks"`
-		SecGroups       BackendRcList[protos.SecGroup]       `yaml:"sec-groups"`
-		SgSgRules       BackendRcList[protos.Rule]           `yaml:"sg-sg-rules"`
-		SgFqdnRules     BackendRcList[protos.FqdnRule]       `yaml:"sg-fqdn-rules"`
-		SgIcmpRules     BackendRcList[protos.SgIcmpRule]     `yaml:"sg-icmp-rules"`
-		SgSgIcmpRules   BackendRcList[protos.SgSgIcmpRule]   `yaml:"sg-sg-icmp-rules"`
-		CidrSgRules     BackendRcList[protos.CidrSgRule]     `yaml:"cidr-sg-rules"`
-		CidrSgIcmpRules BackendRcList[protos.CidrSgIcmpRule] `yaml:"cidr-sg-icmp-rules"`
-		IESgSgRules     BackendRcList[protos.SgSgRule]       `yaml:"ie-sg-sg-rules"`
-		IESgSgIcmpRules BackendRcList[protos.IESgSgIcmpRule] `yaml:"ie-sg-sg-icmp-rules"`
+		Networks          BackendRcList[protos.Network]          `yaml:"networks"`
+		SecGroups         BackendRcList[protos.SecGroup]         `yaml:"sec-groups"`
+		SgSgRules         BackendRcList[protos.SgSgRule]         `yaml:"sg-sg-rules"`
+		SgFqdnRules       BackendRcList[protos.FqdnRule]         `yaml:"sg-fqdn-rules"`
+		SgIcmpRules       BackendRcList[protos.SgIcmpRule]       `yaml:"sg-icmp-rules"`
+		SgSgIcmpRules     BackendRcList[protos.SgSgIcmpRule]     `yaml:"sg-sg-icmp-rules"`
+		IECidrSgRules     BackendRcList[protos.IECidrSgRule]     `yaml:"ie-cidr-sg-rules"`
+		IECidrSgIcmpRules BackendRcList[protos.IECidrSgIcmpRule] `yaml:"ie-cidr-sg-icmp-rules"`
+		IESgSgRules       BackendRcList[protos.IESgSgRule]       `yaml:"ie-sg-sg-rules"`
+		IESgSgIcmpRules   BackendRcList[protos.IESgSgIcmpRule]   `yaml:"ie-sg-sg-icmp-rules"`
 	}
 )
 

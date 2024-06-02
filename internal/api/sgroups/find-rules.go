@@ -13,7 +13,7 @@ import (
 )
 
 // FindRules impl SecGroupServiceServer
-func (srv *sgService) FindRules(ctx context.Context, req *sg.FindRulesReq) (resp *sg.RulesResp, err error) {
+func (srv *sgService) FindRules(ctx context.Context, req *sg.FindSgSgRulesReq) (resp *sg.SgSgRulesResp, err error) {
 	defer func() {
 		err = correctError(err)
 	}()
@@ -29,7 +29,7 @@ func (srv *sgService) FindRules(ctx context.Context, req *sg.FindRulesReq) (resp
 	if s := req.GetSgTo(); len(s) > 0 {
 		sc2 = registry.SGTo(s[0], s[1:]...)
 	}
-	resp = new(sg.RulesResp)
+	resp = new(sg.SgSgRulesResp)
 	err = reader.ListSGRules(ctx, func(rule model.SGRule) error {
 		r, e := sgRule2proto(rule)
 		if e != nil {
@@ -167,7 +167,7 @@ func (srv *sgService) FindIESgSgIcmpRules(ctx context.Context, req *sg.FindIESgS
 }
 
 // FindCidrSgRules impl SecGroupServiceServer
-func (srv *sgService) FindCidrSgRules(ctx context.Context, req *sg.FindCidrSgRulesReq) (resp *sg.CidrSgRulesResp, err error) {
+func (srv *sgService) FindCidrSgRules(ctx context.Context, req *sg.FindIECidrSgRulesReq) (resp *sg.IECidrSgRulesResp, err error) {
 	defer func() {
 		err = correctError(err)
 	}()
@@ -180,7 +180,7 @@ func (srv *sgService) FindCidrSgRules(ctx context.Context, req *sg.FindCidrSgRul
 	if sgs := req.GetSG(); len(sgs) > 0 {
 		sc = registry.SG(sgs...)
 	}
-	resp = new(sg.CidrSgRulesResp)
+	resp = new(sg.IECidrSgRulesResp)
 	err = reader.ListCidrSgRules(ctx, func(r model.IECidrSgRule) error {
 		p, e := cidrSgRule2proto(r)
 		if e == nil {
@@ -192,7 +192,7 @@ func (srv *sgService) FindCidrSgRules(ctx context.Context, req *sg.FindCidrSgRul
 }
 
 // FindCidrSgIcmpRules -
-func (srv *sgService) FindCidrSgIcmpRules(ctx context.Context, req *sg.FindCidrSgIcmpRulesReq) (resp *sg.CidrSgIcmpRulesResp, err error) {
+func (srv *sgService) FindCidrSgIcmpRules(ctx context.Context, req *sg.FindIECidrSgIcmpRulesReq) (resp *sg.IECidrSgIcmpRulesResp, err error) {
 	defer func() {
 		err = correctError(err)
 	}()
@@ -205,7 +205,7 @@ func (srv *sgService) FindCidrSgIcmpRules(ctx context.Context, req *sg.FindCidrS
 	if sgs := req.GetSG(); len(sgs) > 0 {
 		sc = registry.SG(sgs...)
 	}
-	resp = new(sg.CidrSgIcmpRulesResp)
+	resp = new(sg.IECidrSgIcmpRulesResp)
 	err = reader.ListCidrSgIcmpRules(ctx, func(r model.IECidrSgIcmpRule) error {
 		p, e := cidrSgIcmpRule2proto(r)
 		if e == nil {
@@ -216,7 +216,7 @@ func (srv *sgService) FindCidrSgIcmpRules(ctx context.Context, req *sg.FindCidrS
 	return resp, err
 }
 
-func (srv *sgService) FindSgSgRules(ctx context.Context, req *sg.FindSgSgRulesReq) (resp *sg.SgSgRulesResp, err error) {
+func (srv *sgService) FindSgSgRules(ctx context.Context, req *sg.FindIESgSgRulesReq) (resp *sg.IESgSgRulesResp, err error) {
 	defer func() {
 		err = correctError(err)
 	}()
@@ -233,7 +233,7 @@ func (srv *sgService) FindSgSgRules(ctx context.Context, req *sg.FindSgSgRulesRe
 		scSgs = registry.SG(sgs...)
 	}
 
-	resp = new(sg.SgSgRulesResp)
+	resp = new(sg.IESgSgRulesResp)
 	err = reader.ListSgSgRules(ctx, func(r model.IESgSgRule) error {
 		p, e := sgSgRule2proto(r)
 		if e == nil {

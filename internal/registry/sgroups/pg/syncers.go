@@ -105,7 +105,6 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "proto", PgTy: "sgroups.proto", Notnull: true, Pk: true},
 			syncField{Name: "ports", PgTy: "sgroups.sg_rule_ports[]"},
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
-			syncField{Name: "ndpi_protocols", PgTy: "citext[]", Notnull: true},
 			syncField{Name: "action", PgTy: "sgroups.rule_action", Notnull: true},
 			syncField{Name: "priority", PgTy: "smallint"},
 		)

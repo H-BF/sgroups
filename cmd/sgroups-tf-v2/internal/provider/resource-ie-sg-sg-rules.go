@@ -150,10 +150,10 @@ func (item ieSgSgRule) IsDiffer(ctx context.Context, other ieSgSgRule) bool { //
 func readIESgSgRules(ctx context.Context, state NamedResources[ieSgSgRule], client *sgAPI.Client) (NamedResources[ieSgSgRule], diag.Diagnostics) {
 	var diags diag.Diagnostics
 	newState := NewNamedResources[ieSgSgRule]()
-	var resp *protos.SgSgRulesResp
+	var resp *protos.IESgSgRulesResp
 	var err error
 	if len(state.Items) > 0 {
-		var req protos.FindSgSgRulesReq
+		var req protos.FindIESgSgRulesReq
 		linq.From(state.Items).
 			SelectT(func(i linq.KeyValue) string {
 				return i.Value.(ieSgSgRule).SgLocal.ValueString()

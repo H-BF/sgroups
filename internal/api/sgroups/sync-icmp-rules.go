@@ -118,7 +118,7 @@ func (r proto2IESgSgIcmpRule) from(src *sg.IESgSgIcmpRule) error {
 	return e
 }
 
-func (r proto2CidrSgIcmpRule) from(src *sg.CidrSgIcmpRule) error {
+func (r proto2CidrSgIcmpRule) from(src *sg.IECidrSgIcmpRule) error {
 	ip, ipnet, e := net.ParseCIDR(src.GetCIDR())
 	if e != nil {
 		return errors.WithMessagef(e, "bad CIDR '%s'", src.GetCIDR())
@@ -193,11 +193,11 @@ var syncIESgSgIcmpRule = syncAlg[model.IESgSgIcmpRule, *sg.IESgSgIcmpRule]{
 	},
 }.process
 
-var syncIECidrSgIcmpRule = syncAlg[model.IECidrSgIcmpRule, *sg.CidrSgIcmpRule]{
+var syncIECidrSgIcmpRule = syncAlg[model.IECidrSgIcmpRule, *sg.IECidrSgIcmpRule]{
 	makePrimaryKeyScope: func(r []model.IECidrSgIcmpRule) registry.Scope {
 		return registry.PKScopedCidrSgIcmpRules(r...)
 	},
-	proto2model: func(r *sg.CidrSgIcmpRule) (ret model.IECidrSgIcmpRule, err error) {
+	proto2model: func(r *sg.IECidrSgIcmpRule) (ret model.IECidrSgIcmpRule, err error) {
 		err = proto2CidrSgIcmpRule{&ret}.from(r)
 		return ret, err
 	},

@@ -68,8 +68,8 @@ func priority2proto(src model.RulePriority) *sg.RulePriority {
 	return &ret
 }
 
-func sgRule2proto(src model.SGRule) (*sg.Rule, error) {
-	var ret sg.Rule
+func sgRule2proto(src model.SGRule) (*sg.SgSgRule, error) {
+	var ret sg.SgSgRule
 	if t, e := netTranport2proto(src.ID.Transport); e != nil {
 		return nil, e
 	} else {
@@ -185,8 +185,8 @@ func ieSgSgIcmpRule2proto(src model.IESgSgIcmpRule) (*sg.IESgSgIcmpRule, error) 
 	return ret, e
 }
 
-func cidrSgRule2proto(src model.IECidrSgRule) (*sg.CidrSgRule, error) {
-	ret := &sg.CidrSgRule{
+func cidrSgRule2proto(src model.IECidrSgRule) (*sg.IECidrSgRule, error) {
+	ret := &sg.IECidrSgRule{
 		Logs:  src.Logs,
 		Trace: src.Trace,
 		SG:    src.ID.SG,
@@ -207,8 +207,8 @@ func cidrSgRule2proto(src model.IECidrSgRule) (*sg.CidrSgRule, error) {
 	return ret, e
 }
 
-func cidrSgIcmpRule2proto(src model.IECidrSgIcmpRule) (*sg.CidrSgIcmpRule, error) {
-	ret := &sg.CidrSgIcmpRule{
+func cidrSgIcmpRule2proto(src model.IECidrSgIcmpRule) (*sg.IECidrSgIcmpRule, error) {
+	ret := &sg.IECidrSgIcmpRule{
 		CIDR:  src.CIDR.String(),
 		SG:    src.SG,
 		Logs:  src.Logs,
@@ -236,8 +236,8 @@ func cidrSgIcmpRule2proto(src model.IECidrSgIcmpRule) (*sg.CidrSgIcmpRule, error
 	return ret, e
 }
 
-func sgSgRule2proto(src model.IESgSgRule) (*sg.SgSgRule, error) {
-	ret := &sg.SgSgRule{
+func sgSgRule2proto(src model.IESgSgRule) (*sg.IESgSgRule, error) {
+	ret := &sg.IESgSgRule{
 		SG:      src.ID.Sg,
 		SgLocal: src.ID.SgLocal,
 		Logs:    src.Logs,
@@ -258,7 +258,7 @@ func sgSgRule2proto(src model.IESgSgRule) (*sg.SgSgRule, error) {
 	return ret, e
 }
 
-func (srv *sgService) GetRules(ctx context.Context, req *sg.GetRulesReq) (resp *sg.RulesResp, err error) {
+func (srv *sgService) GetRules(ctx context.Context, req *sg.GetSgSgRulesReq) (resp *sg.SgSgRulesResp, err error) {
 	defer func() {
 		err = correctError(err)
 	}()
@@ -267,7 +267,7 @@ func (srv *sgService) GetRules(ctx context.Context, req *sg.GetRulesReq) (resp *
 		return nil, err
 	}
 	defer reader.Close() //lint:nolint
-	resp = new(sg.RulesResp)
+	resp = new(sg.SgSgRulesResp)
 	err = reader.ListSGRules(ctx, func(rule model.SGRule) error {
 		r, e := sgRule2proto(rule)
 		if e != nil {

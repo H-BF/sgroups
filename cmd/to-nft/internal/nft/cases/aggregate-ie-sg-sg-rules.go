@@ -46,8 +46,8 @@ func (rules *SgIeSgRules) Load(ctx context.Context, client SGClient, locals SGs)
 	if len(localSgNames) == 0 {
 		return nil
 	}
-	req := sgAPI.FindSgSgRulesReq{SgLocal: localSgNames}
-	var resp *sgAPI.SgSgRulesResp
+	req := sgAPI.FindIESgSgRulesReq{SgLocal: localSgNames}
+	var resp *sgAPI.IESgSgRulesResp
 	if resp, err = client.FindSgSgRules(ctx, &req); err != nil {
 		return err
 	}

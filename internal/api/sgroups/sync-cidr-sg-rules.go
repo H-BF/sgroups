@@ -53,7 +53,7 @@ func (a ruleAction) from(src sg.RuleAction) error {
 	return nil
 }
 
-func (id cidrSgRuleIdentity) from(src *sg.CidrSgRule) error {
+func (id cidrSgRuleIdentity) from(src *sg.IECidrSgRule) error {
 	ip, ipnet, e := net.ParseCIDR(src.GetCIDR())
 	if e != nil {
 		return errors.WithMessagef(e, "bad CIDR '%s'", src.GetCIDR())
@@ -75,7 +75,7 @@ func (id cidrSgRuleIdentity) from(src *sg.CidrSgRule) error {
 	return nil
 }
 
-func (r cidrSgRule) from(src *sg.CidrSgRule) error {
+func (r cidrSgRule) from(src *sg.IECidrSgRule) error {
 	e := cidrSgRuleIdentity{IECidrSgRuleIdenity: &r.ID}.from(src)
 	if e != nil {
 		return e
@@ -92,11 +92,11 @@ func (r cidrSgRule) from(src *sg.CidrSgRule) error {
 	return e
 }
 
-var syncCidrSgRules = syncAlg[model.IECidrSgRule, *sg.CidrSgRule]{
+var syncCidrSgRules = syncAlg[model.IECidrSgRule, *sg.IECidrSgRule]{
 	makePrimaryKeyScope: func(rr []model.IECidrSgRule) registry.Scope {
 		return registry.PKScopedCidrSgRules(rr...)
 	},
-	proto2model: func(r *sg.CidrSgRule) (model.IECidrSgRule, error) {
+	proto2model: func(r *sg.IECidrSgRule) (model.IECidrSgRule, error) {
 		var item model.IECidrSgRule
 		err := cidrSgRule{IECidrSgRule: &item}.from(r)
 		return item, err

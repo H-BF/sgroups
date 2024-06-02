@@ -135,9 +135,9 @@ func (item sgSgRule) Attributes() map[string]schema.Attribute { //nolint:dupl
 func readSgSgRules(ctx context.Context, state NamedResources[sgSgRule], client *sgAPI.Client) (NamedResources[sgSgRule], diag.Diagnostics) {
 	var diags diag.Diagnostics
 	newState := NewNamedResources[sgSgRule]()
-	var resp *protos.RulesResp
+	var resp *protos.SgSgRulesResp
 	if len(state.Items) > 0 {
-		var req protos.FindRulesReq
+		var req protos.FindSgSgRulesReq
 		linq.From(state.Items).
 			Select(func(i interface{}) interface{} {
 				return i.(linq.KeyValue).Value.(sgSgRule).SgFrom.ValueString()

@@ -16,7 +16,7 @@ type (
 	}
 )
 
-func (id sgSgRuleIdentity) from(src *sg.SgSgRule) error {
+func (id sgSgRuleIdentity) from(src *sg.IESgSgRule) error {
 	id.SgLocal = src.GetSgLocal()
 	id.Sg = src.GetSG()
 
@@ -31,7 +31,7 @@ func (id sgSgRuleIdentity) from(src *sg.SgSgRule) error {
 	return nil
 }
 
-func (r sgSgRule) from(src *sg.SgSgRule) error {
+func (r sgSgRule) from(src *sg.IESgSgRule) error {
 	e := sgSgRuleIdentity{IESgSgRuleIdentity: &r.ID}.from(src)
 	if e != nil {
 		return e
@@ -49,11 +49,11 @@ func (r sgSgRule) from(src *sg.SgSgRule) error {
 	return e
 }
 
-var syncSgSgRules = syncAlg[model.IESgSgRule, *sg.SgSgRule]{
+var syncSgSgRules = syncAlg[model.IESgSgRule, *sg.IESgSgRule]{
 	makePrimaryKeyScope: func(rr []model.IESgSgRule) registry.Scope {
 		return registry.PKScopedSgSgRules(rr...)
 	},
-	proto2model: func(r *sg.SgSgRule) (ret model.IESgSgRule, err error) {
+	proto2model: func(r *sg.IESgSgRule) (ret model.IESgSgRule, err error) {
 		err = sgSgRule{IESgSgRule: &ret}.from(r)
 		return
 	},

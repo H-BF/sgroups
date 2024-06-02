@@ -34,15 +34,15 @@ func (sui *cidrSgIcmpRulesTests) testCidrSgIcmpRulesFromFixtureFilename(name str
 	}
 	for _, tc := range testData.Cases {
 		tcName := tc.TestName
-		expectedBackend := tc.Expected.CidrSgIcmpRules.Decode()
-		nonExpectedBackend := tc.NonExpected.CidrSgIcmpRules.Decode()
+		expectedBackend := tc.Expected.IECidrSgIcmpRules.Decode()
+		nonExpectedBackend := tc.NonExpected.IECidrSgIcmpRules.Decode()
 
 		resourceTestCase.Steps = append(resourceTestCase.Steps, resource.TestStep{
 			Config: sui.providerConfig + "\n" + tc.TfConfig,
 			Check: func(_ *terraform.State) error {
 				if len(expectedBackend)+len(nonExpectedBackend) > 0 {
 					allRules := sui.listAllRules()
-					var checker fixtures.ExpectationsChecker[protos.CidrSgIcmpRule, domain.IECidrSgIcmpRule]
+					var checker fixtures.ExpectationsChecker[protos.IECidrSgIcmpRule, domain.IECidrSgIcmpRule]
 					checker.Init(allRules)
 
 					if !checker.WeExpectFindAll(expectedBackend) {
@@ -63,8 +63,8 @@ func (sui *cidrSgIcmpRulesTests) testCidrSgIcmpRulesFromFixtureFilename(name str
 	return resourceTestCase
 }
 
-func (sui *cidrSgIcmpRulesTests) listAllRules() []*protos.CidrSgIcmpRule {
-	resp, err := sui.sgClient.FindCidrSgIcmpRules(sui.ctx, &protos.FindCidrSgIcmpRulesReq{SG: []string{}})
+func (sui *cidrSgIcmpRulesTests) listAllRules() []*protos.IECidrSgIcmpRule {
+	resp, err := sui.sgClient.FindCidrSgIcmpRules(sui.ctx, &protos.FindIECidrSgIcmpRulesReq{SG: []string{}})
 	sui.Require().NoError(err)
 	return resp.GetRules()
 }

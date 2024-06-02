@@ -35,11 +35,11 @@ func (rules *SG2SGRules) Load(ctx context.Context, client SGClient, locals SGs) 
 	if len(localSgNames) == 0 {
 		return nil
 	}
-	reqs := []sgAPI.FindRulesReq{
+	reqs := []sgAPI.FindSgSgRulesReq{
 		{SgFrom: localSgNames}, {SgTo: localSgNames},
 	}
 	for i := range reqs {
-		var resp *sgAPI.RulesResp
+		var resp *sgAPI.SgSgRulesResp
 		if resp, err = client.FindRules(ctx, &reqs[i]); err != nil {
 			return err
 		}
