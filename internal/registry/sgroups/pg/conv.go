@@ -14,11 +14,11 @@ import (
 // ToModel -
 func (o SG) ToModel() (sgm.SecurityGroup, error) {
 	ret := sgm.SecurityGroup{
-		Name:     o.Name,
-		Networks: o.Networks,
-		Logs:     o.Logs,
-		Trace:    o.Trace,
+		Name:  o.Name,
+		Logs:  o.Logs,
+		Trace: o.Trace,
 	}
+	ret.Networks.PutMany(o.Networks...)
 	err := ret.DefaultAction.FromString(string(o.DefaultAction))
 	return ret, err
 }
@@ -26,7 +26,7 @@ func (o SG) ToModel() (sgm.SecurityGroup, error) {
 // FromModel -
 func (o *SG) FromModel(m sgm.SecurityGroup) {
 	o.Name = m.Name
-	o.Networks = m.Networks
+	o.Networks = m.Networks.Values()
 	o.Logs = m.Logs
 	o.Trace = m.Trace
 	o.DefaultAction = ChainDefaultAction(

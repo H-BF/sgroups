@@ -5,6 +5,7 @@ import (
 	"net"
 	"testing"
 
+	"github.com/H-BF/corlib/pkg/dict"
 	"github.com/stretchr/testify/require"
 )
 
@@ -104,15 +105,19 @@ func TestValidate_SecurityGroup(t *testing.T) {
 		sg   SecurityGroup
 		fail bool
 	}
+	nws := func(names ...NetworkName) (ret dict.HSet[NetworkName]) {
+		ret.PutMany(names...)
+		return ret
+	}
 	cases := []item{
 		{SecurityGroup{}, true},
 		{SecurityGroup{Name: "sg", DefaultAction: DROP + 100}, true},
 		{SecurityGroup{Name: "sg", DefaultAction: ACCEPT + 100}, true},
 		{SecurityGroup{Name: "sg", DefaultAction: ACCEPT}, false},
 		{SecurityGroup{Name: "sg", DefaultAction: DROP}, false},
-		{SecurityGroup{Name: "sg", Networks: []string{""}}, true},
-		{SecurityGroup{Name: "sg", Networks: []string{"nw"}}, false},
-		{SecurityGroup{Name: "sg", Networks: []string{"nw", "nw"}}, true},
+		{SecurityGroup{Name: "sg", Networks: nws("")}, true},
+		{SecurityGroup{Name: "sg", Networks: nws("nw")}, false},
+		{SecurityGroup{Name: "sg", Networks: nws("nw", "nw")}, false},
 	}
 	for i := range cases {
 		c := cases[i]
@@ -191,9 +196,11 @@ func TestValidate_SGRule(t *testing.T) {
 		return SGRulePorts{S: p1, D: p2}
 	}
 	sg := func(n string, nws ...string) SecurityGroup {
+		var nw dict.HSet[NetworkName]
+		nw.PutMany(nws...)
 		return SecurityGroup{
 			Name:     n,
-			Networks: nws,
+			Networks: nw,
 		}
 	}
 	r := func(sg1, sg2 SecurityGroup, tr NetworkTransport, ports ...SGRulePorts) SGRule {

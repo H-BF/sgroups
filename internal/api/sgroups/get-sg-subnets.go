@@ -37,7 +37,7 @@ func (srv *sgService) GetSgSubnets(ctx context.Context, req *sg.GetSgSubnetsReq)
 		return nil, status.Errorf(codes.NotFound, "SG '%s' is not found", sgName)
 	}
 	resp = new(sg.GetSgSubnetsResp)
-	if len(gr.Networks) > 0 {
+	if gr.Networks.Len() > 0 {
 		err = reader.ListNetworks(ctx, func(n model.Network) error {
 			resp.Networks = append(resp.Networks,
 				&sg.Network{
@@ -47,7 +47,7 @@ func (srv *sgService) GetSgSubnets(ctx context.Context, req *sg.GetSgSubnetsReq)
 					},
 				})
 			return nil
-		}, registry.NetworkNames(gr.Networks...))
+		}, registry.NetworkNames(gr.Networks.Values()...))
 		if err != nil {
 			return nil, err
 		}

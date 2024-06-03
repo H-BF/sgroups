@@ -445,10 +445,10 @@ func validateSecGroupsDataIn(sgs []model.SecurityGroup) error {
 		SelectManyT(func(sg model.SecurityGroup) linq.Query {
 			return linq.Query{
 				Iterate: func() linq.Iterator {
-					i := -1
+					nws, i := sg.Networks.Values(), -1
 					return func() (any, bool) {
-						if i++; i < len(sg.Networks) {
-							return nw2sg{sg.Networks[i], sg.Name}, true
+						if i++; i < len(nws) {
+							return nw2sg{nws[i], sg.Name}, true
 						}
 						return nil, false
 					}

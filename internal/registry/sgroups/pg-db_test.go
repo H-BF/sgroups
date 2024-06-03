@@ -15,10 +15,9 @@ func Test_validateSecGroupsDataIn(t *testing.T) {
 		expectFail bool
 	}
 	sg := func(sgName string, nws ...model.NetworkName) model.SecurityGroup {
-		return model.SecurityGroup{
-			Name:     sgName,
-			Networks: nws,
-		}
+		ret := model.SecurityGroup{Name: sgName}
+		ret.Networks.PutMany(nws...)
+		return ret
 	}
 	cases := []tcase{
 		{sgs{sg("sg1")}, false},

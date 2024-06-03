@@ -48,21 +48,20 @@ func (nw Network) Validate() error {
 
 // Validate security grpoup model validate
 func (sg SecurityGroup) Validate() error {
-	a := make(map[NetworkName]int)
 	return oz.ValidateStruct(&sg,
 		oz.Field(&sg.Name, oz.Required.Error(sgNameRequired), oz.Match(reCName)),
 		oz.Field(&sg.DefaultAction),
 		oz.Field(&sg.Networks,
-			oz.Each(oz.By(func(value interface{}) error {
-				nw := value.(string)
-				if e := oz.Validate(nw, oz.Required.Error("network name is required")); e != nil {
-					return e
-				}
-				if a[nw]++; a[nw] > 1 {
-					return errors.Errorf("network '%s' referenced more tna once", nw)
-				}
-				return nil
-			})),
+			oz.By(func(_ any) error {
+				var e error
+				sg.Networks.Iterate(func(k NetworkName) bool {
+					if len(k) == 0 {
+						e = errors.New("network name cannot be empty")
+					}
+					return e == nil
+				})
+				return e
+			}),
 		),
 	)
 }
