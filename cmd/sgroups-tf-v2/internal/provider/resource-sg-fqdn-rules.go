@@ -120,11 +120,6 @@ func (item sgFqdnRule) Attributes() map[string]schema.Attribute { //nolint:dupl
 			},
 			PlanModifiers: []planmodifier.List{ListAccessPortsModifier()},
 		},
-		"protocols": schema.SetAttribute{
-			Description: "protocols for nDPI",
-			Optional:    true,
-			ElementType: types.StringType,
-		},
 		"action": schema.StringAttribute{
 			Description: "Rule action on packets in chain",
 			Required:    true,

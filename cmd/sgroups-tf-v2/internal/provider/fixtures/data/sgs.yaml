@@ -91,7 +91,7 @@ cases:
             1,2,3
           ]
         },
-        "Sg": "sg1",
+        "SG": "sg1",
         "logs": true,
         "trace": true,
         "action": "ACCEPT"
@@ -104,7 +104,7 @@ cases:
             0,255
           ]
         },
-        "Sg": "sg2",
+        "SG": "sg2",
         "logs": false,
         "trace": false,
         "action": "DROP"
@@ -153,7 +153,7 @@ cases:
             10,20,30,40
           ]
         },
-        "Sg": "sg1",
+        "SG": "sg1",
         "logs": false,
         "trace": false,
         "action": "DROP"
@@ -166,7 +166,7 @@ cases:
             10,20,30
           ]
         },
-        "Sg": "sg1",
+        "SG": "sg1",
         "logs": true,
         "trace": false,
         "action": "DROP"
@@ -190,7 +190,7 @@ cases:
             0,255
           ]
         },
-        "Sg": "sg2",
+        "SG": "sg2",
         "logs": false,
         "trace": false,
         "action": "DROP"

@@ -83,7 +83,7 @@ cases:
             1,2,3
           ]
         },
-        "Sg": "sg1",
+        "SG": "sg1",
         "logs": true,
         "trace": true,
         "action": "ACCEPT"
@@ -96,7 +96,7 @@ cases:
             0,255
           ]
         },
-        "Sg": "sg1",
+        "SG": "sg1",
         "logs": false,
         "trace": false,
         "action": "ACCEPT"
@@ -109,7 +109,7 @@ cases:
             1,2,3
           ]
         },
-        "Sg": "sg2",
+        "SG": "sg2",
         "logs": false,
         "trace": false,
         "action": "DROP"
@@ -162,7 +162,7 @@ cases:
           "IPv": "IPv4",
           "Types": [255]
         },
-        "Sg": "sg2",
+        "SG": "sg2",
         "logs": true,
         "trace": false,
         "action": "ACCEPT"
@@ -177,7 +177,7 @@ cases:
             1,2,3
           ]
         },
-        "Sg": "sg1",
+        "SG": "sg1",
         "logs": true,
         "trace": true,
         "action": "ACCEPT"
@@ -190,7 +190,7 @@ cases:
             0,255
           ]
         },
-        "Sg": "sg1",
+        "SG": "sg1",
         "logs": false,
         "trace": false,
         "action": "ACCEPT"

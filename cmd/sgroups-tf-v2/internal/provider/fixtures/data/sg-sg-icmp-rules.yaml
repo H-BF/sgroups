@@ -101,8 +101,8 @@ cases:
           "IPv": "IPv4",
           "Types": [0,2,255]
         },
-        "SgFrom": "group1",
-        "SgTo": "group2",
+        "sgFrom": "group1",
+        "sgTo": "group2",
         "logs": true,
         "trace": true,
         "action": "ACCEPT"
@@ -113,8 +113,8 @@ cases:
           "IPv": "IPv6",
           "Types": [10,30,54]
         },
-        "SgFrom": "group3",
-        "SgTo": "group4",
+        "sgFrom": "group3",
+        "sgTo": "group4",
         "logs": true,
         "trace": true,
         "action": "DROP"
@@ -142,8 +142,8 @@ cases:
           "IPv": "IPv4",
           "Types": [1,2,3]
         },
-        "SgFrom": "group1",
-        "SgTo": "group2",
+        "sgFrom": "group1",
+        "sgTo": "group2",
         "logs": false,
         "trace": false,
         "action": "DROP"
@@ -156,8 +156,8 @@ cases:
           "IPv": "IPv6",
           "Types": [10,30,54]
         },
-        "SgFrom": "group3",
-        "SgTo": "group4",
+        "sgFrom": "group3",
+        "sgTo": "group4",
         "logs": true,
         "trace": true,
         "action": "DROP"

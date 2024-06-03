@@ -69,7 +69,7 @@ cases:
       }
 - name: "add another rule with empty list for ports"
   tf-config: |
-    resource "sgroups_fqdn_rules" "sg-fqdn-rules-set-1" {
+    resource "sgroups_fqdn_rules" "sg-fqdn-rules-set-2" {
       items = {
         "tcp:sg(group1)fqdn(front.example.org)" = {
           transport = "tcp"

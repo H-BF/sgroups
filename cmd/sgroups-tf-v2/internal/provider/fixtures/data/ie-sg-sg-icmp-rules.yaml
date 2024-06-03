@@ -103,8 +103,8 @@ cases:
           "IPv": "IPv4",
           "Types": [0,2,255]
         },
-        "Sg": "group2",
-        "SgLocal": "group1",
+        "SG": "group2",
+        "sgLocal": "group1",
         "logs": true,
         "trace": true,
         "traffic": "Ingress",
@@ -116,8 +116,8 @@ cases:
           "IPv": "IPv6",
           "Types": [10,30,54]
         },
-        "Sg": "group4",
-        "SgLocal": "group3",
+        "SG": "group4",
+        "sgLocal": "group3",
         "logs": true,
         "trace": true,
         "traffic": "Egress",
@@ -147,8 +147,8 @@ cases:
           "IPv": "IPv4",
           "Types": [1,2,3]
         },
-        "Sg": "group2",
-        "SgLocal": "group1",
+        "SG": "group2",
+        "sgLocal": "group1",
         "logs": false,
         "trace": false,
         "traffic": "Ingress",
@@ -162,8 +162,8 @@ cases:
           "IPv": "IPv6",
           "Types": [10,30,54]
         },
-        "Sg": "group4",
-        "SgLocal": "group3",
+        "SG": "group4",
+        "sgLocal": "group3",
         "logs": true,
         "trace": true,
         "traffic": "Egress",
