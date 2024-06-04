@@ -42,7 +42,8 @@ require (
 
 //replace github.com/H-BF/corlib v0.0.11 => ../corlib
 
-replace github.com/H-BF/protos v0.0.0-00000000000000-000000000000 => ../protos
+//replace github.com/H-BF/protos v0.0.0-00000000000000-000000000000 => ../protos
+replace github.com/H-BF/protos v0.0.0-00000000000000-000000000000 => github.com/H-BF/protos/v2 v2.0.0-dev.1
 
 replace github.com/google/nftables v0.3.3 => ./internal/3d-party/nftables
 
