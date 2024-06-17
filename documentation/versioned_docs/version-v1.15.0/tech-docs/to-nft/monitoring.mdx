@@ -230,6 +230,59 @@ id: monitoring
         <td>counter</td>
         <td>Общее количество http ошибок, выявленных обработчиком</td>
       </tr>
+      <tr>
+        <td>nftables_up</td>
+        <td>counter</td>
+        <td>Удачен ли сбор данных для метрик (1 или 0)</td>
+      </tr>
+      <tr>
+        <td>nftables_counter_bytes</td>
+        <td>counter</td>
+        <td>Количество байтов на табличном каунтере</td>
+      </tr>
+      <tr>
+        <td>nftables_counter_packets</td>
+        <td>counter</td>
+        <td>Количество пакетов на табличном каунтере</td>
+      </tr>
+      <tr>
+        <td>nftables_table_chains</td>
+        <td>counter</td>
+        <td>Количество цепочек в таблице</td>
+      </tr>
+      <tr>
+        <td>nftables_chain_rules</td>
+        <td>counter</td>
+        <td>Количество количество правил в цепочке</td>
+      </tr>
+      <tr>
+        <td>nftables_rule_bytes</td>
+        <td>counter</td>
+        <td>Количество байтов у правила</td>
+      </tr>
+      <tr>
+        <td>nftables_rule_packets</td>
+        <td>counter</td>
+        <td>Количество пакетов у правила</td>
+      </tr>
     </tbody>
   </table>
+</div>
+
+<div>
+  Для подключения или отключения сбора метрик необходимо настроить следующие поля `metrics.enable`, `healthcheck.enable` и `profile.enable` установив значение `true` - чтобы включить или `false` - чтобы выключить (по умолчанию `true`).
+
+```bash
+telemetry:
+  useragent: "string"
+  nft-collector:
+    min-frequency: 1s
+  endpoint: 127.0.0.1:5000
+  metrics:
+    enable: true
+  healthcheck:
+    enable: true
+  profile:
+    enable: true
+```
 </div>

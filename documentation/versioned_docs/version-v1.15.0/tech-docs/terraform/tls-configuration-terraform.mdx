@@ -26,58 +26,83 @@ import TabItem from '@theme/TabItem'
 ## Шаги по настройке TLS
 
 <div>
-  Создайте директорию для хранения ваших сертификатов и ключей, если она еще не существует:
+  Создайте файл конфигурации hbf-агента (terraform) для редактирования:
 
 ```bash
-sudo mkdir -p /etc/ssl/certs
-sudo mkdir -p /etc/ssl/private
-```
-</div>
-
-<div>
-  Скопируйте ваш сертификат и приватный ключ в соответствующие директории. Например:
-
-```bash
-sudo cp /path/to/your/cert-file.pem /etc/ssl/certs/
-sudo cp /path/to/your/key-file.pem /etc/ssl/private/
-```
-</div>
-
-<div>
-  Откройте файл конфигурации hbf-агента (terraform) для редактирования:
-
-```bash
-sudo nano /etc/cmd/sgroups-tf-v2/internal/provider/provider.go
+sudo nano /etc/cmd/sgroups-tf-v2/internal/provider/tls-config.tf
 ```
   Далее необходимо настроить секцию для TLS:
-
- ```bash
-provider "sgroups" {
-	authn = {
-		tls = {
-			cert = {
-				key_file = "/etc/ssl/private/key-file.pem"
-				cert_file = "/etc/ssl/certs/cert-file.pem"
-			}
-			server_verify = {
-				server_name = "server-name"
-				root_ca_files = ["file1.pem", "file2.pem", ...]
-			}
-		}
-	}
-}
-```
-<p>В случае если сертификат клиента не проверяются, то значения для `key-file` и `cert-file` можно не указывать.</p>
-
-<p>В случае если требуется наличие сертификата, то необходимо указать значения в `key-file` и `cert-file` актуальных сертификатов и ключей.</p>
-
-<p>Для подключения режима mTLS необходимо указать все 4 поля `key-file`, `cert-file`, `server_name`, `root_ca_files`.</p>
-
-<p>`key-file` - Необходимо указать полный путь `/etc/ssl/private/key-file.pem`  или относительный путь `./../key-file.pem` с названием файла ключа.</p>
-
-<p>`cert-file` - Необходимо указать полный путь `/etc/ssl/certs/cert-file.pem`  или относительный путь `./../cert-file.pem` с названием файла сертификата.</p>
-
-<p>`server_name` - При включенном режиме проверки сертификата сервера mTLS необходимо указать имя сервера.</p>
-
-<p>`root_ca_files` - При включенном режиме проверки сертификата сервера mTLS необходимо перечислить список certificates authorities с указанием относительного или полного пути к файлам.</p>
 </div>
+
+<Tabs
+    defaltValue = "itls"
+    values = {[
+        { label: "Insecure TLS", value: "itls" },
+        { label: "Secure TLS", value: "tls" },
+        { label: "mTLS", value: "mtls" },
+    ]}
+>
+
+    <TabItem value="itls">
+      ```hcl
+        provider "sgroups" {
+          authn = {
+            tls = {
+              cert = {}
+              server_verify = {}
+            }
+          }
+        }
+      ```
+      <p>В случае если сертификат клиента не проверяются, то значения для `cert` и `server_verify` можно не указывать.</p>
+    </TabItem>
+
+    <TabItem value="tls">
+      ```hcl
+        provider "sgroups" {
+          authn = {
+            tls = {
+              cert = {
+                key_file = "/etc/ssl/private/key-file.pem"
+                cert_file = "/etc/ssl/certs/cert-file.pem"
+              }
+              server_verify = {}
+            }
+          }
+        }
+      ```
+      <p>Для подключения secure TLS требуется наличие сертификата, и необходимо указать значения в `key-file` и `cert-file` актуальных сертификатов и ключей.</p>
+
+      <p>`key-file` - Необходимо указать полный путь `/etc/ssl/private/key-file.pem`  или относительный путь `./../key-file.pem` с названием файла ключа.</p>
+
+      <p>`cert-file` - Необходимо указать полный путь `/etc/ssl/certs/cert-file.pem`  или относительный путь `./../cert-file.pem` с названием файла сертификата.</p>
+    </TabItem>
+
+    <TabItem value="mtls">
+      ```hcl
+        provider "sgroups" {
+          authn = {
+            tls = {
+              cert = {
+                key_file = "/etc/ssl/private/key-file.pem"
+                cert_file = "/etc/ssl/certs/cert-file.pem"
+              }
+              server_verify = {
+                server_name = "server-name"
+                root_ca_files = ["file1.pem", "file2.pem", ...]
+              }
+            }
+          }
+        }
+      ```
+      <p>Для подключения mTLS требуется наличие сертификата, и необходимо указать значения в `key-file` и `cert-file` актуальных сертификатов и ключей.</p>
+
+      <p>`key-file` - Необходимо указать полный путь `/etc/ssl/private/key-file.pem`  или относительный путь `./../key-file.pem` с названием файла ключа.</p>
+
+      <p>`cert-file` - Необходимо указать полный путь `/etc/ssl/certs/cert-file.pem`  или относительный путь `./../cert-file.pem` с названием файла сертификата.</p>
+
+      <p>`server_name` - При включенном режиме проверки сертификата сервера mTLS можно указать имя сервера. Поле не обязательное для заполнения, в случае если имя сервера не будет указано то подлинность будет проверяться по данным сертификата.</p>
+
+      <p>`root_ca_files` - При включенном режиме проверки сертификата сервера mTLS необходимо перечислить список certificates authorities с указанием относительного или полного пути к файлам.</p>
+    </TabItem>
+</Tabs>

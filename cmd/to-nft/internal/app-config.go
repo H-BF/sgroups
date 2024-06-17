@@ -47,10 +47,10 @@ extapi:
         tls:
           key-file: "key-file.pem"
           cert-file: "cert-file.pem"
-            server:
-              verify: <true|false> # false is by default
-              name: "server-name" # is not present by default
-              ca-files: ["file1.pem", "file2.pem", ...] # is not present by default
+          server:
+            verify: <true|false> # false is by default
+            name: "server-name" # is not present by default
+            ca-files: ["file1.pem", "file2.pem", ...] # is not present by default
 
 telemetry:
   useragent: "string"

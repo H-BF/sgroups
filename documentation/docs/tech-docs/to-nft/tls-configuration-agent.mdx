@@ -26,50 +26,104 @@ import TabItem from '@theme/TabItem'
 ## Шаги по настройке TLS
 
 <div>
-  Создайте директорию для хранения ваших сертификатов и ключей, если она еще не существует:
+  Создайте файл конфигурации hbf-агента для редактирования:
 
 ```bash
-sudo mkdir -p /etc/ssl/certs
-sudo mkdir -p /etc/ssl/private
-```
-</div>
-
-<div>
-  Скопируйте ваш сертификат и приватный ключ в соответствующие директории. Например:
-
-```bash
-sudo cp /path/to/your/cert-file.pem /etc/ssl/certs/
-sudo cp /path/to/your/key-file.pem /etc/ssl/private/
-```
-</div>
-
-<div>
-  Откройте файл конфигурации hbf-агента для редактирования:
-
-```bash
-sudo nano /etc/cmd/sgroups/app-config.go
+sudo nano /etc/cmd/sgroups/tls-config.yaml
 ```
   Далее необходимо настроить секцию для TLS:
-
- ```bash
-authn:
-	type: tls
-	tls:
-		key-file: "/etc/ssl/private/key-file.pem"
-		cert-file: "/etc/ssl/certs/cert-file.pem"
-			client:
-				verify: skip
-				ca-files: ["file1.pem", "file2.pem", ...]
-```
-
-<p>`type` - Допустимые значени: `none` или `tls`. При значении `none` tls отключен, при значении `tls` tls включен.</p>
-
-<p>`key-file` - Необходимо указать полный путь `/etc/ssl/private/key-file.pem`  или относительный путь `./../key-file.pem` с названием файла ключа.</p>
-
-<p>`cert-file` - Необходимо указать полный путь `/etc/ssl/certs/cert-file.pem`  или относительный путь `./../cert-file.pem` с названием файла сертификата.</p>
-
-<p>`verify` - Допустимые значени: `skip`, `cert-required` или `verify`. При значении `skip` сертификат клиента не проверяется, при значении `cert-required` от клиента требуется наличие сертификатов, но со стороны сервена данные сертификаты не проверяются,
-при значени `verify` включается режим mTLS, когда сертификат клиента необходим и происходит его проверка.</p>
-
-<p>`ca-files` - При включенном режиме проверки сертификата сервера `verify: verify` необходимо перечислить список certificates authorities с указанием относительного или полного пути к файлам.</p>
 </div>
+
+<Tabs
+    defaltValue = "itls"
+    values = {[
+        { label: "Insecure TLS", value: "itls" },
+        { label: "Secure TLS", value: "tls" },
+        { label: "mTLS", value: "mtls" },
+    ]}
+>
+
+    <TabItem value="itls">
+      ```bash
+      extapi:
+        svc:
+          authn:
+            type: tls
+            tls:
+              key-file: "/etc/ssl/private/key-file.pem"
+              cert-file: "/etc/ssl/certs/cert-file.pem"
+              server:
+                verify: false
+      ```
+      <p>`type` - Допустимые значени: `none` или `tls`. При значении `none` tls отключен, при значении `tls` tls включен.</p>
+
+      <p>`key-file` - Необходимо указать полный путь `/etc/ssl/private/key-file.pem`  или относительный путь `./../key-file.pem` с названием файла ключа.</p>
+
+      <p>`cert-file` - Необходимо указать полный путь `/etc/ssl/certs/cert-file.pem`  или относительный путь `./../cert-file.pem` с названием файла сертификата.</p>
+
+      <p>`verify` - Допустимые значени: `true` или `false`. При значении `true` включен режим проверки сертификата сервера, при значении `false` данный режим отключен.</p>
+    </TabItem>
+
+    <TabItem value="tls">
+      ```bash
+      extapi:
+        svc:
+          authn:
+            type: tls
+            tls:
+              key-file: "/etc/ssl/private/key-file.pem"
+              cert-file: "/etc/ssl/certs/cert-file.pem"
+              server:
+                verify: true
+                name: "server-name"
+                ca-files: ["file1.pem", "file2.pem", ...]
+      ```
+      <p>`type` - Допустимые значени: `none` или `tls`. При значении `none` tls отключен, при значении `tls` tls включен.</p>
+
+      <p>`key-file` - Необходимо указать полный путь `/etc/ssl/private/key-file.pem`  или относительный путь `./../key-file.pem` с названием файла ключа.</p>
+
+      <p>`cert-file` - Необходимо указать полный путь `/etc/ssl/certs/cert-file.pem`  или относительный путь `./../cert-file.pem` с названием файла сертификата.</p>
+
+      <p>`verify` - Допустимые значени: `true` или `false`. При значении `true` включен режим проверки сертификата сервера, при значении `false` данный режим отключен.</p>
+
+      <p>`name` - При включенном режиме проверки сертификата сервера `verify: true` можно указать имя сервера. Поле не обязательное для заполнения, в случае если имя сервера не будет указано то подлинность будет проверяться по данным сертификата.</p>
+
+      <p>`ca-files` - При включенном режиме проверки сертификата сервера `verify: true` необходимо перечислить список certificates authorities с указанием относительного или полного пути к файлам.</p>
+    </TabItem>
+
+    <TabItem value="mtls">
+      ```bash
+      extapi:
+        svc:
+          authn:
+            type: tls
+            tls:
+              key-file: "/etc/ssl/private/key-file.pem"
+              cert-file: "/etc/ssl/certs/cert-file.pem"
+              server:
+                verify: true
+                name: "server-name"
+                ca-files: ["file1.pem", "file2.pem", ...]
+      ```
+      <p>`type` - Допустимые значени: `none` или `tls`. При значении `none` tls отключен, при значении `tls` tls включен.</p>
+
+      <p>`key-file` - Необходимо указать полный путь `/etc/ssl/private/key-file.pem`  или относительный путь `./../key-file.pem` с названием файла ключа.</p>
+
+      <p>`cert-file` - Необходимо указать полный путь `/etc/ssl/certs/cert-file.pem`  или относительный путь `./../cert-file.pem` с названием файла сертификата.</p>
+
+      <p>`verify` - Допустимые значени: `true` или `false`. При значении `true` включен режим проверки сертификата сервера, при значении `false` данный режим отключен.</p>
+
+      <p>`name` - При включенном режиме проверки сертификата сервера `verify: true` можно указать имя сервера. Поле не обязательное для заполнения, в случае если имя сервера не будет указано то подлинность будет проверяться по данным сертификата.</p>
+
+      <p>`ca-files` - При включенном режиме проверки сертификата сервера `verify: true` необходимо перечислить список certificates authorities с указанием относительного или полного пути к файлам.</p>
+
+    </TabItem>
+</Tabs>
+
+
+
+
+
+
+
+

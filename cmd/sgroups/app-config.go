@@ -30,9 +30,9 @@ authn:
   tls:
     key-file: "filename1.pem"
     cert-file: "filename2.pem"
-	  client:
-	    verify: <skip|certs-required|verify> # 'skip' is by default
-	    ca-files: ["file1.pem", "file2.pem", "file3.pem", ...]
+    client:
+      verify: <skip|certs-required|verify> # 'skip' is by default
+      ca-files: ["file1.pem", "file2.pem", "file3.pem", ...]
 */
 
 const (
