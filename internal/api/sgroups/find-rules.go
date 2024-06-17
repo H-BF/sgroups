@@ -12,8 +12,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// FindRules impl SecGroupServiceServer
-func (srv *sgService) FindRules(ctx context.Context, req *sg.FindRulesReq) (resp *sg.RulesResp, err error) {
+// FindSgSgRules impl SecGroupServiceServer
+func (srv *sgService) FindSgSgRules(ctx context.Context, req *sg.FindSgSgRulesReq) (resp *sg.SgSgRulesResp, err error) {
 	defer func() {
 		err = correctError(err)
 	}()
@@ -29,7 +29,7 @@ func (srv *sgService) FindRules(ctx context.Context, req *sg.FindRulesReq) (resp
 	if s := req.GetSgTo(); len(s) > 0 {
 		sc2 = registry.SGTo(s[0], s[1:]...)
 	}
-	resp = new(sg.RulesResp)
+	resp = new(sg.SgSgRulesResp)
 	err = reader.ListSGRules(ctx, func(rule model.SGRule) error {
 		r, e := sgRule2proto(rule)
 		if e != nil {
@@ -86,7 +86,7 @@ func (srv *sgService) FindSgIcmpRules(ctx context.Context, req *sg.FindSgIcmpRul
 	}
 	defer reader.Close() //lint:nolint
 	var sc registry.Scope = registry.NoScope
-	if sgs := req.GetSg(); len(sgs) > 0 {
+	if sgs := req.GetSG(); len(sgs) > 0 {
 		sc = registry.SG(sgs...)
 	}
 	resp = new(sg.SgIcmpRulesResp)
@@ -150,7 +150,7 @@ func (srv *sgService) FindIESgSgIcmpRules(ctx context.Context, req *sg.FindIESgS
 	if sgLocals := req.GetSgLocal(); len(sgLocals) > 0 {
 		scSgLocals = registry.SGLocal(sgLocals[0], sgLocals[1:]...)
 	}
-	if sgs := req.GetSg(); len(sgs) > 0 {
+	if sgs := req.GetSG(); len(sgs) > 0 {
 		scSgs = registry.SG(sgs...)
 	}
 
@@ -166,8 +166,8 @@ func (srv *sgService) FindIESgSgIcmpRules(ctx context.Context, req *sg.FindIESgS
 	return resp, err
 }
 
-// FindCidrSgRules impl SecGroupServiceServer
-func (srv *sgService) FindCidrSgRules(ctx context.Context, req *sg.FindCidrSgRulesReq) (resp *sg.CidrSgRulesResp, err error) {
+// FindIECidrSgRules impl SecGroupServiceServer
+func (srv *sgService) FindIECidrSgRules(ctx context.Context, req *sg.FindIECidrSgRulesReq) (resp *sg.IECidrSgRulesResp, err error) {
 	defer func() {
 		err = correctError(err)
 	}()
@@ -177,10 +177,10 @@ func (srv *sgService) FindCidrSgRules(ctx context.Context, req *sg.FindCidrSgRul
 	}
 	defer reader.Close() //lint:nolint
 	var sc registry.Scope = registry.NoScope
-	if sgs := req.GetSg(); len(sgs) > 0 {
+	if sgs := req.GetSG(); len(sgs) > 0 {
 		sc = registry.SG(sgs...)
 	}
-	resp = new(sg.CidrSgRulesResp)
+	resp = new(sg.IECidrSgRulesResp)
 	err = reader.ListCidrSgRules(ctx, func(r model.IECidrSgRule) error {
 		p, e := cidrSgRule2proto(r)
 		if e == nil {
@@ -191,8 +191,8 @@ func (srv *sgService) FindCidrSgRules(ctx context.Context, req *sg.FindCidrSgRul
 	return resp, err
 }
 
-// FindCidrSgIcmpRules -
-func (srv *sgService) FindCidrSgIcmpRules(ctx context.Context, req *sg.FindCidrSgIcmpRulesReq) (resp *sg.CidrSgIcmpRulesResp, err error) {
+// FindIECidrSgIcmpRules -
+func (srv *sgService) FindIECidrSgIcmpRules(ctx context.Context, req *sg.FindIECidrSgIcmpRulesReq) (resp *sg.IECidrSgIcmpRulesResp, err error) {
 	defer func() {
 		err = correctError(err)
 	}()
@@ -202,10 +202,10 @@ func (srv *sgService) FindCidrSgIcmpRules(ctx context.Context, req *sg.FindCidrS
 	}
 	defer reader.Close() //lint:nolint
 	var sc registry.Scope = registry.NoScope
-	if sgs := req.GetSg(); len(sgs) > 0 {
+	if sgs := req.GetSG(); len(sgs) > 0 {
 		sc = registry.SG(sgs...)
 	}
-	resp = new(sg.CidrSgIcmpRulesResp)
+	resp = new(sg.IECidrSgIcmpRulesResp)
 	err = reader.ListCidrSgIcmpRules(ctx, func(r model.IECidrSgIcmpRule) error {
 		p, e := cidrSgIcmpRule2proto(r)
 		if e == nil {
@@ -216,7 +216,7 @@ func (srv *sgService) FindCidrSgIcmpRules(ctx context.Context, req *sg.FindCidrS
 	return resp, err
 }
 
-func (srv *sgService) FindSgSgRules(ctx context.Context, req *sg.FindSgSgRulesReq) (resp *sg.SgSgRulesResp, err error) {
+func (srv *sgService) FindIESgSgRules(ctx context.Context, req *sg.FindIESgSgRulesReq) (resp *sg.IESgSgRulesResp, err error) {
 	defer func() {
 		err = correctError(err)
 	}()
@@ -229,11 +229,11 @@ func (srv *sgService) FindSgSgRules(ctx context.Context, req *sg.FindSgSgRulesRe
 	if sgLocals := req.GetSgLocal(); len(sgLocals) > 0 {
 		scSgLocals = registry.SGLocal(sgLocals[0], sgLocals[1:]...)
 	}
-	if sgs := req.GetSg(); len(sgs) > 0 {
+	if sgs := req.GetSG(); len(sgs) > 0 {
 		scSgs = registry.SG(sgs...)
 	}
 
-	resp = new(sg.SgSgRulesResp)
+	resp = new(sg.IESgSgRulesResp)
 	err = reader.ListSgSgRules(ctx, func(r model.IESgSgRule) error {
 		p, e := sgSgRule2proto(r)
 		if e == nil {

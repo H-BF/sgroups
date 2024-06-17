@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"unsafe"
 
-	"github.com/H-BF/corlib/pkg/dict"
 	"github.com/H-BF/corlib/pkg/ranges"
 	oz "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/pkg/errors"
@@ -49,21 +48,20 @@ func (nw Network) Validate() error {
 
 // Validate security grpoup model validate
 func (sg SecurityGroup) Validate() error {
-	a := make(map[NetworkName]int)
 	return oz.ValidateStruct(&sg,
 		oz.Field(&sg.Name, oz.Required.Error(sgNameRequired), oz.Match(reCName)),
 		oz.Field(&sg.DefaultAction),
 		oz.Field(&sg.Networks,
-			oz.Each(oz.By(func(value interface{}) error {
-				nw := value.(string)
-				if e := oz.Validate(nw, oz.Required.Error("network name is required")); e != nil {
-					return e
-				}
-				if a[nw]++; a[nw] > 1 {
-					return errors.Errorf("network '%s' referenced more tna once", nw)
-				}
-				return nil
-			})),
+			oz.By(func(_ any) error {
+				var e error
+				sg.Networks.Iterate(func(k NetworkName) bool {
+					if len(k) == 0 {
+						e = errors.New("network name cannot be empty")
+					}
+					return e == nil
+				})
+				return e
+			}),
 		),
 	)
 }
@@ -284,26 +282,6 @@ func (o IESgSgRuleIdentity) Validate() error {
 		oz.Field(&o.Traffic),
 		oz.Field(&o.SgLocal, oz.Required.Error(sgNameRequired), oz.Match(reCName)),
 		oz.Field(&o.Sg, oz.Required.Error(sgNameRequired), oz.Match(reCName)))
-}
-
-// Validate validate of FQDNRule
-func (o FQDNRule) Validate() error {
-	return oz.ValidateStruct(&o,
-		oz.Field(&o.ruleT),
-		oz.Field(&o.NdpiProtocols, oz.By(func(_ any) error {
-			const lim = 255
-			if n := o.NdpiProtocols.Len(); n > lim {
-				return errors.Errorf("protocols count is %v but it must be <= %v", n, lim)
-			}
-			var e error
-			o.NdpiProtocols.Iterate(func(k dict.StringCiKey) bool {
-				if len(k) == 0 || !reCName.MatchString(string(k)) {
-					e = errors.Errorf("bad protocol name '%v'", k)
-				}
-				return e == nil
-			})
-			return nil
-		})))
 }
 
 var (

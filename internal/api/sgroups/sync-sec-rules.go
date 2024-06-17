@@ -60,14 +60,14 @@ func (r *rulePorts) from(src []*sg.AccPorts) error {
 	return nil
 }
 
-func (ri sgRuleIdentity) from(src *sg.Rule) error {
+func (ri sgRuleIdentity) from(src *sg.SgSgRule) error {
 	ri.SgFrom = src.GetSgFrom()
 	ri.SgTo = src.GetSgTo()
 	return networkTransport{NetworkTransport: &ri.Transport}.
 		from(src.GetTransport())
 }
 
-func (r sgRule) from(src *sg.Rule) error {
+func (r sgRule) from(src *sg.SgSgRule) error {
 	err := sgRuleIdentity{SGRuleIdentity: &r.ID}.
 		from(src)
 	if err == nil {
@@ -103,11 +103,11 @@ func (p rulePriority) from(src *sg.RulePriority) error {
 	return nil
 }
 
-var syncSGRules = syncAlg[model.SGRule, *sg.Rule]{
+var syncSGRules = syncAlg[model.SGRule, *sg.SgSgRule]{
 	makePrimaryKeyScope: func(rr []model.SGRule) registry.Scope {
 		return registry.PKScopeOfSGRules(rr...)
 	},
-	proto2model: func(r *sg.Rule) (model.SGRule, error) {
+	proto2model: func(r *sg.SgSgRule) (model.SGRule, error) {
 		var item model.SGRule
 		err := sgRule{SGRule: &item}.from(r)
 		return item, err

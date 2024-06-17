@@ -116,8 +116,8 @@ cases:
             "s": "1000-2000"
           }
         ],
-        "SgLocal": "group1",
-        "Sg": "group2",
+        "sgLocal": "group1",
+        "SG": "group2",
         "trace": true,
         "traffic": "Ingress",
         "transport": "TCP",
@@ -132,8 +132,8 @@ cases:
             "s": "15000-16000"
           }
         ],
-        "SgLocal": "group3",
-        "Sg": "group4",
+        "sgLocal": "group3",
+        "SG": "group4",
         "trace": true,
         "traffic": "Egress",
         "transport": "UDP",
@@ -170,8 +170,8 @@ cases:
             "s": "3000-4000"
           }
         ],
-        "SgLocal": "group1",
-        "Sg": "group2",
+        "sgLocal": "group1",
+        "SG": "group2",
         "trace": false,
         "traffic": "Ingress",
         "transport": "TCP",
@@ -188,8 +188,8 @@ cases:
             "s": "15000-16000"
           }
         ],
-        "SgLocal": "group3",
-        "Sg": "group4",
+        "sgLocal": "group3",
+        "SG": "group4",
         "trace": true,
         "traffic": "Egress",
         "transport": "UDP",

@@ -227,11 +227,11 @@ func (c cidr2bigInt) upperBound() bigInt {
 	ip := c.netObj.LastAddress()
 	switch c.netObj.Version() {
 	case iplib.IP4Version:
-		if c.ones < 31 { //nolint:gomnd
+		if c.ones < 31 { //nolint:mnd
 			ip = iplib.NextIP(ip)
 		}
 	case iplib.IP6Version:
-		if c.ones < 128 { //nolint:gomnd
+		if c.ones < 128 { //nolint:mnd
 			ip = iplib.NextIP(ip)
 		}
 	}

@@ -71,7 +71,7 @@ func (sui *memDbSuite) newSG(name string, nws ...model.Network) model.SecurityGr
 	sui.Require().NotEmpty(name)
 	ret := model.SecurityGroup{Name: name}
 	for i := range nws {
-		ret.Networks = append(ret.Networks, nws[i].Name)
+		_ = ret.Networks.Insert(nws[i].Name)
 	}
 	return ret
 }
@@ -304,6 +304,24 @@ func (sui *memDbSuite) TestSyncNetworks() {
 	sui.Require().Equal(1, n)
 }
 
+func (sui *memDbSuite) checkSgsAreEq(sgs1, sgs2 []model.SecurityGroup) bool {
+	if len(sgs1) != len(sgs2) {
+		return false
+	}
+	var l, r dict.HDict[string, *model.SecurityGroup]
+	for i := range sgs1 {
+		sg := &sgs1[i]
+		_ = l.Insert(sg.Name, sg)
+	}
+	for i := range sgs2 {
+		sg := &sgs2[i]
+		_ = r.Insert(sg.Name, sg)
+	}
+	return r.Eq(&r, func(vL, vR *model.SecurityGroup) bool {
+		return vL.IsEq(*vR)
+	})
+}
+
 func (sui *memDbSuite) TestSyncSG_NoNetworks() {
 	//1 - full sync SG(s)
 	sgs := []model.SecurityGroup{
@@ -325,7 +343,7 @@ func (sui *memDbSuite) TestSyncSG_NoNetworks() {
 		return nil
 	}, NoScope)
 	sui.Require().NoError(e)
-	sui.Require().Equal(sgs, sgs1)
+	sui.Require().True(sui.checkSgsAreEq(sgs, sgs1))
 
 	//2 - delete one SG 'sg1'
 	w = sui.regWriter()
@@ -340,7 +358,8 @@ func (sui *memDbSuite) TestSyncSG_NoNetworks() {
 		return nil
 	}, NoScope)
 	sui.Require().NoError(e)
-	sui.Require().Equal(sgs[1:], sgs1)
+	sui.Require().True(sui.checkSgsAreEq(sgs[1:], sgs1))
+	//sui.Require().Equal(sgs[1:], sgs1)
 }
 
 func (sui *memDbSuite) TestSyncSG_Networks() {
@@ -399,7 +418,7 @@ func (sui *memDbSuite) TestSyncSG_Networks() {
 		return nil
 	}, NoScope)
 	sui.Require().NoError(err)
-	sg2.Networks = sg2.Networks[:0]
+	sg2.Networks.Clear()
 	sui.Require().Equal([]model.SecurityGroup{sg1, sg2}, sgs1)
 }
 

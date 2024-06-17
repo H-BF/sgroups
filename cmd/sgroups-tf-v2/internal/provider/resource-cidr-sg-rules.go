@@ -154,15 +154,15 @@ func (item cidrRule) IsDiffer(ctx context.Context, other cidrRule) bool {
 func readCidrRules(ctx context.Context, state NamedResources[cidrRule], client *sgAPI.Client) (NamedResources[cidrRule], diag.Diagnostics) {
 	var diags diag.Diagnostics
 	newState := NewNamedResources[cidrRule]()
-	var resp *protos.CidrSgRulesResp
+	var resp *protos.IECidrSgRulesResp
 	var err error
 	if len(state.Items) > 0 {
-		var req protos.FindCidrSgRulesReq
+		var req protos.FindIECidrSgRulesReq
 		linq.From(state.Items).
 			SelectT(func(i linq.KeyValue) string {
 				return i.Value.(cidrRule).SgName.ValueString()
-			}).Distinct().ToSlice(&req.Sg)
-		if resp, err = client.FindCidrSgRules(ctx, &req); err != nil {
+			}).Distinct().ToSlice(&req.SG)
+		if resp, err = client.FindIECidrSgRules(ctx, &req); err != nil {
 			diags.AddError("read cidr-sg rules", err.Error())
 			return newState, diags
 		}

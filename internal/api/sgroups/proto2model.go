@@ -24,7 +24,7 @@ func Proto2ModelSG(g *sg.SecGroup) (model.SecurityGroup, error) {
 }
 
 // Proto2ModelSGRuleIdentity -
-func Proto2ModelSGRuleIdentity(src *sg.Rule) (model.SGRuleIdentity, error) {
+func Proto2ModelSGRuleIdentity(src *sg.SgSgRule) (model.SGRuleIdentity, error) {
 	const api = "proto2model-SGRuleIdentity-conv"
 	var ret model.SGRuleIdentity
 	err := (sgRuleIdentity{&ret}).from(src)
@@ -40,7 +40,7 @@ func Proto2ModelFQDNRuleIdentity(src *sg.FqdnRule) (model.FQDNRuleIdentity, erro
 }
 
 // Proto2ModelSGRule conv SGRule (proto --> model)
-func Proto2ModelSGRule(src *sg.Rule) (model.SGRule, error) {
+func Proto2ModelSGRule(src *sg.SgSgRule) (model.SGRule, error) {
 	const api = "proto2model-SGRule-conv"
 	var ret model.SGRule
 	err := sgRule{SGRule: &ret}.from(src)
@@ -72,7 +72,7 @@ func Proto2MOdelSgSgIcmpRule(src *sg.SgSgIcmpRule) (model.SgSgIcmpRule, error) {
 }
 
 // Proto2ModelCidrSgRule conv IECidrSgRule (proto --> model)
-func Proto2ModelCidrSgRule(src *sg.CidrSgRule) (model.IECidrSgRule, error) {
+func Proto2ModelCidrSgRule(src *sg.IECidrSgRule) (model.IECidrSgRule, error) {
 	const api = "proto2model-IECidrSgRule-conv"
 	var ret model.IECidrSgRule
 	err := cidrSgRule{IECidrSgRule: &ret}.from(src)
@@ -80,7 +80,7 @@ func Proto2ModelCidrSgRule(src *sg.CidrSgRule) (model.IECidrSgRule, error) {
 }
 
 // Proto2ModelIECidrSgIcmpRule conv CidrSgIcmpRule (proto --> model)
-func Proto2ModelIECidrSgIcmpRule(src *sg.CidrSgIcmpRule) (model.IECidrSgIcmpRule, error) {
+func Proto2ModelIECidrSgIcmpRule(src *sg.IECidrSgIcmpRule) (model.IECidrSgIcmpRule, error) {
 	const api = "proto2model-IECidrSgIcmpRule-conv"
 	var ret model.IECidrSgIcmpRule
 	err := proto2CidrSgIcmpRule{IECidrSgIcmpRule: &ret}.from(src)
@@ -88,7 +88,7 @@ func Proto2ModelIECidrSgIcmpRule(src *sg.CidrSgIcmpRule) (model.IECidrSgIcmpRule
 }
 
 // Proto2ModelSgSgRule conv IESgSgRule (proto --> model)
-func Proto2ModelSgSgRule(src *sg.SgSgRule) (ret model.IESgSgRule, err error) {
+func Proto2ModelSgSgRule(src *sg.IESgSgRule) (ret model.IESgSgRule, err error) {
 	const api = "proto2model-IESgSgRule-conv"
 	err = sgSgRule{IESgSgRule: &ret}.from(src)
 	return ret, errors.WithMessage(err, api)

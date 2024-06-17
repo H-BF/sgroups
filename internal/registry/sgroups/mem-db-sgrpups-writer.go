@@ -465,23 +465,15 @@ func (wr sGroupsMemDbWriter) afterDeleteNetworks(ctx context.Context, nw []model
 		return nil
 	}
 	nwNames := make([]model.NetworkName, 0, len(nw))
-	nwSet := make(map[model.NetworkName]bool)
 	for i := range nw {
-		nwSet[nw[i].Name] = true
 		nwNames = append(nwNames, nw[i].Name)
 	}
 	scope := NetworkNames(nwNames...)
 	var sgs []model.SecurityGroup
 	//get related SG(s)
 	err := wr.ListSecurityGroups(ctx, func(sg model.SecurityGroup) error {
-		nws := sg.Networks[:0]
-		for _, nwName := range sg.Networks {
-			if !nwSet[nwName] {
-				nws = append(nws, nwName)
-			}
-		}
-		if len(nws) != len(sg.Networks) {
-			sg.Networks = nws
+		n0 := sg.Networks.Len()
+		if sg.Networks.Del(nwNames...); n0 != sg.Networks.Len() {
 			sgs = append(sgs, sg)
 		}
 		return nil

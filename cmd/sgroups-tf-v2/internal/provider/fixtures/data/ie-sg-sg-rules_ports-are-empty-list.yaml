@@ -101,8 +101,8 @@ cases:
             "s": "1000-2000"
           }
         ],
-        "SgLocal": "group1",
-        "Sg": "group2",
+        "sgLocal": "group1",
+        "SG": "group2",
         "trace": true,
         "traffic": "Ingress",
         "transport": "TCP",
@@ -150,8 +150,8 @@ cases:
             "s": "1000-2000"
           }
         ],
-        "SgLocal": "group1",
-        "Sg": "group2",
+        "sgLocal": "group1",
+        "SG": "group2",
         "trace": true,
         "traffic": "Ingress",
         "transport": "TCP",
@@ -161,8 +161,8 @@ cases:
       {
         "logs": true,
         "ports": [],
-        "SgLocal": "group3",
-        "Sg": "group4",
+        "sgLocal": "group3",
+        "SG": "group4",
         "trace": true,
         "traffic": "Egress",
         "transport": "UDP",

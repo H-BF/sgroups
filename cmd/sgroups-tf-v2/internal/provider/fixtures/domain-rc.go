@@ -143,7 +143,7 @@ func regHelpers() {
 	regIsEQ(func(l, r domain.SGRule) bool {
 		return l.IsEq(r)
 	})
-	regProto2domain(func(p *protos.Rule, r *domain.SGRule) {
+	regProto2domain(func(p *protos.SgSgRule, r *domain.SGRule) {
 		var e error
 		if *r, e = sgAPI.Proto2ModelSGRule(p); e != nil {
 			panic(e)
@@ -199,7 +199,7 @@ func regHelpers() {
 	regIsEQ(func(l, r domain.IECidrSgRule) bool {
 		return l.IsEq(r)
 	})
-	regProto2domain(func(p *protos.CidrSgRule, r *domain.IECidrSgRule) {
+	regProto2domain(func(p *protos.IECidrSgRule, r *domain.IECidrSgRule) {
 		var e error
 		if *r, e = sgAPI.Proto2ModelCidrSgRule(p); e != nil {
 			panic(e)
@@ -209,7 +209,7 @@ func regHelpers() {
 	// ---------------------- RC IESgSgRule -------------------
 	regKeyExtractor(func(m domain.IESgSgRule) string { return m.ID.String() })
 	regIsEQ(func(l, r domain.IESgSgRule) bool { return l.IsEq(r) })
-	regProto2domain(func(p *protos.SgSgRule, r *domain.IESgSgRule) {
+	regProto2domain(func(p *protos.IESgSgRule, r *domain.IESgSgRule) {
 		var e error
 		if *r, e = sgAPI.Proto2ModelSgSgRule(p); e != nil {
 			panic(e)
@@ -226,10 +226,10 @@ func regHelpers() {
 		}
 	})
 
-	// ------------------ RC CidrSgIcmpRule -------------------
+	// ------------------ RC IECidrSgIcmpRule -------------------
 	regKeyExtractor(func(m domain.IECidrSgIcmpRule) string { return m.ID().String() })
 	regIsEQ(func(l, r domain.IECidrSgIcmpRule) bool { return l.IsEq(r) })
-	regProto2domain(func(p *protos.CidrSgIcmpRule, r *domain.IECidrSgIcmpRule) {
+	regProto2domain(func(p *protos.IECidrSgIcmpRule, r *domain.IECidrSgIcmpRule) {
 		var e error
 		if *r, e = sgAPI.Proto2ModelIECidrSgIcmpRule(p); e != nil {
 			panic(e)

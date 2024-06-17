@@ -353,12 +353,12 @@ func (p *scopedNetworks) inNetwork(network model.Network) bool {
 }
 
 func (p *scopedNetworks) inSG(sg model.SecurityGroup) bool {
-	for i := range sg.Networks {
-		if _, ok := p.Names[sg.Networks[i]]; ok {
-			return true
-		}
-	}
-	return false
+	var found bool
+	sg.Networks.Iterate(func(n model.NetworkName) bool {
+		_, found = p.Names[n]
+		return !found
+	})
+	return found
 }
 
 func (p scopedNetworks) meta() metaInfo {

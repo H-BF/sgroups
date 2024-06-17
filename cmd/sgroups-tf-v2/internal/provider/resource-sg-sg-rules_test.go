@@ -49,7 +49,7 @@ func (sui *sgSgRulesTests) testSgSgRulesFromFixtureFilename(name string) resourc
 			Check: func(_ *terraform.State) error {
 				if len(expectedBackend)+len(nonExpectedBackend) > 0 {
 					allRules := sui.listAllSgRules()
-					var checker fixtures.ExpectationsChecker[protos.Rule, domain.SGRule]
+					var checker fixtures.ExpectationsChecker[protos.SgSgRule, domain.SGRule]
 					checker.Init(allRules)
 
 					if !checker.WeExpectFindAll(expectedBackend) {
@@ -70,8 +70,8 @@ func (sui *sgSgRulesTests) testSgSgRulesFromFixtureFilename(name string) resourc
 	return resourceTestCase
 }
 
-func (sui *sgSgRulesTests) listAllSgRules() []*protos.Rule {
-	resp, err := sui.sgClient.FindRules(sui.ctx, &protos.FindRulesReq{
+func (sui *sgSgRulesTests) listAllSgRules() []*protos.SgSgRule {
+	resp, err := sui.sgClient.FindSgSgRules(sui.ctx, &protos.FindSgSgRulesReq{
 		SgFrom: []string{},
 		SgTo:   []string{},
 	})

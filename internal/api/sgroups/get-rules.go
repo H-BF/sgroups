@@ -1,17 +1,11 @@
 package sgroups
 
 import (
-	"context"
-
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
-	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 
-	"github.com/H-BF/corlib/pkg/dict"
 	"github.com/H-BF/protos/pkg/api/common"
 	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/pkg/errors"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func netTranport2proto(src model.NetworkTransport) (common.Networks_NetIP_Transport, error) {
@@ -69,8 +63,8 @@ func priority2proto(src model.RulePriority) *sg.RulePriority {
 	return &ret
 }
 
-func sgRule2proto(src model.SGRule) (*sg.Rule, error) {
-	var ret sg.Rule
+func sgRule2proto(src model.SGRule) (*sg.SgSgRule, error) {
+	var ret sg.SgSgRule
 	if t, e := netTranport2proto(src.ID.Transport); e != nil {
 		return nil, e
 	} else {
@@ -90,10 +84,6 @@ func sgRule2proto(src model.SGRule) (*sg.Rule, error) {
 
 func sgFqdnRule2proto(src model.FQDNRule) (*sg.FqdnRule, error) {
 	var ret sg.FqdnRule
-	src.NdpiProtocols.Iterate(func(p dict.StringCiKey) bool {
-		ret.Protocols = append(ret.Protocols, string(p))
-		return true
-	})
 	if t, e := netTranport2proto(src.ID.Transport); e != nil {
 		return nil, e
 	} else {
@@ -117,7 +107,7 @@ func sgIcmpRule2proto(src model.SgIcmpRule) (*sg.SgIcmpRule, error) {
 	}
 	ret.Logs = src.Logs
 	ret.Trace = src.Trace
-	ret.Sg = src.Sg
+	ret.SG = src.Sg
 	switch src.Icmp.IPv {
 	case model.IPv4:
 		ret.ICMP.IPv = common.IpAddrFamily_IPv4
@@ -163,7 +153,7 @@ func sgSgIcmpRule2proto(src model.SgSgIcmpRule) (*sg.SgSgIcmpRule, error) {
 
 func ieSgSgIcmpRule2proto(src model.IESgSgIcmpRule) (*sg.IESgSgIcmpRule, error) {
 	ret := &sg.IESgSgIcmpRule{
-		Sg:      src.Sg,
+		SG:      src.Sg,
 		SgLocal: src.SgLocal,
 		Logs:    src.Logs,
 		Trace:   src.Trace,
@@ -190,8 +180,8 @@ func ieSgSgIcmpRule2proto(src model.IESgSgIcmpRule) (*sg.IESgSgIcmpRule, error) 
 	return ret, e
 }
 
-func cidrSgRule2proto(src model.IECidrSgRule) (*sg.CidrSgRule, error) {
-	ret := &sg.CidrSgRule{
+func cidrSgRule2proto(src model.IECidrSgRule) (*sg.IECidrSgRule, error) {
+	ret := &sg.IECidrSgRule{
 		Logs:  src.Logs,
 		Trace: src.Trace,
 		SG:    src.ID.SG,
@@ -212,8 +202,8 @@ func cidrSgRule2proto(src model.IECidrSgRule) (*sg.CidrSgRule, error) {
 	return ret, e
 }
 
-func cidrSgIcmpRule2proto(src model.IECidrSgIcmpRule) (*sg.CidrSgIcmpRule, error) {
-	ret := &sg.CidrSgIcmpRule{
+func cidrSgIcmpRule2proto(src model.IECidrSgIcmpRule) (*sg.IECidrSgIcmpRule, error) {
+	ret := &sg.IECidrSgIcmpRule{
 		CIDR:  src.CIDR.String(),
 		SG:    src.SG,
 		Logs:  src.Logs,
@@ -241,9 +231,9 @@ func cidrSgIcmpRule2proto(src model.IECidrSgIcmpRule) (*sg.CidrSgIcmpRule, error
 	return ret, e
 }
 
-func sgSgRule2proto(src model.IESgSgRule) (*sg.SgSgRule, error) {
-	ret := &sg.SgSgRule{
-		Sg:      src.ID.Sg,
+func sgSgRule2proto(src model.IESgSgRule) (*sg.IESgSgRule, error) {
+	ret := &sg.IESgSgRule{
+		SG:      src.ID.Sg,
 		SgLocal: src.ID.SgLocal,
 		Logs:    src.Logs,
 		Trace:   src.Trace,
@@ -261,36 +251,4 @@ func sgSgRule2proto(src model.IESgSgRule) (*sg.SgSgRule, error) {
 	ret.Priority = priority2proto(src.Priority)
 	ret.Action, e = ruleAction2proto(src.Action)
 	return ret, e
-}
-
-func (srv *sgService) GetRules(ctx context.Context, req *sg.GetRulesReq) (resp *sg.RulesResp, err error) {
-	defer func() {
-		err = correctError(err)
-	}()
-	var reader registry.Reader
-	if reader, err = srv.registryReader(ctx); err != nil {
-		return nil, err
-	}
-	defer reader.Close() //lint:nolint
-	resp = new(sg.RulesResp)
-	err = reader.ListSGRules(ctx, func(rule model.SGRule) error {
-		r, e := sgRule2proto(rule)
-		if e != nil {
-			return errors.WithMessagef(e, "on convert SGRule '%s' to proto", rule.ID)
-		}
-		resp.Rules = append(resp.Rules, r)
-		return nil
-	}, registry.And(
-		registry.SGFrom(req.GetSgFrom()), registry.SGTo(req.GetSgTo()),
-	))
-	if err != nil {
-		return nil,
-			status.Errorf(codes.Internal, "reason: %v", err)
-	}
-	if len(resp.GetRules()) == 0 {
-		return nil,
-			status.Errorf(codes.NotFound, "not found rules for from SG '%s' to SG '%s'",
-				req.GetSgFrom(), req.GetSgTo())
-	}
-	return resp, nil
 }

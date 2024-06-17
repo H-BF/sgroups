@@ -6,7 +6,6 @@ import (
 
 	sgm "github.com/H-BF/sgroups/internal/models/sgroups"
 
-	"github.com/H-BF/corlib/pkg/dict"
 	"github.com/H-BF/corlib/pkg/ranges"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/pkg/errors"
@@ -15,11 +14,11 @@ import (
 // ToModel -
 func (o SG) ToModel() (sgm.SecurityGroup, error) {
 	ret := sgm.SecurityGroup{
-		Name:     o.Name,
-		Networks: o.Networks,
-		Logs:     o.Logs,
-		Trace:    o.Trace,
+		Name:  o.Name,
+		Logs:  o.Logs,
+		Trace: o.Trace,
 	}
+	ret.Networks.PutMany(o.Networks...)
 	err := ret.DefaultAction.FromString(string(o.DefaultAction))
 	return ret, err
 }
@@ -27,7 +26,7 @@ func (o SG) ToModel() (sgm.SecurityGroup, error) {
 // FromModel -
 func (o *SG) FromModel(m sgm.SecurityGroup) {
 	o.Name = m.Name
-	o.Networks = m.Networks
+	o.Networks = m.Networks.Values()
 	o.Logs = m.Logs
 	o.Trace = m.Trace
 	o.DefaultAction = ChainDefaultAction(
@@ -269,9 +268,6 @@ func (o *SGRule) FromModel(m sgm.SGRule) error {
 func (o SG2FQDNRule) ToModel() (sgm.FQDNRule, error) {
 	var ret sgm.FQDNRule
 	var err error
-	for _, p := range o.NdpiProtocols {
-		_ = ret.NdpiProtocols.Insert(dict.StringCiKey(p))
-	}
 	ret.ID.SgFrom = o.SgFrom
 	ret.ID.FqdnTo = sgm.FQDN(string(o.FqndTo))
 	if ret.ID.Transport, err = o.Proto.ToModel(); err != nil {
@@ -288,11 +284,6 @@ func (o SG2FQDNRule) ToModel() (sgm.FQDNRule, error) {
 
 // FromModel -
 func (o *SG2FQDNRule) FromModel(m sgm.FQDNRule) error {
-	o.NdpiProtocols = []string{} //lint:nolint
-	m.NdpiProtocols.Iterate(func(k dict.StringCiKey) bool {
-		o.NdpiProtocols = append(o.NdpiProtocols, string(k))
-		return true
-	})
 	o.SgFrom = m.ID.SgFrom
 	o.FqndTo = FQDN(m.ID.FqdnTo.String())
 	if err := o.Proto.FromModel(m.ID.Transport); err != nil {

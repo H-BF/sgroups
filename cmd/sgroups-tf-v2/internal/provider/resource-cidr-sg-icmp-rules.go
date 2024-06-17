@@ -168,17 +168,17 @@ func readCidrSgIcmpRules(
 ) (NamedResources[cidrSgIcmpRule], diag.Diagnostics) {
 	var diags diag.Diagnostics
 	newState := NewNamedResources[cidrSgIcmpRule]()
-	var resp *protos.CidrSgIcmpRulesResp
+	var resp *protos.IECidrSgIcmpRulesResp
 	var err error
 	if len(state.Items) > 0 {
-		req := new(protos.FindCidrSgIcmpRulesReq)
+		req := new(protos.FindIECidrSgIcmpRulesReq)
 		linq.From(state.Items).
 			SelectT(func(i linq.KeyValue) string {
 				return i.Value.(cidrSgIcmpRule).SgName.ValueString()
 			}).
 			Distinct().
-			ToSlice(&req.Sg)
-		if resp, err = client.FindCidrSgIcmpRules(ctx, req); err != nil {
+			ToSlice(&req.SG)
+		if resp, err = client.FindIECidrSgIcmpRules(ctx, req); err != nil {
 			diags.AddError("read cidr-sg icmp rules", err.Error())
 			return newState, diags
 		}

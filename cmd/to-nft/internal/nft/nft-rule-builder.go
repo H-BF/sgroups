@@ -143,8 +143,8 @@ func (rb ruleBuilder) saddr6() ruleBuilder {
 		&Payload{
 			DestRegister: 1,
 			Base:         PayloadBaseNetworkHeader,
-			Offset:       uint32(8),  //nolint:gomnd
-			Len:          uint32(16), //nolint:gomnd
+			Offset:       uint32(8),  //nolint:mnd
+			Len:          uint32(16), //nolint:mnd
 		},
 	)
 	return rb
@@ -155,8 +155,8 @@ func (rb ruleBuilder) daddr6() ruleBuilder {
 		&Payload{
 			DestRegister: 1,
 			Base:         PayloadBaseNetworkHeader,
-			Offset:       uint32(24), //nolint:gomnd
-			Len:          uint32(16), //nolint:gomnd
+			Offset:       uint32(24), //nolint:mnd
+			Len:          uint32(16), //nolint:mnd
 		},
 	)
 	return rb
@@ -167,8 +167,8 @@ func (rb ruleBuilder) saddr4() ruleBuilder {
 		&Payload{
 			DestRegister: 1,
 			Base:         PayloadBaseNetworkHeader,
-			Offset:       uint32(12), //nolint:gomnd
-			Len:          uint32(4),  //nolint:gomnd
+			Offset:       uint32(12), //nolint:mnd
+			Len:          uint32(4),  //nolint:mnd
 		}, //saddr
 	)
 	return rb
@@ -179,8 +179,8 @@ func (rb ruleBuilder) daddr4() ruleBuilder {
 		&Payload{
 			DestRegister: 1,
 			Base:         PayloadBaseNetworkHeader,
-			Offset:       uint32(16), //nolint:gomnd
-			Len:          uint32(4),  //nolint:gomnd
+			Offset:       uint32(16), //nolint:mnd
+			Len:          uint32(4),  //nolint:mnd
 		}, //daddr
 	)
 	return rb
@@ -435,7 +435,7 @@ func (rb ruleBuilder) srcOrDstSingleIpNet(n net.IPNet, isSource bool) ruleBuilde
 	)().inSet(set.Set)
 }
 
-func (rb ruleBuilder) ndpi(dom model.FQDN, protocols ...string) ruleBuilder {
+func (rb ruleBuilder) ndpi(dom model.FQDN, protocols ...string) ruleBuilder { //nolint:unused
 	n, e := NewNdpi(NdpiWithHost(dom.String()), NdpiWithProtocols(protocols...))
 	if e != nil {
 		panic(e)

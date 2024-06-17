@@ -63,7 +63,7 @@ func regRuleBasePriority[ruleT ruleTypeKind](basePri int16) {
 
 var ruleBasePriorities dict.HDict[reflect.Type, *int16]
 
-//nolint:gomnd
+//nolint:mnd
 func init() {
 	regRuleBasePriority[model.SgSgIcmpRule](-300)
 	regRuleBasePriority[*model.SgSgIcmpRule](-300)

@@ -257,8 +257,8 @@ var setID = rand.Uint32() //nolint:gosec
 // MakeBatchBackoff -
 func MakeBatchBackoff() backoff.Backoff {
 	return backoff.ExponentialBackoffBuilder().
-		WithMultiplier(1.3).                       //nolint:gomnd
-		WithRandomizationFactor(0).                //nolint:gomnd
-		WithMaxElapsedThreshold(20 * time.Second). //nolint:gomnd
+		WithMultiplier(1.3).                       //nolint:mnd
+		WithRandomizationFactor(0).                //nolint:mnd
+		WithMaxElapsedThreshold(20 * time.Second). //nolint:mnd
 		Build()
 }

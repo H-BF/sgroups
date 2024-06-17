@@ -409,7 +409,7 @@ func (bt *batch) addSGNetSets() {
 }
 
 func (bt *batch) addFQDNNetSets() {
-	if bt.fqdnStrategy.Eq(internal.FqdnRulesStartegyNDPI) {
+	if !bt.fqdnStrategy.Eq(internal.FqdnRulesStartegyDNS) {
 		return
 	}
 	f := func(IPv int, domain model.FQDN, a internal.DomainAddresses) {
@@ -531,10 +531,11 @@ func (bt *batch) initSgIeSgRulesDetails() { //nolint:dupl
 func (gp *jobGroup) populateOutSgFqdnRules(sg *cases.SG) {
 	const (
 		useDNS = 1 << iota
-		useNDPI
+		//useNDPI
 	)
 	var strategy int
 	bt := gp.bt
+	/*//
 	if bt.fqdnStrategy.Eq(internal.FqdnRulesStartegyNDPI) {
 		strategy = useNDPI
 	} else if bt.fqdnStrategy.Eq(internal.FqdnRulesStartegyDNS) {
@@ -542,7 +543,10 @@ func (gp *jobGroup) populateOutSgFqdnRules(sg *cases.SG) {
 	} else if bt.fqdnStrategy.Eq(internal.FqdnRulesStartegyCombine) {
 		strategy = useNDPI | useDNS
 	}
-
+	*/
+	if bt.fqdnStrategy.Eq(internal.FqdnRulesStartegyDNS) {
+		strategy = useDNS
+	}
 	targetChName := nameUtils{}.nameOfInOutChain(dirOUT, sg.Name)
 	rules := bt.data.SG2FQDNRules.RulesForSG(sg.Name)
 	for _, ipV := range sli(model.IPv4, model.IPv6) {
@@ -584,14 +588,6 @@ func (gp *jobGroup) populateOutSgFqdnRules(sg *cases.SG) {
 							r.protoIP(rule.ID.Transport),
 						),
 					)
-					if strategy&useNDPI != 0 {
-						var protocols []string
-						rule.NdpiProtocols.Iterate(func(k di.StringCiKey) bool {
-							protocols = append(protocols, string(k))
-							return true
-						})
-						r = r.ndpi(rule.ID.FqdnTo, protocols...)
-					}
 					r = r.counter()
 					if rd.logs {
 						r = r.dlogs(nfte.LogFlagsIPOpt)

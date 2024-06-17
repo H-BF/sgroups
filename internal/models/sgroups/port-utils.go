@@ -119,7 +119,7 @@ func (portSourceHelper) str2portrange(ps string) (PortRange, error) {
 		l, r uint64
 	)
 	m := parsePortsRE.FindStringSubmatch(ps)
-	if len(m) != 4 { //nolint:gomnd
+	if len(m) != 4 { //nolint:mnd
 		return nil,
 			errors.WithMessagef(errIncorrectPortsSource, "unrecognized value '%s'", ps)
 	}

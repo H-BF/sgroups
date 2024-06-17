@@ -1,1 +1,1 @@
-# Security groups service V1
+# Security groups service V2

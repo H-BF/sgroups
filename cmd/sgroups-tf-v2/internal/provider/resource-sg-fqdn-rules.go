@@ -43,7 +43,6 @@ type (
 		Fqdn      types.String `tfsdk:"fqdn"`
 		Ports     types.List   `tfsdk:"ports"`
 		Logs      types.Bool   `tfsdk:"logs"`
-		Protocols types.Set    `tfsdk:"protocols"`
 		Action    types.String `tfsdk:"action"`
 		Priority  RulePriority `tfsdk:"priority"`
 	}
@@ -62,7 +61,7 @@ var reSgFqdnKey = regexp.MustCompile(
 // FromString -
 func (k *sgFqdnRuleKey) FromString(s string) error {
 	sm := reSgFqdnKey.FindStringSubmatch(s)
-	if len(sm) < 4 { //nolint:gomnd
+	if len(sm) < 4 { //nolint:mnd
 		return errors.Errorf("bad sg-fqdn rule key (%s)", s)
 	}
 	k.transport = sm[1]
@@ -121,11 +120,6 @@ func (item sgFqdnRule) Attributes() map[string]schema.Attribute { //nolint:dupl
 			},
 			PlanModifiers: []planmodifier.List{ListAccessPortsModifier()},
 		},
-		"protocols": schema.SetAttribute{
-			Description: "protocols for nDPI",
-			Optional:    true,
-			ElementType: types.StringType,
-		},
 		"action": schema.StringAttribute{
 			Description: "Rule action on packets in chain",
 			Required:    true,
@@ -153,7 +147,6 @@ func (item sgFqdnRule) IsDiffer(ctx context.Context, other sgFqdnRule) bool {
 		model.FQDN(item.Fqdn.ValueString()).
 			IsEq(model.FQDN(other.Fqdn.ValueString())) &&
 		item.Logs.Equal(other.Logs) &&
-		item.Protocols.Equal(other.Protocols) &&
 		item.Action.Equal(other.Action) &&
 		model.AreRulePortsEq(itemModelPorts, otherModelPorts) &&
 		item.Priority.Equal(other.Priority))
@@ -185,8 +178,6 @@ func readFqdnRules(ctx context.Context, state NamedResources[sgFqdnRule], client
 		}
 		portsList, d := types.ListValueFrom(ctx, types.ObjectType{AttrTypes: AccessPorts{}.AttrTypes()}, accPorts)
 		diags.Append(d...)
-		protocolsList, d := types.SetValueFrom(ctx, types.StringType, fqdnRule.GetProtocols())
-		diags.Append(d...)
 		if diags.HasError() {
 			return newState, diags
 		}
@@ -196,7 +187,6 @@ func readFqdnRules(ctx context.Context, state NamedResources[sgFqdnRule], client
 			Fqdn:      types.StringValue(strings.ToLower(fqdnRule.GetFQDN())),
 			Logs:      types.BoolValue(fqdnRule.GetLogs()),
 			Ports:     portsList,
-			Protocols: protocolsList,
 			Action:    types.StringValue(fqdnRule.GetAction().String()),
 		}
 		k := it.Key().String()

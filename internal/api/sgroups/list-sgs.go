@@ -53,7 +53,7 @@ func sgDefaultAction2proto(m sgroups.ChainDefaultAction) (ret sg.SecGroup_Defaul
 func sg2proto(m sgroups.SecurityGroup) (*sg.SecGroup, error) {
 	ret := sg.SecGroup{
 		Name:     m.Name,
-		Networks: m.Networks,
+		Networks: m.Networks.Values(),
 		Logs:     m.Logs,
 		Trace:    m.Trace,
 	}

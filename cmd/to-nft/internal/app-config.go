@@ -15,7 +15,7 @@ graceful-shutdown: 10s
 base-rules:
   networks: ["10.10.1.0/24", "10.10.2.0/24",....]  # optional or value will borrow data from "extapi/svc/sgroups/address"
 fqdn-rules:
-  strategy: dns|ndpi|combine #default = dns
+  strategy: dns #default = dns
 logger:
   level: INFO
 netlink:
@@ -167,7 +167,7 @@ func (o FqdnRulesStrategy) Eq(other FqdnRulesStrategy) bool {
 // Variants -
 func (FqdnRulesStrategy) Variants() []FqdnRulesStrategy {
 	r := [...]FqdnRulesStrategy{
-		FqdnRulesStartegyDNS, FqdnRulesStartegyNDPI, FqdnRulesStartegyCombine,
+		FqdnRulesStartegyDNS, //FqdnRulesStartegyNDPI, FqdnRulesStartegyCombine,
 	}
 	return r[:]
 }
@@ -176,7 +176,7 @@ const (
 	// FqdnRulesStartegyDNS -
 	FqdnRulesStartegyDNS FqdnRulesStrategy = "dns"
 	// FqdnRulesStartegyNDPI -
-	FqdnRulesStartegyNDPI FqdnRulesStrategy = "ndpi"
+	//FqdnRulesStartegyNDPI FqdnRulesStrategy = "ndpi"
 	// FqdnRulesStartegyCombine -
-	FqdnRulesStartegyCombine FqdnRulesStrategy = "combine"
+	//FqdnRulesStartegyCombine FqdnRulesStrategy = "combine"
 )

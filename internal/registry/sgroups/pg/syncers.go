@@ -83,7 +83,7 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "default_action", PgTy: "sgroups.chain_default_action", Notnull: true},
 		)
 		o.mutatorFn = "sgroups.sync_sg"
-	case *sgm.SGRule:
+	case *sgm.SGRule: //nolint:dupl
 		o.tableDst = syncTable{
 			Name: "sgroups.vu_sg_rule",
 		}.WithFields(
@@ -96,7 +96,7 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "priority", PgTy: "smallint"},
 		)
 		o.mutatorFn = "sgroups.sync_sg_rule"
-	case *sgm.FQDNRule:
+	case *sgm.FQDNRule: //nolint:dupl
 		o.tableDst = syncTable{
 			Name: "sgroups.vu_fqdn_rule",
 		}.WithFields(
@@ -105,7 +105,6 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "proto", PgTy: "sgroups.proto", Notnull: true, Pk: true},
 			syncField{Name: "ports", PgTy: "sgroups.sg_rule_ports[]"},
 			syncField{Name: "logs", PgTy: "bool", Notnull: true},
-			syncField{Name: "ndpi_protocols", PgTy: "citext[]", Notnull: true},
 			syncField{Name: "action", PgTy: "sgroups.rule_action", Notnull: true},
 			syncField{Name: "priority", PgTy: "smallint"},
 		)
@@ -338,7 +337,7 @@ func (o *syncObj[T, tFlt]) AddData(ctx context.Context, data ...T) error { //nol
 			if err := x.FromModel(v); err != nil {
 				return err
 			}
-			raw = append(raw, []any{x.SgFrom, x.FqndTo, x.Proto, x.Ports, x.Logs, x.NdpiProtocols, x.Action, x.Priority.Int2})
+			raw = append(raw, []any{x.SgFrom, x.FqndTo, x.Proto, x.Ports, x.Logs, x.Action, x.Priority.Int2})
 		case sgm.SgIcmpRule:
 			var x SgIcmpRule
 			if err := x.FromModel(v); err != nil {

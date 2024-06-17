@@ -113,7 +113,7 @@ func (tfSg2Backend) sync(ctx context.Context, items NamedResources[sgItem], clie
 	for i := range ipf {
 		icmps[i].Iterate(func(sgName string, o types.Object) bool {
 			rule := &protos.SgIcmpRule{
-				Sg:   sgName,
+				SG:   sgName,
 				ICMP: &common.ICMP{IPv: ipf[i]},
 			}
 			if o.IsNull() {
@@ -186,7 +186,7 @@ func (tfSg2Backend) sync(ctx context.Context, items NamedResources[sgItem], clie
 }
 
 func (tfSgSgRules2Backend) sync(ctx context.Context, items NamedResources[sgSgRule], client *sgAPI.Client, op protos.SyncReq_SyncOp) diag.Diagnostics { //nolint:dupl
-	var syncObj protos.SyncSGRules
+	var syncObj protos.SyncSgSgRules
 	var diags diag.Diagnostics
 	for _, features := range items.Items {
 		var accPorts []AccessPorts
@@ -210,7 +210,7 @@ func (tfSgSgRules2Backend) sync(ctx context.Context, items NamedResources[sgSgRu
 			diags.Append(di)
 			return diags
 		}
-		syncObj.Rules = append(syncObj.Rules, &protos.Rule{
+		syncObj.Rules = append(syncObj.Rules, &protos.SgSgRule{
 			SgFrom:    features.SgFrom.ValueString(),
 			SgTo:      features.SgTo.ValueString(),
 			Transport: common.Networks_NetIP_Transport(protoValue),
@@ -222,8 +222,8 @@ func (tfSgSgRules2Backend) sync(ctx context.Context, items NamedResources[sgSgRu
 	}
 	req := protos.SyncReq{
 		SyncOp: op,
-		Subject: &protos.SyncReq_SgRules{
-			SgRules: &syncObj,
+		Subject: &protos.SyncReq_SgSgRules{
+			SgSgRules: &syncObj,
 		},
 	}
 	if _, err := client.Sync(ctx, &req); err != nil {
@@ -291,11 +291,6 @@ func (tfSgFqdnRules2Backend) sync(ctx context.Context, items NamedResources[sgFq
 				fmt.Sprintf("no proto conv for value(%s)", features.Transport.ValueString()))
 			return diags
 		}
-		var protocols []string
-		diags.Append(features.Protocols.ElementsAs(ctx, &protocols, false)...)
-		if diags.HasError() {
-			return diags
-		}
 		ra := features.Action.ValueString()
 		pri, di := rulePriority2proto(features.Priority)
 		if di != nil {
@@ -308,7 +303,6 @@ func (tfSgFqdnRules2Backend) sync(ctx context.Context, items NamedResources[sgFq
 			Transport: common.Networks_NetIP_Transport(transportValue),
 			Logs:      features.Logs.ValueBool(),
 			Ports:     accPortsRangeToProto(accPorts),
-			Protocols: protocols,
 			Action:    protos.RuleAction(protos.RuleAction_value[ra]),
 			Priority:  pri,
 		})
@@ -328,7 +322,7 @@ func (tfSgFqdnRules2Backend) sync(ctx context.Context, items NamedResources[sgFq
 }
 
 func (tfCidrSgRules2Backend) sync(ctx context.Context, items NamedResources[cidrRule], client *sgAPI.Client, op protos.SyncReq_SyncOp) diag.Diagnostics { //nolint:dupl
-	var syncCidrRules protos.SyncCidrSgRules
+	var syncCidrRules protos.SyncIECidrSgRules
 	var diags diag.Diagnostics
 	for _, features := range items.Items {
 		var accPorts []AccessPorts
@@ -362,7 +356,7 @@ func (tfCidrSgRules2Backend) sync(ctx context.Context, items NamedResources[cidr
 			diags.Append(di)
 			return diags
 		}
-		syncCidrRules.Rules = append(syncCidrRules.Rules, &protos.CidrSgRule{
+		syncCidrRules.Rules = append(syncCidrRules.Rules, &protos.IECidrSgRule{
 			Transport: common.Networks_NetIP_Transport(protoValue),
 			CIDR:      features.Cidr.ValueString(),
 			SG:        features.SgName.ValueString(),
@@ -376,20 +370,20 @@ func (tfCidrSgRules2Backend) sync(ctx context.Context, items NamedResources[cidr
 	}
 	req := protos.SyncReq{
 		SyncOp: op,
-		Subject: &protos.SyncReq_CidrSgRules{
-			CidrSgRules: &syncCidrRules,
+		Subject: &protos.SyncReq_IeCidrSgRules{
+			IeCidrSgRules: &syncCidrRules,
 		},
 	}
 	if _, err := client.Sync(ctx, &req); err != nil {
 		diags.AddError(
-			fmt.Sprintf("%s(cidr-sg-rules)", op), err.Error(),
+			fmt.Sprintf("%s(ie-cidr-sg-rules)", op), err.Error(),
 		)
 	}
 	return diags
 }
 
 func (tfCidrSgIcmpRules2Backend) sync(ctx context.Context, items NamedResources[cidrSgIcmpRule], client *sgAPI.Client, op protos.SyncReq_SyncOp) diag.Diagnostics {
-	var syncObj protos.SyncCidrSgIcmpRules
+	var syncObj protos.SyncIECidrSgIcmpRules
 	var diags diag.Diagnostics
 	for _, features := range items.Items {
 		caser := cases.Title(language.AmericanEnglish).String
@@ -408,7 +402,7 @@ func (tfCidrSgIcmpRules2Backend) sync(ctx context.Context, items NamedResources[
 			diags.Append(di)
 			return diags
 		}
-		syncObj.Rules = append(syncObj.Rules, &protos.CidrSgIcmpRule{
+		syncObj.Rules = append(syncObj.Rules, &protos.IECidrSgIcmpRule{
 			CIDR:     features.Cidr.ValueString(),
 			SG:       features.SgName.ValueString(),
 			Traffic:  common.Traffic(trafficValue),
@@ -424,20 +418,20 @@ func (tfCidrSgIcmpRules2Backend) sync(ctx context.Context, items NamedResources[
 	}
 	req := protos.SyncReq{
 		SyncOp: op,
-		Subject: &protos.SyncReq_CidrSgIcmpRules{
-			CidrSgIcmpRules: &syncObj,
+		Subject: &protos.SyncReq_IeCidrSgIcmpRules{
+			IeCidrSgIcmpRules: &syncObj,
 		},
 	}
 	if _, err := client.Sync(ctx, &req); err != nil {
 		diags.AddError(
-			fmt.Sprintf("%s(cidr-sg-icmp-rules)", op), err.Error(),
+			fmt.Sprintf("%s(ie-cidr-sg-icmp-rules)", op), err.Error(),
 		)
 	}
 	return diags
 }
 
 func (tfIESgSgRules2Backend) sync(ctx context.Context, items NamedResources[ieSgSgRule], client *sgAPI.Client, op protos.SyncReq_SyncOp) diag.Diagnostics { //nolint:dupl
-	var syncObj protos.SyncSgSgRules
+	var syncObj protos.SyncIESgSgRules
 	var diags diag.Diagnostics
 	for _, features := range items.Items {
 		var accPorts []AccessPorts
@@ -471,9 +465,9 @@ func (tfIESgSgRules2Backend) sync(ctx context.Context, items NamedResources[ieSg
 			diags.Append(di)
 			return diags
 		}
-		syncObj.Rules = append(syncObj.Rules, &protos.SgSgRule{
+		syncObj.Rules = append(syncObj.Rules, &protos.IESgSgRule{
 			Transport: common.Networks_NetIP_Transport(protoValue),
-			Sg:        features.Sg.ValueString(),
+			SG:        features.Sg.ValueString(),
 			SgLocal:   features.SgLocal.ValueString(),
 			Traffic:   common.Traffic(trafficValue),
 			Ports:     accPortsRangeToProto(accPorts),
@@ -485,8 +479,8 @@ func (tfIESgSgRules2Backend) sync(ctx context.Context, items NamedResources[ieSg
 	}
 	req := protos.SyncReq{
 		SyncOp: op,
-		Subject: &protos.SyncReq_SgSgRules{
-			SgSgRules: &syncObj,
+		Subject: &protos.SyncReq_IeSgSgRules{
+			IeSgSgRules: &syncObj,
 		},
 	}
 	if _, err := client.Sync(ctx, &req); err != nil {
@@ -516,7 +510,7 @@ func (tfIESgSgIcmpRules2Backend) sync(ctx context.Context, items NamedResources[
 			return diags
 		}
 		syncObj.Rules = append(syncObj.Rules, &protos.IESgSgIcmpRule{
-			Sg:       features.Sg.ValueString(),
+			SG:       features.Sg.ValueString(),
 			SgLocal:  features.SgLocal.ValueString(),
 			Traffic:  common.Traffic(trafficValue),
 			ICMP:     features.icmp2Proto(ctx, &diags),

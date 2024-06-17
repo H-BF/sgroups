@@ -112,22 +112,15 @@ func (rd sGroupsMemDbReader) Close() error {
 }
 
 func (rd sGroupsMemDbReader) fillSG(sg *model.SecurityGroup) error {
-	nw := sg.Networks[:0]
-	seen := make(map[model.NetworkName]bool)
-	for _, nwName := range sg.Networks {
-		if seen[nwName] {
-			continue
-		}
-		seen[nwName] = true
+	nws := sg.Networks.Values()
+	sg.Networks.Clear()
+	for _, nwName := range nws {
 		x, e := rd.reader.First(TblNetworks, indexID, nwName)
 		if e != nil {
 			return errors.WithMessage(e, "db error")
 		}
-		if x != nil {
-			nw = append(nw, x.(*model.Network).Name)
-		}
+		sg.Networks.Insert(x.(*model.Network).Name)
 	}
-	sg.Networks = nw
 	return nil
 }
 

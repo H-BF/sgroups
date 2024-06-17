@@ -56,7 +56,7 @@ type (
 	// SecurityGroup security group for networks(s)
 	SecurityGroup struct {
 		Name          string
-		Networks      []NetworkName
+		Networks      dict.HSet[NetworkName]
 		Logs          bool
 		Trace         bool
 		DefaultAction ChainDefaultAction
@@ -102,10 +102,7 @@ type (
 	SGRule = ruleT[SGRuleIdentity]
 
 	// FQDNRule rule for from SG to FQDN
-	FQDNRule struct {
-		ruleT[FQDNRuleIdentity]
-		NdpiProtocols dict.RBSet[dict.StringCiKey]
-	}
+	FQDNRule = ruleT[FQDNRuleIdentity]
 
 	// IECidrSgRule proto:CIDR:SG:[INGRESS|EGRESS] rule
 	IECidrSgRule = ruleT[IECidrSgRuleIdenity]
@@ -377,17 +374,11 @@ func (nw Network) IsEq(other Network) bool {
 
 // IsEq -
 func (sg SecurityGroup) IsEq(other SecurityGroup) bool {
-	eq := sg.DefaultAction == other.DefaultAction &&
+	return sg.DefaultAction == other.DefaultAction &&
 		sg.Logs == other.Logs &&
 		sg.Trace == other.Trace &&
-		sg.Name == other.Name
-	if eq {
-		var a, b dict.HSet[string]
-		a.PutMany(sg.Networks...)
-		b.PutMany(other.Networks...)
-		eq = a.Eq(&b)
-	}
-	return eq
+		sg.Name == other.Name &&
+		sg.Networks.Eq(&other.Networks)
 }
 
 // IdentityHash makes ID as hash for SGRule
@@ -443,12 +434,6 @@ func (rule ruleT[T]) IsEq(other ruleT[T]) bool {
 		rule.Trace == other.Trace &&
 		rule.Action == other.Action &&
 		rule.Priority.IsEq(other.Priority)
-}
-
-// IsEq -
-func (rule FQDNRule) IsEq(other FQDNRule) bool {
-	return rule.ruleT.IsEq(other.ruleT) &&
-		rule.NdpiProtocols.Eq(&other.NdpiProtocols)
 }
 
 // String impl Stringer

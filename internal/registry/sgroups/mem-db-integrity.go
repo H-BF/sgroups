@@ -94,8 +94,8 @@ func IntegrityChecker4SG() IntegrityChecker {
 		all := make(allT)
 		for x := it.Next(); x != nil; x = it.Next() {
 			sg := x.(*model.SecurityGroup)
-			for _, nwName := range sg.Networks {
-				var xNw interface{}
+			for _, nwName := range sg.Networks.Values() {
+				var xNw any
 				if xNw, e = reader.First(TblNetworks, indexID, nwName); e != nil {
 					return errors.WithMessagef(e, "%s: SG '%s' get related network '%s'",
 						api, sg.Name, nwName)

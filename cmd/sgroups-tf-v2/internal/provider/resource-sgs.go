@@ -132,7 +132,7 @@ func readSgState(ctx context.Context, state NamedResources[sgItem], client *sgAP
 		}
 
 		sgIcmpReq := protos.FindSgIcmpRulesReq{
-			Sg: listGroupsReq.SgNames,
+			SG: listGroupsReq.SgNames,
 		}
 		if sgIcmpResp, err = client.FindSgIcmpRules(ctx, &sgIcmpReq); err != nil {
 			diags.AddError("read security groups", err.Error())

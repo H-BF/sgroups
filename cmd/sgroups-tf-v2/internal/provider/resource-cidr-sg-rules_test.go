@@ -35,15 +35,15 @@ func (sui *cidrRulesTests) testCidrRulesFromFixtureFilename(name string) resourc
 	}
 	for _, tc := range testData.Cases {
 		tcName := tc.TestName
-		expectedBackend := tc.Expected.CidrSgRules.Decode()
-		nonExpectedBackend := tc.NonExpected.CidrSgRules.Decode()
+		expectedBackend := tc.Expected.IECidrSgRules.Decode()
+		nonExpectedBackend := tc.NonExpected.IECidrSgRules.Decode()
 
 		resourceTestCase.Steps = append(resourceTestCase.Steps, resource.TestStep{
 			Config: sui.providerConfig + "\n" + tc.TfConfig,
 			Check: func(_ *terraform.State) error {
 				if len(expectedBackend)+len(nonExpectedBackend) > 0 {
-					allRules := sui.listAllCidrRules()
-					var checker fixtures.ExpectationsChecker[protos.CidrSgRule, domain.IECidrSgRule]
+					allRules := sui.listAllIECidrRules()
+					var checker fixtures.ExpectationsChecker[protos.IECidrSgRule, domain.IECidrSgRule]
 					checker.Init(allRules)
 
 					if !checker.WeExpectFindAll(expectedBackend) {
@@ -64,8 +64,8 @@ func (sui *cidrRulesTests) testCidrRulesFromFixtureFilename(name string) resourc
 	return resourceTestCase
 }
 
-func (sui *cidrRulesTests) listAllCidrRules() []*protos.CidrSgRule {
-	resp, err := sui.sgClient.FindCidrSgRules(sui.ctx, &protos.FindCidrSgRulesReq{Sg: []string{}})
+func (sui *cidrRulesTests) listAllIECidrRules() []*protos.IECidrSgRule {
+	resp, err := sui.sgClient.FindIECidrSgRules(sui.ctx, &protos.FindIECidrSgRulesReq{SG: []string{}})
 	sui.Require().NoError(err)
 	return resp.GetRules()
 }

@@ -14,7 +14,7 @@ type securityGroup struct {
 
 func (n *securityGroup) from(g *sg.SecGroup) error {
 	n.Name = g.GetName()
-	n.Networks = g.GetNetworks()
+	n.Networks.PutMany(g.GetNetworks()...)
 	n.Logs = g.GetLogs()
 	n.Trace = g.GetTrace()
 	switch g.GetDefaultAction() {

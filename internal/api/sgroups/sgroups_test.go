@@ -176,8 +176,8 @@ func (sui *sGroupServiceTests) Test_Sync_SecGroups() {
 	sui.Require().Equal(0, cn)
 }
 
-func (sui *sGroupServiceTests) newRule(from, to *api.SecGroup, tr common.Networks_NetIP_Transport, ports ...*api.AccPorts) *api.Rule {
-	return &api.Rule{
+func (sui *sGroupServiceTests) newRule(from, to *api.SecGroup, tr common.Networks_NetIP_Transport, ports ...*api.AccPorts) *api.SgSgRule {
+	return &api.SgSgRule{
 		SgFrom:    from.Name,
 		SgTo:      to.Name,
 		Transport: tr,
@@ -190,10 +190,10 @@ func (sui *sGroupServiceTests) newSgSgRule(
 	sgLocal, sg *api.SecGroup,
 	transport common.Networks_NetIP_Transport,
 	traffic common.Traffic,
-	ports ...*api.AccPorts) *api.SgSgRule {
-	return &api.SgSgRule{
+	ports ...*api.AccPorts) *api.IESgSgRule {
+	return &api.IESgSgRule{
 		Transport: transport,
-		Sg:        sg.Name,
+		SG:        sg.Name,
 		SgLocal:   sgLocal.Name,
 		Traffic:   traffic,
 		Ports:     ports,
@@ -207,7 +207,7 @@ func (sui *sGroupServiceTests) newIESgSgIcmpRule(
 	ipv common.IpAddrFamily,
 ) *api.IESgSgIcmpRule {
 	return &api.IESgSgIcmpRule{
-		Sg:      sg.Name,
+		SG:      sg.Name,
 		SgLocal: sgLocal.Name,
 		Traffic: traffic,
 		ICMP:    &common.ICMP{IPv: ipv},
@@ -220,10 +220,10 @@ func (sui *sGroupServiceTests) newCidrSgIcmpRule(
 	sg *api.SecGroup,
 	traffic common.Traffic,
 	ipv common.IpAddrFamily,
-) *api.CidrSgIcmpRule {
+) *api.IECidrSgIcmpRule {
 	_, _, err := net.ParseCIDR(cidr)
 	sui.Require().NoError(err)
-	return &api.CidrSgIcmpRule{
+	return &api.IECidrSgIcmpRule{
 		CIDR:    cidr,
 		SG:      sg.GetName(),
 		Traffic: traffic,
@@ -232,11 +232,11 @@ func (sui *sGroupServiceTests) newCidrSgIcmpRule(
 	}
 }
 
-func (sui *sGroupServiceTests) syncRules(rules []*api.Rule, op api.SyncReq_SyncOp) {
+func (sui *sGroupServiceTests) syncRules(rules []*api.SgSgRule, op api.SyncReq_SyncOp) {
 	req := api.SyncReq{
 		SyncOp: op,
-		Subject: &api.SyncReq_SgRules{
-			SgRules: &api.SyncSGRules{
+		Subject: &api.SyncReq_SgSgRules{
+			SgSgRules: &api.SyncSgSgRules{
 				Rules: rules,
 			},
 		},
@@ -245,11 +245,11 @@ func (sui *sGroupServiceTests) syncRules(rules []*api.Rule, op api.SyncReq_SyncO
 	sui.Require().NoError(err)
 }
 
-func (sui *sGroupServiceTests) syncSgSgRules(rules []*api.SgSgRule, op api.SyncReq_SyncOp) {
+func (sui *sGroupServiceTests) syncSgSgRules(rules []*api.IESgSgRule, op api.SyncReq_SyncOp) {
 	req := api.SyncReq{
 		SyncOp: op,
-		Subject: &api.SyncReq_SgSgRules{
-			SgSgRules: &api.SyncSgSgRules{
+		Subject: &api.SyncReq_IeSgSgRules{
+			IeSgSgRules: &api.SyncIESgSgRules{
 				Rules: rules,
 			},
 		},
@@ -271,11 +271,11 @@ func (sui *sGroupServiceTests) syncIESgSgIcmpRules(rules []*api.IESgSgIcmpRule, 
 	sui.Require().NoError(err)
 }
 
-func (sui *sGroupServiceTests) syncCidrSgIcmpRules(rules []*api.CidrSgIcmpRule, op api.SyncReq_SyncOp) {
+func (sui *sGroupServiceTests) syncCidrSgIcmpRules(rules []*api.IECidrSgIcmpRule, op api.SyncReq_SyncOp) {
 	req := api.SyncReq{
 		SyncOp: op,
-		Subject: &api.SyncReq_CidrSgIcmpRules{
-			CidrSgIcmpRules: &api.SyncCidrSgIcmpRules{
+		Subject: &api.SyncReq_IeCidrSgIcmpRules{
+			IeCidrSgIcmpRules: &api.SyncIECidrSgIcmpRules{
 				Rules: rules,
 			},
 		},
@@ -284,7 +284,7 @@ func (sui *sGroupServiceTests) syncCidrSgIcmpRules(rules []*api.CidrSgIcmpRule, 
 	sui.Require().NoError(err)
 }
 
-func (sui *sGroupServiceTests) rule2Id(rules ...*api.Rule) []model.SGRuleIdentity {
+func (sui *sGroupServiceTests) rule2Id(rules ...*api.SgSgRule) []model.SGRuleIdentity {
 	var ret []model.SGRuleIdentity
 	for _, r := range rules {
 		var id model.SGRuleIdentity
@@ -298,12 +298,12 @@ func (sui *sGroupServiceTests) rule2Id(rules ...*api.Rule) []model.SGRuleIdentit
 	return ret
 }
 
-func (sui *sGroupServiceTests) sgSgRule2Id(rules ...*api.SgSgRule) []model.IESgSgRuleIdentity {
+func (sui *sGroupServiceTests) sgSgRule2Id(rules ...*api.IESgSgRule) []model.IESgSgRuleIdentity {
 	var ret []model.IESgSgRuleIdentity
 	for _, r := range rules {
 		var id model.IESgSgRuleIdentity
 		id.SgLocal = r.GetSgLocal()
-		id.Sg = r.GetSg()
+		id.Sg = r.GetSG()
 		err := (networkTransport{&id.Transport}).
 			from(r.GetTransport())
 		sui.Require().NoError(err)
@@ -319,7 +319,7 @@ func (sui *sGroupServiceTests) ieSgSgIcmpRule2Id(rules ...*api.IESgSgIcmpRule) [
 	for _, r := range rules {
 		var id model.IESgSgIcmpRuleID
 		id.SgLocal = r.GetSgLocal()
-		id.Sg = r.GetSg()
+		id.Sg = r.GetSG()
 		err := (traffic{&id.Traffic}).from(r.GetTraffic())
 		sui.Require().NoError(err)
 		ipv := r.GetICMP().GetIPv()
@@ -334,7 +334,7 @@ func (sui *sGroupServiceTests) ieSgSgIcmpRule2Id(rules ...*api.IESgSgIcmpRule) [
 	return ret
 }
 
-func (sui *sGroupServiceTests) cidrSgIcmpRule2Id(rules ...*api.CidrSgIcmpRule) []model.IECidrSgIcmpRuleID {
+func (sui *sGroupServiceTests) cidrSgIcmpRule2Id(rules ...*api.IECidrSgIcmpRule) []model.IECidrSgIcmpRuleID {
 	var ret []model.IECidrSgIcmpRuleID
 	for _, r := range rules {
 		var id model.IECidrSgIcmpRuleID
@@ -363,7 +363,7 @@ func (sui *sGroupServiceTests) Test_Sync_Rules() {
 
 	rule1 := sui.newRule(sg1, sg2, common.Networks_NetIP_TCP, sui.newPorts("100-200", "80"))
 	rule2 := sui.newRule(sg1, sg2, common.Networks_NetIP_UDP, sui.newPorts("100-200", "80"))
-	sui.syncRules([]*api.Rule{rule1, rule2}, api.SyncReq_FullSync)
+	sui.syncRules([]*api.SgSgRule{rule1, rule2}, api.SyncReq_FullSync)
 
 	r := sui.reader()
 	m := make(map[string]bool)
@@ -378,7 +378,7 @@ func (sui *sGroupServiceTests) Test_Sync_Rules() {
 		sui.Require().Truef(ok, "required rule '%s'", x)
 	}
 
-	sui.syncRules([]*api.Rule{rule1, rule2}, api.SyncReq_Delete)
+	sui.syncRules([]*api.SgSgRule{rule1, rule2}, api.SyncReq_Delete)
 	r = sui.reader()
 	var cn int
 	err = r.ListSGRules(sui.ctx, func(_ model.SGRule) error {
@@ -388,7 +388,7 @@ func (sui *sGroupServiceTests) Test_Sync_Rules() {
 	sui.Require().NoError(err)
 	sui.Require().Equal(0, cn)
 
-	sui.syncRules([]*api.Rule{rule1, rule2}, api.SyncReq_FullSync)
+	sui.syncRules([]*api.SgSgRule{rule1, rule2}, api.SyncReq_FullSync)
 	sui.syncSGs([]*api.SecGroup{sg1}, api.SyncReq_Delete)
 	r = sui.reader()
 	err = r.ListSGRules(sui.ctx, func(_ model.SGRule) error {
@@ -409,7 +409,7 @@ func (sui *sGroupServiceTests) Test_Sync_SgSgRules() {
 	rule1 := sui.newSgSgRule(sg1, sg2, common.Networks_NetIP_TCP, common.Traffic_Egress, sui.newPorts("100-200", "80"))
 	rule2 := sui.newSgSgRule(sg3, sg4, common.Networks_NetIP_UDP, common.Traffic_Ingress, sui.newPorts("100-200", "80"))
 
-	sui.syncSgSgRules([]*api.SgSgRule{rule1, rule2}, api.SyncReq_FullSync)
+	sui.syncSgSgRules([]*api.IESgSgRule{rule1, rule2}, api.SyncReq_FullSync)
 	r := sui.reader()
 	m := make(map[string]bool)
 	err := r.ListSgSgRules(sui.ctx, func(rule model.IESgSgRule) error {
@@ -423,7 +423,7 @@ func (sui *sGroupServiceTests) Test_Sync_SgSgRules() {
 		sui.Require().Truef(ok, "required rule '%s'", x)
 	}
 
-	sui.syncSgSgRules([]*api.SgSgRule{rule1, rule2}, api.SyncReq_Delete)
+	sui.syncSgSgRules([]*api.IESgSgRule{rule1, rule2}, api.SyncReq_Delete)
 	r = sui.reader()
 	var cn int
 	err = r.ListSgSgRules(sui.ctx, func(_ model.IESgSgRule) error {
@@ -433,7 +433,7 @@ func (sui *sGroupServiceTests) Test_Sync_SgSgRules() {
 	sui.Require().NoError(err)
 	sui.Require().Equal(0, cn)
 
-	sui.syncSgSgRules([]*api.SgSgRule{rule1, rule2}, api.SyncReq_FullSync)
+	sui.syncSgSgRules([]*api.IESgSgRule{rule1, rule2}, api.SyncReq_FullSync)
 	sui.syncSGs([]*api.SecGroup{sg1, sg3}, api.SyncReq_Delete)
 	r = sui.reader()
 	err = r.ListSgSgRules(sui.ctx, func(_ model.IESgSgRule) error {
@@ -497,7 +497,7 @@ func (sui *sGroupServiceTests) Test_Sync_CidrSgIcmpRules() {
 	rule1 := sui.newCidrSgIcmpRule("10.10.10.0/24", sg1, common.Traffic_Egress, common.IpAddrFamily_IPv4)
 	rule2 := sui.newCidrSgIcmpRule("2001:db8::/64", sg2, common.Traffic_Ingress, common.IpAddrFamily_IPv6)
 
-	sui.syncCidrSgIcmpRules([]*api.CidrSgIcmpRule{rule1, rule2}, api.SyncReq_FullSync)
+	sui.syncCidrSgIcmpRules([]*api.IECidrSgIcmpRule{rule1, rule2}, api.SyncReq_FullSync)
 	r := sui.reader()
 	m := make(map[string]bool)
 	err := r.ListCidrSgIcmpRules(sui.ctx, func(rule model.IECidrSgIcmpRule) error {
@@ -511,7 +511,7 @@ func (sui *sGroupServiceTests) Test_Sync_CidrSgIcmpRules() {
 		sui.Require().Truef(ok, "required rule '%s'", x)
 	}
 
-	sui.syncCidrSgIcmpRules([]*api.CidrSgIcmpRule{rule1, rule2}, api.SyncReq_Delete)
+	sui.syncCidrSgIcmpRules([]*api.IECidrSgIcmpRule{rule1, rule2}, api.SyncReq_Delete)
 	r = sui.reader()
 	var cn int
 	err = r.ListCidrSgIcmpRules(sui.ctx, func(_ model.IECidrSgIcmpRule) error {
@@ -521,7 +521,7 @@ func (sui *sGroupServiceTests) Test_Sync_CidrSgIcmpRules() {
 	sui.Require().NoError(err)
 	sui.Require().Equal(0, cn)
 
-	sui.syncCidrSgIcmpRules([]*api.CidrSgIcmpRule{rule1, rule2}, api.SyncReq_FullSync)
+	sui.syncCidrSgIcmpRules([]*api.IECidrSgIcmpRule{rule1, rule2}, api.SyncReq_FullSync)
 	sui.syncSGs([]*api.SecGroup{sg1, sg2}, api.SyncReq_Delete)
 	r = sui.reader()
 	err = r.ListCidrSgIcmpRules(sui.ctx, func(_ model.IECidrSgIcmpRule) error {
@@ -601,52 +601,7 @@ func (sui *sGroupServiceTests) Test_GetSgSubnets() {
 	}
 }
 
-func (sui *sGroupServiceTests) Test_GetRules() {
-	nw1 := sui.newNetwork("net1", "10.10.10.0/24")
-	nw2 := sui.newNetwork("net2", "20.20.20.0/24")
-	nw3 := sui.newNetwork("net3", "25.20.20.0/24")
-	sui.syncNetworks([]*api.Network{nw1, nw2, nw3}, api.SyncReq_FullSync)
-
-	sg1 := sui.newSG("sg1", nw1.Name)
-	sg2 := sui.newSG("sg2", nw2.Name)
-	sg3 := sui.newSG("sg3", nw3.Name)
-	sui.syncSGs([]*api.SecGroup{sg1, sg2, sg3}, api.SyncReq_FullSync)
-
-	r1 := sui.newRule(sg1, sg2, common.Networks_NetIP_TCP)
-	r2 := sui.newRule(sg1, sg3, common.Networks_NetIP_UDP)
-	r3 := sui.newRule(sg2, sg1, common.Networks_NetIP_UDP)
-	r4 := sui.newRule(sg2, sg3, common.Networks_NetIP_TCP)
-	sui.syncRules([]*api.Rule{r1, r2, r3, r4}, api.SyncReq_FullSync)
-
-	tests := []struct {
-		from, to      string
-		shouldBeFound bool
-	}{
-		{"sg1", "sg2", true},
-		{"sg1", "sg3", true},
-
-		{"sg2", "sg1", true},
-		{"sg2", "sg3", true},
-
-		{"sg3", "sg1", false},
-		{"sg3", "sg2", false},
-	}
-
-	req := new(api.GetRulesReq)
-	for _, t := range tests {
-		req.SgFrom = t.from
-		req.SgTo = t.to
-		if resp, err := sui.srv.GetRules(sui.ctx, req); !t.shouldBeFound {
-			sui.Require().Error(err)
-			sui.Require().Equal(codes.NotFound, status.Code(err))
-		} else {
-			sui.Require().Equal(t.from, resp.GetRules()[0].GetSgFrom())
-			sui.Require().Equal(t.to, resp.GetRules()[0].GetSgTo())
-		}
-	}
-}
-
-func (sui *sGroupServiceTests) Test_FindRules() {
+func (sui *sGroupServiceTests) Test_FindSgSgRules() {
 	sg1 := sui.newSG("sg1")
 	sg2 := sui.newSG("sg2")
 	sg3 := sui.newSG("sg3")
@@ -656,7 +611,7 @@ func (sui *sGroupServiceTests) Test_FindRules() {
 	r2 := sui.newRule(sg1, sg3, common.Networks_NetIP_UDP)
 	r3 := sui.newRule(sg2, sg1, common.Networks_NetIP_TCP)
 	r4 := sui.newRule(sg2, sg3, common.Networks_NetIP_UDP)
-	sui.syncRules([]*api.Rule{r1, r2, r3, r4}, api.SyncReq_FullSync)
+	sui.syncRules([]*api.SgSgRule{r1, r2, r3, r4}, api.SyncReq_FullSync)
 
 	type sgPair = [2]string
 	expect := func(pairs ...string) map[sgPair]bool {
@@ -670,7 +625,7 @@ func (sui *sGroupServiceTests) Test_FindRules() {
 		}
 		return ret
 	}
-	got := func(rr []*api.Rule) map[sgPair]struct{} {
+	got := func(rr []*api.SgSgRule) map[sgPair]struct{} {
 		ret := make(map[sgPair]struct{})
 		for _, r := range rr {
 			ret[sgPair{r.GetSgFrom(),
@@ -691,11 +646,11 @@ func (sui *sGroupServiceTests) Test_FindRules() {
 		{sl("sg3"), sl(), expect()},
 	}
 
-	req := new(api.FindRulesReq)
+	req := new(api.FindSgSgRulesReq)
 	for _, t := range tests {
 		req.SgFrom = t.from
 		req.SgTo = t.to
-		resp, err := sui.srv.FindRules(sui.ctx, req)
+		resp, err := sui.srv.FindSgSgRules(sui.ctx, req)
 		sui.Require().NoError(err)
 		sui.Require().NotNil(resp)
 		g := got(resp.GetRules())
