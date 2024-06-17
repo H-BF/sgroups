@@ -71,7 +71,6 @@ sudo nano /etc/cmd/to-nft/internal/tls-config.yaml
           cert-file: "/etc/ssl/certs/cert-file.pem"
           client:
             verify: cert-required
-            ca-files: ["file1.pem", "file2.pem", ...]
       ```
       <p>`type` - Допустимые значени: `none` или `tls`. При значении `none` tls отключен, при значении `tls` tls включен.</p>
 
@@ -90,7 +89,7 @@ sudo nano /etc/cmd/to-nft/internal/tls-config.yaml
           key-file: "/etc/ssl/private/key-file.pem"
           cert-file: "/etc/ssl/certs/cert-file.pem"
           client:
-            verify: skip
+            verify: verify
             ca-files: ["file1.pem", "file2.pem", ...]
       ```
       <p>`type` - Допустимые значени: `none` или `tls`. При значении `none` tls отключен, при значении `tls` tls включен.</p>
