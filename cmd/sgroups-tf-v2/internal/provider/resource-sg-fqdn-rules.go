@@ -61,7 +61,7 @@ var reSgFqdnKey = regexp.MustCompile(
 // FromString -
 func (k *sgFqdnRuleKey) FromString(s string) error {
 	sm := reSgFqdnKey.FindStringSubmatch(s)
-	if len(sm) < 4 { //nolint:gomnd
+	if len(sm) < 4 { //nolint:mnd
 		return errors.Errorf("bad sg-fqdn rule key (%s)", s)
 	}
 	k.transport = sm[1]

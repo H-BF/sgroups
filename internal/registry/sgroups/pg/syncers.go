@@ -83,7 +83,7 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "default_action", PgTy: "sgroups.chain_default_action", Notnull: true},
 		)
 		o.mutatorFn = "sgroups.sync_sg"
-	case *sgm.SGRule:
+	case *sgm.SGRule: //nolint:dupl
 		o.tableDst = syncTable{
 			Name: "sgroups.vu_sg_rule",
 		}.WithFields(
@@ -96,7 +96,7 @@ func (o *syncObj[T, tFlt]) construct() {
 			syncField{Name: "priority", PgTy: "smallint"},
 		)
 		o.mutatorFn = "sgroups.sync_sg_rule"
-	case *sgm.FQDNRule:
+	case *sgm.FQDNRule: //nolint:dupl
 		o.tableDst = syncTable{
 			Name: "sgroups.vu_fqdn_rule",
 		}.WithFields(

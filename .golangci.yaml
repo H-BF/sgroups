@@ -29,10 +29,10 @@ linters-settings:
       - octalLiteral
       - whyNoLint
   gocyclo:
-    min-complexity: 15
+    min-complexity: 31
   goimports:
     local-prefixes: github.com/golangci/golangci-lint
-  gomnd:
+  mnd:
     # don't include the "operation" and "assign"
     checks:
       - argument
@@ -48,7 +48,7 @@ linters-settings:
       - strings.SplitN
 
   govet:
-    check-shadowing: true
+    shadow: true
     settings:
       printf:
         funcs:
@@ -81,7 +81,7 @@ linters:
     - gocyclo
     - gofmt
     - goimports
-    - gomnd
+    - mnd
     - goprintffuncname
     - gosec
     - gosimple
@@ -121,7 +121,7 @@ issues:
   exclude-rules:
     - path: _test\.go
       linters:
-        - gomnd
+        - mnd
 
     - path: pkg/golinters/errcheck.go
       text: "SA1019: errCfg.Exclude is deprecated: use ExcludeFunctions instead"
@@ -138,9 +138,20 @@ issues:
       text: "SA1019: (.+).(GoVersion|LangVersion) is deprecated: use the global `run.go` instead."
     - path: pkg/golinters/unused.go
       text: "rangeValCopy: each iteration copies 160 bytes \\(consider pointers or indexing\\)"
+  exclude-dirs:
+    - bin
+    - vendor
+    - 3d-party
+    - var
+    - tmp
+    - internal/3d-party
+  exclude-files:
+    - \.pb\.go$
+    - \.pb\.gw\.go$
 
 output:
-  format: colored-line-number
+  formats:
+  - format: colored-line-number
   print-issued-lines: true
   print-linter-name: true
 
@@ -148,16 +159,16 @@ run:
   timeout: 5m
   issues-exit-code: 1
   tests: false
-  skip-dirs:
-    - bin
-    - vendor
-    - 3d-party
-    - var
-    - tmp
-    - internal/3d-party
-  skip-files:
-    - \.pb\.go$
-    - \.pb\.gw\.go$
+  # skip-dirs:
+  #   - bin
+  #   - vendor
+  #   - 3d-party
+  #   - var
+  #   - tmp
+  #   - internal/3d-party
+  # skip-files:
+  #   - \.pb\.go$
+  #   - \.pb\.gw\.go$
   #skip-dirs-use-default: true
   #modules-download-mode: readonly|vendor|mod
   modules-download-mode: readonly

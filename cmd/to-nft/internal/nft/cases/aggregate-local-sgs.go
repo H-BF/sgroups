@@ -121,7 +121,7 @@ func (loc *SGs) LoadFromIPs(ctx context.Context, client SGClient, localIPs []net
 		}
 		return nil
 	}
-	if err := parallel.ExecAbstract(len(localIPs), 8, job); err != nil { //nolint:gomnd
+	if err := parallel.ExecAbstract(len(localIPs), 8, job); err != nil { //nolint:mnd
 		return errors.WithMessage(err, api)
 	}
 	loc.Iterate(func(_ string, it *SG) bool {

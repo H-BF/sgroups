@@ -233,7 +233,7 @@ func RegisterSGroupsTypesOntoPGX(ctx context.Context, c *pgx.Conn) (err error) {
 	}
 	pgTypeMap.RegisterType(pgType)
 	{
-		oid := uint32(100001) //nolint:gomnd
+		oid := uint32(100001) //nolint:mnd
 		var x SgRulePorts
 		pgTypeMap.RegisterDefaultPgType(x, pgType.Name)
 		pgTypeMap.RegisterDefaultPgType(&x, pgType.Name)
