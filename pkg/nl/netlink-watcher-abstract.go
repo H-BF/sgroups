@@ -6,8 +6,8 @@ import (
 	"net"
 
 	"github.com/H-BF/corlib/pkg/jsonview"
-	"github.com/H-BF/sgroups/internal/3d-party/vishvananda/netlink"
 	"github.com/pkg/errors"
+	"github.com/vishvananda/netlink"
 )
 
 type (

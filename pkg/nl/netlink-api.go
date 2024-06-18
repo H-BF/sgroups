@@ -4,9 +4,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/H-BF/sgroups/internal/3d-party/vishvananda/netlink"
-
 	"github.com/pkg/errors"
+	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netns"
 )
 
@@ -75,7 +74,7 @@ func (api *linkListerImpl) Addrs(_ context.Context, lnk Link) ([]Addr, error) {
 func (api *linkListerImpl) Close() error {
 	api.closeOnce.Do(func() {
 		if api.h != nil {
-			api.h.Delete()
+			api.h.Close()
 		}
 		if api.ns != nil {
 			_ = api.ns.Close()

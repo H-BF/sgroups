@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/H-BF/sgroups/internal/3d-party/vishvananda/netlink"
 	"github.com/pkg/errors"
+	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netns"
 	"go.uber.org/multierr"
 	"golang.org/x/sys/unix"

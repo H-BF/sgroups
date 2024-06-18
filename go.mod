@@ -2,8 +2,6 @@ module github.com/H-BF/sgroups
 
 go 1.21
 
-toolchain go1.22.1
-
 require (
 	github.com/H-BF/corlib v0.0.12
 	github.com/H-BF/protos v0.0.0-00000000000000-000000000000
@@ -29,10 +27,11 @@ require (
 	github.com/spf13/cast v1.5.0
 	github.com/spf13/viper v1.12.0
 	github.com/stretchr/testify v1.9.0
-	github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df
+	github.com/vishvananda/netlink v1.3.0
+	github.com/vishvananda/netns v0.0.0-20200728191858-db3c7e526aae
 	go.uber.org/multierr v1.8.0
 	go.uber.org/zap v1.22.0
-	golang.org/x/sys v0.20.0
+	golang.org/x/sys v0.21.0
 	golang.org/x/text v0.15.0
 	google.golang.org/grpc v1.62.1
 	google.golang.org/protobuf v1.33.0
@@ -50,6 +49,8 @@ replace github.com/H-BF/protos v0.0.0-00000000000000-000000000000 => github.com/
 //replace github.com/google/nftables v0.3.3 => ./internal/3d-party/nftables
 //replace github.com/google/nftables v0.3.0 => ../nftables
 replace github.com/google/nftables v0.3.0 => github.com/H-BF/nftables v0.3.0-dev
+
+replace github.com/vishvananda/netlink v1.3.0 => github.com/H-BF/netlink v1.3.0-dev
 
 //github.com/google/nftables v0.0.0-20231024065723-32bfbb662717 -> master
 
