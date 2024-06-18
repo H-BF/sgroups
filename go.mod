@@ -1,6 +1,8 @@
 module github.com/H-BF/sgroups
 
-go 1.20
+go 1.21
+
+toolchain go1.22.1
 
 require (
 	github.com/H-BF/corlib v0.0.12
@@ -9,7 +11,7 @@ require (
 	github.com/c-robinson/iplib v1.0.6
 	github.com/cenkalti/backoff/v4 v4.1.3
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
-	github.com/google/nftables v0.3.3
+	github.com/google/nftables v0.3.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.1
 	github.com/hashicorp/go-memdb v1.3.3
 	github.com/hashicorp/terraform-plugin-framework v1.4.1
@@ -45,7 +47,9 @@ require (
 //replace github.com/H-BF/protos v0.0.0-00000000000000-000000000000 => ../protos
 replace github.com/H-BF/protos v0.0.0-00000000000000-000000000000 => github.com/H-BF/protos/v2 v2.0.0
 
-replace github.com/google/nftables v0.3.3 => ./internal/3d-party/nftables
+//replace github.com/google/nftables v0.3.3 => ./internal/3d-party/nftables
+//replace github.com/google/nftables v0.3.0 => ../nftables
+replace github.com/google/nftables v0.3.0 => github.com/H-BF/nftables v0.3.0-dev
 
 //github.com/google/nftables v0.0.0-20231024065723-32bfbb662717 -> master
 
@@ -94,15 +98,15 @@ require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/josharian/intern v1.0.0 // indirect
-	github.com/josharian/native v1.0.0 // indirect
+	github.com/josharian/native v1.1.0 // indirect
 	github.com/lib/pq v1.10.2 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
-	github.com/mdlayher/netlink v1.7.1 // indirect
-	github.com/mdlayher/socket v0.4.0 // indirect
+	github.com/mdlayher/netlink v1.7.2 // indirect
+	github.com/mdlayher/socket v0.5.0 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.0 // indirect
