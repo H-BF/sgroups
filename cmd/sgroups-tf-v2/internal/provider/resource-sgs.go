@@ -4,7 +4,7 @@ import (
 	"context"
 
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
-	model "github.com/H-BF/sgroups/internal/models/sgroups"
+	model "github.com/H-BF/sgroups/internal/domains/sgroups"
 
 	"github.com/H-BF/corlib/pkg/dict"
 	protos "github.com/H-BF/protos/pkg/api/sgroups"

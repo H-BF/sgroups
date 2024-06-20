@@ -3,7 +3,7 @@ package sgroups
 import (
 	"testing"
 
-	model "github.com/H-BF/sgroups/internal/models/sgroups"
+	model "github.com/H-BF/sgroups/internal/domains/sgroups"
 
 	"github.com/stretchr/testify/require"
 )

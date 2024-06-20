@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
-	domain "github.com/H-BF/sgroups/internal/models/sgroups"
+	domain "github.com/H-BF/sgroups/internal/domains/sgroups"
 
 	"github.com/H-BF/corlib/pkg/dict"
 	"github.com/H-BF/corlib/pkg/functional"

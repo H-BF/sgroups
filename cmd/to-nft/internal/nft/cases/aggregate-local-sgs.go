@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	conv "github.com/H-BF/sgroups/internal/api/sgroups"
-	model "github.com/H-BF/sgroups/internal/models/sgroups"
+	model "github.com/H-BF/sgroups/internal/domains/sgroups"
 
 	"github.com/H-BF/corlib/pkg/dict"
 	"github.com/H-BF/corlib/pkg/parallel"

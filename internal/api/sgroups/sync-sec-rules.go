@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math"
 
-	model "github.com/H-BF/sgroups/internal/models/sgroups"
+	model "github.com/H-BF/sgroups/internal/domains/sgroups"
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 
 	"github.com/H-BF/protos/pkg/api/common"

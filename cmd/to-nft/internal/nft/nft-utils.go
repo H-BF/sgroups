@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal"
-	model "github.com/H-BF/sgroups/internal/models/sgroups"
+	model "github.com/H-BF/sgroups/internal/domains/sgroups"
 
 	"github.com/H-BF/corlib/pkg/backoff"
 	"github.com/ahmetb/go-linq/v3"

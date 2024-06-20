@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	model "github.com/H-BF/sgroups/internal/models/sgroups"
+	model "github.com/H-BF/sgroups/internal/domains/sgroups"
 
 	di "github.com/H-BF/corlib/pkg/dict"
 	"github.com/c-robinson/iplib"

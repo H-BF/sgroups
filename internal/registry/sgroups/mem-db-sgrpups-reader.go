@@ -4,7 +4,8 @@ import (
 	"context"
 	"strings"
 
-	model "github.com/H-BF/sgroups/internal/models/sgroups"
+	model "github.com/H-BF/sgroups/internal/domains/sgroups"
+
 	"github.com/hashicorp/go-memdb"
 	"github.com/pkg/errors"
 )

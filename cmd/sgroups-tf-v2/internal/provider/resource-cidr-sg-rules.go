@@ -7,7 +7,7 @@ import (
 
 	"github.com/H-BF/sgroups/cmd/sgroups-tf-v2/internal/validators"
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
-	model "github.com/H-BF/sgroups/internal/models/sgroups"
+	model "github.com/H-BF/sgroups/internal/domains/sgroups"
 
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/ahmetb/go-linq/v3"

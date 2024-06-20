@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/H-BF/sgroups/cmd/sgroups-tf-v2/internal/provider/fixtures"
-	domain "github.com/H-BF/sgroups/internal/models/sgroups"
+	domain "github.com/H-BF/sgroups/internal/domains/sgroups"
 
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"

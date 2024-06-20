@@ -6,7 +6,7 @@ import (
 	"sort"
 	"testing"
 
-	domain "github.com/H-BF/sgroups/internal/models/sgroups"
+	domain "github.com/H-BF/sgroups/internal/domains/sgroups"
 
 	"github.com/stretchr/testify/require"
 )

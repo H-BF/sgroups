@@ -7,9 +7,9 @@ import (
 	"net"
 	"reflect"
 
-	model "github.com/H-BF/sgroups/internal/models/sgroups"
-	"github.com/c-robinson/iplib"
+	model "github.com/H-BF/sgroups/internal/domains/sgroups"
 
+	"github.com/c-robinson/iplib"
 	"github.com/pkg/errors"
 )
 
