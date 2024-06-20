@@ -5,11 +5,11 @@ import (
 	"os"
 
 	"github.com/H-BF/sgroups/internal/app"
-	"github.com/H-BF/sgroups/internal/config"
 
 	_ "github.com/H-BF/corlib/app/identity"
 	"github.com/H-BF/corlib/logger"
 	pkgNet "github.com/H-BF/corlib/pkg/net"
+	config "github.com/H-BF/corlib/pkg/plain-config"
 	"github.com/H-BF/corlib/server"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"

@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/H-BF/sgroups/pkg/nl"
-
 	"github.com/H-BF/corlib/logger"
+	"github.com/H-BF/corlib/pkg/nl"
 	"github.com/H-BF/corlib/pkg/patterns/observer"
 )
 
@@ -110,7 +109,7 @@ func (w *NetlinkEventSource) gatherLinkState(ctx context.Context) (err error) {
 	}()
 
 	var lister nl.LinkLister
-	if lister, err = nl.NewLinkLister(ctx, nl.WithNetnsName{Netns: w.NetNS}); err != nil {
+	if lister, err = nl.NewLinkLister(ctx, nl.WithNetnsName(w.NetNS)); err != nil {
 		return err
 	}
 	defer lister.Close() //nolint

@@ -5,9 +5,9 @@ import (
 
 	"github.com/H-BF/sgroups/internal/api/sgroups"
 	"github.com/H-BF/sgroups/internal/app"
-	"github.com/H-BF/sgroups/internal/config"
 	_ "github.com/H-BF/sgroups/internal/grpc"
 
+	config "github.com/H-BF/corlib/pkg/plain-config"
 	"github.com/H-BF/corlib/server"
 	"github.com/H-BF/corlib/server/interceptors"
 	serverPrometheusMetrics "github.com/H-BF/corlib/server/metrics/prometheus"

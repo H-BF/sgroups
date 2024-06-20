@@ -5,9 +5,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/H-BF/sgroups/internal/nftables/conf"
-
 	"github.com/H-BF/corlib/logger"
+	conf "github.com/H-BF/corlib/pkg/nftables"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

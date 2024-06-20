@@ -5,10 +5,9 @@ import (
 	"net"
 	"time"
 
-	"github.com/H-BF/sgroups/internal/config"
-	"github.com/H-BF/sgroups/internal/dns"
-
 	"github.com/H-BF/corlib/pkg/backoff"
+	"github.com/H-BF/corlib/pkg/dns"
+	config "github.com/H-BF/corlib/pkg/plain-config"
 	"github.com/ahmetb/go-linq/v3"
 	bf "github.com/cenkalti/backoff/v4"
 	"github.com/pkg/errors"

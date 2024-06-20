@@ -1,7 +1,7 @@
 package nft
 
 import (
-	host "github.com/H-BF/sgroups/cmd/to-nft/internal/host"
+	"github.com/H-BF/corlib/pkg/host"
 )
 
 type (

@@ -5,11 +5,11 @@ import (
 	"net"
 	"time"
 
-	"github.com/H-BF/sgroups/cmd/to-nft/internal/host"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
 	"github.com/H-BF/corlib/logger"
 	"github.com/H-BF/corlib/pkg/dict"
+	"github.com/H-BF/corlib/pkg/host"
 	"github.com/pkg/errors"
 )
 

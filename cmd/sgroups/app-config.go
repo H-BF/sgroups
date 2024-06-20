@@ -3,7 +3,7 @@ package main
 import (
 	"time"
 
-	"github.com/H-BF/sgroups/internal/config"
+	config "github.com/H-BF/corlib/pkg/plain-config"
 )
 
 /*//Sample of config

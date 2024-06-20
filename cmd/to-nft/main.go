@@ -11,14 +11,14 @@ import (
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/jobs"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft"
 	"github.com/H-BF/sgroups/internal/app"
-	"github.com/H-BF/sgroups/internal/config"
-	"github.com/H-BF/sgroups/pkg/nl"
 
 	"github.com/H-BF/corlib/logger"
 	pkgNet "github.com/H-BF/corlib/pkg/net"
+	"github.com/H-BF/corlib/pkg/nl"
 	"github.com/H-BF/corlib/pkg/parallel"
 	gs "github.com/H-BF/corlib/pkg/patterns/graceful-shutdown"
 	"github.com/H-BF/corlib/pkg/patterns/observer"
+	config "github.com/H-BF/corlib/pkg/plain-config"
 	"github.com/H-BF/corlib/server"
 	"github.com/pkg/errors"
 	"go.uber.org/multierr"
@@ -230,7 +230,7 @@ func makeNetlinkWatcher(ctx context.Context, netNs string) (nl.NetlinkWatcher, e
 		},
 	}
 	if len(netNs) > 0 {
-		opts = append(opts, nl.WithNetnsName{Netns: netNs})
+		opts = append(opts, nl.WithNetnsName(netNs))
 	}
 	nlWatcher, err := nl.NewNetlinkWatcher(opts...)
 	return nlWatcher, errors.WithMessage(err, "create net-watcher")

@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal"
-	"github.com/H-BF/sgroups/cmd/to-nft/internal/host"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
 	"github.com/H-BF/corlib/logger"
+	"github.com/H-BF/corlib/pkg/host"
 	"github.com/H-BF/corlib/pkg/patterns/observer"
 	"github.com/H-BF/corlib/pkg/queue"
 	"github.com/c-robinson/iplib"

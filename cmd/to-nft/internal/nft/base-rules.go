@@ -9,9 +9,9 @@ import (
 	"strings"
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal"
-	"github.com/H-BF/sgroups/internal/config"
 
 	pkgNet "github.com/H-BF/corlib/pkg/net"
+	config "github.com/H-BF/corlib/pkg/plain-config"
 	"github.com/pkg/errors"
 )
 

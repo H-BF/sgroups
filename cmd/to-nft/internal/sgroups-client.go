@@ -5,8 +5,9 @@ import (
 	"time"
 
 	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
-	"github.com/H-BF/sgroups/internal/config"
 	grpc_client "github.com/H-BF/sgroups/internal/grpc"
+
+	config "github.com/H-BF/corlib/pkg/plain-config"
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/credentials"

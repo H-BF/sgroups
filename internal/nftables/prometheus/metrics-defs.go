@@ -1,17 +1,17 @@
 package metrics
 
 import (
-	"github.com/prometheus/client_golang/prometheus"
+	prom "github.com/prometheus/client_golang/prometheus"
 )
 
 var (
-	upDesc = prometheus.NewDesc(
+	upDesc = prom.NewDesc(
 		"nftables_up",
 		"'1' if reading the nft output was successful, '0' otherwise",
 		nil,
 		nil,
 	)
-	counterBytesDesc = prometheus.NewDesc(
+	counterBytesDesc = prom.NewDesc(
 		"nftables_counter_bytes",
 		"bytes, matched by counter",
 		[]string{
@@ -21,7 +21,7 @@ var (
 		},
 		nil,
 	)
-	counterPacketsDesc = prometheus.NewDesc(
+	counterPacketsDesc = prom.NewDesc(
 		"nftables_counter_packets",
 		"packets, matched by counter",
 		[]string{
@@ -31,7 +31,7 @@ var (
 		},
 		nil,
 	)
-	tableChainsDesc = prometheus.NewDesc(
+	tableChainsDesc = prom.NewDesc(
 		"nftables_table_chains",
 		"count chains in table",
 		[]string{
@@ -40,7 +40,7 @@ var (
 		},
 		nil,
 	)
-	chainRulesDesc = prometheus.NewDesc(
+	chainRulesDesc = prom.NewDesc(
 		"nftables_chain_rules",
 		"count rules in chain",
 		[]string{
@@ -51,7 +51,7 @@ var (
 		},
 		nil,
 	)
-	ruleBytesDesc = prometheus.NewDesc(
+	ruleBytesDesc = prom.NewDesc(
 		"nftables_rule_bytes",
 		"bytes, matched by rule per rule comment",
 		[]string{
@@ -70,7 +70,7 @@ var (
 		},
 		nil,
 	)
-	rulePacketsDesc = prometheus.NewDesc(
+	rulePacketsDesc = prom.NewDesc(
 		"nftables_rule_packets",
 		"packets, matched by rule per rule comment",
 		[]string{

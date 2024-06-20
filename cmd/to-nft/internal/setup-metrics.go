@@ -6,11 +6,11 @@ import (
 	"time"
 
 	"github.com/H-BF/sgroups/internal/app"
-	nfmetrics "github.com/H-BF/sgroups/internal/nftables/collector"
-	"github.com/H-BF/sgroups/internal/nftables/conf"
+	nfmetrics "github.com/H-BF/sgroups/internal/nftables/prometheus"
 
 	"github.com/H-BF/corlib/logger"
 	"github.com/H-BF/corlib/pkg/atomic"
+	conf "github.com/H-BF/corlib/pkg/nftables"
 	"github.com/google/nftables"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"

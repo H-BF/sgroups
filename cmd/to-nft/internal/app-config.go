@@ -4,7 +4,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/H-BF/sgroups/internal/config"
+	config "github.com/H-BF/corlib/pkg/plain-config"
 )
 
 /*// config-sample.yaml

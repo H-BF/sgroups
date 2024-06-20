@@ -6,7 +6,7 @@ import (
 	"crypto/x509"
 	"os"
 
-	"github.com/H-BF/sgroups/internal/config"
+	config "github.com/H-BF/corlib/pkg/plain-config"
 
 	"github.com/pkg/errors"
 	"go.uber.org/multierr"

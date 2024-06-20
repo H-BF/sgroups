@@ -4,8 +4,7 @@
 package nft
 
 import (
-	inner "github.com/H-BF/sgroups/internal/nftables/conf"
-
+	inner "github.com/H-BF/corlib/pkg/nftables"
 	nftlib "github.com/google/nftables"
 )
 

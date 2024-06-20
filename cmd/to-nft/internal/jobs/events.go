@@ -1,9 +1,10 @@
 package jobs
 
 import (
-	"github.com/H-BF/corlib/pkg/patterns/observer"
-	"github.com/H-BF/sgroups/cmd/to-nft/internal/host"
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft"
+
+	"github.com/H-BF/corlib/pkg/host"
+	"github.com/H-BF/corlib/pkg/patterns/observer"
 )
 
 // AppliedConfEvent -

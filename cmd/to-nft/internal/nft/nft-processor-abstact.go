@@ -7,10 +7,10 @@ import (
 	"sync"
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft/cases"
-	"github.com/H-BF/sgroups/internal/config"
 	model "github.com/H-BF/sgroups/internal/models/sgroups"
 
 	"github.com/H-BF/corlib/pkg/dict"
+	config "github.com/H-BF/corlib/pkg/plain-config"
 	"github.com/c-robinson/iplib"
 	nftlib "github.com/google/nftables"
 	"github.com/pkg/errors"

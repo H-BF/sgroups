@@ -4,11 +4,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/H-BF/sgroups/internal/nftables/conf"
-	"github.com/H-BF/sgroups/internal/nftables/conf/view"
 	hlp "github.com/H-BF/sgroups/internal/nftables/helpers"
+	"github.com/H-BF/sgroups/internal/nftables/view"
 
 	dkt "github.com/H-BF/corlib/pkg/dict"
+	conf "github.com/H-BF/corlib/pkg/nftables"
 	nftlib "github.com/google/nftables"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/sys/unix"
