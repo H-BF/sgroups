@@ -4,26 +4,26 @@
 package nft
 
 import (
-	inner "github.com/H-BF/corlib/pkg/nftables"
+	nftrc "github.com/H-BF/corlib/pkg/nftables"
 	nftlib "github.com/google/nftables"
 )
 
 // type aliases
 type (
 	// NfTableKey is a type alias
-	NfTableKey = inner.NfTableKey
+	NfTableKey = nftrc.NfTableKey
 	// NfChainKey is a type alias
-	NfChainKey = inner.NfChainKey
+	NfChainKey = nftrc.NfChainKey
 	// NfChain is a type alias
-	NfChain = inner.NfChain
+	NfChain = nftrc.NfChain
 	// NfSet is a type alias
-	NfSet = inner.NfSet
+	NfSet = nftrc.NfSet
 	// NFTablesConf is a type alias
-	NFTablesConf = inner.StateOfNFTables
+	NFTablesConf = nftrc.StateOfNFTables
 )
 
 // NFTconfLoad it loads current nftables config
 func NFTconfLoad(conn *nftlib.Conn) (NFTablesConf, error) {
-	lister := inner.ListerFromConn(conn)
-	return inner.LoadState(lister)
+	lister := nftrc.ListerFromConn(conn)
+	return nftrc.LoadState(lister)
 }

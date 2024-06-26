@@ -3,7 +3,6 @@ package sgroups
 import (
 	"net"
 	"regexp"
-	"unsafe"
 
 	"github.com/H-BF/corlib/pkg/ranges"
 	oz "github.com/go-ozzo/ozzo-validation/v4"
@@ -20,9 +19,6 @@ var (
 
 	// ErrUnexpectedNullPortRange -
 	ErrUnexpectedNullPortRange = errors.New("unexpected null port range")
-
-	// ErrInvalidFQDN -
-	ErrInvalidFQDN = errors.New("invalid FQDN")
 
 	errICMPrequiresNetIPv4  = errors.New("ICMP requires IPv4 net")
 	errICMP6requiresNetIPv6 = errors.New("ICMP6 requires IPv6 net")
@@ -64,30 +60,6 @@ func (sg SecurityGroup) Validate() error {
 			}),
 		),
 	)
-}
-
-// Validate ChainDefaultAction validator
-func (a ChainDefaultAction) Validate() error {
-	vals, x := [...]any{int(DEFAULT), int(DROP), int(ACCEPT)}, int(a)
-	return oz.Validate(x, oz.In(vals[:]...).Error("must be in ['DROP', 'ACCEPT']"))
-}
-
-// Validate RuleAction validator
-func (a RuleAction) Validate() error {
-	vals, x := [...]any{int(RA_DROP), int(RA_ACCEPT)}, int(a)
-	return oz.Validate(x, oz.In(vals[:]...).Error("must be in ['DROP', 'ACCEPT']"))
-}
-
-// Validate net transport validator
-func (nt NetworkTransport) Validate() error {
-	vals, x := [...]any{int(TCP), int(UDP)}, int(nt)
-	return oz.Validate(x, oz.In(vals[:]...).Error("must be in ['TCP', 'UDP']"))
-}
-
-// Validate net transport validator
-func (tfc Traffic) Validate() error {
-	vals, x := [...]any{int(INGRESS), int(EGRESS)}, int(tfc)
-	return oz.Validate(x, oz.In(vals[:]...).Error("must be in ['INGRESS', 'EGRESS']"))
 }
 
 // Validate validate of SGRuleIdentity
@@ -167,25 +139,6 @@ func (rule ruleT[T]) Validate() error {
 			//oz.Skip,
 		),
 		oz.Field(&rule.Action),
-	)
-}
-
-// Validate impl Validator
-func (o FQDN) Validate() error {
-	a := unsafe.Slice(
-		unsafe.StringData(string(o)), len(o),
-	)
-	if m := reFQDN.Match(a); !m || len(a) > 255 {
-		return ErrInvalidFQDN
-	}
-	return nil
-}
-
-// Validate impl Validator
-func (o ICMP) Validate() error {
-	return oz.ValidateStruct(&o,
-		oz.Field(&o.IPv, oz.Required, oz.In(uint8(IPv4), uint8(IPv6)).
-			Error("IPv should be in [4,6]")),
 	)
 }
 
@@ -286,6 +239,4 @@ func (o IESgSgRuleIdentity) Validate() error {
 
 var (
 	reCName = regexp.MustCompile(`^\S(.*\S)?$`)
-
-	reFQDN = regexp.MustCompile(`(?ims)^([a-z0-9\*][a-z0-9_-]{1,62}){1}(\.[a-z0-9_][a-z0-9_-]{0,62})*$`)
 )

@@ -4,21 +4,19 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"math/rand"
 	"net"
 	"regexp"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/H-BF/sgroups/cmd/to-nft/internal"
 	model "github.com/H-BF/sgroups/internal/domains/sgroups"
 
 	"github.com/H-BF/corlib/pkg/backoff"
+	nftrc "github.com/H-BF/corlib/pkg/nftables"
 	"github.com/ahmetb/go-linq/v3"
-	"github.com/c-robinson/iplib"
-	nftLib "github.com/google/nftables"
+	nftlib "github.com/google/nftables"
 )
 
 type (
@@ -118,53 +116,12 @@ func (nameUtils) nameSgIeSgRuleDetails(rule *model.IESgSgRule) string {
 	return rule.ID.String()
 }
 
-func (setsUtils) nets2SetElements(nets []net.IPNet, ipV int) []nftLib.SetElement {
-	const (
-		b32  = 32
-		b128 = 128
-	)
-	var elements []nftLib.SetElement
-	for i := range nets {
-		nw := nets[i]
-		ones, _ := nw.Mask.Size()
-		netIf := iplib.NewNet(nw.IP, ones)
-		ipLast := iplib.NextIP(netIf.LastAddress())
-		switch ipV {
-		case iplib.IP4Version:
-			ipLast = tern(ones < b32, iplib.NextIP(ipLast), ipLast)
-		case iplib.IP6Version:
-			ipLast = tern(ones < b128, iplib.NextIP(ipLast), ipLast)
-		default:
-			return nil
-		}
-		////TODO: need expert opinion
-		//elements = append(elements, nftLib.SetElement{
-		//	Key:    nw.IP,
-		//	KeyEnd: ipLast,
-		//})
-		elements = append(elements,
-			nftLib.SetElement{
-				Key: nw.IP,
-			},
-			nftLib.SetElement{
-				IntervalEnd: true,
-				Key:         ipLast,
-			})
-	}
-	return elements
+func (setsUtils) nets2SetElements(nets []net.IPNet, ipV int) []nftlib.SetElement {
+	return nftrc.Nets2SetElements(nets, ipV)
 }
 
 func (setsUtils) transormPortRanges(pr model.PortRanges) (ret [][2]model.PortNumber) {
-	ret = make([][2]model.PortNumber, 0, pr.Len())
-	pr.Iterate(func(r model.PortRange) bool {
-		a, b := r.Bounds()
-		var x [2]model.PortNumber
-		x[0], _ = a.AsIncluded().GetValue()
-		x[1], _ = b.AsIncluded().GetValue()
-		ret = append(ret, x)
-		return true
-	})
-	return ret
+	return nftrc.TransormPortRanges(pr)
 }
 
 func (u setsUtils) makeAccPorts(prr []model.SGRulePorts) (ret []accports) {
@@ -237,22 +194,7 @@ func val2ptr[T any](val T) *T {
 	return &val
 }
 
-func zeroEndedS(s string) string { //nolint:unused
-	const z = "\x00"
-	if n := len(s); n > 0 {
-		n1 := strings.LastIndex(s, z)
-		if n1 >= 0 && (n-n1) == 1 {
-			return s
-		}
-	}
-	return s + z
-}
-
-func nextSetID() uint32 {
-	return atomic.AddUint32(&setID, 1)
-}
-
-var setID = rand.Uint32() //nolint:gosec
+var nextSetID = nftrc.NextSetID
 
 // MakeBatchBackoff -
 func MakeBatchBackoff() backoff.Backoff {

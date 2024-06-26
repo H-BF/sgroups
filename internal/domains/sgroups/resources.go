@@ -11,41 +11,39 @@ import (
 	"time"
 
 	"github.com/H-BF/corlib/pkg/dict"
+	netrc "github.com/H-BF/corlib/pkg/net/resources"
+	nftrc "github.com/H-BF/corlib/pkg/nftables"
 	"github.com/H-BF/corlib/pkg/option"
 	"github.com/H-BF/corlib/pkg/ranges"
-	"github.com/pkg/errors"
 )
 
 type (
 	// PortNumber net port num
-	PortNumber = uint16
+	PortNumber = netrc.PortNumber
 
 	// PortRanges net port ranges
-	PortRanges = ranges.MultiRange[PortNumber]
+	PortRanges = netrc.PortRanges
 
 	// PortRange net port range
-	PortRange = ranges.Range[PortNumber]
+	PortRange = netrc.PortRange
 
 	// NetworkTransport net transport
-	NetworkTransport uint8
+	NetworkTransport = netrc.NetworkTransport
 
 	// Traffic packet traffic any of [INGRESS, EGRESS]
-	Traffic uint8
+	Traffic = netrc.Traffic
 
 	// ChainDefaultAction default action for SG {DROP|ACCEPT}
-	ChainDefaultAction uint8
+	ChainDefaultAction = nftrc.ChainDefaultAction
 
 	// NetworkName net nam
 	NetworkName = string
 
 	// FQDN -
-	FQDN string
+	FQDN = netrc.FQDN
 
 	// ICMP an ICMP proto spec
-	ICMP struct {
-		IPv   uint8             // Use in IP net version 4 or 6
-		Types dict.RBSet[uint8] // Use ICMP message types set of [0-254]
-	}
+	ICMP = netrc.ICMP
 
 	// Network is IP network
 	Network struct {
@@ -116,7 +114,7 @@ type (
 	}
 
 	// RuleAction terminal verdict action for rules
-	RuleAction uint8
+	RuleAction = nftrc.RuleAction
 
 	// RulePriority represents rule priority i e relative placement pos in the rule list
 	RulePriority struct {
@@ -228,141 +226,55 @@ var PortRangeFull = PortRangeFactory.Range(0, false, ^PortNumber(0), false)
 
 const (
 	// IPv4 IP family v4
-	IPv4 = 4
+	IPv4 = netrc.IPv4
 	// IPv6 IP family v6
-	IPv6 = 6
+	IPv6 = netrc.IPv6
 )
 
 const (
 	// TCP ...
-	TCP NetworkTransport = iota
+	TCP = netrc.TCP
 
 	// UDP ...
-	UDP
+	UDP = netrc.UDP
 )
 
 const (
 	// INGRESS as is
-	INGRESS Traffic = iota + 1
+	INGRESS = netrc.INGRESS
 
 	// EGRESS as is
-	EGRESS
+	EGRESS = netrc.EGRESS
 )
 
 const (
 	// DEFAULT is mean default action
-	DEFAULT ChainDefaultAction = iota
+	DEFAULT = nftrc.DEFAULT
 
 	// DROP drop action net packet
-	DROP
+	DROP = nftrc.DROP
 
 	// ACCEPT accept action net packet
-	ACCEPT
+	ACCEPT = nftrc.ACCEPT
 )
 
 const (
 	// RA_UNDEF -
-	RA_UNDEF RuleAction = iota
+	RA_UNDEF = nftrc.RA_UNDEF
 
 	// RA_DROP setups rule to drop packet
-	RA_DROP
+	RA_DROP = nftrc.RA_DROP
 
 	// RA_ACCEPT setups rule to accept packet
-	RA_ACCEPT
+	RA_ACCEPT = nftrc.RA_ACCEPT
 )
 
 // NewPortRarnges is a port rarnges constructor
-func NewPortRarnges() PortRanges {
-	return ranges.NewMultiRange(PortRangeFactory)
-}
+var NewPortRarnges = netrc.NewPortRarnges
 
 // String impl Stringer
 func (nw Network) String() string {
 	return fmt.Sprintf("%s(%s)", nw.Name, &nw.Net)
-}
-
-// String impl Stringer
-func (nt NetworkTransport) String() string {
-	return [...]string{"tcp", "udp"}[nt]
-}
-
-// String -
-func (tfc Traffic) String() string {
-	switch tfc {
-	case INGRESS:
-		return "ingress"
-	case EGRESS:
-		return "egress"
-	}
-	return fmt.Sprintf("Undef(%v)", int(tfc))
-}
-
-// String impl Stringer
-func (a ChainDefaultAction) String() string {
-	return [...]string{"default", "drop", "accept"}[a]
-}
-
-// FromString inits from string
-func (a *ChainDefaultAction) FromString(s string) error {
-	const api = "ChainDefaultAction/FromString"
-	switch strings.ToLower(s) {
-	case "defuault":
-		*a = DEFAULT
-	case "drop":
-		*a = DROP
-	case "accept":
-		*a = ACCEPT
-	default:
-		return errors.WithMessage(fmt.Errorf("unknown value '%s'", s), api)
-	}
-	return nil
-}
-
-// String impl Stringer
-func (a RuleAction) String() string {
-	return [...]string{"undef", "drop", "accept"}[a]
-}
-
-// FromString init from string
-func (a *RuleAction) FromString(s string) error {
-	const api = "RuleAction/FromString"
-	switch strings.ToLower(s) {
-	case "drop":
-		*a = RA_DROP
-	case "accept":
-		*a = RA_ACCEPT
-	default:
-		return errors.WithMessage(fmt.Errorf("unknown value '%s'", s), api)
-	}
-	return nil
-}
-
-// FromString init from string
-func (nt *NetworkTransport) FromString(s string) error {
-	const api = "NetworkTransport/FromString"
-	switch strings.ToLower(s) {
-	case "tcp":
-		*nt = TCP
-	case "udp":
-		*nt = UDP
-	default:
-		return errors.WithMessage(fmt.Errorf("unknown value '%s'", s), api)
-	}
-	return nil
-}
-
-// FromString init from string
-func (tfc *Traffic) FromString(s string) error {
-	const api = "Traffic/FromString"
-	switch strings.ToLower(s) {
-	case "ingress":
-		*tfc = INGRESS
-	case "egress":
-		*tfc = EGRESS
-	default:
-		return errors.WithMessage(fmt.Errorf("unknown value '%s'", s), api)
-	}
-	return nil
 }
 
 // IsEq -
@@ -434,27 +346,6 @@ func (rule ruleT[T]) IsEq(other ruleT[T]) bool {
 		rule.Trace == other.Trace &&
 		rule.Action == other.Action &&
 		rule.Priority.IsEq(other.Priority)
-}
-
-// String impl Stringer
-func (o FQDN) String() string {
-	return string(o)
-}
-
-// IsEq chacke if is Eq with no case
-func (o FQDN) IsEq(other FQDN) bool {
-	return strings.EqualFold(string(o), string(other))
-}
-
-// Cmp compare no case
-func (o FQDN) Cmp(other FQDN) int {
-	if strings.EqualFold(string(o), string(other)) {
-		return 0
-	}
-	if o < other {
-		return -1
-	}
-	return 1
 }
 
 // IdentityHash -
@@ -646,12 +537,6 @@ func (o IESgSgRuleIdentity) IsEq(other IESgSgRuleIdentity) bool {
 func (o IESgSgRuleIdentity) String() string {
 	return fmt.Sprintf("%s:sg-local(%s)sg(%s)%s",
 		o.Transport, o.SgLocal, o.Sg, o.Traffic)
-}
-
-// IsEq -
-func (o ICMP) IsEq(other ICMP) bool {
-	return o.IPv == other.IPv &&
-		o.Types.Eq(&other.Types)
 }
 
 // IsEq -

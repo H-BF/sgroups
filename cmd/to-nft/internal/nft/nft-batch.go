@@ -82,11 +82,11 @@ type (
 func (ap accports) sourceOrDestPort(rb ruleBuilder, isSource bool) ruleBuilder {
 	src := tern(isSource, ap.sp, ap.dp)
 	if n := len(src); n == 1 {
-		rb = tern(isSource, rb.sport, rb.dport)()
+		rb = tern(isSource, rb.SPort, rb.DPort)()
 		if p := src[0]; p[0] == p[1] {
-			rb = rb.eqU16(p[0])
+			rb = rb.EqU16(p[0])
 		} else {
-			rb = rb.geU16(p[0]).leU16(p[1])
+			rb = rb.GeU16(p[0]).LeU16(p[1])
 		}
 	} else if n > 1 { //add anonimous port set
 		set := &nftLib.Set{
@@ -109,8 +109,8 @@ func (ap accports) sourceOrDestPort(rb ruleBuilder, isSource bool) ruleBuilder {
 				},
 			)
 		}
-		rb = tern(isSource, rb.sport, rb.dport)().inSet(set)
-		rb.sets.Put(set.ID, NfSet{Set: set, Elements: elements})
+		rb = tern(isSource, rb.SPort, rb.DPort)().InSet(set)
+		rb.PutSet(set.ID, NfSet{Set: set, Elements: elements})
 	}
 	return rb
 }
@@ -120,7 +120,7 @@ func (ap accports) S(rb ruleBuilder) ruleBuilder {
 	return ap.sourceOrDestPort(rb, true)
 }
 
-// S - means 'dports'
+// D - means 'dports'
 func (ap accports) D(rb ruleBuilder) ruleBuilder {
 	return ap.sourceOrDestPort(rb, false)
 }
@@ -322,9 +322,9 @@ func (bt *batch) initRootChains() {
 		)
 		for i := range chains {
 			chain := tx.AddChain(chains[i])
-			beginRule().
-				ctState(nfte.CtStateBitESTABLISHED|nfte.CtStateBitRELATED).
-				counter().accept().applyRule(chain, tx.Conn)
+			BeginRule().
+				CTState(nfte.CtStateBitESTABLISHED|nfte.CtStateBitRELATED).
+				Counter().Accept().ApplyRule(chain, tx.Conn)
 			bt.chains.Put(chain.Name, chain)
 			bt.log.Debugf("add chain '%s'/'%s'", bt.table.Name, chain.Name)
 		}
@@ -365,11 +365,11 @@ func (bt *batch) initBaseRules(dir direction) {
 				)
 				bt.log.Debugf("add network(s) %s into '%s'/'%s' base rules",
 					slice2stringer(nw...), bt.table.Name, chnDest)
-				rule := beginRule()
-				tern(dirIN == dir, rule.saddr, rule.daddr)(
+				rule := BeginRule()
+				tern(dirIN == dir, rule.SAddr, rule.DAddr)(
 					tern(isIP4, iplib.IP4Version, iplib.IP6Version),
-				).inSet(netSet).accept().
-					applyRule(bt.chains.At(chnDest), tx.Conn)
+				).InSet(netSet).Accept().
+					ApplyRule(bt.chains.At(chnDest), tx.Conn)
 				return nil
 			})
 		}
@@ -555,7 +555,7 @@ func (gp *jobGroup) populateOutSgFqdnRules(sg *cases.SG) {
 			detailsName := nameUtils{}.nameOfSG2FQDNRuleDetails(
 				rule.ID.Transport, rule.ID.SgFrom, rule.ID.FqdnTo,
 			)
-			daddrSetName := nameUtils{}.nameOfFqdnNetSet(ipV, rule.ID.FqdnTo)
+			daddrSetName := nameUtils{}.nameOfFqdnNetSet(int(ipV), rule.ID.FqdnTo)
 			rd := bt.ruleDetails.At(detailsName)
 			rule := rule
 			pri := rule.Priority.SomeOr(
@@ -579,20 +579,20 @@ func (gp *jobGroup) populateOutSgFqdnRules(sg *cases.SG) {
 						bt.log.Debugf("add fqdn rule '%s' with '%s' strategy into '%s'/'%s' with priority(%v)",
 							rule.ID.FqdnTo, string(bt.fqdnStrategy), bt.table.Name, targetChName, pri)
 					}
-					r := beginRule()
+					r := BeginRule()
 					if strategy&useDNS != 0 {
-						r = r.daddr(ipV).inSet(daddr)
+						r = r.DAddr(int(ipV)).InSet(daddr)
 					}
 					r = ports.D(
 						ports.S(
-							r.protoIP(rule.ID.Transport),
+							r.ProtoIP(rule.ID.Transport),
 						),
 					)
-					r = r.counter()
+					r = r.Counter()
 					if rd.logs {
-						r = r.dlogs(nfte.LogFlagsIPOpt)
+						r = r.DLogs(nfte.LogFlagsIPOpt)
 					}
-					r.ruleAction2Verdict(rule.Action).applyRule(chnApplyTo, tx.Conn)
+					r.RuleAction2Verdict(rule.Action).ApplyRule(chnApplyTo, tx.Conn)
 					return nil
 				})
 			}
@@ -615,13 +615,13 @@ func (bt *batch) populateDefaultIcmpRules(dir direction, sg *cases.SG) {
 				bt.log.Debugf("add default-icmp%v-rule into '%s'/'%s'",
 					tern(rule.Icmp.IPv == model.IPv6, "6", ""),
 					bt.table.Name, targetChName)
-				rb := beginRule().metaNFTRACE(rule.Trace).
-					protoICMP(rule.Icmp).
-					counter()
+				rb := BeginRule().MetaNFTRACE(rule.Trace).
+					ProtoICMP(rule.Icmp).
+					Counter()
 				if rule.Logs {
-					rb = rb.dlogs(nfte.LogFlagsIPOpt)
+					rb = rb.DLogs(nfte.LogFlagsIPOpt)
 				}
-				rb.ruleAction2Verdict(rule.Action).applyRule(chnApplyTo, tx.Conn)
+				rb.RuleAction2Verdict(rule.Action).ApplyRule(chnApplyTo, tx.Conn)
 			}
 			return nil
 		})
@@ -653,15 +653,15 @@ func (gp *jobGroup) populateInOutSgIcmpRules(dir direction, sg *cases.SG) {
 					tern(isIN, "in", "out"),
 					tern(rule.Icmp.IPv == model.IPv6, "6", ""),
 					addrSetName, targetChName, bt.table.Name, pri)
-				rb := beginRule().metaNFTRACE(rule.Trace)
-				rb = tern(isIN, rb.saddr, rb.daddr)(int(rule.Icmp.IPv)).
-					inSet(addrSet).
-					protoICMP(rule.Icmp).
-					counter()
+				rb := BeginRule().MetaNFTRACE(rule.Trace)
+				rb = tern(isIN, rb.SAddr, rb.DAddr)(int(rule.Icmp.IPv)).
+					InSet(addrSet).
+					ProtoICMP(rule.Icmp).
+					Counter()
 				if rule.Logs {
-					rb = rb.dlogs(nfte.LogFlagsIPOpt)
+					rb = rb.DLogs(nfte.LogFlagsIPOpt)
 				}
-				rb.ruleAction2Verdict(rule.Action).applyRule(chnApplyTo, tx.Conn)
+				rb.RuleAction2Verdict(rule.Action).ApplyRule(chnApplyTo, tx.Conn)
 			}
 			return nil
 		})
@@ -699,15 +699,15 @@ func (gp *jobGroup) populateSgIeSgIcmpRules(dir direction, sg *cases.SG) {
 					tern(rule.Icmp.IPv == model.IPv6, "6", ""),
 					addrSetName, targetSGchName, bt.table.Name,
 					pri)
-				rb := beginRule().metaNFTRACE(rule.Trace)
-				rb = tern(isIN, rb.saddr, rb.daddr)(int(rule.Icmp.IPv)).
-					inSet(addrSet).
-					protoICMP(rule.Icmp).
-					counter()
+				rb := BeginRule().MetaNFTRACE(rule.Trace)
+				rb = tern(isIN, rb.SAddr, rb.DAddr)(int(rule.Icmp.IPv)).
+					InSet(addrSet).
+					ProtoICMP(rule.Icmp).
+					Counter()
 				if rule.Logs {
-					rb = rb.dlogs(nfte.LogFlagsIPOpt)
+					rb = rb.DLogs(nfte.LogFlagsIPOpt)
 				}
-				rb.ruleAction2Verdict(rule.Action).applyRule(chnApplyTo, tx.Conn)
+				rb.RuleAction2Verdict(rule.Action).ApplyRule(chnApplyTo, tx.Conn)
 			}
 			return nil
 		})
@@ -742,14 +742,14 @@ func (gp *jobGroup) populateIeCidrSgIcmpRules(dir direction, sg *cases.SG) {
 					bt.table.Name, targetSGchName,
 					pri)
 			}
-			rb := beginRule().
-				metaNFTRACE(rule.Trace).
-				srcOrDstSingleIpNet(rule.CIDR, isIN).
-				protoICMP(rule.Icmp).counter()
+			rb := BeginRule().
+				MetaNFTRACE(rule.Trace).
+				SrcOrDstSingleIpNet(rule.CIDR, isIN).
+				ProtoICMP(rule.Icmp).Counter()
 			if rule.Logs {
-				rb = rb.dlogs(nfte.LogFlagsIPOpt)
+				rb = rb.DLogs(nfte.LogFlagsIPOpt)
 			}
-			rb.ruleAction2Verdict(rule.Action).applyRule(chnApplyTo, tx.Conn)
+			rb.RuleAction2Verdict(rule.Action).ApplyRule(chnApplyTo, tx.Conn)
 			return nil
 		})
 	}
@@ -765,7 +765,7 @@ func (gp *jobGroup) populateInOutSgRules(dir direction, sg *cases.SG) {
 		ipV := ipV
 		for _, rule := range rules {
 			rule := rule
-			addrSetName := nameUtils{}.nameOfNetSet(ipV,
+			addrSetName := nameUtils{}.nameOfNetSet(int(ipV),
 				tern(isIN, rule.ID.SgFrom, rule.ID.SgTo))
 
 			detailsName := nameUtils{}.nameOfSG2SGRuleDetails(rule.ID.Transport,
@@ -788,27 +788,27 @@ func (gp *jobGroup) populateInOutSgRules(dir direction, sg *cases.SG) {
 						bt.log.Debugf("add %s-sg-rule for addr-set '%s' into '%s'/'%s'",
 							tern(isIN, "in", "out"),
 							addrSetName, bt.table.Name, targetSGchName)
-						r := beginRule()
+						r := BeginRule()
 						if isIN {
 							r = ports.S(
 								ports.D(
-									r.saddr(ipV).inSet(addrSet).
-										protoIP(rule.ID.Transport),
+									r.SAddr(int(ipV)).InSet(addrSet).
+										ProtoIP(rule.ID.Transport),
 								),
 							)
 						} else {
 							r = ports.D(
 								ports.S(
-									r.daddr(ipV).inSet(addrSet).
-										protoIP(rule.ID.Transport),
+									r.DAddr(int(ipV)).InSet(addrSet).
+										ProtoIP(rule.ID.Transport),
 								),
 							)
 						}
-						r = r.counter()
+						r = r.Counter()
 						if details.logs {
-							r = r.dlogs(nfte.LogFlagsIPOpt)
+							r = r.DLogs(nfte.LogFlagsIPOpt)
 						}
-						r.ruleAction2Verdict(rule.Action).applyRule(chnApplyTo, tx.Conn)
+						r.RuleAction2Verdict(rule.Action).ApplyRule(chnApplyTo, tx.Conn)
 					}
 					return nil
 				})
@@ -829,7 +829,7 @@ func (gp *jobGroup) populateInOutSgIeSgRules(dir direction, sg *cases.SG) {
 		ipV := ipV
 		for _, rule := range rules {
 			rule := rule
-			addrSetName := nameUtils{}.nameOfNetSet(ipV, rule.ID.Sg)
+			addrSetName := nameUtils{}.nameOfNetSet(int(ipV), rule.ID.Sg)
 			detailsName := nameUtils{}.nameSgIeSgRuleDetails(rule)
 			details := bt.ruleDetails.At(detailsName)
 			if details == nil {
@@ -849,16 +849,16 @@ func (gp *jobGroup) populateInOutSgIeSgRules(dir direction, sg *cases.SG) {
 					bt.log.Debugf("add '%s' rule for accports(%s) into '%s'/'%s' with priority(%v)",
 						rule.ID, ports, bt.table.Name, targetSGchName, pri)
 
-					rb := beginRule().metaNFTRACE(details.trace)
+					rb := BeginRule().MetaNFTRACE(details.trace)
 					sd := tern(isIN, sli(ports.S, ports.D), sli(ports.D, ports.S))
 					rb = sd[0](sd[1](
-						tern(isIN, rb.saddr, rb.daddr)(ipV).inSet(addrSet).
-							protoIP(rule.ID.Transport),
-					)).counter()
+						tern(isIN, rb.SAddr, rb.DAddr)(int(ipV)).InSet(addrSet).
+							ProtoIP(rule.ID.Transport),
+					)).Counter()
 					if details.logs {
-						rb = rb.dlogs(nfte.LogFlagsIPOpt)
+						rb = rb.DLogs(nfte.LogFlagsIPOpt)
 					}
-					rb.ruleAction2Verdict(rule.Action).applyRule(chnApplyTo, tx.Conn)
+					rb.RuleAction2Verdict(rule.Action).ApplyRule(chnApplyTo, tx.Conn)
 					return nil
 				})
 			}
@@ -894,15 +894,15 @@ func (gp *jobGroup) populateInOutCidrSgRules(dir direction, sg *cases.SG) {
 				if chnApplyTo == nil {
 					return nil
 				}
-				rb := beginRule().
-					metaNFTRACE(details.trace).
-					srcOrDstSingleIpNet(rule.ID.CIDR, isIN).
-					protoIP(rule.ID.Transport)
-				rb = ports.D(ports.S(rb)).counter()
+				rb := BeginRule().
+					MetaNFTRACE(details.trace).
+					SrcOrDstSingleIpNet(rule.ID.CIDR, isIN).
+					ProtoIP(rule.ID.Transport)
+				rb = ports.D(ports.S(rb)).Counter()
 				if details.logs {
-					rb = rb.dlogs(nfte.LogFlagsIPOpt)
+					rb = rb.DLogs(nfte.LogFlagsIPOpt)
 				}
-				rb.ruleAction2Verdict(rule.Action).applyRule(chnApplyTo, tx.Conn)
+				rb.RuleAction2Verdict(rule.Action).ApplyRule(chnApplyTo, tx.Conn)
 				return nil
 			})
 		}
@@ -939,7 +939,7 @@ func (bt *batch) chainInOutProlog(dir direction, sg *cases.SG) {
 		destChainName := tern(dir == dirIN, chnIngressINPUT, chnEgressPOSTROUTING)
 		ipV := ipV
 		bt.addJob(api, func(tx *Tx) error {
-			addrSetName := nameUtils{}.nameOfNetSet(ipV, sg.Name)
+			addrSetName := nameUtils{}.nameOfNetSet(int(ipV), sg.Name)
 			if addrSet := bt.addrsets.At(addrSetName); addrSet != nil {
 				if bt.chains.At(sgChName) == nil {
 					chn := tx.AddChain(&nftLib.Chain{
@@ -953,12 +953,12 @@ func (bt *batch) chainInOutProlog(dir direction, sg *cases.SG) {
 				bt.log.Debugf("add goto-rule '%s'/('%s' -> '%s')",
 					bt.table.Name, destChainName, sgChName)
 				destChain := bt.chains.At(destChainName)
-				rb := beginRule()
-				tern(isIN, rb.daddr, rb.saddr)(ipV).
-					inSet(addrSet).
-					counter().
-					go2(sgChName).
-					applyRule(destChain, tx.Conn)
+				rb := BeginRule()
+				tern(isIN, rb.DAddr, rb.SAddr)(int(ipV)).
+					InSet(addrSet).
+					Counter().
+					GoTo(sgChName).
+					ApplyRule(destChain, tx.Conn)
 			}
 			return nil
 		})
@@ -973,22 +973,22 @@ func (bt *batch) chainInOutEpilog(dir direction, sg *cases.SG) {
 			if chnApplyTo == nil {
 				return nil
 			}
-			r := beginRule().metaNFTRACE(sg.Trace).counter()
+			r := BeginRule().MetaNFTRACE(sg.Trace).Counter()
 			if sg.Logs {
-				r = r.dlogs(nfte.LogFlagsIPOpt)
+				r = r.DLogs(nfte.LogFlagsIPOpt)
 			}
 			switch da := sg.DefaultAction; da {
 			case model.ACCEPT:
-				r = r.accept()
+				r = r.Accept()
 			case model.DROP, model.DEFAULT:
-				r = r.drop()
+				r = r.Drop()
 			default:
 				panic(
 					errors.Errorf("for chain '%s'/'%s' provided unsupported default verdict '%v'",
 						bt.table.Name, sgChainName, da),
 				)
 			}
-			r.applyRule(chnApplyTo, tx.Conn)
+			r.ApplyRule(chnApplyTo, tx.Conn)
 			bt.log.Debugf("chain '%s'/'%s' finished",
 				bt.table.Name, sgChainName)
 			return nil
@@ -1000,7 +1000,7 @@ func (bt *batch) fwInOutAddDefaultRules() {
 		chName := chName
 		bt.addJob("add-default-rules", func(tx *Tx) error {
 			bt.log.Debugf("add default rules into chain '%s'/'%s'", bt.table.Name, chName)
-			beginRule().counter().applyRule(bt.chains.At(chName), tx.Conn)
+			BeginRule().Counter().ApplyRule(bt.chains.At(chName), tx.Conn)
 			return nil
 		})
 	}

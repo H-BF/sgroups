@@ -9,26 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestValidate_NetworkTransport(t *testing.T) {
-	cases := []struct {
-		x    NetworkTransport
-		fail bool
-	}{
-		{TCP, false},
-		{UDP, false},
-		{NetworkTransport(100), true},
-	}
-	for i := range cases {
-		c := cases[i]
-		e := c.x.Validate()
-		if !c.fail {
-			require.NoErrorf(t, e, "test case #%v", i)
-		} else {
-			require.Errorf(t, e, "test case #%v", i)
-		}
-	}
-}
-
 func TestValidate_Traffic(t *testing.T) {
 	cases := []struct {
 		x    Traffic
@@ -37,26 +17,6 @@ func TestValidate_Traffic(t *testing.T) {
 		{INGRESS, false},
 		{EGRESS, false},
 		{Traffic(100), true},
-	}
-	for i := range cases {
-		c := cases[i]
-		e := c.x.Validate()
-		if !c.fail {
-			require.NoErrorf(t, e, "test case #%v", i)
-		} else {
-			require.Errorf(t, e, "test case #%v", i)
-		}
-	}
-}
-
-func TestValidate_RuleAction(t *testing.T) {
-	cases := []struct {
-		x    RuleAction
-		fail bool
-	}{
-		{RA_DROP, false},
-		{RA_ACCEPT, false},
-		{RuleAction(100), true},
 	}
 	for i := range cases {
 		c := cases[i]
@@ -241,42 +201,6 @@ func TestValidate_SGRule(t *testing.T) {
 	}
 }
 
-func TestValidate_FQDN(t *testing.T) {
-	cases := []struct {
-		val  string
-		fail bool
-	}{
-		{"", true},
-		{" ", true},
-		{"*", true},
-		{"*ex", false},
-		{"*ex.", true},
-		{"*ex.com", false},
-		{"*ex.com.2", false},
-		{"*ex.com.2w", false},
-		{"microsoft.com", false},
-	}
-	for i := range cases {
-		c := cases[i]
-		e := FQDN(c.val).Validate()
-		if !c.fail {
-			require.NoErrorf(t, e, "test case #%v  '%v'", i, c.val)
-		} else {
-			require.Errorf(t, e, "test case #%v  '%v'", i, c.val)
-		}
-	}
-}
-
-func Test_Validate_ICMP(t *testing.T) {
-	var x ICMP
-	require.Error(t, x.Validate())
-	x.IPv = 1
-	require.Error(t, x.Validate())
-	x.IPv = 4
-	x.Types.Put(1)
-	require.NoError(t, x.Validate())
-}
-
 func Test_Validate_SgIcmpRule(t *testing.T) {
 	var r SgIcmpRule
 	e := r.Validate()
@@ -291,7 +215,7 @@ func Test_Validate_SgIcmpRule(t *testing.T) {
 func Test_Validate_IECidrSgIcmpRule(t *testing.T) {
 	cases := []struct {
 		cidr string
-		ipv  int
+		ipv  uint8
 		fail bool
 	}{
 		{"1.1.1.1/24", IPv4, false},
