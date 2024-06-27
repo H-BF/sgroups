@@ -241,14 +241,7 @@ func (scopedCidrSgIcmpRuleIdentity) privateScope() {}
 func (scopedSgSgRuleIdentity) privateScope()       {}
 func (scopedIESgSgIcmpRuleIdentity) privateScope() {}
 
-type filterKindArg interface {
-	model.Network | model.SecurityGroup |
-		model.SGRule | model.FQDNRule | model.SgIcmpRule |
-		model.SgSgIcmpRule | model.IECidrSgRule | model.IESgSgRule |
-		model.IESgSgIcmpRule | model.IECidrSgIcmpRule
-}
-
-type filterTree[filterArgT filterKindArg] struct {
+type filterTree[filterArgT any] struct {
 	filter func(filterArgT) bool
 	next   func(bool, filterArgT) bool
 }

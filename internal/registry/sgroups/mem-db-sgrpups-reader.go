@@ -125,7 +125,7 @@ func (rd sGroupsMemDbReader) fillSG(sg *model.SecurityGroup) error {
 	return nil
 }
 
-func memDbListObjects[T filterKindArg](reader MemDbReader, sc Scope, tbl TableID, consume func(T) error) error {
+func memDbListObjects[T any](reader MemDbReader, sc Scope, tbl TableID, consume func(T) error) error {
 	var f filterTree[T]
 	if !f.init(sc) {
 		var t T
