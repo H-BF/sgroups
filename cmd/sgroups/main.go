@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/H-BF/sgroups/internal/app"
+	. "github.com/H-BF/sgroups/internal/app/sgroups-server" //nolint:revive
 
 	_ "github.com/H-BF/corlib/app/identity"
 	"github.com/H-BF/corlib/logger"
@@ -17,7 +18,7 @@ import (
 )
 
 func main() {
-	setupContext()
+	SetupContext()
 	ctx := app.Context()
 	logger.SetLevel(zap.InfoLevel)
 	logger.Info(ctx, "-= HELLO =-")
@@ -35,7 +36,7 @@ func main() {
 	if err != nil {
 		logger.Fatal(ctx, err)
 	}
-	if err = setupLogger(); err != nil {
+	if err = SetupLogger(); err != nil {
 		logger.Fatal(ctx, errors.WithMessage(err, "when setup logger"))
 	}
 
@@ -60,11 +61,11 @@ func main() {
 	if err != nil && errors.Is(err, config.ErrNotFound) {
 		logger.Fatal(ctx, errors.WithMessage(err, "server endpoint is absent"))
 	}
-	if err = setupRegistry(); err != nil {
+	if err = SetupRegistry(); err != nil {
 		logger.Fatal(ctx, errors.WithMessage(err, "on opening db storade"))
 	}
 	var srv *server.APIServer
-	if srv, err = setupSgServer(ctx); err != nil {
+	if srv, err = SetupSgServer(ctx); err != nil {
 		logger.Fatalf(ctx, "setup server: %v", err)
 	}
 	gracefulDuration, _ := ServerGracefulShutdown.Value(ctx)

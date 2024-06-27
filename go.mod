@@ -3,7 +3,7 @@ module github.com/H-BF/sgroups
 go 1.21
 
 require (
-	github.com/H-BF/corlib v1.1.0-dev
+	github.com/H-BF/corlib v1.2.0-dev
 	github.com/H-BF/protos v0.0.0-00000000000000-000000000000
 	github.com/ahmetb/go-linq/v3 v3.2.0
 	github.com/c-robinson/iplib v1.0.8
@@ -23,6 +23,7 @@ require (
 	github.com/prometheus/client_golang v1.14.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/stretchr/testify v1.9.0
+	github.com/vishvananda/netns v0.0.4
 	go.uber.org/multierr v1.9.0
 	go.uber.org/zap v1.22.0
 	golang.org/x/sys v0.21.0
@@ -35,7 +36,7 @@ require (
 //github.com/jackc/pgx/v5 v5.4.1
 //github.com/jackc/puddle/v2 v2.2.0
 
-//replace github.com/H-BF/corlib v1.0.1-dev => ../corlib
+//replace github.com/H-BF/corlib v1.2.0-dev => ../corlib
 
 //replace github.com/H-BF/protos v0.0.0-00000000000000-000000000000 => ../protos
 replace github.com/H-BF/protos v0.0.0-00000000000000-000000000000 => github.com/H-BF/protos/v2 v2.0.0
@@ -126,7 +127,6 @@ require (
 	github.com/spf13/viper v1.19.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/vishvananda/netlink v1.3.0 // indirect
-	github.com/vishvananda/netns v0.0.4 // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
 	github.com/vmihailenco/msgpack/v5 v5.3.5 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect

@@ -7,10 +7,10 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/H-BF/sgroups/cmd/to-nft/internal" //nolint:revive
-	"github.com/H-BF/sgroups/cmd/to-nft/internal/jobs"
-	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft"
 	"github.com/H-BF/sgroups/internal/app"
+	. "github.com/H-BF/sgroups/internal/app/agent" //nolint:revive
+	"github.com/H-BF/sgroups/internal/app/agent/jobs"
+	"github.com/H-BF/sgroups/internal/app/agent/nft"
 
 	"github.com/H-BF/corlib/logger"
 	pkgNet "github.com/H-BF/corlib/pkg/net"
