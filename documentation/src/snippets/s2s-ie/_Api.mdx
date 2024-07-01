@@ -11,8 +11,8 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
 
 <ul>
   <li>`$node.rules[]` - {DICTIONARY.rules.short}</li>
-  <li>`$node.rules[].Sg` - {DICTIONARY.sg.short}</li>
-  <li>`$node.rules[].SgLocal` - {DICTIONARY.sgLocal.short}</li>
+  <li>`$node.rules[].SG` - {DICTIONARY.sg.short}</li>
+  <li>`$node.rules[].sgLocal` - {DICTIONARY.sgLocal.short}</li>
   <li>`$node.rules[].logs` - {DICTIONARY.log.short}</li>
   <li>`$node.rules[].trace` - {DICTIONARY.trace.short}</li>
   <li>`$node.rules[].ports` - {DICTIONARY.ports.short}</li>
@@ -57,7 +57,7 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
         <td className="green center">✔</td>
       </tr>
       <tr>
-        <td>$node.rules[].Sg</td>
+        <td>$node.rules[].SG</td>
         <td>да</td>
         <td>String</td>
         <td></td>
@@ -66,7 +66,7 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
         <td className="green center">✔</td>
       </tr>
       <tr>
-        <td>$node.rules[].SgLocal</td>
+        <td>$node.rules[].sgLocal</td>
         <td>да</td>
         <td>String</td>
         <td></td>
@@ -212,11 +212,11 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
 
 <ul>
   <li>
-    `sgSgRules.rules[].Sg`:
+    `sgSgRules.rules[].SG`:
     <Restrictions data={RESTRICTIONS.name} />
   </li>
   <li>
-    `sgSgRules.rules[].SgLocal`:
+    `sgSgRules.rules[].sgLocal`:
     <Restrictions data={RESTRICTIONS.name} />
   </li>
   <li>
@@ -249,15 +249,15 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
             <div className="child-block">
                 <h4 className="center">Ingress</h4>
                 ```bash
-                curl '127.0.0.1:9007/v1/sync' \
+                curl '127.0.0.1:9007/v2/sync' \
                 --header 'Content-Type: application/json' \
                 --data '{
-                  "sgSgRules": {
+                  "ieSgSgRules": {
                     "rules": [
                       {
                         "traffic": "Ingress",
-                        "Sg": "sg-example",
-                        "SgLocal": "sg-local-example",
+                        "SG": "sg-example",
+                        "sgLocal": "sg-local-example",
                         "logs": true,
                         "trace": true,
                         "ports": [{
@@ -279,15 +279,15 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
             <div className="child-block">
                 <h4 className="center">Egress</h4>
                 ```bash
-                curl '127.0.0.1:9007/v1/sync' \
+                curl '127.0.0.1:9007/v2/sync' \
                 --header 'Content-Type: application/json' \
                 --data '{
-                  "sgSgRules": {
+                  "ieSgSgRules": {
                     "rules": [
                       {
                         "traffic": "Egress",
-                        "Sg": "sg-example",
-                        "SgLocal": "sg-local-example",
+                        "SG": "sg-example",
+                        "sgLocal": "sg-local-example",
                         "logs": true,
                         "trace": true,
                         "ports": [{
@@ -376,15 +376,15 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
             <div className="child-block">
                 <h4 className="center">Ingress</h4>
                 ```bash
-                curl '127.0.0.1:9007/v1/sync' \
+                curl '127.0.0.1:9007/v2/sync' \
                 --header 'Content-Type: application/json' \
                 --data '{
-                  "sgSgRules": {
+                  "ieSgSgRules": {
                     "rules": [
                       {
                         "traffic": "Ingress",
-                        "Sg": "sg-example",
-                        "SgLocal": "sg-local-example",
+                        "SG": "sg-example",
+                        "sgLocal": "sg-local-example",
                         "logs": true,
                         "trace": true,
                         "ports": [{
@@ -406,15 +406,15 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
             <div className="child-block">
                 <h4 className="center">Egress</h4>
                 ```bash
-                curl '127.0.0.1:9007/v1/sync' \
+                curl '127.0.0.1:9007/v2/sync' \
                 --header 'Content-Type: application/json' \
                 --data '{
-                  "sgSgRules": {
+                  "ieSgSgRules": {
                     "rules": [
                       {
                         "traffic": "Egress",
-                        "Sg": "sg-example",
-                        "SgLocal": "sg-local-example",
+                        "SG": "sg-example",
+                        "sgLocal": "sg-local-example",
                         "logs": true,
                         "trace": true,
                         "ports": [{
@@ -503,15 +503,15 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
             <div className="child-block">
                 <h4 className="center">Ingress</h4>
                 ```bash
-                curl '127.0.0.1:9007/v1/sync' \
+                curl '127.0.0.1:9007/v2/sync' \
                 --header 'Content-Type: application/json' \
                 --data '{
                   "ieSgSgIcmpRules": {
                     "rules": [
                       {
                         "traffic": "Ingress",
-                        "Sg": "sg-example",
-                        "SgLocal": "sg-local-example",
+                        "SG": "sg-example",
+                        "sgLocal": "sg-local-example",
                         "logs": true,
                         "trace": true,
                         "ICMP": {
@@ -532,15 +532,15 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
             <div className="child-block">
                 <h4 className="center">Egress</h4>
                 ```bash
-                curl '127.0.0.1:9007/v1/sync' \
+                curl '127.0.0.1:9007/v2/sync' \
                 --header 'Content-Type: application/json' \
                 --data '{
                   "ieSgSgIcmpRules": {
                     "rules": [
                       {
                         "traffic": "Egress",
-                        "Sg": "sg-example",
-                        "SgLocal": "sg-local-example",
+                        "SG": "sg-example",
+                        "sgLocal": "sg-local-example",
                         "logs": true,
                         "trace": true,
                         "ICMP": {
@@ -634,15 +634,15 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
             <div className="child-block">
                 <h4 className="center">Ingress</h4>
                 ```bash
-                curl '127.0.0.1:9007/v1/sync' \
+                curl '127.0.0.1:9007/v2/sync' \
                 --header 'Content-Type: application/json' \
                 --data '{
                   "ieSgSgIcmpRules": {
                     "rules": [
                       {
                         "traffic": "Ingress",
-                        "Sg": "sg-example",
-                        "SgLocal": "sg-local-example",
+                        "SG": "sg-example",
+                        "sgLocal": "sg-local-example",
                         "logs": true,
                         "trace": true,
                         "ICMP": {
@@ -663,15 +663,15 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
             <div className="child-block">
                 <h4 className="center">Egress</h4>
                 ```bash
-                curl '127.0.0.1:9007/v1/sync' \
+                curl '127.0.0.1:9007/v2/sync' \
                 --header 'Content-Type: application/json' \
                 --data '{
                   "ieSgSgIcmpRules": {
                     "rules": [
                       {
                         "traffic": "Egress",
-                        "Sg": "sg-example",
-                        "SgLocal": "sg-local-example",
+                        "SG": "sg-example",
+                        "sgLocal": "sg-local-example",
                         "logs": true,
                         "trace": true,
                         "ICMP": {

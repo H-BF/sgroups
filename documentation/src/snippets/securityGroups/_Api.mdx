@@ -20,7 +20,7 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
   <li>`sgIcmpRules.rules[].ICMP` - {DICTIONARY.apiIcmp.short}</li>
   <li>`sgIcmpRules.rules[].ICMP.IPv` - {DICTIONARY.icmpV.short}</li>
   <li>`sgIcmpRules.rules[].ICMP.Types` - {DICTIONARY.icmpTypes.short}</li>
-  <li>`sgIcmpRules.rules[].Sg` - {DICTIONARY.sgLocal.short}</li>
+  <li>`sgIcmpRules.rules[].SG` - {DICTIONARY.sgLocal.short}</li>
   <li>`sgIcmpRules.rules[].logs` - {DICTIONARY.log.short}</li>
   <li>`sgIcmpRules.rules[].trace` - {DICTIONARY.trace.short}</li>
   <li>`sgIcmpRules.rules[].action` - {DICTIONARY.action.short}</li>
@@ -126,7 +126,7 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
         <td className="green center">✔</td>
       </tr>
       <tr>
-        <td>sgIcmpRules.rules[].Sg</td>
+        <td>sgIcmpRules.rules[].SG</td>
         <td>да</td>
         <td>String</td>
         <td></td>
@@ -185,7 +185,7 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
     <Restrictions data={RESTRICTIONS.cidrSet} />
   </li>
   <li>
-    `sgIcmpRules.rules[].Sg`:
+    `sgIcmpRules.rules[].SG`:
     <Restrictions data={RESTRICTIONS.name} />
   </li>
   <li>
@@ -206,7 +206,7 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
 
     <TabItem value="sg">
         ```bash
-        curl '127.0.0.1:9007/v1/sync' \
+        curl '127.0.0.1:9007/v2/sync' \
         --header 'Content-Type: application/json' \
         --data '{
             "groups": {
@@ -291,7 +291,7 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
 
     <TabItem value="icmp">
         ```bash
-        curl '127.0.0.1:9007/v1/sync' \
+        curl '127.0.0.1:9007/v2/sync' \
         --header 'Content-Type: application/json' \
         --data '{
             "sgIcmpRules": {
@@ -300,7 +300,7 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
                         "IPv": "IPv4",
                         "Types": [0,8]
                     },
-                    "Sg": "sg-example",
+                    "SG": "sg-example",
                     "logs": true,
                     "trace": true,
                     "action": "DROP",
@@ -310,7 +310,7 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
                         "IPv": "IPv6",
                         "Types": [0,8]
                     },
-                    "Sg": "sg-example",
+                    "SG": "sg-example",
                     "logs": true,
                     "trace": true,
                     "action": "DROP",
