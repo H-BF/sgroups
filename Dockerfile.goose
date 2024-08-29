@@ -3,16 +3,18 @@ ARG ALPINE_VER
 
 # first build stage
 # by default uses alpine-based image
-FROM golang:1.20-alpine3.19 as builder
+FROM golang:1.21-alpine3.19 as builder
 
 # copy all source code for build
 WORKDIR /src
-COPY . .
 
 # install updates and build executable
 RUN apk upgrade --no-cache -X https://mirror.yandex.ru/mirrors/alpine/v3.19/main && \
-    apk add make git && \
-    make .install-goose
+    apk add make git
+
+COPY . .
+
+RUN make .install-goose
 
 # second release stage
 FROM alpine:3.19
