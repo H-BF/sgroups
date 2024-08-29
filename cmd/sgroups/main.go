@@ -25,13 +25,13 @@ func main() {
 	err := config.InitGlobalConfig(
 		config.WithAcceptEnvironment{EnvPrefix: "SG"},
 		config.WithSourceFile{FileName: ConfigFile},
-		config.WithDefValue{Key: LoggerLevel, Val: "DEBUG"},
-		config.WithDefValue{Key: MetricsEnable, Val: true},
-		config.WithDefValue{Key: HealthcheckEnable, Val: true},
-		config.WithDefValue{Key: ServerGracefulShutdown, Val: "10s"},
-		config.WithDefValue{Key: ServerEndpoint, Val: "tcp://127.0.0.1:9000"},
-		config.WithDefValue{Key: StorageType, Val: "INTERNAL"},
-		config.WithDefValue{Key: AuthnType, Val: config.AuthnTypeNONE},
+		config.WithDefValue(LoggerLevel, "DEBUG"),
+		config.WithDefValue(MetricsEnable, true),
+		config.WithDefValue(HealthcheckEnable, true),
+		config.WithDefValue(ServerGracefulShutdown, "10s"),
+		config.WithDefValue(ServerEndpoint, "tcp://127.0.0.1:9000"),
+		config.WithDefValue(StorageType, "INTERNAL"),
+		config.WithDefValue(AuthnType, config.AuthnTypeNONE),
 	)
 	if err != nil {
 		logger.Fatal(ctx, err)

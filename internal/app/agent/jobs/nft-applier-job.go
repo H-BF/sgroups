@@ -178,11 +178,8 @@ func (jb *NftApplierJob) handleNetlinkEvent(ev agent.NetlinkUpdates) { //sync re
 	if tr.netConf != nil {
 		cnf = tr.netConf.Clone()
 	}
-	cnf.UpdFromWatcher(ev.Updates...)
-	apply := tr.netConf == nil
-	if !apply {
-		apply = !tr.netConf.IPAdresses.Eq(cnf.IPAdresses)
-	}
+	updated := cnf.UpdFromWatcher(ev.Updates...)
+	apply := tr.netConf == nil || updated
 	tr.netConf = &cnf
 	if apply {
 		tr.netConfChanged = 1

@@ -3,7 +3,7 @@ module github.com/H-BF/sgroups
 go 1.21
 
 require (
-	github.com/H-BF/corlib v1.2.2-dev
+	github.com/H-BF/corlib v1.2.8-dev
 	github.com/H-BF/protos v0.0.0-00000000000000-000000000000
 	github.com/ahmetb/go-linq/v3 v3.2.0
 	github.com/c-robinson/iplib v1.0.8
@@ -71,6 +71,7 @@ require (
 	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-checkpoint v0.5.0 // indirect

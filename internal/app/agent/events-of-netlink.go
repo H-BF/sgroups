@@ -131,8 +131,6 @@ func (w *NetlinkEventSource) gatherLinkState(ctx context.Context) (err error) {
 				})
 		}
 	}
-	if len(ret.Updates) > 0 {
-		w.Subject.Notify(ret)
-	}
+	w.Subject.Notify(ret)
 	return nil
 }

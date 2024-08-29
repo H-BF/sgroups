@@ -124,11 +124,13 @@ func (loader *LocalDataLoader) Load(ctx context.Context, client SGClient, ncnf h
 	defer func() {
 		err = errors.WithMessage(err, "LocalData/Load")
 	}()
-
 	var locIPs []net.IP
 	{
 		v4, v6 := ncnf.LocalIPs()
-		locIPs = append(append(locIPs, v4...), v6...)
+		locIPs = append(
+			append(locIPs, host.IPvSet2List(v4).NetIPs()...),
+			host.IPvSet2List(v6).NetIPs()...,
+		)
 	}
 	res.SyncStatus = loader.SyncStatus
 	log := logger.FromContext(ctx)
