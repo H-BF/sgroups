@@ -19,6 +19,7 @@ APP_NAME?=$(PROJECT)/$(APP)
 APP_VERSION:=$(if $(VERSION),$(VERSION),$(if $(GIT_TAG),$(GIT_TAG),$(GIT_BRANCH)))
 
 
+.NOTPARALLEL:
 
 
 .PHONY: help
@@ -46,7 +47,7 @@ else
 endif
 
 .PHONY: lint
-lint: | go-deps ##run full lint
+lint: ##run full lint
 	@echo full lint... && \
 	$(MAKE) .install-linter && \
 	$(GOLANGCI_BIN) cache clean && \
@@ -101,21 +102,22 @@ endif
 	echo -=OK=-
 
 .PHONY: to-nft
-to-nft: | go-deps ##build NFT processor. Usage: make to-nft [platform=linux/<amd64|arm64>]
+to-nft: ##build NFT processor. Usage: make to-nft [platform=linux/<amd64|arm64>]
 to-nft: APP=to-nft
-to-nft: os=linux
-to-nft: 
-ifneq ('$(os)','linux')
-	$(error 'os' should be 'linux')
+to-nft:
+ifeq ($(filter amd64 arm64,$(arch)),)
+	$(error arch=$(arch) but must be in [amd64|arm64])
 endif
-ifeq ($(and $(os),$(arch)),)
-	$(error bad param 'platform'; usage: platform=linux/<arch>; where <arch> = amd64|arm64)
-endif
-	@echo build \"$(APP)\" for OS/ARCH=\"$(os)/$(arch)\" ... && \
+ifneq ($(os),linux)
+	@$(MAKE) $@ os=linux
+else
+	@$(MAKE) go-deps &&\
+	echo build \"$(APP)\" for OS/ARCH=\"$(os)/$(arch)\" ... && \
 	echo into \"$(OUT)\" && \
 	env GOOS=$(os) GOARCH=$(arch) CGO_ENABLED=0 \
 	$(GO) build -ldflags="$(LDFLAGS)" -o $(OUT) $(CURDIR)/cmd/$(APP) &&\
-	echo -=OK=- 
+	echo -=OK=-
+endif
 
  
 .PHONY: sgroups-tf-v2	
