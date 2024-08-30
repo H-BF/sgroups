@@ -57,10 +57,10 @@ func main() { //nolint:gocyclo
 		//config.WithDefValue(BaseRulesOutNets,   `["192.168.1.0/24","192.168.2.0/24"]`),
 		config.WithDefValue(FqdnStrategy, FqdnRulesStartegyDNS),
 		config.WithDefValue(AppLoggerLevel, "DEBUG"),
-		config.WithDefValue(AppGracefulShutdown, 10*time.Second),
+		config.WithDefValue(AppGracefulShutdown, 10*time.Second), //nolint:mnd
 		config.WithDefValue(NetNS, ""),
 		config.WithDefValue(NetlinkWatcherLinger, "10s"),
-		config.WithDefValue(ServicesDefDialDuration, 10*time.Second),
+		config.WithDefValue(ServicesDefDialDuration, 10*time.Second), //nolint:mnd
 		config.WithDefValue(SGroupsAddress, "tcp://127.0.0.1:9000"),
 		config.WithDefValue(SGroupsSyncStatusInterval, "10s"),
 		config.WithDefValue(SGroupsSyncStatusPush, false),
@@ -68,8 +68,8 @@ func main() { //nolint:gocyclo
 		//DNS group
 		config.WithDefValue(DnsNameservers, `["8.8.8.8"]`),
 		config.WithDefValue(DnsProto, "udp"),
-		config.WithDefValue(DnsPort, 53),
-		config.WithDefValue(DnsRetries, 3),
+		config.WithDefValue(DnsPort, 53),   //nolint:mnd
+		config.WithDefValue(DnsRetries, 3), //nolint:mnd
 		config.WithDefValue(DnsRetriesTmo, "1s"),
 		config.WithDefValue(DnsDialDuration, "3s"),
 		config.WithDefValue(DnsWriteDuration, "5s"),
