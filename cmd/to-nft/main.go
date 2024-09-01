@@ -7,18 +7,18 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/H-BF/sgroups/cmd/to-nft/internal" //nolint:revive
-	"github.com/H-BF/sgroups/cmd/to-nft/internal/jobs"
-	"github.com/H-BF/sgroups/cmd/to-nft/internal/nft"
 	"github.com/H-BF/sgroups/internal/app"
-	"github.com/H-BF/sgroups/internal/config"
-	"github.com/H-BF/sgroups/pkg/nl"
+	. "github.com/H-BF/sgroups/internal/app/agent" //nolint:revive
+	"github.com/H-BF/sgroups/internal/app/agent/jobs"
+	"github.com/H-BF/sgroups/internal/app/agent/nft"
 
 	"github.com/H-BF/corlib/logger"
 	pkgNet "github.com/H-BF/corlib/pkg/net"
+	"github.com/H-BF/corlib/pkg/nl"
 	"github.com/H-BF/corlib/pkg/parallel"
 	gs "github.com/H-BF/corlib/pkg/patterns/graceful-shutdown"
 	"github.com/H-BF/corlib/pkg/patterns/observer"
+	config "github.com/H-BF/corlib/pkg/plain-config"
 	"github.com/H-BF/corlib/server"
 	"github.com/pkg/errors"
 	"go.uber.org/multierr"
@@ -51,38 +51,38 @@ func main() { //nolint:gocyclo
 	err := config.InitGlobalConfig(
 		config.WithAcceptEnvironment{EnvPrefix: "NFT"},
 		config.WithSourceFile{FileName: ConfigFile},
-		config.WithDefValue{Key: ExitOnSuccess, Val: false},
-		config.WithDefValue{Key: ContinueOnFailure, Val: true},
-		config.WithDefValue{Key: ContinueAfterTimeout, Val: "10s"},
-		//config.WithDefValue{Key: BaseRulesOutNets, Val: `["192.168.1.0/24","192.168.2.0/24"]`},
-		config.WithDefValue{Key: FqdnStrategy, Val: FqdnRulesStartegyDNS},
-		config.WithDefValue{Key: AppLoggerLevel, Val: "DEBUG"},
-		config.WithDefValue{Key: AppGracefulShutdown, Val: 10 * time.Second},
-		config.WithDefValue{Key: NetNS, Val: ""},
-		config.WithDefValue{Key: NetlinkWatcherLinger, Val: "10s"},
-		config.WithDefValue{Key: ServicesDefDialDuration, Val: 10 * time.Second},
-		config.WithDefValue{Key: SGroupsAddress, Val: "tcp://127.0.0.1:9000"},
-		config.WithDefValue{Key: SGroupsSyncStatusInterval, Val: "10s"},
-		config.WithDefValue{Key: SGroupsSyncStatusPush, Val: false},
-		config.WithDefValue{Key: SGroupsUseJsonCodec, Val: false},
+		config.WithDefValue(ExitOnSuccess, false),
+		config.WithDefValue(ContinueOnFailure, true),
+		config.WithDefValue(ContinueAfterTimeout, "10s"),
+		//config.WithDefValue(BaseRulesOutNets,   `["192.168.1.0/24","192.168.2.0/24"]`),
+		config.WithDefValue(FqdnStrategy, FqdnRulesStartegyDNS),
+		config.WithDefValue(AppLoggerLevel, "DEBUG"),
+		config.WithDefValue(AppGracefulShutdown, 10*time.Second), //nolint:mnd
+		config.WithDefValue(NetNS, ""),
+		config.WithDefValue(NetlinkWatcherLinger, "10s"),
+		config.WithDefValue(ServicesDefDialDuration, 10*time.Second), //nolint:mnd
+		config.WithDefValue(SGroupsAddress, "tcp://127.0.0.1:9000"),
+		config.WithDefValue(SGroupsSyncStatusInterval, "10s"),
+		config.WithDefValue(SGroupsSyncStatusPush, false),
+		config.WithDefValue(SGroupsUseJsonCodec, false),
 		//DNS group
-		config.WithDefValue{Key: DnsNameservers, Val: `["8.8.8.8"]`},
-		config.WithDefValue{Key: DnsProto, Val: "udp"},
-		config.WithDefValue{Key: DnsPort, Val: 53},
-		config.WithDefValue{Key: DnsRetries, Val: 3},
-		config.WithDefValue{Key: DnsRetriesTmo, Val: "1s"},
-		config.WithDefValue{Key: DnsDialDuration, Val: "3s"},
-		config.WithDefValue{Key: DnsWriteDuration, Val: "5s"},
-		config.WithDefValue{Key: DnsReadDuration, Val: "5s"},
+		config.WithDefValue(DnsNameservers, `["8.8.8.8"]`),
+		config.WithDefValue(DnsProto, "udp"),
+		config.WithDefValue(DnsPort, 53),   //nolint:mnd
+		config.WithDefValue(DnsRetries, 3), //nolint:mnd
+		config.WithDefValue(DnsRetriesTmo, "1s"),
+		config.WithDefValue(DnsDialDuration, "3s"),
+		config.WithDefValue(DnsWriteDuration, "5s"),
+		config.WithDefValue(DnsReadDuration, "5s"),
 		//telemetry group
-		config.WithDefValue{Key: TelemetryEndpoint, Val: "127.0.0.1:5000"},
-		config.WithDefValue{Key: MetricsEnable, Val: true},
-		config.WithDefValue{Key: HealthcheckEnable, Val: true},
-		config.WithDefValue{Key: UserAgent, Val: ""},
-		config.WithDefValue{Key: ProfileEnable, Val: true},
-		config.WithDefValue{Key: NftablesCollectorMinFrequency, Val: "10s"},
+		config.WithDefValue(TelemetryEndpoint, "127.0.0.1:5000"),
+		config.WithDefValue(MetricsEnable, true),
+		config.WithDefValue(HealthcheckEnable, true),
+		config.WithDefValue(UserAgent, ""),
+		config.WithDefValue(ProfileEnable, true),
+		config.WithDefValue(NftablesCollectorMinFrequency, "10s"),
 		//authn group
-		config.WithDefValue{Key: SGroupsAuthnType, Val: config.AuthnTypeNONE},
+		config.WithDefValue(SGroupsAuthnType, config.AuthnTypeNONE),
 	)
 	if err != nil {
 		logger.Fatal(ctx, err)
@@ -230,7 +230,7 @@ func makeNetlinkWatcher(ctx context.Context, netNs string) (nl.NetlinkWatcher, e
 		},
 	}
 	if len(netNs) > 0 {
-		opts = append(opts, nl.WithNetnsName{Netns: netNs})
+		opts = append(opts, nl.WithNetnsName(netNs))
 	}
 	nlWatcher, err := nl.NewNetlinkWatcher(opts...)
 	return nlWatcher, errors.WithMessage(err, "create net-watcher")

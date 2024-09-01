@@ -236,7 +236,7 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
 >
     <TabItem value="tcp">
         ```bash
-        curl '127.0.0.1:9007/v1/sync' \
+        curl '127.0.0.1:9007/v2/sync' \
         --header 'Content-Type: application/json' \
         --data '{
           "sgRules": {
@@ -324,7 +324,7 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
     </TabItem>
     <TabItem value="udp">
         ```bash
-        curl '127.0.0.1:9007/v1/sync' \
+        curl '127.0.0.1:9007/v2/sync' \
         --header 'Content-Type: application/json' \
         --data '{
           "sgRules": {
@@ -412,13 +412,13 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
     </TabItem>
     <TabItem value="icmp4">
         ```bash
-        curl '127.0.0.1:9007/v1/sync' \
+        curl '127.0.0.1:9007/v2/sync' \
         --header 'Content-Type: application/json' \
         --data '{
           "sgSgIcmpRules": {
             "rules": [{
-              "SgFrom": "sg-local-example",
-              "SgTo": "sg-example",
+              "sgFrom": "sg-local-example",
+              "sgTo": "sg-example",
               "logs": true,
               "trace": true
               "ICMP": {
@@ -505,13 +505,13 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
 
     <TabItem value="icmp6">
         ```bash
-        curl '127.0.0.1:9007/v1/sync' \
+        curl '127.0.0.1:9007/v2/sync' \
         --header 'Content-Type: application/json' \
         --data '{
           "sgSgIcmpRules": {
             "rules": [{
-              "SgFrom": "sg-local-example",
-              "SgTo": "sg-example",
+              "sgFrom": "sg-local-example",
+              "sgTo": "sg-example",
               "logs": true,
               "trace": true
               "ICMP": {

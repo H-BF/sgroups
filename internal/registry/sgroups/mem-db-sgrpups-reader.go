@@ -4,7 +4,8 @@ import (
 	"context"
 	"strings"
 
-	model "github.com/H-BF/sgroups/internal/models/sgroups"
+	model "github.com/H-BF/sgroups/internal/domains/sgroups"
+
 	"github.com/hashicorp/go-memdb"
 	"github.com/pkg/errors"
 )
@@ -124,7 +125,7 @@ func (rd sGroupsMemDbReader) fillSG(sg *model.SecurityGroup) error {
 	return nil
 }
 
-func memDbListObjects[T filterKindArg](reader MemDbReader, sc Scope, tbl TableID, consume func(T) error) error {
+func memDbListObjects[T any](reader MemDbReader, sc Scope, tbl TableID, consume func(T) error) error {
 	var f filterTree[T]
 	if !f.init(sc) {
 		var t T

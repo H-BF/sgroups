@@ -1,0 +1,62 @@
+---
+id: spec-terraform
+---
+
+# Запуск
+
+<div>
+  После установки провайдера, пользователь может приступать к описанию собственных sgroups. В качестве отправной точки,
+  воспользуемся готовым шаблоном.
+</div>
+
+```bash title='Install terraform-spec-template'
+git clone https://github.com/H-BF/swarm-spec-template
+cd swarm-spec-template
+```
+
+<div>
+    Следующим шагом настроим файл *providers.tf*:
+    <ul>
+        <li>
+            Убедитесь, что вы корректно настроили <a href='https://github.com/H-BF/swarm-spec-template/blob/master/providers.tf#L3'>backend</a>,
+            который будет хранить актуальный terraform-state.
+        </li>
+        <li>
+            Убедитесь, что вы корректно указали версию <a href='https://github.com/H-BF/swarm-spec-template/blob/master/providers.tf#L8'>провайдер</a> в секции required_providers.
+        </li>
+        <li>
+            Убедитесь, что вы корректно указали <a href='https://github.com/H-BF/swarm-spec-template/blob/master/providers.tf#L14'>IP адресс и порт hbf-server'a</a>.
+            Либо укажите данное значение через переменную окружения `SGROUPS_ADDRESS`.
+        </li>
+        <li>
+            Убедитесь, что вы корректно указали <a href='https://github.com/H-BF/swarm-spec-template/blob/master/providers.tf#L15'>период времени ожидания подключения к серверу</a>.
+            Либо укажите данное значение через переменную окружения `SGROUPS_DIAL_DURATION`.
+        </li>
+    </ul>
+
+    Далее убедимся в корректной настройке файл *main.tf*:
+    <ul>
+        <li>
+            Убедитесь, что вы корректно настроили параметр <a href='https://github.com/H-BF/swarm-spec-template/blob/master/main.tf#L2'>source</a>. Важной часть параметра, является то, куда ссылается
+            Все возможные варианты описания данного параметра можно найти <a href='https://developer.hashicorp.com/terraform/language/modules/sources#github'>в официальной документации</a>.
+        </li>
+    </ul>
+
+    Воспользуйтесь предоставленными в репозитории sgroups для проверки работоспособности провайдера.
+    Для этого выполните команду (важно устанавливать флаг `--parallelism=1`):
+
+    ```bash title='Run terraform plan'
+    terraform plan --parallelism=1
+    ```
+    Результатом выполнения команды, должен быть список ресурсов, которые описаны в директории *spec/*.
+
+    Следующим шагом будет описание собственных sgroups опираясь, на примеры из документации. Вы можете создавать любую иерархичность в директорию *spec/*, поскольку при описании
+    сетевых политик sgroups, они ссылаются *на имена sgroups*, а не на пути расположения файлов до sgroups.
+
+    Для того, чтобы применить описанные правила, выполните команду (важно устанавливать флаг `--parallelism=1`):
+
+    ```bash title='Run terraform plan'
+    terraform apply --auto-approve --parallelism=1
+    ```
+
+</div>

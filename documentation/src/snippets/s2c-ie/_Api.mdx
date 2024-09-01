@@ -12,8 +12,8 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
 
 <ul>
   <li>`$node.rules[]` - {DICTIONARY.rules.short}</li>
-  <li>`$node.rules[].cidr` - {DICTIONARY.cidrSet.short}</li>
-  <li>`$node.rules[].sg` - {DICTIONARY.sgLocal.short}</li>
+  <li>`$node.rules[].CIDR` - {DICTIONARY.cidrSet.short}</li>
+  <li>`$node.rules[].SG` - {DICTIONARY.sgLocal.short}</li>
   <li>`$node.rules[].logs` - {DICTIONARY.log.short}</li>
   <li>`$node.rules[].trace` - {DICTIONARY.trace.short}</li>
   <li>`$node.rules[].ports` - {DICTIONARY.ports.short}</li>
@@ -250,10 +250,10 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
             <div className="child-block">
                 <h4 className="center">Ingress</h4>
                 ```bash
-                curl '127.0.0.1:9007/v1/sync' \
+                curl '127.0.0.1:9007/v2/sync' \
                 --header 'Content-Type: application/json' \
                 --data '{
-                  "cidrSgRules": {
+                  "ieCidrSgRules": {
                     "rules": [
                       {
                         "traffic": "Ingress",
@@ -280,10 +280,10 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
             <div className="child-block">
                 <h4 className="center">Egress</h4>
                 ```bash
-                curl '127.0.0.1:9007/v1/sync' \
+                curl '127.0.0.1:9007/v2/sync' \
                 --header 'Content-Type: application/json' \
                 --data '{
-                  "cidrSgRules": {
+                  "ieCidrSgRules": {
                     "rules": [
                       {
                         "traffic": "Egress",
@@ -377,10 +377,10 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
             <div className="child-block">
                 <h4 className="center">Ingress</h4>
                 ```bash
-                curl '127.0.0.1:9007/v1/sync' \
+                curl '127.0.0.1:9007/v2/sync' \
                 --header 'Content-Type: application/json' \
                 --data '{
-                  "cidrSgRules": {
+                  "ieCidrSgRules": {
                     "rules": [
                       {
                         "traffic": "Ingress",
@@ -407,10 +407,10 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
             <div className="child-block">
                 <h4 className="center">Egress</h4>
                 ```bash
-                curl '127.0.0.1:9007/v1/sync' \
+                curl '127.0.0.1:9007/v2/sync' \
                 --header 'Content-Type: application/json' \
                 --data '{
-                  "cidrSgRules": {
+                  "ieCidrSgRules": {
                     "rules": [
                       {
                         "traffic": "Egress",
@@ -504,10 +504,10 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
             <div className="child-block">
                 <h4 className="center">Ingress</h4>
                 ```bash
-                curl '127.0.0.1:9007/v1/sync' \
+                curl '127.0.0.1:9007/v2/sync' \
                 --header 'Content-Type: application/json' \
                 --data '{
-                  "cidrSgIcmpRules": {
+                  "ieCidrSgIcmpRules": {
                     "rules": [
                       {
                         "traffic": "Ingress",
@@ -533,10 +533,10 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
             <div className="child-block">
                 <h4 className="center">Egress</h4>
                 ```bash
-                curl '127.0.0.1:9007/v1/sync' \
+                curl '127.0.0.1:9007/v2/sync' \
                 --header 'Content-Type: application/json' \
                 --data '{
-                  "cidrSgIcmpRules": {
+                  "ieCidrSgIcmpRules": {
                     "rules": [
                       {
                         "traffic": "Egress",
@@ -635,10 +635,10 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
             <div className="child-block">
                 <h4 className="center">Ingress</h4>
                 ```bash
-                curl '127.0.0.1:9007/v1/sync' \
+                curl '127.0.0.1:9007/v2/sync' \
                 --header 'Content-Type: application/json' \
                 --data '{
-                  "cidrSgIcmpRules": {
+                  "ieCidrSgIcmpRules": {
                     "rules": [
                       {
                         "traffic": "Ingress",
@@ -664,10 +664,10 @@ import Codes from '@site/src/components/commonBlocks/Codes/_Codes.mdx'
             <div className="child-block">
                 <h4 className="center">Egress</h4>
                 ```bash
-                curl '127.0.0.1:9007/v1/sync' \
+                curl '127.0.0.1:9007/v2/sync' \
                 --header 'Content-Type: application/json' \
                 --data '{
-                  "cidrSgIcmpRules": {
+                  "ieCidrSgIcmpRules": {
                     "rules": [
                       {
                         "traffic": "Egress",

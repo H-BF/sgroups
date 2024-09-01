@@ -3,7 +3,7 @@ package sgroups
 import (
 	"context"
 
-	"github.com/H-BF/sgroups/internal/models/sgroups"
+	"github.com/H-BF/sgroups/internal/domains/sgroups"
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 
 	"github.com/H-BF/protos/pkg/api/common"

@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"strings"
 
-	model "github.com/H-BF/sgroups/internal/models/sgroups"
+	model "github.com/H-BF/sgroups/internal/domains/sgroups"
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 
 	sg "github.com/H-BF/protos/pkg/api/sgroups"

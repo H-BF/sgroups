@@ -5,11 +5,12 @@ import (
 	"os"
 
 	"github.com/H-BF/sgroups/internal/app"
-	"github.com/H-BF/sgroups/internal/config"
+	. "github.com/H-BF/sgroups/internal/app/sgroups-server" //nolint:revive
 
 	_ "github.com/H-BF/corlib/app/identity"
 	"github.com/H-BF/corlib/logger"
 	pkgNet "github.com/H-BF/corlib/pkg/net"
+	config "github.com/H-BF/corlib/pkg/plain-config"
 	"github.com/H-BF/corlib/server"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -17,25 +18,25 @@ import (
 )
 
 func main() {
-	setupContext()
+	SetupContext()
 	ctx := app.Context()
 	logger.SetLevel(zap.InfoLevel)
 	logger.Info(ctx, "-= HELLO =-")
 	err := config.InitGlobalConfig(
 		config.WithAcceptEnvironment{EnvPrefix: "SG"},
 		config.WithSourceFile{FileName: ConfigFile},
-		config.WithDefValue{Key: LoggerLevel, Val: "DEBUG"},
-		config.WithDefValue{Key: MetricsEnable, Val: true},
-		config.WithDefValue{Key: HealthcheckEnable, Val: true},
-		config.WithDefValue{Key: ServerGracefulShutdown, Val: "10s"},
-		config.WithDefValue{Key: ServerEndpoint, Val: "tcp://127.0.0.1:9000"},
-		config.WithDefValue{Key: StorageType, Val: "INTERNAL"},
-		config.WithDefValue{Key: AuthnType, Val: config.AuthnTypeNONE},
+		config.WithDefValue(LoggerLevel, "DEBUG"),
+		config.WithDefValue(MetricsEnable, true),
+		config.WithDefValue(HealthcheckEnable, true),
+		config.WithDefValue(ServerGracefulShutdown, "10s"),
+		config.WithDefValue(ServerEndpoint, "tcp://127.0.0.1:9000"),
+		config.WithDefValue(StorageType, "INTERNAL"),
+		config.WithDefValue(AuthnType, config.AuthnTypeNONE),
 	)
 	if err != nil {
 		logger.Fatal(ctx, err)
 	}
-	if err = setupLogger(); err != nil {
+	if err = SetupLogger(); err != nil {
 		logger.Fatal(ctx, errors.WithMessage(err, "when setup logger"))
 	}
 
@@ -60,11 +61,11 @@ func main() {
 	if err != nil && errors.Is(err, config.ErrNotFound) {
 		logger.Fatal(ctx, errors.WithMessage(err, "server endpoint is absent"))
 	}
-	if err = setupRegistry(); err != nil {
+	if err = SetupRegistry(); err != nil {
 		logger.Fatal(ctx, errors.WithMessage(err, "on opening db storade"))
 	}
 	var srv *server.APIServer
-	if srv, err = setupSgServer(ctx); err != nil {
+	if srv, err = SetupSgServer(ctx); err != nil {
 		logger.Fatalf(ctx, "setup server: %v", err)
 	}
 	gracefulDuration, _ := ServerGracefulShutdown.Value(ctx)

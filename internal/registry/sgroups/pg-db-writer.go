@@ -5,7 +5,7 @@ import (
 	"strings"
 	"sync/atomic"
 
-	model "github.com/H-BF/sgroups/internal/models/sgroups"
+	model "github.com/H-BF/sgroups/internal/domains/sgroups"
 	"github.com/H-BF/sgroups/internal/registry/sgroups/pg"
 
 	linq "github.com/ahmetb/go-linq/v3"

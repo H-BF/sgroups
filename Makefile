@@ -19,6 +19,7 @@ APP_NAME?=$(PROJECT)/$(APP)
 APP_VERSION:=$(if $(VERSION),$(VERSION),$(if $(GIT_TAG),$(GIT_TAG),$(GIT_BRANCH)))
 
 
+.NOTPARALLEL:
 
 
 .PHONY: help
@@ -27,16 +28,16 @@ help: ##display this help
 
 
 GOLANGCI_BIN:=$(GOBIN)/golangci-lint
-GOLANGCI_REPO=https://github.com/golangci/golangci-lint
-GOLANGCI_LATEST_VERSION:= $(shell git ls-remote --tags --refs --sort='v:refname' $(GOLANGCI_REPO)|tail -1|egrep -o "v[0-9]+.*")
+GOLANGCI_REPO?=https://github.com/golangci/golangci-lint
+GOLANGCI_LATEST_VERSION?= $(shell git ls-remote --tags --refs --sort='v:refname' $(GOLANGCI_REPO)|tail -1|egrep -o "v[0-9]+.*")
 ifneq ($(wildcard $(GOLANGCI_BIN)),)
 	GOLANGCI_CUR_VERSION=v$(shell $(GOLANGCI_BIN) --version|sed -E 's/.*version (.*) built.*/\1/g')	
 else
 	GOLANGCI_CUR_VERSION=
 endif
 
-.PHONY: install-linter
-install-linter: 
+.PHONY: .install-linter
+.install-linter:	
 ifeq ($(filter $(GOLANGCI_CUR_VERSION), $(GOLANGCI_LATEST_VERSION)),)
 	$(info Installing GOLANGCI-LINT $(GOLANGCI_LATEST_VERSION)...)
 	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOBIN) $(GOLANGCI_LATEST_VERSION)
@@ -46,9 +47,9 @@ else
 endif
 
 .PHONY: lint
-lint: | go-deps ##run full lint
+lint: ##run full lint
 	@echo full lint... && \
-	$(MAKE) install-linter && \
+	$(MAKE) .install-linter && \
 	$(GOLANGCI_BIN) cache clean && \
 	$(GOLANGCI_BIN) run --timeout=120s --config=$(CURDIR)/.golangci.yaml -v $(CURDIR)/... &&\
 	echo -=OK=-
@@ -64,9 +65,9 @@ go-deps: ##install golang dependencies
 
 .PHONY: test-tf-provider
 test-tf-provider: ##run tests for tf provider only
-	@echo running tf provider tests... && \
+	@echo running sgroups-tf-provider tests... && \
 	$(GO) clean -testcache && \
-	$(GO) test -v ./cmd/sgroups-tf-v2/internal/provider && \
+	$(GO) test -v ./internal/app/sgroups-tf-provider && \
 	echo -=OK=-
 
 .PHONY: test
@@ -101,21 +102,22 @@ endif
 	echo -=OK=-
 
 .PHONY: to-nft
-to-nft: | go-deps ##build NFT processor. Usage: make to-nft [platform=linux/<amd64|arm64>]
+to-nft: ##build NFT processor. Usage: make to-nft [platform=linux/<amd64|arm64>]
 to-nft: APP=to-nft
-to-nft: os=linux
-to-nft: 
-ifneq ('$(os)','linux')
-	$(error 'os' should be 'linux')
+to-nft:
+ifeq ($(filter amd64 arm64,$(arch)),)
+	$(error arch=$(arch) but must be in [amd64|arm64])
 endif
-ifeq ($(and $(os),$(arch)),)
-	$(error bad param 'platform'; usage: platform=linux/<arch>; where <arch> = amd64|arm64)
-endif
-	@echo build \"$(APP)\" for OS/ARCH=\"$(os)/$(arch)\" ... && \
+ifneq ($(os),linux)
+	@$(MAKE) $@ os=linux
+else
+	@$(MAKE) go-deps &&\
+	echo build \"$(APP)\" for OS/ARCH=\"$(os)/$(arch)\" ... && \
 	echo into \"$(OUT)\" && \
 	env GOOS=$(os) GOARCH=$(arch) CGO_ENABLED=0 \
 	$(GO) build -ldflags="$(LDFLAGS)" -o $(OUT) $(CURDIR)/cmd/$(APP) &&\
-	echo -=OK=- 
+	echo -=OK=-
+endif
 
  
 .PHONY: sgroups-tf-v2	

@@ -4,7 +4,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/H-BF/sgroups/internal/models/sgroups"
+	"github.com/H-BF/sgroups/internal/domains/sgroups"
 	"github.com/H-BF/sgroups/internal/patterns"
 	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
 

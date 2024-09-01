@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	model "github.com/H-BF/sgroups/internal/models/sgroups"
+	model "github.com/H-BF/sgroups/internal/domains/sgroups"
 	"github.com/H-BF/sgroups/internal/patterns"
 
 	"github.com/hashicorp/go-memdb"

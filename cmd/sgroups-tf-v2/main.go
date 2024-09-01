@@ -5,15 +5,17 @@ import (
 	"flag"
 	"os"
 
-	"github.com/H-BF/sgroups/cmd/sgroups-tf-v2/internal/provider"
+	provider "github.com/H-BF/sgroups/internal/app/sgroups-tf-provider"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
 var (
-	address = "registry.terraform.io/h-bf/sgroups"
-	version = "v2"
+	// Address - address of TF provider in registry
+	Address = "registry.terraform.io/h-bf/sgroups"
+	// Version - the version of provider
+	Version = "v2"
 )
 
 func main() {
@@ -23,11 +25,11 @@ func main() {
 	flag.Parse()
 
 	opts := providerserver.ServeOpts{
-		Address: address,
+		Address: Address,
 		Debug:   debug,
 	}
 	ctx := context.Background()
-	if err := providerserver.Serve(ctx, provider.Factory(version), opts); err != nil {
+	if err := providerserver.Serve(ctx, provider.Factory(Version), opts); err != nil {
 		tflog.Error(ctx, err.Error())
 		os.Exit(1)
 	}

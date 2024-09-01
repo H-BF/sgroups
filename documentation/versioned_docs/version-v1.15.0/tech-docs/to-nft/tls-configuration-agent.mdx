@@ -50,16 +50,14 @@ sudo nano /etc/cmd/sgroups/tls-config.yaml
           authn:
             type: tls
             tls:
-              key-file: "/etc/ssl/private/key-file.pem"
-              cert-file: "/etc/ssl/certs/cert-file.pem"
               server:
                 verify: false
       ```
       <p>`type` - Допустимые значени: `none` или `tls`. При значении `none` tls отключен, при значении `tls` tls включен.</p>
 
-      <p>`key-file` - Необходимо указать полный путь `/etc/ssl/private/key-file.pem`  или относительный путь `./../key-file.pem` с названием файла ключа.</p>
+      <p>`tls.key-file` - В случае если на сервере стоит настройка `verify: cert-required/verify`, то в этом случае необходимо установить сертификаты со стороны клиента. Необходимо указать полный путь `/etc/ssl/private/key-file.pem`  или относительный путь `./../key-file.pem` с названием файла ключа.</p>
 
-      <p>`cert-file` - Необходимо указать полный путь `/etc/ssl/certs/cert-file.pem`  или относительный путь `./../cert-file.pem` с названием файла сертификата.</p>
+      <p>`tls.cert-file` - В случае если на сервере стоит настройка `verify: cert-required/verify`, то в этом случае необходимо установить сертификаты со стороны клиента. Необходимо указать полный путь `/etc/ssl/certs/cert-file.pem`  или относительный путь `./../cert-file.pem` с названием файла сертификата.</p>
 
       <p>`verify` - Допустимые значени: `true` или `false`. При значении `true` включен режим проверки сертификата сервера, при значении `false` данный режим отключен.</p>
     </TabItem>
@@ -71,8 +69,6 @@ sudo nano /etc/cmd/sgroups/tls-config.yaml
           authn:
             type: tls
             tls:
-              key-file: "/etc/ssl/private/key-file.pem"
-              cert-file: "/etc/ssl/certs/cert-file.pem"
               server:
                 verify: true
                 name: "server-name"
@@ -80,9 +76,9 @@ sudo nano /etc/cmd/sgroups/tls-config.yaml
       ```
       <p>`type` - Допустимые значени: `none` или `tls`. При значении `none` tls отключен, при значении `tls` tls включен.</p>
 
-      <p>`key-file` - Необходимо указать полный путь `/etc/ssl/private/key-file.pem`  или относительный путь `./../key-file.pem` с названием файла ключа.</p>
+      <p>`tls.key-file` - В случае если на сервере стоит настройка `verify: cert-required/verify`, то в этом случае необходимо установить сертификаты со стороны клиента. Необходимо указать полный путь `/etc/ssl/private/key-file.pem`  или относительный путь `./../key-file.pem` с названием файла ключа.</p>
 
-      <p>`cert-file` - Необходимо указать полный путь `/etc/ssl/certs/cert-file.pem`  или относительный путь `./../cert-file.pem` с названием файла сертификата.</p>
+      <p>`tls.cert-file` - В случае если на сервере стоит настройка `verify: cert-required/verify`, то в этом случае необходимо установить сертификаты со стороны клиента. Необходимо указать полный путь `/etc/ssl/certs/cert-file.pem`  или относительный путь `./../cert-file.pem` с названием файла сертификата.</p>
 
       <p>`verify` - Допустимые значени: `true` или `false`. При значении `true` включен режим проверки сертификата сервера, при значении `false` данный режим отключен.</p>
 
@@ -107,9 +103,9 @@ sudo nano /etc/cmd/sgroups/tls-config.yaml
       ```
       <p>`type` - Допустимые значени: `none` или `tls`. При значении `none` tls отключен, при значении `tls` tls включен.</p>
 
-      <p>`key-file` - Необходимо указать полный путь `/etc/ssl/private/key-file.pem`  или относительный путь `./../key-file.pem` с названием файла ключа.</p>
+      <p>`key-file` - В случае если на сервере стоит настройка `verify: cert-required/verify`, то в этом случае необходимо установить сертификаты со стороны клиента. Необходимо указать полный путь `/etc/ssl/private/key-file.pem`  или относительный путь `./../key-file.pem` с названием файла ключа.</p>
 
-      <p>`cert-file` - Необходимо указать полный путь `/etc/ssl/certs/cert-file.pem`  или относительный путь `./../cert-file.pem` с названием файла сертификата.</p>
+      <p>`cert-file` - В случае если на сервере стоит настройка `verify: cert-required/verify`, то в этом случае необходимо установить сертификаты со стороны клиента. Необходимо указать полный путь `/etc/ssl/certs/cert-file.pem`  или относительный путь `./../cert-file.pem` с названием файла сертификата.</p>
 
       <p>`verify` - Допустимые значени: `true` или `false`. При значении `true` включен режим проверки сертификата сервера, при значении `false` данный режим отключен.</p>
 
