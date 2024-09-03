@@ -8,9 +8,9 @@ import (
 	"os"
 	"time"
 
-	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
-	"github.com/H-BF/sgroups/internal/app/sgroups-tf-provider/validators"
-	client "github.com/H-BF/sgroups/internal/grpc"
+	sgAPI "github.com/H-BF/sgroups/v2/internal/api/sgroups"
+	"github.com/H-BF/sgroups/v2/internal/app/sgroups-tf-provider/validators"
+	client "github.com/H-BF/sgroups/v2/internal/grpc"
 
 	"github.com/hashicorp/terraform-plugin-framework-validators/setvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"

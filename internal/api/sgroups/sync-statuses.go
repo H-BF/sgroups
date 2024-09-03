@@ -4,9 +4,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/H-BF/sgroups/internal/domains/sgroups"
-	"github.com/H-BF/sgroups/internal/patterns"
-	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
+	"github.com/H-BF/sgroups/v2/internal/domains/sgroups"
+	"github.com/H-BF/sgroups/v2/internal/patterns"
+	registry "github.com/H-BF/sgroups/v2/internal/registry/sgroups"
 
 	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	"google.golang.org/protobuf/types/known/emptypb"

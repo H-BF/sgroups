@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
-	g "github.com/H-BF/sgroups/internal/grpc"
-	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
+	sgAPI "github.com/H-BF/sgroups/v2/internal/api/sgroups"
+	g "github.com/H-BF/sgroups/v2/internal/grpc"
+	registry "github.com/H-BF/sgroups/v2/internal/registry/sgroups"
 
 	pkgNet "github.com/H-BF/corlib/pkg/net"
 	corlib "github.com/H-BF/corlib/server"

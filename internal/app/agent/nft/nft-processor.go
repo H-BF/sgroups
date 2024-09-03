@@ -3,7 +3,7 @@ package nft
 import (
 	"context"
 
-	"github.com/H-BF/sgroups/internal/app/agent/nft/resources"
+	"github.com/H-BF/sgroups/v2/internal/app/agent/nft/resources"
 
 	"github.com/H-BF/corlib/logger"
 	sgAPI "github.com/H-BF/protos/pkg/api/sgroups"

@@ -3,8 +3,8 @@ package sgroups
 import (
 	"context"
 
-	"github.com/H-BF/sgroups/internal/app"
-	"github.com/H-BF/sgroups/internal/domains/sgroups"
+	"github.com/H-BF/sgroups/v2/internal/app"
+	"github.com/H-BF/sgroups/v2/internal/domains/sgroups"
 
 	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	"google.golang.org/grpc/codes"

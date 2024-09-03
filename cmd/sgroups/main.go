@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/H-BF/sgroups/internal/app"
-	. "github.com/H-BF/sgroups/internal/app/sgroups-server" //nolint:revive
+	"github.com/H-BF/sgroups/v2/internal/app"
+	. "github.com/H-BF/sgroups/v2/internal/app/sgroups-server" //nolint:revive
 
 	_ "github.com/H-BF/corlib/app/identity"
 	"github.com/H-BF/corlib/logger"

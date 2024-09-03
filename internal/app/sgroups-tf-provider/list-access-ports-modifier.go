@@ -3,7 +3,7 @@ package provider
 import (
 	"context"
 
-	model "github.com/H-BF/sgroups/internal/domains/sgroups"
+	model "github.com/H-BF/sgroups/v2/internal/domains/sgroups"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"

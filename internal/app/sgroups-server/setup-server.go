@@ -3,9 +3,9 @@ package server
 import (
 	"context"
 
-	"github.com/H-BF/sgroups/internal/api/sgroups"
-	"github.com/H-BF/sgroups/internal/app"
-	_ "github.com/H-BF/sgroups/internal/grpc"
+	"github.com/H-BF/sgroups/v2/internal/api/sgroups"
+	"github.com/H-BF/sgroups/v2/internal/app"
+	_ "github.com/H-BF/sgroups/v2/internal/grpc"
 
 	config "github.com/H-BF/corlib/pkg/plain-config"
 	"github.com/H-BF/corlib/server"

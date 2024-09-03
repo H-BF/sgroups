@@ -1,4 +1,4 @@
-module github.com/H-BF/sgroups
+module github.com/H-BF/sgroups/v2
 
 go 1.21
 

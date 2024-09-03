@@ -1,7 +1,7 @@
 package sgroups
 
 import (
-	model "github.com/H-BF/sgroups/internal/domains/sgroups"
+	model "github.com/H-BF/sgroups/v2/internal/domains/sgroups"
 
 	sg "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/pkg/errors"

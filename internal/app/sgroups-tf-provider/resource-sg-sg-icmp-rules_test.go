@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/H-BF/sgroups/internal/app/sgroups-tf-provider/fixtures"
-	domain "github.com/H-BF/sgroups/internal/domains/sgroups"
+	"github.com/H-BF/sgroups/v2/internal/app/sgroups-tf-provider/fixtures"
+	domain "github.com/H-BF/sgroups/v2/internal/domains/sgroups"
 
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"

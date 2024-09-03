@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/H-BF/sgroups/internal/app"
-	appdb "github.com/H-BF/sgroups/internal/registry/sgroups"
+	"github.com/H-BF/sgroups/v2/internal/app"
+	appdb "github.com/H-BF/sgroups/v2/internal/registry/sgroups"
 
 	"github.com/H-BF/corlib/pkg/atomic"
 	"github.com/pkg/errors"

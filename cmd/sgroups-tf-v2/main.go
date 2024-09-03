@@ -5,7 +5,7 @@ import (
 	"flag"
 	"os"
 
-	provider "github.com/H-BF/sgroups/internal/app/sgroups-tf-provider"
+	provider "github.com/H-BF/sgroups/v2/internal/app/sgroups-tf-provider"
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-log/tflog"

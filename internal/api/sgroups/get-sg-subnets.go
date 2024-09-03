@@ -3,8 +3,8 @@ package sgroups
 import (
 	"context"
 
-	model "github.com/H-BF/sgroups/internal/domains/sgroups"
-	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
+	model "github.com/H-BF/sgroups/v2/internal/domains/sgroups"
+	registry "github.com/H-BF/sgroups/v2/internal/registry/sgroups"
 
 	"github.com/H-BF/protos/pkg/api/common"
 	sg "github.com/H-BF/protos/pkg/api/sgroups"

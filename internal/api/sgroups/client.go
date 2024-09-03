@@ -3,7 +3,7 @@ package sgroups
 import (
 	"context"
 
-	grpc_client "github.com/H-BF/sgroups/internal/grpc"
+	grpc_client "github.com/H-BF/sgroups/v2/internal/grpc"
 
 	grpcClient "github.com/H-BF/corlib/client/grpc"
 	sg "github.com/H-BF/protos/pkg/api/sgroups"

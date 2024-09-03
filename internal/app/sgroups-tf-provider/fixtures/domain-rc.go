@@ -4,8 +4,8 @@ import (
 	"reflect"
 	"sync"
 
-	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
-	domain "github.com/H-BF/sgroups/internal/domains/sgroups"
+	sgAPI "github.com/H-BF/sgroups/v2/internal/api/sgroups"
+	domain "github.com/H-BF/sgroups/v2/internal/domains/sgroups"
 
 	"github.com/H-BF/corlib/pkg/dict"
 	"github.com/H-BF/corlib/pkg/functional"

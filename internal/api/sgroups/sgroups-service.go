@@ -6,8 +6,8 @@ import (
 	"net/url"
 	"path"
 
-	"github.com/H-BF/sgroups/internal/patterns"
-	registry "github.com/H-BF/sgroups/internal/registry/sgroups"
+	"github.com/H-BF/sgroups/v2/internal/patterns"
+	registry "github.com/H-BF/sgroups/v2/internal/registry/sgroups"
 
 	"github.com/H-BF/corlib/server"
 	sgPkg "github.com/H-BF/protos/pkg"

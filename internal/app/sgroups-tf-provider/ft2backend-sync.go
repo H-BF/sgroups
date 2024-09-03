@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
+	sgAPI "github.com/H-BF/sgroups/v2/internal/api/sgroups"
 
 	"github.com/H-BF/corlib/pkg/dict"
 	"github.com/H-BF/protos/pkg/api/common"

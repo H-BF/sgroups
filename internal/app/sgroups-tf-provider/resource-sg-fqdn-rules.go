@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
-	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
-	model "github.com/H-BF/sgroups/internal/domains/sgroups"
+	sgAPI "github.com/H-BF/sgroups/v2/internal/api/sgroups"
+	model "github.com/H-BF/sgroups/v2/internal/domains/sgroups"
 
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"

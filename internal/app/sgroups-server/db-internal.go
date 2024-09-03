@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 
-	appdb "github.com/H-BF/sgroups/internal/registry/sgroups"
+	appdb "github.com/H-BF/sgroups/v2/internal/registry/sgroups"
 
 	"github.com/pkg/errors"
 )

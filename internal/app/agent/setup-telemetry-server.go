@@ -3,7 +3,7 @@ package agent
 import (
 	"context"
 
-	"github.com/H-BF/sgroups/internal/app"
+	"github.com/H-BF/sgroups/v2/internal/app"
 
 	"github.com/H-BF/corlib/server"
 	"github.com/prometheus/client_golang/prometheus"

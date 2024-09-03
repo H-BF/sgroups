@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
-	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
+	sgAPI "github.com/H-BF/sgroups/v2/internal/api/sgroups"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"

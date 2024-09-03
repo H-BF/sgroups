@@ -4,9 +4,9 @@ import (
 	"context"
 	"sync"
 
-	conv "github.com/H-BF/sgroups/internal/api/sgroups"
-	"github.com/H-BF/sgroups/internal/app/agent"
-	model "github.com/H-BF/sgroups/internal/domains/sgroups"
+	conv "github.com/H-BF/sgroups/v2/internal/api/sgroups"
+	"github.com/H-BF/sgroups/v2/internal/app/agent"
+	model "github.com/H-BF/sgroups/v2/internal/domains/sgroups"
 
 	"github.com/H-BF/corlib/pkg/dict"
 	"github.com/H-BF/corlib/pkg/parallel"

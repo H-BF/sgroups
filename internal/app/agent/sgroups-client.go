@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
-	grpc_client "github.com/H-BF/sgroups/internal/grpc"
+	sgAPI "github.com/H-BF/sgroups/v2/internal/api/sgroups"
+	grpc_client "github.com/H-BF/sgroups/v2/internal/grpc"
 
 	config "github.com/H-BF/corlib/pkg/plain-config"
 

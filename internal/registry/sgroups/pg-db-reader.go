@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	model "github.com/H-BF/sgroups/internal/domains/sgroups"
-	"github.com/H-BF/sgroups/internal/registry/sgroups/pg"
+	model "github.com/H-BF/sgroups/v2/internal/domains/sgroups"
+	"github.com/H-BF/sgroups/v2/internal/registry/sgroups/pg"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"

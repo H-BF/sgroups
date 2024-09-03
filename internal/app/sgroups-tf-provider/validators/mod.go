@@ -7,7 +7,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/H-BF/sgroups/internal/patterns"
+	"github.com/H-BF/sgroups/v2/internal/patterns"
 
 	pkgNet "github.com/H-BF/corlib/pkg/net"
 	"github.com/hashicorp/terraform-plugin-framework/diag"

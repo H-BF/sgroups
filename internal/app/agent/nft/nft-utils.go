@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/H-BF/sgroups/internal/app/agent"
-	model "github.com/H-BF/sgroups/internal/domains/sgroups"
+	"github.com/H-BF/sgroups/v2/internal/app/agent"
+	model "github.com/H-BF/sgroups/v2/internal/domains/sgroups"
 
 	"github.com/H-BF/corlib/pkg/backoff"
 	nftrc "github.com/H-BF/corlib/pkg/nftables"

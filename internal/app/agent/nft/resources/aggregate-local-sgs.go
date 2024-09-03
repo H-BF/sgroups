@@ -6,8 +6,8 @@ import (
 	"sort"
 	"sync"
 
-	conv "github.com/H-BF/sgroups/internal/api/sgroups"
-	model "github.com/H-BF/sgroups/internal/domains/sgroups"
+	conv "github.com/H-BF/sgroups/v2/internal/api/sgroups"
+	model "github.com/H-BF/sgroups/v2/internal/domains/sgroups"
 
 	"github.com/H-BF/corlib/pkg/dict"
 	"github.com/H-BF/corlib/pkg/parallel"

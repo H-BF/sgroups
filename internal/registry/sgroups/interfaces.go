@@ -3,8 +3,8 @@ package sgroups
 import (
 	"context"
 
-	model "github.com/H-BF/sgroups/internal/domains/sgroups"
-	"github.com/H-BF/sgroups/internal/patterns"
+	model "github.com/H-BF/sgroups/v2/internal/domains/sgroups"
+	"github.com/H-BF/sgroups/v2/internal/patterns"
 
 	"github.com/pkg/errors"
 )

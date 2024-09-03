@@ -3,8 +3,8 @@ package resources
 import (
 	"context"
 
-	conv "github.com/H-BF/sgroups/internal/api/sgroups"
-	model "github.com/H-BF/sgroups/internal/domains/sgroups"
+	conv "github.com/H-BF/sgroups/v2/internal/api/sgroups"
+	model "github.com/H-BF/sgroups/v2/internal/domains/sgroups"
 
 	"github.com/H-BF/corlib/pkg/dict"
 	sgAPI "github.com/H-BF/protos/pkg/api/sgroups"

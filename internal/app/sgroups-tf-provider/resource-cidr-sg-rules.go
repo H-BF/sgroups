@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
-	"github.com/H-BF/sgroups/internal/app/sgroups-tf-provider/validators"
-	model "github.com/H-BF/sgroups/internal/domains/sgroups"
+	sgAPI "github.com/H-BF/sgroups/v2/internal/api/sgroups"
+	"github.com/H-BF/sgroups/v2/internal/app/sgroups-tf-provider/validators"
+	model "github.com/H-BF/sgroups/v2/internal/domains/sgroups"
 
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
 	"github.com/ahmetb/go-linq/v3"

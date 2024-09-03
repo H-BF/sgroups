@@ -6,8 +6,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/H-BF/sgroups/internal/patterns"
-	"github.com/H-BF/sgroups/internal/registry/sgroups/pg"
+	"github.com/H-BF/sgroups/v2/internal/patterns"
+	"github.com/H-BF/sgroups/v2/internal/registry/sgroups/pg"
 
 	atm "github.com/H-BF/corlib/pkg/atomic"
 	"github.com/jackc/pgx/v5"

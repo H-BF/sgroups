@@ -6,7 +6,7 @@ import (
 	"io"
 	"sync"
 
-	sgm "github.com/H-BF/sgroups/internal/domains/sgroups"
+	sgm "github.com/H-BF/sgroups/v2/internal/domains/sgroups"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/pkg/errors"

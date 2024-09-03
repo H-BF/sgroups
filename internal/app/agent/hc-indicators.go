@@ -3,7 +3,7 @@ package agent
 import (
 	"sync"
 
-	"github.com/H-BF/sgroups/internal/app"
+	"github.com/H-BF/sgroups/v2/internal/app"
 )
 
 type hcIndicator uint8

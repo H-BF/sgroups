@@ -4,7 +4,7 @@ import (
 	"net"
 	"reflect"
 
-	model "github.com/H-BF/sgroups/internal/domains/sgroups"
+	model "github.com/H-BF/sgroups/v2/internal/domains/sgroups"
 
 	"github.com/pkg/errors"
 )

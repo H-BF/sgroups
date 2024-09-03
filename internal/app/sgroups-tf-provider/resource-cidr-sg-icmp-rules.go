@@ -8,8 +8,8 @@ import (
 
 	"github.com/H-BF/protos/pkg/api/common"
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
-	sgAPI "github.com/H-BF/sgroups/internal/api/sgroups"
-	"github.com/H-BF/sgroups/internal/app/sgroups-tf-provider/validators"
+	sgAPI "github.com/H-BF/sgroups/v2/internal/api/sgroups"
+	"github.com/H-BF/sgroups/v2/internal/app/sgroups-tf-provider/validators"
 
 	"github.com/ahmetb/go-linq/v3"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"

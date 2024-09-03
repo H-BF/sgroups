@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/H-BF/sgroups/internal/app"
+	"github.com/H-BF/sgroups/v2/internal/app"
 
 	"github.com/H-BF/corlib/logger"
 	"github.com/H-BF/corlib/pkg/atomic"

@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/url"
 
-	appdb "github.com/H-BF/sgroups/internal/registry/sgroups"
+	appdb "github.com/H-BF/sgroups/v2/internal/registry/sgroups"
 )
 
 func newPostgresDB(ctx context.Context) (r appdb.Registry, err error) {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	protos "github.com/H-BF/protos/pkg/api/sgroups"
-	"github.com/H-BF/sgroups/internal/app/sgroups-tf-provider/validators"
+	"github.com/H-BF/sgroups/v2/internal/app/sgroups-tf-provider/validators"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"

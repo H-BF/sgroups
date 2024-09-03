@@ -5,7 +5,7 @@ import (
 	"net"
 	"time"
 
-	model "github.com/H-BF/sgroups/internal/domains/sgroups"
+	model "github.com/H-BF/sgroups/v2/internal/domains/sgroups"
 
 	"github.com/H-BF/corlib/logger"
 	"github.com/H-BF/corlib/pkg/dict"
