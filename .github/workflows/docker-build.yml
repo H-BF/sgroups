@@ -29,7 +29,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
       
       - name: Build and push goose
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile.goose
@@ -37,7 +37,7 @@ jobs:
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/sgroups.goose:${{ github.head_ref || github.ref_name }}-${{ steps.short-sha.outputs.sha }} 
 
       - name: Build and push sgroups
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile.sgroups
@@ -45,7 +45,7 @@ jobs:
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/sgroups.server:${{ github.head_ref || github.ref_name }}-${{ steps.short-sha.outputs.sha }}
 
       - name: Build and push terraform
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile.terraform
@@ -53,7 +53,7 @@ jobs:
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/sgroups.terraform:${{ github.head_ref || github.ref_name }}-${{ steps.short-sha.outputs.sha }}
 
       - name: Build and push to-nft
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile.to-nft

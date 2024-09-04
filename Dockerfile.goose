@@ -1,15 +1,16 @@
-ARG GO_VER
-ARG ALPINE_VER
+ARG GO_VER=1.22
+ARG ALPINE_VER=3.20
+ARG ALPINE_MIRROR=https://mirror.yandex.ru/mirrors/alpine/v${ALPINE_VER}/main
 
 # first build stage
 # by default uses alpine-based image
-FROM golang:1.21-alpine3.19 as builder
+FROM golang:${GO_VER}-alpine${ALPINE_VER} as builder
 
 # copy all source code for build
 WORKDIR /src
 
 # install updates and build executable
-RUN apk upgrade --no-cache -X https://mirror.yandex.ru/mirrors/alpine/v3.19/main && \
+RUN apk upgrade --no-cache -X ${ALPINE_MIRROR} && \
     apk add make git
 
 COPY . .
@@ -17,13 +18,13 @@ COPY . .
 RUN make .install-goose
 
 # second release stage
-FROM alpine:3.19
+FROM alpine:${ALPINE_VER}
 
 # create user other than root and install updated
 RUN addgroup -g 101 app && \
     adduser -H -u 101 -G app -s /bin/sh -D app && \
-    apk update --no-cache -X https://mirror.yandex.ru/mirrors/alpine/v3.19/main && \
-    apk upgrade --no-cache -X https://mirror.yandex.ru/mirrors/alpine/v3.19/main
+    apk update --no-cache -X ${ALPINE_MIRROR} && \
+    apk upgrade --no-cache -X ${ALPINE_MIRROR}
 
 # place all necessary executables and other files into /app directory
 WORKDIR /app/
