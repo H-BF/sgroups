@@ -9,8 +9,8 @@ FROM golang:${GO_VER}-alpine${ALPINE_VER} AS builder
 WORKDIR /src
 
 # install updates and build executable
-RUN apk update --no-cache -X https://mirror.yandex.ru/mirrors/alpine/v${ALPINE_VER}/main
-RUN apk upgrade --no-cache -X https://mirror.yandex.ru/mirrors/alpine/v${ALPINE_VER}/main
+RUN apk update --no-cache -X https://mirror.yandex.ru/mirrors/alpine/v3.20/main
+RUN apk upgrade --no-cache -X https://mirror.yandex.ru/mirrors/alpine/v3.20/main
 RUN apk add make git
 
 COPY . .
@@ -19,13 +19,12 @@ RUN make .install-goose
 
 # second release stage
 FROM alpine:${ALPINE_VER}
-ARG ALPINE_VER
 
 # create user other than root and install updated
 RUN addgroup -g 101 app && \
     adduser -H -u 101 -G app -s /bin/sh -D app && \
-    apk update --no-cache -X https://mirror.yandex.ru/mirrors/alpine/v${ALPINE_VER}/main && \
-    apk upgrade --no-cache -X https://mirror.yandex.ru/mirrors/alpine/v${ALPINE_VER}/main
+    apk update --no-cache -X https://mirror.yandex.ru/mirrors/alpine/v3.20/main && \
+    apk upgrade --no-cache -X https://mirror.yandex.ru/mirrors/alpine/v3.20/main
 
 # place all necessary executables and other files into /app directory
 WORKDIR /app/
