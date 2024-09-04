@@ -20,6 +20,8 @@ RUN make .install-goose
 
 # second release stage
 FROM alpine:${ALPINE_VER}
+ARG ALPINE_VER
+ARG ALPINE_MIRROR
 
 # create user other than root and install updated
 RUN addgroup -g 101 app && \
