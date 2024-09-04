@@ -22,10 +22,10 @@ RUN make .install-goose
 FROM alpine:${ALPINE_VER}
 
 # create user other than root and install updated
-RUN apk update --no-cache -X ${ALPINE_MIRROR}
-RUN apk upgrade --no-cache -X ${ALPINE_MIRROR}
 RUN addgroup -g 101 app && \
     adduser -H -u 101 -G app -s /bin/sh -D app
+RUN apk update --no-cache -X ${ALPINE_MIRROR}
+RUN apk upgrade --no-cache -X ${ALPINE_MIRROR}    
 
 # place all necessary executables and other files into /app directory
 WORKDIR /app/
