@@ -1,6 +1,6 @@
-ARG GO_VER=1.22
-ARG ALPINE_VER=3.20
-ARG ALPINE_MIRROR=https://mirror.yandex.ru/mirrors/alpine/v${ALPINE_VER}/main
+ARG GO_VER="1.22"
+ARG ALPINE_VER="3.20"
+ARG ALPINE_MIRROR="https://mirror.yandex.ru/mirrors/alpine/v${ALPINE_VER}/main/"
 
 # first build stage
 # by default uses alpine-based image
