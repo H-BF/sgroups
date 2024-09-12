@@ -42,7 +42,12 @@ func (o PortRange) ToModel(allowNull bool) (sgm.PortRange, error) {
 		}
 		return nil, errors.New("we got unexpected null port range from PG")
 	}
-	if o.Lower < 0 || o.Lower > o.Upper || o.Upper > PortMumber(^sgm.PortNumber(0)) {
+	const maxPort = PortMumber(^sgm.PortNumber(0))
+	if o.Upper == (maxPort+1) && o.UpperType == pgtype.Exclusive {
+		o.Upper -= 1
+		o.UpperType = pgtype.Inclusive
+	}
+	if o.Lower < 0 || o.Lower > o.Upper || o.Upper > maxPort {
 		return nil, errors.Errorf("we got invalid invalid port range from PG: %v - %v", o.Lower, o.Upper)
 	}
 	var (
