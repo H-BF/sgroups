@@ -14,7 +14,7 @@ export const Header: FC = () => (
       <p>
         Создавайте защищенные сети в вашей организации за пару минут, используя весь функционал <span>sgroups</span> для сетевой микросегментации.
       </p>
-      <a href="/sgroups/info/introduction/">
+      <a href="/info/introduction/">
         <button className={styles.button} type="button">
           Начать
         </button>

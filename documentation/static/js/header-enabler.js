@@ -1,12 +1,12 @@
 const createMedusScript = () => {
   const element = document.createElement('script')
-  element.src = '/sgroups/js/header.bundle.js'
+  element.src = '/js/header.bundle.js'
   element.type = 'text/javascript'
   document.querySelector('body').appendChild(element)
 }
 
 const injectOnLandingLoad = () => {
-  if (document.location.pathname === '/sgroups/') {
+  if (document.location.pathname === '/') {
     document.querySelector('footer').style.display = 'none'
     createMedusScript()
   }
@@ -20,7 +20,7 @@ const observeUrlChange = () => {
   const observer = new MutationObserver(mutations => {
     if (oldHref !== document.location.href) {
       oldHref = document.location.href
-      if (document.location.pathname === '/sgroups/') {
+      if (document.location.pathname === '/') {
         document.getElementById('medusa-root').style.display = 'block'
         document.querySelector('footer').style.display = 'none'
         if (!scriptInjected) {

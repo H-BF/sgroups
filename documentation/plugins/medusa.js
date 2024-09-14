@@ -9,7 +9,7 @@ export default function () {
             tagName: 'script',
             attributes: {
               charset: 'utf-8',
-              src: '/sgroups/js/header-enabler.js',
+              src: '/js/header-enabler.js',
             },
           },
         ],

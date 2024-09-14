@@ -115,7 +115,7 @@ const config: Config = {
 
   scripts: [
     {
-      src: '/sgroups/js/observer.js',
+      src: '/js/observer.js',
       async: false,
     },
   ],
