@@ -8,7 +8,7 @@ const config: Config = {
 
   // Set the production url of your site here
   url: 'http://localhost',
-  baseUrl: '/sgroups/',
+  baseUrl: '/',
 
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
