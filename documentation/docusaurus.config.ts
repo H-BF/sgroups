@@ -78,7 +78,7 @@ const config: Config = {
       logo: {
         src: 'img/logo.jpg',
       },
-      title: 'S.Groups',
+      title: 'SGroups',
       items: [
         {
           type: 'docSidebar',
@@ -104,7 +104,7 @@ const config: Config = {
     },
     footer: {
       style: 'dark',
-      copyright: `Copyright © ${new Date().getFullYear()} Swarm. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Исключительные права на ПО принадлежат ООО «ПРТ» (ИНН 7735199547; ОГРН 1237700341185)`,
     },
     prism: {
       theme: prismThemes.github,
