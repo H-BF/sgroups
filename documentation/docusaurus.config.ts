@@ -37,8 +37,13 @@ const config: Config = {
               process.env.DOC_INCLUDE_CURRENT_VERSION.toLowerCase() === 'true') ||
             false,
         },
-        blog: false,
+        blog: {
+          blogTitle: 'Docusaurus blog!',
+          blogDescription: 'A Docusaurus powered blog!',
+          postsPerPage: 'ALL',
+        },
         pages: {
+          
           path: 'src/pages',
           routeBasePath: '',
           include: ['**/*.{js,jsx,ts,tsx,md,mdx}'],
@@ -80,6 +85,7 @@ const config: Config = {
       },
       title: 'SGroups',
       items: [
+        {to: 'blog', label: 'Blog', position: 'left'}, // or position: 'right'
         {
           type: 'docSidebar',
           sidebarId: 'informationSidebar',
