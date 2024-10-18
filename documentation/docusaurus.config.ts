@@ -110,9 +110,22 @@ const config: Config = {
     },
     footer: {
       style: 'dark',
-      copyright: `Copyright © ${new Date().getFullYear()} Исключительные права на ПО принадлежат ООО «ПРТ» (ИНН 7735199547; ОГРН 1237700341185)`,
-    },
-    prism: {
+      links: [
+        {
+          html: `
+           <div>
+              <a href="/docs/polzovatelskoe-soglashenie.pdf" target="_blank" rel="noopener noreferrer">
+                Пользовательское соглашение
+              </a>
+              <p>
+                Copyright © ${new Date().getFullYear()} Исключительные права на ПО принадлежат ООО «ПРТ» (ИНН 7735199547; ОГРН 1237700341185). Все права защищены.
+              </p>
+            </div>
+            `,
+        },
+      ],
+  },
+      prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
       additionalLanguages: ['bash', 'hcl', 'json', 'docker'],
