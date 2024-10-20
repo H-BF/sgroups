@@ -1,0 +1,79 @@
+
+<details>
+<summary>ETCD Certificates</summary>
+
+
+```bash
+mkdir -p ${BASE_K8S_PATH}/pki/etcd
+```
+
+```bash
+cat <<EOF > ${BASE_K8S_PATH}/cfssl/etcd-client.json
+{
+  "CN": "kube-etcd-healthcheck-client",
+  "key": {
+    "algo": "rsa",
+    "size": 4096
+  },
+  "names": [
+    {
+      "O": "system:masters",
+      "OU": "ETCD"
+    }
+  ]
+}
+
+EOF
+```
+
+```bash
+cat <<EOF > ${BASE_K8S_PATH}/cfssl/etcd-server.json
+{
+  "CN": "${FULL_HOST_NAME}",
+  "key": {
+    "algo": "rsa",
+    "size": 4096
+  },
+  "hosts": [
+    "localhost",
+    "127.0.0.1",
+    "${HOST_NAME}",
+    "${FULL_HOST_NAME}",
+    "${LOCAL_ADDRESS}",
+    "0:0:0:0:0:0:0:1"
+  ]
+}
+
+EOF
+```
+
+```bash
+cat <<EOF > ${BASE_K8S_PATH}/cfssl/etcd-peer.json
+{
+  "CN": "${FULL_HOST_NAME}",
+  "key": {
+    "algo": "rsa",
+    "size": 4096
+  },
+  "hosts": [
+    "localhost",
+    "127.0.0.1",
+    "${HOST_NAME}",
+    "${FULL_HOST_NAME}",
+    "${LOCAL_ADDRESS}",
+    "0:0:0:0:0:0:0:1"
+  ]
+}
+
+EOF
+```
+
+```bash
+cfssl gencert -ca=${BASE_K8S_PATH}/pki/ca/etcd-ca.pem -ca-key=${BASE_K8S_PATH}/pki/ca/etcd-ca-key.pem -config=${BASE_K8S_PATH}/cfssl/etcd-ca-config.json -profile=client ${BASE_K8S_PATH}/cfssl/etcd-client.json | cfssljson -bare ${BASE_K8S_PATH}/pki/etcd/client
+
+cfssl gencert -ca=${BASE_K8S_PATH}/pki/ca/etcd-ca.pem -ca-key=${BASE_K8S_PATH}/pki/ca/etcd-ca-key.pem -config=${BASE_K8S_PATH}/cfssl/etcd-ca-config.json -profile=peer ${BASE_K8S_PATH}/cfssl/etcd-server.json | cfssljson -bare ${BASE_K8S_PATH}/pki/etcd/server
+
+cfssl gencert -ca=${BASE_K8S_PATH}/pki/ca/etcd-ca.pem -ca-key=${BASE_K8S_PATH}/pki/ca/etcd-ca-key.pem -config=${BASE_K8S_PATH}/cfssl/etcd-ca-config.json -profile=peer ${BASE_K8S_PATH}/cfssl/etcd-server.json | cfssljson -bare ${BASE_K8S_PATH}/pki/etcd/peer
+```
+
+</details>

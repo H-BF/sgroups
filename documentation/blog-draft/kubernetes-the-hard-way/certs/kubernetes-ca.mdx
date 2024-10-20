@@ -1,0 +1,59 @@
+<details>
+<summary>Kubernetes CA</summary>
+
+
+```bash
+mkdir -p ${BASE_K8S_PATH}/cfssl/
+mkdir -p ${BASE_K8S_PATH}/pki/ca
+```
+
+```bash
+cat <<EOF > ${BASE_K8S_PATH}/cfssl/kubernetes-ca-config.json
+{
+  "signing": {
+    "default": {
+      "expiry": "8760h",
+      "usages": ["digital signature", "key encipherment"]
+    },
+    "profiles": {
+      "client": {
+        "usages": ["digital signature", "key encipherment", "client auth"],
+        "expiry": "8760h"
+      },
+      "server": {
+        "usages": ["digital signature", "key encipherment", "server auth"],
+        "expiry": "8760h"
+      },
+      "peer": {
+        "usages": ["digital signature", "key encipherment", "server auth", "client auth"],
+        "expiry": "8760h"
+      }
+    }
+  }
+}
+EOF
+```
+
+```bash
+cat <<EOF > ${BASE_K8S_PATH}/cfssl/kubernetes-ca-csr.json
+{
+  "CN": "Kubernetes CA",
+  "key": {
+    "algo": "rsa",
+    "size": 4096
+  },
+  "names": [
+    {
+      "O": "Kubernetes",
+      "OU": "CA"
+    }
+  ]
+}
+
+EOF
+```
+
+```bash
+cfssl gencert -initca ${BASE_K8S_PATH}/cfssl/kubernetes-ca-csr.json | cfssljson -bare ${BASE_K8S_PATH}/pki/ca/kubernetes-ca
+```
+</details>

@@ -1,0 +1,151 @@
+<details>
+<summary>KubeAPI</summary>
+
+```bash
+mkdir -p ${BASE_K8S_PATH}/manifests
+cat <<EOF > ${BASE_K8S_PATH}/manifests/kube-apiserver.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    kubeadm.kubernetes.io/kube-apiserver.advertise-address.endpoint: ${LOCAL_ADDRESS}:${KUBE_APISERVER_PORT}
+  creationTimestamp: null
+  labels:
+    component: kube-apiserver
+    tier: control-plane
+  name: kube-apiserver
+  namespace: kube-system
+spec:
+  containers:
+  - command:
+    - kube-apiserver
+    - --advertise-address=${LOCAL_ADDRESS}
+    - --allow-privileged=true
+    - --authorization-mode=Node,RBAC
+    - --bind-address=0.0.0.0
+    - --client-ca-file=${BASE_K8S_PATH}/pki/ca/kubernetes-ca.pem
+    - --enable-admission-plugins=NodeRestriction
+    - --enable-bootstrap-token-auth=true
+    - --etcd-cafile=${BASE_K8S_PATH}/pki/ca/etcd-ca.pem
+    - --etcd-certfile=${BASE_K8S_PATH}/pki/kubeAPI/client-etcd.pem
+    - --etcd-keyfile=${BASE_K8S_PATH}/pki/kubeAPI/client-etcd-key.pem
+    - --etcd-servers=${ETCD_SERVERS}
+    - --kubelet-client-certificate=${BASE_K8S_PATH}/pki/kubeAPI/client-kubelet.pem
+    - --kubelet-client-key=${BASE_K8S_PATH}/pki/kubeAPI/client-kubelet-key.pem
+    - --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname
+    - --proxy-client-cert-file=${BASE_K8S_PATH}/pki/kubeAPI/client-front-proxy.pem
+    - --proxy-client-key-file=${BASE_K8S_PATH}/pki/kubeAPI/client-front-proxy-key.pem
+    - --requestheader-allowed-names=front-proxy-client
+    - --requestheader-client-ca-file=${BASE_K8S_PATH}/pki/ca/front-proxy-ca.pem
+    - --requestheader-extra-headers-prefix=X-Remote-Extra-
+    - --requestheader-group-headers=X-Remote-Group
+    - --requestheader-username-headers=X-Remote-User
+    - --secure-port=${KUBE_APISERVER_PORT}
+    - --service-account-issuer=https://kubernetes.default.svc.${BASE_CLUSTER_DOMAIN}
+    - --service-account-key-file=${BASE_K8S_PATH}/pki/kubeAPI/sa.pub
+    - --service-account-signing-key-file=${BASE_K8S_PATH}/pki/kubeAPI/sa.key
+    - --service-cluster-ip-range=${SERVICE_CIDR}
+    - --tls-cert-file=${BASE_K8S_PATH}/pki/kubeAPI/server.pem
+    - --tls-private-key-file=${BASE_K8S_PATH}/pki/kubeAPI/server-key.pem
+    image: k8s.gcr.io/kube-apiserver:${KUBERNETES_VERSION}
+    imagePullPolicy: IfNotPresent
+    livenessProbe:
+      failureThreshold: 8
+      httpGet:
+        host: ${LOCAL_ADDRESS}
+        path: /livez
+        port: ${KUBE_APISERVER_PORT}
+        scheme: HTTPS
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 15
+    name: kube-apiserver
+    readinessProbe:
+      failureThreshold: 3
+      httpGet:
+        host: ${LOCAL_ADDRESS}
+        path: /readyz
+        port: ${KUBE_APISERVER_PORT}
+        scheme: HTTPS
+      periodSeconds: 1
+      timeoutSeconds: 15
+    resources:
+      requests:
+        cpu: 250m
+    startupProbe:
+      failureThreshold: 24
+      httpGet:
+        host: ${LOCAL_ADDRESS}
+        path: /livez
+        port: ${KUBE_APISERVER_PORT}
+        scheme: HTTPS
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 15
+    volumeMounts:
+    - mountPath: /etc/ssl/certs
+      name: ca-certs
+      readOnly: true
+    - mountPath: /etc/ca-certificates
+      name: etc-ca-certificates
+      readOnly: true
+    - mountPath: /var/log/kubernetes/audit/
+      name: k8s-audit
+    - mountPath: ${BASE_K8S_PATH}/pki/ca
+      name: k8s-ca
+      readOnly: true
+    - mountPath: ${BASE_K8S_PATH}/pki/kubeAPI
+      name: k8s-certs
+      readOnly: true
+    - mountPath: ${BASE_K8S_PATH}/kube-apiserver
+      name: k8s-kube-apiserver-configs
+      readOnly: true
+    - mountPath: /usr/local/share/ca-certificates
+      name: usr-local-share-ca-certificates
+      readOnly: true
+    - mountPath: /usr/share/ca-certificates
+      name: usr-share-ca-certificates
+      readOnly: true
+  hostNetwork: true
+  priorityClassName: system-node-critical
+  securityContext:
+    seccompProfile:
+      type: RuntimeDefault
+  volumes:
+  - hostPath:
+      path: /etc/ssl/certs
+      type: DirectoryOrCreate
+    name: ca-certs
+  - hostPath:
+      path: /etc/ca-certificates
+      type: DirectoryOrCreate
+    name: etc-ca-certificates
+  - hostPath:
+      path: /var/log/kubernetes/audit/
+      type: DirectoryOrCreate
+    name: k8s-audit
+  - hostPath:
+      path: ${BASE_K8S_PATH}/pki/ca
+      type: DirectoryOrCreate
+    name: k8s-ca
+  - hostPath:
+      path: ${BASE_K8S_PATH}/pki/kubeAPI
+      type: DirectoryOrCreate
+    name: k8s-certs
+  - hostPath:
+      path: ${BASE_K8S_PATH}/kube-apiserver
+      type: DirectoryOrCreate
+    name: k8s-kube-apiserver-configs
+  - hostPath:
+      path: /usr/local/share/ca-certificates
+      type: DirectoryOrCreate
+    name: usr-local-share-ca-certificates
+  - hostPath:
+      path: /usr/share/ca-certificates
+      type: DirectoryOrCreate
+    name: usr-share-ca-certificates
+status: {}
+EOF
+```
+
+</details>

@@ -1,0 +1,85 @@
+
+<details>
+<summary>Kubelet Certificates</summary>
+
+
+```bash
+mkdir -p ${BASE_K8S_PATH}/pki/kubelet
+```
+
+```bash
+cat <<EOF > ${BASE_K8S_PATH}/cfssl/kubelet-client.json
+{
+  "CN": "system:node:${FULL_HOST_NAME}",
+  "key": {
+    "algo": "rsa",
+    "size": 4096
+  },
+  "names": [
+    {
+      "O": "system:nodes",
+      "OU": "Kubernetes"
+    }
+  ]
+}
+
+EOF
+```
+
+```bash
+cat <<EOF > ${BASE_K8S_PATH}/cfssl/kubelet-server.json
+{
+  "CN": "system:node:${FULL_HOST_NAME}",
+  "key": {
+    "algo": "rsa",
+    "size": 4096
+  },
+  "names": [
+    {
+      "O": "system:nodes",
+      "OU": "Kubernetes"
+    }
+  ],
+  "hosts": [
+    "localhost",
+    "127.0.0.1",
+    "${HOST_NAME}",
+    "${FULL_HOST_NAME}",
+    "${LOCAL_ADDRESS}",
+    "0:0:0:0:0:0:0:1"
+  ]
+}
+
+EOF
+```
+
+```bash
+cfssl gencert -ca=${BASE_K8S_PATH}/pki/ca/kubernetes-ca.pem -ca-key=${BASE_K8S_PATH}/pki/ca/kubernetes-ca-key.pem -config=${BASE_K8S_PATH}/cfssl/kubernetes-ca-config.json -profile=client ${BASE_K8S_PATH}/cfssl/kubelet-client.json | cfssljson -bare ${BASE_K8S_PATH}/pki/kubelet/client
+
+cfssl gencert -ca=${BASE_K8S_PATH}/pki/ca/kubernetes-ca.pem -ca-key=${BASE_K8S_PATH}/pki/ca/kubernetes-ca-key.pem -config=${BASE_K8S_PATH}/cfssl/kubernetes-ca-config.json -profile=server ${BASE_K8S_PATH}/cfssl/kubelet-server.json | cfssljson -bare ${BASE_K8S_PATH}/pki/kubelet/server
+```
+
+```bash
+mkdir -p ${BASE_K8S_PATH}/kubelet
+
+kubectl config set-cluster kubernetes \
+  --certificate-authority=${BASE_K8S_PATH}/pki/ca/kubernetes-ca.pem \
+  --embed-certs=false \
+  --server=https://127.0.0.1:6443 \
+  --kubeconfig=${BASE_K8S_PATH}/kubelet/kubeconfig
+
+kubectl config set-credentials system:node:${HOST_NAME} \
+  --client-certificate=${BASE_K8S_PATH}/pki/kubelet/client.pem \
+  --client-key=${BASE_K8S_PATH}/pki/kubelet/client-key.pem \
+  --embed-certs=false \
+  --kubeconfig=${BASE_K8S_PATH}/kubelet/kubeconfig
+
+kubectl config set-context default \
+  --cluster=kubernetes \
+  --user=system:node:${HOST_NAME} \
+  --kubeconfig=${BASE_K8S_PATH}/kubelet/kubeconfig
+
+kubectl config use-context default --kubeconfig=${BASE_K8S_PATH}/kubelet/kubeconfig
+
+```
+</details>

@@ -1,0 +1,72 @@
+<details>
+<summary>Container Runtime Interface (CRI)</summary>
+
+
+#### Настройка сервиса
+```bash
+cat <<EOF > /usr/lib/systemd/system/containerd.service
+[Unit]
+Description=containerd container runtime
+Documentation=https://containerd.io
+After=network.target
+
+[Service]
+ExecStartPre=/sbin/modprobe overlay
+ExecStart=/usr/local/bin/containerd
+Restart=always
+RestartSec=5
+Delegate=yes
+KillMode=process
+OOMScoreAdjust=-999
+LimitNOFILE=1048576
+LimitNPROC=infinity
+LimitCORE=infinity
+
+[Install]
+WantedBy=multi-user.target
+EOF
+```
+
+#### Настройка containerd
+```bash
+mkdir -p /etc/containerd/
+
+cat <<EOF > /etc/containerd/config.toml
+version = 2
+imports = ["/etc/containerd/conf.d/*.toml"]
+EOF
+```
+
+```bash
+mkdir -p /etc/containerd/conf.d
+
+cat <<EOF > /etc/containerd/conf.d/cloud.toml
+version = 2       
+[plugins]
+  [plugins."io.containerd.grpc.v1.cri"]
+    sandbox_image = "${BASE_DOCKER_REGISTRY}/${PAUSED_IMAGE}"
+  [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]
+    runtime_type = "io.containerd.runc.v2"
+  [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+    SystemdCgroup = true
+  [plugins."io.containerd.grpc.v1.cri".registry]
+    config_path = "/etc/containerd/certs.d/"
+EOF
+```
+
+
+#### Настройка crictl
+```bash
+cat <<EOF > /etc/crictl.yaml
+runtime-endpoint: unix://${CRI_ENDPOINT}
+EOF
+```
+
+
+#### Старт сервиса
+```bash
+systemctl start containerd
+systemctl enable containerd
+```
+
+</details>

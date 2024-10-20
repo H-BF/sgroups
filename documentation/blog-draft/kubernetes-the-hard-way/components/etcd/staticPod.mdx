@@ -1,0 +1,111 @@
+<details>
+<summary>ETCD</summary>
+
+```bash
+mkdir -p ${BASE_K8S_PATH}/manifests
+cat <<EOF > ${BASE_K8S_PATH}/manifests/etcd.yaml
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    component: etcd
+    tier: control-plane
+  name: etcd
+  namespace: kube-system
+spec:
+  containers:
+  - name: etcd
+    command:
+      - etcd
+    args:
+      - --name=${FULL_HOST_NAME}
+      - --initial-cluster=${ETCD_INITIAL_CLUSTER}
+      - --initial-advertise-peer-urls=https://${FULL_HOST_NAME}:${ETCD_PEER_PORT}
+      - --advertise-client-urls=https://${FULL_HOST_NAME}:${ETCD_SERVER_PORT}
+      - --peer-trusted-ca-file=${BASE_K8S_PATH}/pki/ca/etcd-ca.pem
+      - --trusted-ca-file=${BASE_K8S_PATH}/pki/ca/etcd-ca.pem
+      - --peer-cert-file=${BASE_K8S_PATH}/pki/etcd/peer.pem
+      - --peer-key-file=${BASE_K8S_PATH}/pki/etcd/peer-key.pem
+      - --cert-file=${BASE_K8S_PATH}/pki/etcd/server.pem
+      - --key-file=${BASE_K8S_PATH}/pki/etcd/server-key.pem
+      - --listen-client-urls=https://127.0.0.1:${ETCD_SERVER_PORT},https://${LOCAL_ADDRESS}:${ETCD_SERVER_PORT}
+      - --listen-peer-urls=https://${LOCAL_ADDRESS}:${ETCD_PEER_PORT}
+      - --listen-metrics-urls=https://127.0.0.1:${ETCD_METRICS_PORT},https://${LOCAL_ADDRESS}:${ETCD_METRICS_PORT}
+      - --initial-cluster-token=etcd
+      - --initial-cluster-state=new
+      - --data-dir=/var/lib/etcd
+      - --strict-reconfig-check=true
+      - --peer-client-cert-auth=true
+      - --peer-auto-tls=true
+      - --client-cert-auth=true
+      - --snapshot-count=10000
+      - --heartbeat-interval=250
+      - --election-timeout=1500
+      - --quota-backend-bytes=0
+      - --max-snapshots=10
+      - --max-wals=10
+      - --discovery-fallback=proxy
+      - --auto-compaction-retention=8
+      - --force-new-cluster=false
+      - --enable-v2=false
+      - --proxy=off
+      - --proxy-failure-wait=5000
+      - --proxy-refresh-interval=30000
+      - --proxy-dial-timeout=1000
+      - --proxy-write-timeout=5000
+      - --proxy-read-timeout=0
+      - --metrics=extensive
+      - --logger=zap
+    image: k8s.gcr.io/etcd:${ETCD_VERSION}
+    imagePullPolicy: IfNotPresent
+    livenessProbe:
+      failureThreshold: 8
+      httpGet:
+        host: 127.0.0.1
+        path: /health
+        port: ${ETCD_METRICS_PORT}
+        scheme: HTTP
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 15
+    resources:
+      requests:
+        cpu: 100m
+        memory: 100Mi
+    startupProbe:
+      failureThreshold: 24
+      httpGet:
+        host: 127.0.0.1
+        path: /health
+        port: ${ETCD_METRICS_PORT}
+        scheme: HTTP
+    volumeMounts:
+    - mountPath: /var/lib/etcd
+      name: etcd-data
+    - mountPath: ${BASE_K8S_PATH}/pki/etcd
+      name: etcd-certs
+    - mountPath: ${BASE_K8S_PATH}/pki/ca
+      name: ca
+  hostNetwork: true
+  priorityClassName: system-node-critical
+  securityContext:
+      null
+  volumes:
+  - hostPath:
+      path: ${BASE_K8S_PATH}/pki/etcd
+      type: DirectoryOrCreate
+    name: etcd-certs
+  - hostPath:
+      path: ${BASE_K8S_PATH}/pki/ca
+      type: DirectoryOrCreate
+    name: ca
+  - hostPath:
+      path: /var/lib/etcd
+      type: DirectoryOrCreate
+    name: etcd-data
+status: {}
+EOF
+```
+</details>
