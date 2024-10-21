@@ -99,15 +99,53 @@ EOF
 ```
 
 ```bash
-openssl genrsa -out ${BASE_K8S_PATH}/pki/kubeAPI/sa.key 4096
-openssl rsa -in ${BASE_K8S_PATH}/pki/kubeAPI/sa.key -pubout -out ${BASE_K8S_PATH}/pki/kubeAPI/sa.pub
+openssl genrsa \
+  -out ${BASE_K8S_PATH}/pki/kubeAPI/sa.key 4096
 
-cfssl gencert -ca=${BASE_K8S_PATH}/pki/ca/kubernetes-ca.pem   -ca-key=${BASE_K8S_PATH}/pki/ca/kubernetes-ca-key.pem   -config=${BASE_K8S_PATH}/cfssl/kubernetes-ca-config.json  -profile=client ${BASE_K8S_PATH}/cfssl/kube-api-kubernetes-admin-client.json  | cfssljson -bare ${BASE_K8S_PATH}/pki/kubeAPI/client-kubernetes-admin
+openssl rsa \
+  -pubout \
+  -in ${BASE_K8S_PATH}/pki/kubeAPI/sa.key \
+  -out ${BASE_K8S_PATH}/pki/kubeAPI/sa.pub
 
-cfssl gencert -ca=${BASE_K8S_PATH}/pki/ca/kubernetes-ca.pem   -ca-key=${BASE_K8S_PATH}/pki/ca/kubernetes-ca-key.pem   -config=${BASE_K8S_PATH}/cfssl/kubernetes-ca-config.json  -profile=client ${BASE_K8S_PATH}/cfssl/kube-api-kubelet-client.json           | cfssljson -bare ${BASE_K8S_PATH}/pki/kubeAPI/client-kubelet
-cfssl gencert -ca=${BASE_K8S_PATH}/pki/ca/front-proxy-ca.pem  -ca-key=${BASE_K8S_PATH}/pki/ca/front-proxy-ca-key.pem  -config=${BASE_K8S_PATH}/cfssl/front-proxy-ca-config.json -profile=client ${BASE_K8S_PATH}/cfssl/kube-api-front-proxy-client.json       | cfssljson -bare ${BASE_K8S_PATH}/pki/kubeAPI/client-front-proxy
-cfssl gencert -ca=${BASE_K8S_PATH}/pki/ca/etcd-ca.pem         -ca-key=${BASE_K8S_PATH}/pki/ca/etcd-ca-key.pem         -config=${BASE_K8S_PATH}/cfssl/etcd-ca-config.json        -profile=client ${BASE_K8S_PATH}/cfssl/kube-api-etcd-client.json              | cfssljson -bare ${BASE_K8S_PATH}/pki/kubeAPI/client-etcd
-cfssl gencert -ca=${BASE_K8S_PATH}/pki/ca/kubernetes-ca.pem   -ca-key=${BASE_K8S_PATH}/pki/ca/kubernetes-ca-key.pem   -config=${BASE_K8S_PATH}/cfssl/kubernetes-ca-config.json  -profile=server ${BASE_K8S_PATH}/cfssl/kube-api-server.json                   | cfssljson -bare ${BASE_K8S_PATH}/pki/kubeAPI/server
+cfssl gencert \
+  -profile=client \
+  -ca=${BASE_K8S_PATH}/pki/ca/kubernetes-ca.pem \
+  -ca-key=${BASE_K8S_PATH}/pki/ca/kubernetes-ca-key.pem \
+  -config=${BASE_K8S_PATH}/cfssl/certs-config.json \
+  ${BASE_K8S_PATH}/cfssl/kube-api-kubernetes-admin-client.json  | 
+  cfssljson -bare ${BASE_K8S_PATH}/pki/kubeAPI/client-kubernetes-admin
+
+cfssl gencert \
+  -profile=client \
+  -ca=${BASE_K8S_PATH}/pki/ca/kubernetes-ca.pem \
+  -ca-key=${BASE_K8S_PATH}/pki/ca/kubernetes-ca-key.pem \
+  -config=${BASE_K8S_PATH}/cfssl/certs-config.json \
+  ${BASE_K8S_PATH}/cfssl/kube-api-kubelet-client.json | 
+  cfssljson -bare ${BASE_K8S_PATH}/pki/kubeAPI/client-kubelet
+
+cfssl gencert \
+  -profile=client \
+  -ca=${BASE_K8S_PATH}/pki/ca/front-proxy-ca.pem \
+  -ca-key=${BASE_K8S_PATH}/pki/ca/front-proxy-ca-key.pem \
+  -config=${BASE_K8S_PATH}/cfssl/front-proxy-certs-config.json \
+  ${BASE_K8S_PATH}/cfssl/kube-api-front-proxy-client.json | 
+  cfssljson -bare ${BASE_K8S_PATH}/pki/kubeAPI/client-front-proxy
+
+cfssl gencert \
+  -profile=client \
+  -ca=${BASE_K8S_PATH}/pki/ca/etcd-ca.pem \
+  -ca-key=${BASE_K8S_PATH}/pki/ca/etcd-ca-key.pem \
+  -config=${BASE_K8S_PATH}/cfssl/etcd-certs-config.json \
+  ${BASE_K8S_PATH}/cfssl/kube-api-etcd-client.json | 
+  cfssljson -bare ${BASE_K8S_PATH}/pki/kubeAPI/client-etcd
+
+cfssl gencert \
+  -profile=server \
+  -ca=${BASE_K8S_PATH}/pki/ca/kubernetes-ca.pem \
+  -ca-key=${BASE_K8S_PATH}/pki/ca/kubernetes-ca-key.pem \
+  -config=${BASE_K8S_PATH}/cfssl/certs-config.json \
+  ${BASE_K8S_PATH}/cfssl/kube-api-server.json | 
+  cfssljson -bare ${BASE_K8S_PATH}/pki/kubeAPI/server
 
 ```
 

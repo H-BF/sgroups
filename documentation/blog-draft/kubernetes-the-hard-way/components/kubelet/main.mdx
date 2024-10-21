@@ -37,11 +37,14 @@ mkdir -p /usr/lib/systemd/system/kubelet.service.d
 cat <<EOF > /usr/lib/systemd/system/kubelet.service.d/10-cloud.conf
 [Service]
 EnvironmentFile=-${BASE_KUBELET_PATH}/kubeadm-flags.env
+EnvironmentFile=-${BASE_KUBELET_PATH}/cloud-flags.env
 
 ExecStart=
 ExecStart=/usr/local/bin/kubelet \
 \$KUBELET_BASIC_ARGS \
+\$KUBELET_NETWORKS_ARGS \
 \$KUBELET_CONFIGS_ARGS \
+\$KUBELET_KUBEADM_ARGS \
 \$KUBELET_KUBECONFIG_ARGS
 EOF
 
@@ -55,12 +58,27 @@ EOF
 mkdir -p  ${BASE_KUBELET_PATH}/
 
 cat <<EOF > ${BASE_KUBELET_PATH}/kubeadm-flags.env
+KUBELET_KUBEADM_ARGS="
+--container-runtime-endpoint=unix://${CRI_ENDPOINT} \
+--pod-infra-container-image=${BASE_DOCKER_REGISTRY}/${PAUSED_IMAGE}
+"
+EOF
+```
+
+```bash
+mkdir -p  ${BASE_KUBELET_PATH}/
+
+cat <<EOF > ${BASE_KUBELET_PATH}/cloud-flags.env
 KUBELET_KUBECONFIG_ARGS="
 --bootstrap-kubeconfig=${BASE_K8S_PATH}/bootstrap-kubelet.conf \
---kubeconfig=${BASE_K8S_PATH}/kubelet/kubeconfig
+--kubeconfig=${BASE_K8S_PATH}/kubelet.conf
 "
 KUBELET_CONFIGS_ARGS="
---config=${BASE_KUBELET_PATH}/config.yaml
+--config=${BASE_KUBELET_PATH}/config-custom.yaml
+"
+KUBELET_NETWORKS_ARGS="
+--healthz-port=${KUBELET_HEALTHZ_PORT} \
+--port="${KUBELET_SERVER_PORT}"
 "
 EOF
 ```
@@ -71,7 +89,7 @@ EOF
 
 
 ```bash
-cat <<EOF > ${BASE_KUBELET_PATH}/config.yaml
+cat <<EOF > ${BASE_KUBELET_PATH}/config-custom.yaml
 apiVersion: kubelet.config.k8s.io/v1beta1
 authentication:
   anonymous:
@@ -80,7 +98,7 @@ authentication:
       cacheTTL: 0s
       enabled: true
   x509:
-    clientCAFile: ${BASE_K8S_PATH}/pki/ca/kubernetes-ca.pem 
+    clientCAFile: ${KUBERNETES_CA_CRT_PATH}
 
 authorization:
     mode: Webhook
@@ -91,8 +109,8 @@ cgroupDriver: systemd
 clusterDNS:
 - ${SERVICE_DNS}
 clusterDomain: ${BASE_CLUSTER_DOMAIN}
-tlsCertFile: "${BASE_K8S_PATH}/pki/kubelet/server.pem"
-tlsPrivateKeyFile: "${BASE_K8S_PATH}/pki/kubelet/server-key.pem"
+tlsCertFile: "${KUBELET_CURRENT_SERVER_CRT_PATH}"
+tlsPrivateKeyFile: "${KUBELET_CURRENT_SERVER_CRT_PATH}"
 containerLogMaxSize: "50Mi"
 cpuManagerReconcilePeriod: 0s
 evictionPressureTransitionPeriod: 5s

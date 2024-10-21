@@ -40,7 +40,7 @@ const config: Config = {
         blog: {
           blogTitle: 'Docusaurus blog!',
           blogDescription: 'A Docusaurus powered blog!',
-          postsPerPage: 'ALL',
+          postsPerPage: 'ALL'
         },
         pages: {
           

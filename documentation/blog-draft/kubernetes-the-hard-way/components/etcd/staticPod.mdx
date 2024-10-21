@@ -24,21 +24,20 @@ spec:
       - --initial-cluster=${ETCD_INITIAL_CLUSTER}
       - --initial-advertise-peer-urls=https://${FULL_HOST_NAME}:${ETCD_PEER_PORT}
       - --advertise-client-urls=https://${FULL_HOST_NAME}:${ETCD_SERVER_PORT}
-      - --peer-trusted-ca-file=${BASE_K8S_PATH}/pki/ca/etcd-ca.pem
-      - --trusted-ca-file=${BASE_K8S_PATH}/pki/ca/etcd-ca.pem
-      - --peer-cert-file=${BASE_K8S_PATH}/pki/etcd/peer.pem
-      - --peer-key-file=${BASE_K8S_PATH}/pki/etcd/peer-key.pem
-      - --cert-file=${BASE_K8S_PATH}/pki/etcd/server.pem
-      - --key-file=${BASE_K8S_PATH}/pki/etcd/server-key.pem
+      - --peer-trusted-ca-file=${ETCD_CA_CRT_PATH}
+      - --trusted-ca-file=${ETCD_CA_CRT_PATH}
+      - --peer-cert-file=${ETCD_PEER_CRT_PATH}
+      - --peer-key-file=${ETCD_PEER_KEY_PATH}
+      - --cert-file=${ETCD_SERVER_CRT_PATH}
+      - --key-file=${ETCD_SERVER_KEY_PATH}
       - --listen-client-urls=https://127.0.0.1:${ETCD_SERVER_PORT},https://${LOCAL_ADDRESS}:${ETCD_SERVER_PORT}
       - --listen-peer-urls=https://${LOCAL_ADDRESS}:${ETCD_PEER_PORT}
-      - --listen-metrics-urls=https://127.0.0.1:${ETCD_METRICS_PORT},https://${LOCAL_ADDRESS}:${ETCD_METRICS_PORT}
+      - --listen-metrics-urls=http://127.0.0.1:${ETCD_METRICS_PORT},http://${LOCAL_ADDRESS}:${ETCD_METRICS_PORT}
       - --initial-cluster-token=etcd
       - --initial-cluster-state=new
       - --data-dir=/var/lib/etcd
       - --strict-reconfig-check=true
       - --peer-client-cert-auth=true
-      - --peer-auto-tls=true
       - --client-cert-auth=true
       - --snapshot-count=10000
       - --heartbeat-interval=250
@@ -58,6 +57,7 @@ spec:
       - --proxy-read-timeout=0
       - --metrics=extensive
       - --logger=zap
+      - --log-level=debug
     image: k8s.gcr.io/etcd:${ETCD_VERSION}
     imagePullPolicy: IfNotPresent
     livenessProbe:
@@ -84,23 +84,17 @@ spec:
     volumeMounts:
     - mountPath: /var/lib/etcd
       name: etcd-data
-    - mountPath: ${BASE_K8S_PATH}/pki/etcd
+    - mountPath: ${BASE_K8S_PATH}/pki
       name: etcd-certs
-    - mountPath: ${BASE_K8S_PATH}/pki/ca
-      name: ca
   hostNetwork: true
   priorityClassName: system-node-critical
   securityContext:
       null
   volumes:
   - hostPath:
-      path: ${BASE_K8S_PATH}/pki/etcd
+      path: ${BASE_K8S_PATH}/pki
       type: DirectoryOrCreate
     name: etcd-certs
-  - hostPath:
-      path: ${BASE_K8S_PATH}/pki/ca
-      type: DirectoryOrCreate
-    name: ca
   - hostPath:
       path: /var/lib/etcd
       type: DirectoryOrCreate

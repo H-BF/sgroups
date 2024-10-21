@@ -1,61 +1,65 @@
-
+import { FancyboxDiagram }  from '@site/src/components/commonBlocks/FancyboxDiagram'
+import TabItem              from '@theme/TabItem'
+import Tabs                 from '@theme/Tabs'
 
 <details>
 <summary>ETCD CA</summary>
 
-
 ```bash
-mkdir -p ${BASE_K8S_PATH}/cfssl/
-mkdir -p ${BASE_K8S_PATH}/pki/ca
+mkdir -p ${BASE_K8S_PATH}/pki/etcd
+
+export ETCD_CA_KEY_PATH="${BASE_K8S_PATH}/pki/etcd/ca.key"
+export ETCD_CA_CRT_PATH="${BASE_K8S_PATH}/pki/etcd/ca.crt"
+export ETCD_CA_CSR_PATH="${BASE_K8S_PATH}/openssl/etcd-ca.conf"
+export ETCD_CA_CRT_CN="etcd-ca"
+export ETCD_CA_KEY_SIZE=2048
 ```
 
-```bash
-cat <<EOF > ${BASE_K8S_PATH}/cfssl/etcd-ca-config.json
-{
-  "signing": {
-    "default": {
-      "expiry": "8760h",
-      "usages": ["digital signature", "key encipherment"]
-    },
-    "profiles": {
-      "client": {
-        "usages": ["digital signature", "key encipherment", "client auth"],
-        "expiry": "8760h"
-      },
-      "server": {
-        "usages": ["digital signature", "key encipherment", "server auth"],
-        "expiry": "8760h"
-      },
-      "peer": {
-        "usages": ["digital signature", "key encipherment", "server auth", "client auth"],
-        "expiry": "8760h"
-      }
-    }
-  }
-}
-EOF
-```
+<Tabs 
+    defaultValue='openssl'
+    values={[
+        { label: "openssl", value: "openssl" },
+    ]}>
+    <TabItem value='openssl'>
 
-```bash
-cat <<EOF > ${BASE_K8S_PATH}/cfssl/etcd-ca-csr.json
-{
-  "CN": "ETCD CA",
-  "key": {
-    "algo": "rsa",
-    "size": 4096
-  },
-  "names": [
-    {
-      "O": "Kubernetes",
-      "OU": "CA"
-    }
-  ]
-}
+      ```bash
+      mkdir -p ${BASE_K8S_PATH}/openssl
+      ```
 
-EOF
-```
+      ```bash
+      cat <<EOF > ${ETCD_CA_CSR_PATH}
+      [req]
+      distinguished_name = req_distinguished_name
+      x509_extensions    = v3_ca
+      prompt             = no
 
-```bash
-cfssl gencert -initca ${BASE_K8S_PATH}/cfssl/etcd-ca-csr.json | cfssljson -bare ${BASE_K8S_PATH}/pki/ca/etcd-ca
-```
+      [req_distinguished_name]
+      CN = "${ETCD_CA_CRT_CN}"
+
+      [v3_ca]
+      keyUsage = critical, keyCertSign, keyEncipherment, digitalSignature
+      basicConstraints = critical,CA:TRUE
+      EOF
+      ```
+
+      ```bash
+      openssl genrsa \
+        -out "${ETCD_CA_KEY_PATH}" ${ETCD_CA_KEY_SIZE}
+
+      openssl req \
+        -x509 \
+        -new \
+        -nodes \
+        -key "${ETCD_CA_KEY_PATH}" \
+        -sha256 \
+        -days 3650 \
+        -out "${ETCD_CA_CRT_PATH}" \
+        -config "${ETCD_CA_CSR_PATH}"
+      ```
+
+    </TabItem>
+
+</Tabs>
+
 </details>
+

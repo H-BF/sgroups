@@ -1,85 +1,175 @@
+import { FancyboxDiagram }  from '@site/src/components/commonBlocks/FancyboxDiagram'
+import TabItem              from '@theme/TabItem'
+import Tabs                 from '@theme/Tabs'
 
 <details>
 <summary>Kubelet Certificates</summary>
 
-
 ```bash
-mkdir -p ${BASE_K8S_PATH}/pki/kubelet
+mkdir -p ${BASE_K8S_PATH}/pki
+mkdir -p ${BASE_K8S_PATH}/openssl/csr
+mkdir -p ${BASE_KUBELET_PATH}/pki
+
+
+export CERTIFICATE_KEY_SIZE=4096
+export KUBELET_CURRENT_CLIENT_CRT_PATH="${BASE_KUBELET_PATH}/pki/kubelet-client-current.pem"
+export KUBELET_CURRENT_SERVER_CRT_PATH="${BASE_KUBELET_PATH}/pki/kubelet-server-current.pem"
+
+export KUBELET_CLIENT_KEY_PATH="${BASE_KUBELET_PATH}/pki/kubelet-client-key.pem"
+export KUBELET_CLIENT_CRT_PATH="${BASE_KUBELET_PATH}/pki/kubelet-client.pem"
+export KUBELET_CLIENT_CRT_CONF="${BASE_K8S_PATH}/openssl/kubelet-client.conf"
+export KUBELET_CLIENT_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/kubelet-client.csr"
+
+export KUBELET_SERVER_KEY_PATH="${BASE_KUBELET_PATH}/pki/kubelet-server-key.pem"
+export KUBELET_SERVER_CRT_PATH="${BASE_KUBELET_PATH}/pki/kubelet-server.pem"
+export KUBELET_SERVER_CRT_CONF="${BASE_K8S_PATH}/openssl/kubelet-server.conf"
+export KUBELET_SERVER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/kubelet-server.csr"
+
 ```
 
+<Tabs 
+    defaultValue='openssl'
+    values={[
+        { label: "openssl", value: "openssl" },
+    ]}>
+    <TabItem value='openssl'>
+
+      ```bash
+      cat <<EOF > ${KUBELET_CLIENT_CRT_CONF}
+      [ req ]
+      default_bits        = 4096
+      prompt              = no
+      default_md          = sha256
+      distinguished_name  = dn
+
+      [ dn ]
+      CN = system:node:${FULL_HOST_NAME}
+      O  = system:nodes
+      OU = Kubernetes
+
+      [ v3_ext ]
+      authorityKeyIdentifier=keyid,issuer:always
+      basicConstraints=CA:FALSE
+      keyUsage=keyEncipherment,dataEncipherment
+      extendedKeyUsage=clientAuth
+      EOF
+      ```
+
+      ```bash
+      cat <<EOF > ${KUBELET_SERVER_CRT_CONF}
+      [ req ]
+      default_bits        = 4096
+      prompt              = no
+      default_md          = sha256
+      distinguished_name  = dn
+      req_extensions      = req_ext
+
+      [ req_ext ]
+      subjectAltName = @alt_names
+
+      [ alt_names ]
+      DNS.1 = localhost
+      DNS.2 = ${HOST_NAME}
+      DNS.3 = ${FULL_HOST_NAME}
+      IP.1  = 127.0.0.1
+      IP.2  = 0:0:0:0:0:0:0:1
+      IP.3  = ${LOCAL_ADDRESS}
+
+      [ dn ]
+      CN = "system:node:${FULL_HOST_NAME}"
+      O  = "system:nodes"
+      OU = "Kubernetes"
+
+      [ v3_ext ]
+      authorityKeyIdentifier=keyid,issuer:always
+      basicConstraints=CA:FALSE
+      keyUsage=keyEncipherment,dataEncipherment
+      extendedKeyUsage=serverAuth
+      subjectAltName=@alt_names
+      EOF
+      ```
+
+      ```bash
+      openssl genrsa \
+        -out "${KUBELET_CLIENT_KEY_PATH}" ${CERTIFICATE_KEY_SIZE}
+      openssl genrsa \
+        -out "${KUBELET_SERVER_KEY_PATH}" ${CERTIFICATE_KEY_SIZE}
+      ```
+
+
+      ```bash
+      openssl req \
+        -new \
+        -key "${KUBELET_CLIENT_KEY_PATH}" \
+        -out "${KUBELET_CLIENT_CSR_PATH}" \
+        -config "${KUBELET_CLIENT_CRT_CONF}"
+
+      openssl req \
+        -new \
+        -key "${KUBELET_SERVER_KEY_PATH}" \
+        -out "${KUBELET_SERVER_CSR_PATH}" \
+        -config "${KUBELET_SERVER_CRT_CONF}"
+      ```
+
+      ```bash
+      openssl x509 \
+        -req \
+        -days 365 \
+        -sha256 \
+        -outform PEM \
+        -CA "${KUBERNETES_CA_CRT_PATH}" \
+        -CAkey "${KUBERNETES_CA_KEY_PATH}" \
+        -CAcreateserial \
+        -in "${KUBELET_CLIENT_CSR_PATH}" \
+        -out "${KUBELET_CLIENT_CRT_PATH}" \
+        -extensions v3_ext \
+        -extfile "${KUBELET_CLIENT_CRT_CONF}"
+
+      openssl x509 \
+        -req \
+        -days 365 \
+        -sha256 \
+        -outform PEM \
+        -CA "${KUBERNETES_CA_CRT_PATH}" \
+        -CAkey "${KUBERNETES_CA_KEY_PATH}" \
+        -CAcreateserial \
+        -in "${KUBELET_SERVER_CSR_PATH}" \
+        -out "${KUBELET_SERVER_CRT_PATH}" \
+        -extensions v3_ext \
+        -extfile "${KUBELET_SERVER_CRT_CONF}"
+
+      ```
+
+      ```bash
+      cat "${KUBELET_CLIENT_CRT_PATH}" "${KUBELET_CLIENT_KEY_PATH}" >> "${KUBELET_CURRENT_CLIENT_CRT_PATH}"
+      cat "${KUBELET_SERVER_CRT_PATH}" "${KUBELET_SERVER_KEY_PATH}" >> "${KUBELET_CURRENT_SERVER_CRT_PATH}"
+      ```
+    </TabItem>
+
+</Tabs>
+
+
 ```bash
-cat <<EOF > ${BASE_K8S_PATH}/cfssl/kubelet-client.json
-{
-  "CN": "system:node:${FULL_HOST_NAME}",
-  "key": {
-    "algo": "rsa",
-    "size": 4096
-  },
-  "names": [
-    {
-      "O": "system:nodes",
-      "OU": "Kubernetes"
-    }
-  ]
-}
-
-EOF
-```
-
-```bash
-cat <<EOF > ${BASE_K8S_PATH}/cfssl/kubelet-server.json
-{
-  "CN": "system:node:${FULL_HOST_NAME}",
-  "key": {
-    "algo": "rsa",
-    "size": 4096
-  },
-  "names": [
-    {
-      "O": "system:nodes",
-      "OU": "Kubernetes"
-    }
-  ],
-  "hosts": [
-    "localhost",
-    "127.0.0.1",
-    "${HOST_NAME}",
-    "${FULL_HOST_NAME}",
-    "${LOCAL_ADDRESS}",
-    "0:0:0:0:0:0:0:1"
-  ]
-}
-
-EOF
-```
-
-```bash
-cfssl gencert -ca=${BASE_K8S_PATH}/pki/ca/kubernetes-ca.pem -ca-key=${BASE_K8S_PATH}/pki/ca/kubernetes-ca-key.pem -config=${BASE_K8S_PATH}/cfssl/kubernetes-ca-config.json -profile=client ${BASE_K8S_PATH}/cfssl/kubelet-client.json | cfssljson -bare ${BASE_K8S_PATH}/pki/kubelet/client
-
-cfssl gencert -ca=${BASE_K8S_PATH}/pki/ca/kubernetes-ca.pem -ca-key=${BASE_K8S_PATH}/pki/ca/kubernetes-ca-key.pem -config=${BASE_K8S_PATH}/cfssl/kubernetes-ca-config.json -profile=server ${BASE_K8S_PATH}/cfssl/kubelet-server.json | cfssljson -bare ${BASE_K8S_PATH}/pki/kubelet/server
-```
-
-```bash
-mkdir -p ${BASE_K8S_PATH}/kubelet
 
 kubectl config set-cluster kubernetes \
-  --certificate-authority=${BASE_K8S_PATH}/pki/ca/kubernetes-ca.pem \
-  --embed-certs=false \
+  --certificate-authority="${BASE_K8S_PATH}/pki/ca.crt" \
+  --embed-certs=true \
   --server=https://127.0.0.1:6443 \
-  --kubeconfig=${BASE_K8S_PATH}/kubelet/kubeconfig
+  --kubeconfig=${BASE_K8S_PATH}/kubelet.conf
 
 kubectl config set-credentials system:node:${HOST_NAME} \
-  --client-certificate=${BASE_K8S_PATH}/pki/kubelet/client.pem \
-  --client-key=${BASE_K8S_PATH}/pki/kubelet/client-key.pem \
+  --client-certificate=${KUBELET_CLIENT_CRT_PATH} \
+  --client-key=${KUBELET_CLIENT_CRT_PATH} \
   --embed-certs=false \
-  --kubeconfig=${BASE_K8S_PATH}/kubelet/kubeconfig
+  --kubeconfig=${BASE_K8S_PATH}/kubelet.conf
 
 kubectl config set-context default \
   --cluster=kubernetes \
   --user=system:node:${HOST_NAME} \
-  --kubeconfig=${BASE_K8S_PATH}/kubelet/kubeconfig
+  --kubeconfig=${BASE_K8S_PATH}/kubelet.conf
 
-kubectl config use-context default --kubeconfig=${BASE_K8S_PATH}/kubelet/kubeconfig
+kubectl config use-context default --kubeconfig=${BASE_K8S_PATH}/kubelet.conf
 
 ```
+
 </details>

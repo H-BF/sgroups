@@ -1,59 +1,66 @@
+import { FancyboxDiagram }  from '@site/src/components/commonBlocks/FancyboxDiagram'
+import TabItem              from '@theme/TabItem'
+import Tabs                 from '@theme/Tabs'
+
 <details>
 <summary>Kubernetes CA</summary>
 
-
 ```bash
-mkdir -p ${BASE_K8S_PATH}/cfssl/
-mkdir -p ${BASE_K8S_PATH}/pki/ca
+mkdir -p ${BASE_K8S_PATH}/pki
+
+export KUBERNETES_CA_KEY_PATH="${BASE_K8S_PATH}/pki/ca.key"
+export KUBERNETES_CA_CRT_PATH="${BASE_K8S_PATH}/pki/ca.crt"
+export KUBERNETES_CA_CSR_PATH="${BASE_K8S_PATH}/openssl/kubernetes-ca.conf"
+export KUBERNETES_CA_CRT_CN="kubernetes"
+export KUBERNETES_CA_KEY_SIZE=4096
 ```
 
-```bash
-cat <<EOF > ${BASE_K8S_PATH}/cfssl/kubernetes-ca-config.json
-{
-  "signing": {
-    "default": {
-      "expiry": "8760h",
-      "usages": ["digital signature", "key encipherment"]
-    },
-    "profiles": {
-      "client": {
-        "usages": ["digital signature", "key encipherment", "client auth"],
-        "expiry": "8760h"
-      },
-      "server": {
-        "usages": ["digital signature", "key encipherment", "server auth"],
-        "expiry": "8760h"
-      },
-      "peer": {
-        "usages": ["digital signature", "key encipherment", "server auth", "client auth"],
-        "expiry": "8760h"
-      }
-    }
-  }
-}
-EOF
-```
 
-```bash
-cat <<EOF > ${BASE_K8S_PATH}/cfssl/kubernetes-ca-csr.json
-{
-  "CN": "Kubernetes CA",
-  "key": {
-    "algo": "rsa",
-    "size": 4096
-  },
-  "names": [
-    {
-      "O": "Kubernetes",
-      "OU": "CA"
-    }
-  ]
-}
+<Tabs 
+    defaultValue='openssl'
+    values={[
+        { label: "openssl", value: "openssl" },
+    ]}>
+    <TabItem value='openssl'>
 
-EOF
-```
+      ```bash
+      mkdir -p ${BASE_K8S_PATH}/openssl
+      ```
 
-```bash
-cfssl gencert -initca ${BASE_K8S_PATH}/cfssl/kubernetes-ca-csr.json | cfssljson -bare ${BASE_K8S_PATH}/pki/ca/kubernetes-ca
-```
+      ```bash
+      cat <<EOF > ${KUBERNETES_CA_CSR_PATH}
+      [req]
+      distinguished_name = req_distinguished_name
+      x509_extensions    = v3_ca
+      prompt             = no
+
+      [req_distinguished_name]
+      CN = "${KUBERNETES_CA_CRT_CN}"
+
+      [v3_ca]
+      keyUsage = critical, keyCertSign, keyEncipherment, digitalSignature
+      basicConstraints = critical,CA:TRUE
+      EOF
+      ```
+
+      ```bash
+      openssl genrsa \
+        -out "${KUBERNETES_CA_KEY_PATH}" ${KUBERNETES_CA_KEY_SIZE}
+
+      openssl req \
+        -x509 \
+        -new \
+        -nodes \
+        -key "${KUBERNETES_CA_KEY_PATH}" \
+        -sha256 \
+        -days 3650 \
+        -out "${KUBERNETES_CA_CRT_PATH}" \
+        -config "${KUBERNETES_CA_CSR_PATH}"
+      ```
+
+    </TabItem>
+
+</Tabs>
+
 </details>
+

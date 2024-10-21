@@ -9,7 +9,7 @@ authors:
     image_url: https://avatars.githubusercontent.com/u/107264732?s=400&u=9e62851aa556117c3997181cd93b4bcccf2c0cc9&v=4
     socials:
       x: Dobry_kot
-      github: Dobry_kot
+      github: fr-solution
 
 tags: [K8S]
 image: https://i.imgur.com/mErPwqL.png
@@ -54,6 +54,8 @@ Kubernetes, или K8S, — это как волшебная палочка дл
 
 ## Архитектура 
 
+<div className="center">
+
 ```mermaid
 ---
 config:
@@ -76,37 +78,50 @@ flowchart LR
   runc[runc]
   pod([pod])
 
-  etcdctl-->|https|db
-  subgraph data plane
-    
-    subgraph user-space
-    kubelet-->|http|pod
-    kubelet-->|socket|cri
-    
-    cri-->runc
-    crictl-->|socket|cri
-    
-    
-    end
-    subgraph kernel-space
-    runc-->|msg|netlink
-    end
 
-  end
 
   subgraph control plane
-    api-->|https|db
-    controllers-->|https|api
-    scheduler-->|https|api
+    api
+    controllers
+    scheduler
+    db
+    
   end
 
-  
+
+  subgraph data plane
+
+    subgraph kernel-space
+      netlink
+    end
+
+    subgraph user-space
+      kubelet
+      cri
+      crictl
+      runc
+
+      pod
+      
+    end
+  end
+
+  api-->|https|db
   kubelet<-->|https|api
-  
+  crictl-->|socket|cri
+  kubelet-->|http|pod
+  kubelet-->|socket|cri
+  cri-->runc
+  controllers-->|https|api
+  scheduler-->|https|api
+  runc-->|msg|netlink
   kubectl-->|https|api
-  
+  etcdctl-->|https|db
+
 
 ```
+
+</div>
 
 ## Этапы создания кластера Kubernetes
 
@@ -196,7 +211,7 @@ flowchart LR
 <ETCDCerts />
 <KubeAPICerts />
 
-
+## Настройка компонентов
 <ComponentsSetings />
 
 ## Терминология

@@ -3,7 +3,9 @@
 <details>
 <summary>Environments</summary>
 
-### env
+### Базовые переменные окружения:
+
+Для начала зададим переменные окружния, определяющие расположение файлов и сам кластер
 
 ```bash
 export BASE_DOMAIN=prorobotech.ru
@@ -12,21 +14,25 @@ export BASE_CLUSTER_DOMAIN=${CLUSTER_NAME}.${BASE_DOMAIN}
 export MASTERCOUNT=3
 export BASE_K8S_PATH="/etc/kubernetes"
 export BASE_KUBELET_PATH="/var/lib/kubelet"
-export CRI_ENDPOINT="/run/containerd/containerd.sock"
-export HOST_NAME=master-1
+export CRI_ENDPOINT="/var/run/containerd/containerd.sock"
 export FULL_HOST_NAME=${HOST_NAME}.${BASE_CLUSTER_DOMAIN}
-export LOCAL_ADDRESS=$(ip -4 addr show scope global | awk '/inet/ {print $2; exit}' | cut -d/ -f1)
+
 ```
 
-### networks
+### Переменные окружения сети:
+
+:::warning
+Просьба обратить внимание, что я не указал тут подсеть для подов, тк по моему мнению этим должен управлять сетевой плагин, а не компоненты управляющего контура.
+:::
 
 ```bash
 export SERVICE_CIDR="29.64.0.0/16"
 export SERVICE_DNS="29.64.0.10"
 export SERVICE_KUBE_API="29.64.0.1"
+export LOCAL_ADDRESS=$(ip -4 addr show scope global | awk '/inet/ {print $2; exit}' | cut -d/ -f1)
 ```
 
-
+Заранее определяем список слушающих портов, будут нам полезны для понимания кто что использует.
 ```bash
 export ETCD_SERVER_PORT="2379"
 export ETCD_PEER_PORT="2380"
@@ -34,13 +40,14 @@ export ETCD_METRICS_PORT="2381"
 export KUBE_APISERVER_PORT="6443"
 export KUBE_CONTROLLER_MANAGER_PORT="10257"
 export KUBE_SCHEDULER_PORT="10259"
+export KUBELET_HEALTHZ_PORT=10248
+export KUBELET_SERVER_PORT=10250
 ```
 
 ```bash
 export BASE_DOCKER_REGISTRY="registry.k8s.io"
 export PAUSED_IMAGE="pause:3.9"
 ```
-
 
 ### versions
 ```bash

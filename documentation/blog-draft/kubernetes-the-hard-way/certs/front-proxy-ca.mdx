@@ -1,61 +1,65 @@
-
+import { FancyboxDiagram }  from '@site/src/components/commonBlocks/FancyboxDiagram'
+import TabItem              from '@theme/TabItem'
+import Tabs                 from '@theme/Tabs'
 
 <details>
-<summary>FrontProxy CA</summary>
-
-
-```bash
-mkdir -p ${BASE_K8S_PATH}/cfssl/
-mkdir -p ${BASE_K8S_PATH}/pki/ca
-```
+<summary>Front Proxy CA</summary>
 
 ```bash
-cat <<EOF > ${BASE_K8S_PATH}/cfssl/front-proxy-ca-config.json
-{
-  "signing": {
-    "default": {
-      "expiry": "8760h",
-      "usages": ["digital signature", "key encipherment"]
-    },
-    "profiles": {
-      "client": {
-        "usages": ["digital signature", "key encipherment", "client auth"],
-        "expiry": "8760h"
-      },
-      "server": {
-        "usages": ["digital signature", "key encipherment", "server auth"],
-        "expiry": "8760h"
-      },
-      "peer": {
-        "usages": ["digital signature", "key encipherment", "server auth", "client auth"],
-        "expiry": "8760h"
-      }
-    }
-  }
-}
-EOF
+mkdir -p ${BASE_K8S_PATH}/pki/FRONT_PROXY
+
+export FRONT_PROXY_CA_KEY_PATH="${BASE_K8S_PATH}/pki/front-proxy-ca.key"
+export FRONT_PROXY_CA_CRT_PATH="${BASE_K8S_PATH}/pki/front-proxy-ca.crt"
+export FRONT_PROXY_CA_CSR_PATH="${BASE_K8S_PATH}/openssl/front-proxy-ca.conf"
+export FRONT_PROXY_CA_CRT_CN="front-proxy-ca"
+export FRONT_PROXY_CA_KEY_SIZE=4096
 ```
 
-```bash
-cat <<EOF > ${BASE_K8S_PATH}/cfssl/front-proxy-ca-csr.json
-{
-  "CN": "FrontProxy CA",
-  "key": {
-    "algo": "rsa",
-    "size": 4096
-  },
-  "names": [
-    {
-      "O": "Kubernetes",
-      "OU": "CA"
-    }
-  ]
-}
+<Tabs 
+    defaultValue='openssl'
+    values={[
+        { label: "openssl", value: "openssl" },
+    ]}>
+    <TabItem value='openssl'>
 
-EOF
-```
+      ```bash
+      mkdir -p ${BASE_K8S_PATH}/openssl
+      ```
 
-```bash
-cfssl gencert -initca ${BASE_K8S_PATH}/cfssl/front-proxy-ca-csr.json | cfssljson -bare ${BASE_K8S_PATH}/pki/ca/front-proxy-ca
-```
+      ```bash
+      cat <<EOF > ${FRONT_PROXY_CA_CSR_PATH}
+      [req]
+      distinguished_name = req_distinguished_name
+      x509_extensions    = v3_ca
+      prompt             = no
+
+      [req_distinguished_name]
+      CN = "${FRONT_PROXY_CA_CRT_CN}"
+
+      [v3_ca]
+      keyUsage = critical, keyCertSign, keyEncipherment, digitalSignature
+      basicConstraints = critical,CA:TRUE
+      EOF
+      ```
+
+      ```bash
+      openssl genrsa \
+        -out "${FRONT_PROXY_CA_KEY_PATH}" ${FRONT_PROXY_CA_KEY_SIZE}
+
+      openssl req \
+        -x509 \
+        -new \
+        -nodes \
+        -key "${FRONT_PROXY_CA_KEY_PATH}" \
+        -sha256 \
+        -days 3650 \
+        -out "${FRONT_PROXY_CA_CRT_PATH}" \
+        -config "${FRONT_PROXY_CA_CSR_PATH}"
+      ```
+
+    </TabItem>
+
+</Tabs>
+
 </details>
+
