@@ -63,7 +63,7 @@ sed -r 's/^v([0-9]*).([0-9]*).([0-9]*)/v\1.\2.0/')
 ### etcd
 ```bash
 # Список ETCD Servers
-export ETCD_SERVERS=export ETCD_SERVERS=$(printf "https://master-%s.$BASE_CLUSTER_DOMAIN:$ETCD_SERVER_PORT," $(seq 1 $MASTER_COUNT) | sed 's/,$//')
+export ETCD_SERVERS=$(printf "https://master-%s.$BASE_CLUSTER_DOMAIN:$ETCD_SERVER_PORT," $(seq 1 $MASTER_COUNT) | sed 's/,$//')
 
 # Список ETCD Peers
 export ETCD_INITIAL_CLUSTER=$(seq -s, 1 $MASTER_COUNT | sed "s/\([0-9]\)/master-\1.$BASE_CLUSTER_DOMAIN=https:\/\/master-\1.$BASE_CLUSTER_DOMAIN:$ETCD_PEER_PORT/g")
