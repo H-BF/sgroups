@@ -11,7 +11,7 @@ mkdir -p ${BASE_K8S_PATH}/openssl/csr
 mkdir -p ${BASE_KUBELET_PATH}/pki
 
 
-export CERTIFICATE_KEY_SIZE=4096
+export CERTIFICATE_KEY_SIZE=2048
 export KUBELET_CURRENT_CLIENT_CRT_PATH="${BASE_KUBELET_PATH}/pki/kubelet-client-current.pem"
 export KUBELET_CURRENT_SERVER_CRT_PATH="${BASE_KUBELET_PATH}/pki/kubelet-server-current.pem"
 
@@ -37,7 +37,7 @@ export KUBELET_SERVER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/kubelet-server.csr"
       ```bash
       cat <<EOF > ${KUBELET_CLIENT_CRT_CONF}
       [ req ]
-      default_bits        = 4096
+      default_bits        = ${CERTIFICATE_KEY_SIZE}
       prompt              = no
       default_md          = sha256
       distinguished_name  = dn
@@ -45,7 +45,6 @@ export KUBELET_SERVER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/kubelet-server.csr"
       [ dn ]
       CN = system:node:${FULL_HOST_NAME}
       O  = system:nodes
-      OU = Kubernetes
 
       [ v3_ext ]
       authorityKeyIdentifier=keyid,issuer:always
@@ -58,7 +57,7 @@ export KUBELET_SERVER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/kubelet-server.csr"
       ```bash
       cat <<EOF > ${KUBELET_SERVER_CRT_CONF}
       [ req ]
-      default_bits        = 4096
+      default_bits        = ${CERTIFICATE_KEY_SIZE}
       prompt              = no
       default_md          = sha256
       distinguished_name  = dn
@@ -78,7 +77,6 @@ export KUBELET_SERVER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/kubelet-server.csr"
       [ dn ]
       CN = "system:node:${FULL_HOST_NAME}"
       O  = "system:nodes"
-      OU = "Kubernetes"
 
       [ v3_ext ]
       authorityKeyIdentifier=keyid,issuer:always
@@ -152,20 +150,20 @@ export KUBELET_SERVER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/kubelet-server.csr"
 ```bash
 
 kubectl config set-cluster kubernetes \
-  --certificate-authority="${BASE_K8S_PATH}/pki/ca.crt" \
+  --certificate-authority="${KUBERNETES_CA_CRT_PATH}" \
   --embed-certs=true \
   --server=https://127.0.0.1:6443 \
   --kubeconfig=${BASE_K8S_PATH}/kubelet.conf
 
-kubectl config set-credentials system:node:${HOST_NAME} \
+kubectl config set-credentials system:node:${FULL_HOST_NAME} \
   --client-certificate=${KUBELET_CLIENT_CRT_PATH} \
-  --client-key=${KUBELET_CLIENT_CRT_PATH} \
-  --embed-certs=false \
+  --client-key=${KUBELET_CLIENT_KEY_PATH} \
+  --embed-certs=true \
   --kubeconfig=${BASE_K8S_PATH}/kubelet.conf
 
 kubectl config set-context default \
   --cluster=kubernetes \
-  --user=system:node:${HOST_NAME} \
+  --user=system:node:${FULL_HOST_NAME} \
   --kubeconfig=${BASE_K8S_PATH}/kubelet.conf
 
 kubectl config use-context default --kubeconfig=${BASE_K8S_PATH}/kubelet.conf

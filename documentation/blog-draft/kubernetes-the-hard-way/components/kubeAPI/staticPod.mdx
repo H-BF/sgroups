@@ -23,30 +23,30 @@ spec:
     - --allow-privileged=true
     - --authorization-mode=Node,RBAC
     - --bind-address=0.0.0.0
-    - --client-ca-file=${BASE_K8S_PATH}/pki/ca/kubernetes-ca.pem
+    - --client-ca-file=${KUBERNETES_CA_CRT_PATH}
     - --enable-admission-plugins=NodeRestriction
     - --enable-bootstrap-token-auth=true
-    - --etcd-cafile=${BASE_K8S_PATH}/pki/ca/etcd-ca.pem
-    - --etcd-certfile=${BASE_K8S_PATH}/pki/kubeAPI/client-etcd.pem
-    - --etcd-keyfile=${BASE_K8S_PATH}/pki/kubeAPI/client-etcd-key.pem
+    - --etcd-cafile=${ETCD_CA_CRT_PATH}
+    - --etcd-certfile=${KUBERNETES_ETCD_CLIENT_CRT_PATH}
+    - --etcd-keyfile=${KUBERNETES_ETCD_CLIENT_KEY_PATH}
     - --etcd-servers=${ETCD_SERVERS}
-    - --kubelet-client-certificate=${BASE_K8S_PATH}/pki/kubeAPI/client-kubelet.pem
-    - --kubelet-client-key=${BASE_K8S_PATH}/pki/kubeAPI/client-kubelet-key.pem
+    - --kubelet-client-certificate=${KUBERNETES_KUBELET_CLIENT_CRT_PATH}
+    - --kubelet-client-key=${KUBERNETES_KUBELET_CLIENT_KEY_PATH}
     - --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname
-    - --proxy-client-cert-file=${BASE_K8S_PATH}/pki/kubeAPI/client-front-proxy.pem
-    - --proxy-client-key-file=${BASE_K8S_PATH}/pki/kubeAPI/client-front-proxy-key.pem
+    - --proxy-client-cert-file=${KUBERNETES_FRONT_PROXY_CLIENT_CRT_PATH}
+    - --proxy-client-key-file=${KUBERNETES_FRONT_PROXY_CLIENT_KEY_PATH}
     - --requestheader-allowed-names=front-proxy-client
-    - --requestheader-client-ca-file=${BASE_K8S_PATH}/pki/ca/front-proxy-ca.pem
+    - --requestheader-client-ca-file=${FRONT_PROXY_CA_CRT_PATH}
     - --requestheader-extra-headers-prefix=X-Remote-Extra-
     - --requestheader-group-headers=X-Remote-Group
     - --requestheader-username-headers=X-Remote-User
     - --secure-port=${KUBE_APISERVER_PORT}
     - --service-account-issuer=https://kubernetes.default.svc.${BASE_CLUSTER_DOMAIN}
-    - --service-account-key-file=${BASE_K8S_PATH}/pki/kubeAPI/sa.pub
-    - --service-account-signing-key-file=${BASE_K8S_PATH}/pki/kubeAPI/sa.key
+    - --service-account-key-file=${KUBERNETES_SERVICE_ACCOUNT_CRT_PATH}
+    - --service-account-signing-key-file=${KUBERNETES_SERVICE_ACCOUNT_KEY_PATH}
     - --service-cluster-ip-range=${SERVICE_CIDR}
-    - --tls-cert-file=${BASE_K8S_PATH}/pki/kubeAPI/server.pem
-    - --tls-private-key-file=${BASE_K8S_PATH}/pki/kubeAPI/server-key.pem
+    - --tls-cert-file=${KUBERNETES_SERVER_CRT_PATH}
+    - --tls-private-key-file=${KUBERNETES_SERVER_KEY_PATH}
     image: k8s.gcr.io/kube-apiserver:${KUBERNETES_VERSION}
     imagePullPolicy: IfNotPresent
     livenessProbe:
@@ -91,14 +91,8 @@ spec:
       readOnly: true
     - mountPath: /var/log/kubernetes/audit/
       name: k8s-audit
-    - mountPath: ${BASE_K8S_PATH}/pki/ca
-      name: k8s-ca
-      readOnly: true
-    - mountPath: ${BASE_K8S_PATH}/pki/kubeAPI
-      name: k8s-certs
-      readOnly: true
-    - mountPath: ${BASE_K8S_PATH}/kube-apiserver
-      name: k8s-kube-apiserver-configs
+    - mountPath: ${BASE_K8S_PATH}/pki
+      name: pki
       readOnly: true
     - mountPath: /usr/local/share/ca-certificates
       name: usr-local-share-ca-certificates
@@ -125,17 +119,9 @@ spec:
       type: DirectoryOrCreate
     name: k8s-audit
   - hostPath:
-      path: ${BASE_K8S_PATH}/pki/ca
+      path: ${BASE_K8S_PATH}/pki/
       type: DirectoryOrCreate
-    name: k8s-ca
-  - hostPath:
-      path: ${BASE_K8S_PATH}/pki/kubeAPI
-      type: DirectoryOrCreate
-    name: k8s-certs
-  - hostPath:
-      path: ${BASE_K8S_PATH}/kube-apiserver
-      type: DirectoryOrCreate
-    name: k8s-kube-apiserver-configs
+    name: pki
   - hostPath:
       path: /usr/local/share/ca-certificates
       type: DirectoryOrCreate

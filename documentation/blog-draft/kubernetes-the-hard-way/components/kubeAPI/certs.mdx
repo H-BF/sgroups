@@ -1,165 +1,351 @@
+import { FancyboxDiagram }  from '@site/src/components/commonBlocks/FancyboxDiagram'
+import TabItem              from '@theme/TabItem'
+import Tabs                 from '@theme/Tabs'
 
 <details>
 <summary>KubeAPI Certificates</summary>
 
-
 ```bash
-mkdir -p ${BASE_K8S_PATH}/pki/kubeAPI
+mkdir -p ${BASE_K8S_PATH}/pki
+mkdir -p ${BASE_K8S_PATH}/openssl/csr
+mkdir -p ${BASE_K8S_PATH}/kubeconfig/
+
+export CERTIFICATE_KEY_SIZE=2048
+
+export KUBERNETES_KUBELET_CLIENT_KEY_PATH="${BASE_K8S_PATH}/pki/apiserver-kubelet-client.key"
+export KUBERNETES_KUBELET_CLIENT_CRT_PATH="${BASE_K8S_PATH}/pki/apiserver-kubelet-client.crt"
+export KUBERNETES_KUBELET_CLIENT_CRT_CONF="${BASE_K8S_PATH}/openssl/apiserver-kubelet-client.conf"
+export KUBERNETES_KUBELET_CLIENT_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/apiserver-kubelet-client.csr"
+
+export KUBERNETES_FRONT_PROXY_CLIENT_KEY_PATH="${BASE_K8S_PATH}/pki/front-proxy-client.key"
+export KUBERNETES_FRONT_PROXY_CLIENT_CRT_PATH="${BASE_K8S_PATH}/pki/front-proxy-client.crt"
+export KUBERNETES_FRONT_PROXY_CLIENT_CRT_CONF="${BASE_K8S_PATH}/openssl/front-proxy-client.conf"
+export KUBERNETES_FRONT_PROXY_CLIENT_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/front-proxy-client.csr"
+
+export KUBERNETES_ETCD_CLIENT_KEY_PATH="${BASE_K8S_PATH}/pki/apiserver-etcd-client.key"
+export KUBERNETES_ETCD_CLIENT_CRT_PATH="${BASE_K8S_PATH}/pki/apiserver-etcd-client.crt"
+export KUBERNETES_ETCD_CLIENT_CRT_CONF="${BASE_K8S_PATH}/openssl/apiserver-etcd-client.conf"
+export KUBERNETES_ETCD_CLIENT_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/apiserver-etcd-client.csr"
+
+export KUBERNETES_SERVER_KEY_PATH="${BASE_K8S_PATH}/pki/apiserver.key"
+export KUBERNETES_SERVER_CRT_PATH="${BASE_K8S_PATH}/pki/apiserver.crt"
+export KUBERNETES_SERVER_CRT_CONF="${BASE_K8S_PATH}/openssl/apiserver.conf"
+export KUBERNETES_SERVER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/apiserver.csr"
+
+export KUBERNETES_SERVICE_ACCOUNT_KEY_PATH="${BASE_K8S_PATH}/pki/sa.key"
+export KUBERNETES_SERVICE_ACCOUNT_CRT_PATH="${BASE_K8S_PATH}/pki/sa.pub"
+
+export KUBERNETES_SUPER_ADMIN_CLIENT_KEY_PATH="${BASE_K8S_PATH}/kubeconfig/super-admin.key"
+export KUBERNETES_SUPER_ADMIN_CLIENT_CRT_PATH="${BASE_K8S_PATH}/kubeconfig/super-admin.crt"
+export KUBERNETES_SUPER_ADMIN_CLIENT_CRT_CONF="${BASE_K8S_PATH}/openssl/super-admin.conf"
+export KUBERNETES_SUPER_ADMIN_CLIENT_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/super-admin.csr"
+
+export KUBERNETES_ADMIN_CLIENT_KEY_PATH="${BASE_K8S_PATH}/kubeconfig/admin.key"
+export KUBERNETES_ADMIN_CLIENT_CRT_PATH="${BASE_K8S_PATH}/kubeconfig/admin.crt"
+export KUBERNETES_ADMIN_CLIENT_CRT_CONF="${BASE_K8S_PATH}/openssl/admin.conf"
+export KUBERNETES_ADMIN_CLIENT_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/admin.csr"
 ```
 
-```bash
-cat <<EOF > ${BASE_K8S_PATH}/cfssl/kube-api-kubelet-client.json
-{
-  "CN": "kube-apiserver-kubelet-client",
-  "key": {
-    "algo": "rsa",
-    "size": 4096
-  },
-  "names": [
-    {
-      "O": "system:masters",
-      "OU": "Kubernetes"
-    }
-  ]
-}
-EOF
-```
+<Tabs 
+    defaultValue='openssl'
+    values={[
+        { label: "openssl", value: "openssl" },
+    ]}>
+    <TabItem value='openssl'>
 
-```bash
-cat <<EOF > ${BASE_K8S_PATH}/cfssl/kube-api-kubernetes-admin-client.json
-{
-  "CN": "kubernetes-admin",
-  "key": {
-    "algo": "rsa",
-    "size": 4096
-  },
-  "names": [
-    {
-      "O": "system:masters",
-      "OU": "Kubernetes"
-    }
-  ]
-}
-EOF
-```
+      #### Описываем инструкции:
 
-```bash
-cat <<EOF > ${BASE_K8S_PATH}/cfssl/kube-api-front-proxy-client.json
-{
-  "CN": "front-proxy-client",
-  "key": {
-    "algo": "rsa",
-    "size": 4096
-  }
-}
-EOF
-```
+      ```bash
+      cat <<EOF > ${KUBERNETES_ETCD_CLIENT_CRT_CONF}
+      [ req ]
+      default_bits        = ${CERTIFICATE_KEY_SIZE}
+      prompt              = no
+      default_md          = sha256
+      distinguished_name  = dn
 
+      [ dn ]
+      CN = kube-apiserver-etcd-client
 
-```bash
-cat <<EOF > ${BASE_K8S_PATH}/cfssl/kube-api-etcd-client.json
-{
-  "CN": "kube-apiserver-etcd-client",
-  "key": {
-    "algo": "rsa",
-    "size": 4096
-  },
-  "names": [
-    {
-      "O": "system:masters",
-      "OU": "Kubernetes"
-    }
-  ]
-}
-EOF
-```
+      [ v3_ext ]
+      authorityKeyIdentifier=keyid,issuer:always
+      basicConstraints=CA:FALSE
+      keyUsage=keyEncipherment,dataEncipherment
+      extendedKeyUsage=clientAuth
+      EOF
+      ```
 
-```bash
-cat <<EOF > ${BASE_K8S_PATH}/cfssl/kube-api-server.json
-{
-  "CN": "kube-apiserver",
-  "key": {
-    "algo": "rsa",
-    "size": 4096
-  },
-  "hosts": [
-    "${HOST_NAME}",
-    "${SERVICE_KUBE_API}",
-    "${LOCAL_ADDRESS}",
-    "${KUBE_VIP_ADDRESS}",
-    "kubernetes",
-    "kubernetes.default",
-    "kubernetes.default.svc",
-    "kubernetes.default.svc.${BASE_CLUSTER_DOMAIN}",
-    "127.0.0.1",
-    "0:0:0:0:0:0:0:1"
-  ]
-}
-EOF
-```
+      ```bash
+      cat <<EOF > ${KUBERNETES_KUBELET_CLIENT_CRT_CONF}
+      [ req ]
+      default_bits        = ${CERTIFICATE_KEY_SIZE}
+      prompt              = no
+      default_md          = sha256
+      distinguished_name  = dn
 
-```bash
-openssl genrsa \
-  -out ${BASE_K8S_PATH}/pki/kubeAPI/sa.key 4096
+      [ dn ]
+      CN = kube-apiserver-kubelet-client
+      O  = kubeadm:cluster-admins
 
-openssl rsa \
-  -pubout \
-  -in ${BASE_K8S_PATH}/pki/kubeAPI/sa.key \
-  -out ${BASE_K8S_PATH}/pki/kubeAPI/sa.pub
+      [ v3_ext ]
+      authorityKeyIdentifier=keyid,issuer:always
+      basicConstraints=CA:FALSE
+      keyUsage=keyEncipherment,dataEncipherment
+      extendedKeyUsage=clientAuth
+      EOF
+      ```
 
-cfssl gencert \
-  -profile=client \
-  -ca=${BASE_K8S_PATH}/pki/ca/kubernetes-ca.pem \
-  -ca-key=${BASE_K8S_PATH}/pki/ca/kubernetes-ca-key.pem \
-  -config=${BASE_K8S_PATH}/cfssl/certs-config.json \
-  ${BASE_K8S_PATH}/cfssl/kube-api-kubernetes-admin-client.json  | 
-  cfssljson -bare ${BASE_K8S_PATH}/pki/kubeAPI/client-kubernetes-admin
+      ```bash
+      cat <<EOF > ${KUBERNETES_SUPER_ADMIN_CLIENT_CRT_CONF}
+      [ req ]
+      default_bits        = ${CERTIFICATE_KEY_SIZE}
+      prompt              = no
+      default_md          = sha256
+      distinguished_name  = dn
 
-cfssl gencert \
-  -profile=client \
-  -ca=${BASE_K8S_PATH}/pki/ca/kubernetes-ca.pem \
-  -ca-key=${BASE_K8S_PATH}/pki/ca/kubernetes-ca-key.pem \
-  -config=${BASE_K8S_PATH}/cfssl/certs-config.json \
-  ${BASE_K8S_PATH}/cfssl/kube-api-kubelet-client.json | 
-  cfssljson -bare ${BASE_K8S_PATH}/pki/kubeAPI/client-kubelet
+      [ dn ]
+      CN = kubernetes-super-admin
+      O  = system:masters
 
-cfssl gencert \
-  -profile=client \
-  -ca=${BASE_K8S_PATH}/pki/ca/front-proxy-ca.pem \
-  -ca-key=${BASE_K8S_PATH}/pki/ca/front-proxy-ca-key.pem \
-  -config=${BASE_K8S_PATH}/cfssl/front-proxy-certs-config.json \
-  ${BASE_K8S_PATH}/cfssl/kube-api-front-proxy-client.json | 
-  cfssljson -bare ${BASE_K8S_PATH}/pki/kubeAPI/client-front-proxy
+      [ v3_ext ]
+      authorityKeyIdentifier=keyid,issuer:always
+      basicConstraints=CA:FALSE
+      keyUsage=keyEncipherment,dataEncipherment
+      extendedKeyUsage=clientAuth
+      EOF
+      ```
 
-cfssl gencert \
-  -profile=client \
-  -ca=${BASE_K8S_PATH}/pki/ca/etcd-ca.pem \
-  -ca-key=${BASE_K8S_PATH}/pki/ca/etcd-ca-key.pem \
-  -config=${BASE_K8S_PATH}/cfssl/etcd-certs-config.json \
-  ${BASE_K8S_PATH}/cfssl/kube-api-etcd-client.json | 
-  cfssljson -bare ${BASE_K8S_PATH}/pki/kubeAPI/client-etcd
+      ```bash
+      cat <<EOF > ${KUBERNETES_ADMIN_CLIENT_CRT_CONF}
+      [ req ]
+      default_bits        = ${CERTIFICATE_KEY_SIZE}
+      prompt              = no
+      default_md          = sha256
+      distinguished_name  = dn
 
-cfssl gencert \
-  -profile=server \
-  -ca=${BASE_K8S_PATH}/pki/ca/kubernetes-ca.pem \
-  -ca-key=${BASE_K8S_PATH}/pki/ca/kubernetes-ca-key.pem \
-  -config=${BASE_K8S_PATH}/cfssl/certs-config.json \
-  ${BASE_K8S_PATH}/cfssl/kube-api-server.json | 
-  cfssljson -bare ${BASE_K8S_PATH}/pki/kubeAPI/server
+      [ dn ]
+      CN = kubernetes-admin
+      O  = kubeadm:cluster-admins
 
-```
+      [ v3_ext ]
+      authorityKeyIdentifier=keyid,issuer:always
+      basicConstraints=CA:FALSE
+      keyUsage=keyEncipherment,dataEncipherment
+      extendedKeyUsage=clientAuth
+      EOF
+      ```
+
+      ```bash
+      cat <<EOF > ${KUBERNETES_FRONT_PROXY_CLIENT_CRT_CONF}
+      [ req ]
+      default_bits        = ${CERTIFICATE_KEY_SIZE}
+      prompt              = no
+      default_md          = sha256
+      distinguished_name  = dn
+
+      [ dn ]
+      CN = front-proxy-client
+
+      [ v3_ext ]
+      authorityKeyIdentifier=keyid,issuer:always
+      basicConstraints=CA:FALSE
+      keyUsage=keyEncipherment,dataEncipherment
+      extendedKeyUsage=clientAuth
+      EOF
+      ```
+
+      ```bash
+      cat <<EOF > ${KUBERNETES_SERVER_CRT_CONF}
+      [ req ]
+      default_bits        = ${CERTIFICATE_KEY_SIZE}
+      prompt              = no
+      default_md          = sha256
+      distinguished_name  = dn
+      req_extensions      = req_ext
+
+      [ req_ext ]
+      subjectAltName = @alt_names
+
+      [ alt_names ]
+      DNS.1 = kubernetes
+      DNS.2 = kubernetes.default
+      DNS.3 = kubernetes.default.svc
+      DNS.4 = kubernetes.default.svc.${BASE_CLUSTER_DOMAIN}
+      DNS.5 = ${FULL_HOST_NAME}
+      IP.1  = ${LOCAL_ADDRESS}
+      IP.2  = 127.0.0.1
+
+      [ dn ]
+      CN = kube-apiserver
+
+      [ v3_ext ]
+      authorityKeyIdentifier=keyid,issuer:always
+      basicConstraints=CA:FALSE
+      keyUsage=keyEncipherment,dataEncipherment
+      extendedKeyUsage=serverAuth
+      subjectAltName=@alt_names
+      EOF
+      ```
+
+      #### Создаем приватные ключи:
+
+      ```bash
+      openssl genrsa \
+        -out "${KUBERNETES_KUBELET_CLIENT_KEY_PATH}" ${CERTIFICATE_KEY_SIZE}
+      openssl genrsa \
+        -out "${KUBERNETES_FRONT_PROXY_CLIENT_KEY_PATH}" ${CERTIFICATE_KEY_SIZE}
+      openssl genrsa \
+        -out "${KUBERNETES_ETCD_CLIENT_KEY_PATH}" ${CERTIFICATE_KEY_SIZE}
+      openssl genrsa \
+        -out "${KUBERNETES_SERVER_KEY_PATH}" ${CERTIFICATE_KEY_SIZE}
+      openssl genrsa \
+        -out "${KUBERNETES_SUPER_ADMIN_CLIENT_KEY_PATH}" ${CERTIFICATE_KEY_SIZE}
+      openssl genrsa \
+        -out "${KUBERNETES_ADMIN_CLIENT_KEY_PATH}" ${CERTIFICATE_KEY_SIZE}
+      ```
+
+      #### Создаем CSR:
+
+      ```bash
+      openssl req \
+        -new \
+        -key    "${KUBERNETES_KUBELET_CLIENT_KEY_PATH}" \
+        -out    "${KUBERNETES_KUBELET_CLIENT_CSR_PATH}" \
+        -config "${KUBERNETES_KUBELET_CLIENT_CRT_CONF}"
+
+      openssl req \
+        -new \
+        -key    "${KUBERNETES_FRONT_PROXY_CLIENT_KEY_PATH}" \
+        -out    "${KUBERNETES_FRONT_PROXY_CLIENT_CSR_PATH}" \
+        -config "${KUBERNETES_FRONT_PROXY_CLIENT_CRT_CONF}"
+
+      openssl req \
+        -new \
+        -key    "${KUBERNETES_ETCD_CLIENT_KEY_PATH}" \
+        -out    "${KUBERNETES_ETCD_CLIENT_CSR_PATH}" \
+        -config "${KUBERNETES_ETCD_CLIENT_CRT_CONF}"
+
+      openssl req \
+        -new \
+        -key    "${KUBERNETES_SERVER_KEY_PATH}" \
+        -out    "${KUBERNETES_SERVER_CSR_PATH}" \
+        -config "${KUBERNETES_SERVER_CRT_CONF}"
+
+      openssl req \
+        -new \
+        -key    "${KUBERNETES_SUPER_ADMIN_CLIENT_KEY_PATH}" \
+        -out    "${KUBERNETES_SUPER_ADMIN_CLIENT_CSR_PATH}" \
+        -config "${KUBERNETES_SUPER_ADMIN_CLIENT_CRT_CONF}"
+
+      openssl req \
+        -new \
+        -key    "${KUBERNETES_ADMIN_CLIENT_KEY_PATH}" \
+        -out    "${KUBERNETES_ADMIN_CLIENT_CSR_PATH}" \
+        -config "${KUBERNETES_ADMIN_CLIENT_CRT_CONF}"
+      ```
+
+      #### Подписываем CSR:
+
+      ```bash
+      openssl x509 \
+        -req \
+        -days 365 \
+        -sha256 \
+        -CA "${KUBERNETES_CA_CRT_PATH}" \
+        -CAkey "${KUBERNETES_CA_KEY_PATH}" \
+        -CAcreateserial \
+        -in "${KUBERNETES_KUBELET_CLIENT_CSR_PATH}" \
+        -out "${KUBERNETES_KUBELET_CLIENT_CRT_PATH}" \
+        -extensions v3_ext \
+        -extfile "${KUBERNETES_KUBELET_CLIENT_CRT_CONF}"
+
+      openssl x509 \
+        -req \
+        -days 365 \
+        -sha256 \
+        -CA "${FRONT_PROXY_CA_CRT_PATH}" \
+        -CAkey "${FRONT_PROXY_CA_KEY_PATH}" \
+        -CAcreateserial \
+        -in "${KUBERNETES_FRONT_PROXY_CLIENT_CSR_PATH}" \
+        -out "${KUBERNETES_FRONT_PROXY_CLIENT_CRT_PATH}" \
+        -extensions v3_ext \
+        -extfile "${KUBERNETES_FRONT_PROXY_CLIENT_CRT_CONF}"
+
+      openssl x509 \
+        -req \
+        -days 365 \
+        -sha256 \
+        -CA "${ETCD_CA_CRT_PATH}" \
+        -CAkey "${ETCD_CA_KEY_PATH}" \
+        -CAcreateserial \
+        -in "${KUBERNETES_ETCD_CLIENT_CSR_PATH}" \
+        -out "${KUBERNETES_ETCD_CLIENT_CRT_PATH}" \
+        -extensions v3_ext \
+        -extfile "${KUBERNETES_ETCD_CLIENT_CRT_CONF}"
+
+      openssl x509 \
+        -req \
+        -days 365 \
+        -sha256 \
+        -CA "${KUBERNETES_CA_CRT_PATH}" \
+        -CAkey "${KUBERNETES_CA_KEY_PATH}" \
+        -CAcreateserial \
+        -in "${KUBERNETES_SERVER_CSR_PATH}" \
+        -out "${KUBERNETES_SERVER_CRT_PATH}" \
+        -extensions v3_ext \
+        -extfile "${KUBERNETES_SERVER_CRT_CONF}"
+
+      openssl x509 \
+        -req \
+        -days 365 \
+        -sha256 \
+        -CA "${KUBERNETES_CA_CRT_PATH}" \
+        -CAkey "${KUBERNETES_CA_KEY_PATH}" \
+        -CAcreateserial \
+        -in "${KUBERNETES_SUPER_ADMIN_CLIENT_CSR_PATH}" \
+        -out "${KUBERNETES_SUPER_ADMIN_CLIENT_CRT_PATH}" \
+        -extensions v3_ext \
+        -extfile "${KUBERNETES_SUPER_ADMIN_CLIENT_CRT_CONF}"
+
+      openssl x509 \
+        -req \
+        -days 365 \
+        -sha256 \
+        -CA "${KUBERNETES_CA_CRT_PATH}" \
+        -CAkey "${KUBERNETES_CA_KEY_PATH}" \
+        -CAcreateserial \
+        -in "${KUBERNETES_ADMIN_CLIENT_CSR_PATH}" \
+        -out "${KUBERNETES_ADMIN_CLIENT_CRT_PATH}" \
+        -extensions v3_ext \
+        -extfile "${KUBERNETES_ADMIN_CLIENT_CRT_CONF}"
+
+      ```
+
+      ```bash
+      openssl genpkey \
+        -algorithm RSA \
+        -out "${KUBERNETES_SERVICE_ACCOUNT_KEY_PATH}" \
+        -pkeyopt rsa_keygen_bits:2048
+
+      openssl rsa \
+        -pubout \
+        -in "${KUBERNETES_SERVICE_ACCOUNT_KEY_PATH}" \
+        -out "${KUBERNETES_SERVICE_ACCOUNT_CRT_PATH}"
+      ```
+    </TabItem>
+
+</Tabs>
 
 ```bash
 kubectl config set-cluster kubernetes \
-  --certificate-authority=${BASE_K8S_PATH}/pki/ca/kubernetes-ca.pem \
-  --embed-certs=false \
+  --certificate-authority=${KUBERNETES_CA_CRT_PATH} \
+  --embed-certs=true \
   --server=https://127.0.0.1:6443 \
   --kubeconfig=${BASE_K8S_PATH}/admin.conf
 
 kubectl config set-credentials system:node:${HOST_NAME} \
-  --client-certificate=${BASE_K8S_PATH}/pki/kubeAPI/client-kubernetes-admin.pem \
-  --client-key=${BASE_K8S_PATH}/pki/kubeAPI/client-kubernetes-admin-key.pem \
-  --embed-certs=false \
+  --client-certificate=${KUBERNETES_ADMIN_CLIENT_CRT_PATH} \
+  --client-key=${KUBERNETES_ADMIN_CLIENT_KEY_PATH} \
+  --embed-certs=true \
   --kubeconfig=${BASE_K8S_PATH}/admin.conf
 
 kubectl config set-context default \
@@ -170,4 +356,31 @@ kubectl config set-context default \
 kubectl config use-context default --kubeconfig=${BASE_K8S_PATH}/admin.conf
 ```
 
+
+```bash
+kubectl config set-cluster kubernetes \
+  --certificate-authority=${KUBERNETES_CA_CRT_PATH} \
+  --embed-certs=true \
+  --server=https://127.0.0.1:6443 \
+  --kubeconfig=${BASE_K8S_PATH}/super-admin.conf
+
+kubectl config set-credentials system:node:${HOST_NAME} \
+  --client-certificate=${KUBERNETES_SUPER_ADMIN_CLIENT_CRT_PATH} \
+  --client-key=${KUBERNETES_SUPER_ADMIN_CLIENT_KEY_PATH} \
+  --embed-certs=true \
+  --kubeconfig=${BASE_K8S_PATH}/super-admin.conf
+
+kubectl config set-context default \
+  --cluster=kubernetes \
+  --user=system:node:${HOST_NAME} \
+  --kubeconfig=${BASE_K8S_PATH}/super-admin.conf
+
+kubectl config use-context default --kubeconfig=${BASE_K8S_PATH}/super-admin.conf
+```
+
+
+
+
 </details>
+
+
