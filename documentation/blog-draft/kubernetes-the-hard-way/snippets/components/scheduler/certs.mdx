@@ -1,26 +1,30 @@
 import { FancyboxDiagram }  from '@site/src/components/commonBlocks/FancyboxDiagram'
 import TabItem              from '@theme/TabItem'
 import Tabs                 from '@theme/Tabs'
+import CodeBlock            from '@theme/CodeBlock';
+import { CUSTOM_VALUE }     from '@site/blog-draft/kubernetes-the-hard-way/constants/customValue'
+import { CERTIFICATES }     from '@site/blog-draft/kubernetes-the-hard-way/constants/certs'
 
 <details>
-<summary>Kube Controller Manager Certificates</summary>
-
-```bash
-mkdir -p ${BASE_K8S_PATH}/pki
-mkdir -p ${BASE_K8S_PATH}/openssl/csr
-```
-
+<summary>Kube Scheduler Certificates</summary>
 
 ### Переменные окружения сертификатов
+<CodeBlock language="bash">
+{`export BASE_K8S_PATH="${CUSTOM_VALUE.kuberneteBaseFolderPath.value}"
 
-```bash
-export CERTIFICATE_KEY_SIZE=2048
+  export SCHEDULER_CLIENT_KEY_SIZE=${CERTIFICATES.controllerManagerClient.keySize}
+  export SCHEDULER_CLIENT_KEY_PATH="${CERTIFICATES.controllerManagerClient.keyPath}"
+  export SCHEDULER_CLIENT_CRT_PATH="${CERTIFICATES.controllerManagerClient.crtPath}"
+  export SCHEDULER_CLIENT_CRT_CONF="${CERTIFICATES.controllerManagerClient.crtConf}"
+  export SCHEDULER_CLIENT_CSR_PATH="${CERTIFICATES.controllerManagerClient.csrPath}"
 
-export CONTROLLER_MANAGER_CLIENT_KEY_PATH="${BASE_K8S_PATH}/kubeconfig/controller-manager-client-key.pem"
-export CONTROLLER_MANAGER_CLIENT_CRT_PATH="${BASE_K8S_PATH}/kubeconfig/controller-manager-client.pem"
-export CONTROLLER_MANAGER_CLIENT_CRT_CONF="${BASE_K8S_PATH}/openssl/controller-manager-client.conf"
-export CONTROLLER_MANAGER_CLIENT_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/controller-manager-client.csr"
-```
+  export KUBERNETES_CA_CRT_PATH="${CERTIFICATES.kubernetesCA.crtPath}"
+
+  mkdir -p $\{BASE_K8S_PATH\}/pki
+  mkdir -p $\{BASE_K8S_PATH\}/openssl/csr
+
+`}
+</CodeBlock>
 
 ### Инструкция создания сертификатов
 
@@ -35,18 +39,18 @@ export CONTROLLER_MANAGER_CLIENT_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/controll
     ]}>
     <TabItem value='openssl'>
 
-      #### Конфигурация `openssl` controller-manager-client
+      #### Конфигурация `openssl` scheduler-client
 
       ```bash
-      cat <<EOF > ${CONTROLLER_MANAGER_CLIENT_CRT_CONF}
+      cat <<EOF > ${SCHEDULER_CLIENT_CRT_CONF}
       [ req ]
-      default_bits        = ${CERTIFICATE_KEY_SIZE}
+      default_bits        = ${SCHEDULER_CLIENT_KEY_SIZE}
       prompt              = no
       default_md          = sha256
       distinguished_name  = dn
 
       [ dn ]
-      CN = system:kube-controller-manager
+      CN = system:kube-scheduler
 
       [ v3_ext ]
       authorityKeyIdentifier=keyid,issuer:always
@@ -60,7 +64,7 @@ export CONTROLLER_MANAGER_CLIENT_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/controll
 
       ```bash
       openssl genrsa \
-        -out "${CONTROLLER_MANAGER_CLIENT_KEY_PATH}" ${CERTIFICATE_KEY_SIZE}
+        -out "${SCHEDULER_CLIENT_KEY_PATH}" ${SCHEDULER_CLIENT_KEY_SIZE}
       ```
 
       #### Генерация CSR будущих сертификатов
@@ -68,9 +72,9 @@ export CONTROLLER_MANAGER_CLIENT_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/controll
       ```bash
       openssl req \
         -new \
-        -key "${CONTROLLER_MANAGER_CLIENT_KEY_PATH}" \
-        -out "${CONTROLLER_MANAGER_CLIENT_CSR_PATH}" \
-        -config "${CONTROLLER_MANAGER_CLIENT_CRT_CONF}"
+        -key "${SCHEDULER_CLIENT_KEY_PATH}" \
+        -out "${SCHEDULER_CLIENT_CSR_PATH}" \
+        -config "${SCHEDULER_CLIENT_CRT_CONF}"
       ```
 
       #### Подпись CSR ключом удостоверяющего центра (CA)
@@ -84,10 +88,10 @@ export CONTROLLER_MANAGER_CLIENT_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/controll
         -CA "${KUBERNETES_CA_CRT_PATH}" \
         -CAkey "${KUBERNETES_CA_KEY_PATH}" \
         -CAcreateserial \
-        -in "${CONTROLLER_MANAGER_CLIENT_CSR_PATH}" \
-        -out "${CONTROLLER_MANAGER_CLIENT_CRT_PATH}" \
+        -in "${SCHEDULER_CLIENT_CSR_PATH}" \
+        -out "${SCHEDULER_CLIENT_CRT_PATH}" \
         -extensions v3_ext \
-        -extfile "${CONTROLLER_MANAGER_CLIENT_CRT_CONF}"
+        -extfile "${SCHEDULER_CLIENT_CRT_CONF}"
       ```
 
     </TabItem>
@@ -103,20 +107,20 @@ kubectl config set-cluster kubernetes \
   --certificate-authority="${KUBERNETES_CA_CRT_PATH}" \
   --embed-certs=true \
   --server=https://127.0.0.1:6443 \
-  --kubeconfig=${BASE_K8S_PATH}/controller-manager.conf
+  --kubeconfig=${BASE_K8S_PATH}/scheduler.conf
 
 kubectl config set-credentials system:node:${FULL_HOST_NAME} \
-  --client-certificate=${CONTROLLER_MANAGER_CLIENT_CRT_PATH} \
-  --client-key=${CONTROLLER_MANAGER_CLIENT_KEY_PATH} \
+  --client-certificate=${SCHEDULER_CLIENT_CRT_PATH} \
+  --client-key=${SCHEDULER_CLIENT_KEY_PATH} \
   --embed-certs=true \
-  --kubeconfig=${BASE_K8S_PATH}/controller-manager.conf
+  --kubeconfig=${BASE_K8S_PATH}/scheduler.conf
 
 kubectl config set-context default \
   --cluster=kubernetes \
   --user=system:node:${FULL_HOST_NAME} \
-  --kubeconfig=${BASE_K8S_PATH}/controller-manager.conf
+  --kubeconfig=${BASE_K8S_PATH}/scheduler.conf
 
-kubectl config use-context default --kubeconfig=${BASE_K8S_PATH}/controller-manager.conf
+kubectl config use-context default --kubeconfig=${BASE_K8S_PATH}/scheduler.conf
 ```
 
 </details>

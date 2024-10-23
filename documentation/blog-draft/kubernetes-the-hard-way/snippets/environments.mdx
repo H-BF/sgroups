@@ -1,0 +1,88 @@
+
+import React from 'react';
+import CodeBlock from '@theme/CodeBlock';
+
+import { PORTS }                from '@site/blog-draft/kubernetes-the-hard-way/constants/ports'
+import { CUSTOM_VALUE }         from '@site/blog-draft/kubernetes-the-hard-way/constants/customValue'
+import { COMPONENTS_VERSION }   from '@site/blog-draft/kubernetes-the-hard-way/constants/componentsVersion'
+
+<details>
+<summary>Environments</summary>
+
+### Базовые переменные окружения:
+
+Для начала зададим переменные окружния, определяющие расположение файлов и сам кластер
+
+<CodeBlock language="bash">
+{`export BASE_DOMAIN="${CUSTOM_VALUE.kubernetesBaseDomain.value}"
+  export CLUSTER_NAME="${CUSTOM_VALUE.kubernetesClusterName.value}"
+  export BASE_CLUSTER_DOMAIN=$\{CLUSTER_NAME\}.$\{BASE_DOMAIN\}
+  export BASE_K8S_PATH="${CUSTOM_VALUE.kuberneteBaseFolderPath.value}"
+  export BASE_KUBELET_PATH="${CUSTOM_VALUE.kuberneteKubeletFolderPath.value}"
+  export CRI_ENDPOINT="${CUSTOM_VALUE.criEndpoint.value}"
+  export FULL_HOST_NAME=$\{HOST_NAME\}.$\{BASE_CLUSTER_DOMAIN\}
+`}
+</CodeBlock>
+
+### Переменные окружения сети:
+
+:::warning
+Просьба обратить внимание, что я не указал тут подсеть для подов, тк по моему мнению этим должен управлять сетевой плагин, а не компоненты управляющего контура.
+:::
+
+<CodeBlock language="bash">
+{`export SERVICE_CIDR="${CUSTOM_VALUE.kubernetesServiceCIDR.value}"
+  export SERVICE_DNS="${CUSTOM_VALUE.kubernetesDNSAddress.value}"
+  export SERVICE_KUBE_API="${CUSTOM_VALUE.kubernetesDefaultInternalAddress.value}"
+  export MACHINE_LOCAL_ADDRESS=${CUSTOM_VALUE.virtualMachineLocalAddress.value}
+`}
+</CodeBlock>
+
+Заранее определяем список слушающих портов, будут нам полезны для понимания кто что использует
+
+<CodeBlock language="bash">
+{`export ETCD_SERVER_PORT="${PORTS.etcdServer.portNumber}"
+  export ETCD_PEER_PORT="${PORTS.etcdPeer.portNumber}"
+  export ETCD_METRICS_PORT="${PORTS.etcdMetricServer.portNumber}"
+  export KUBE_APISERVER_PORT="${PORTS.kubeAPIServer.portNumber}"
+  export KUBE_CONTROLLER_MANAGER_PORT="${PORTS.kubeControllerManager.portNumber}"
+  export KUBE_SCHEDULER_PORT="${PORTS.kubeScheduler.portNumber}"
+  export KUBELET_HEALTHZ_PORT=${PORTS.kubeletHealthz.portNumber}
+  export KUBELET_SERVER_PORT=${PORTS.kubeletServer.portNumber}
+`}
+</CodeBlock>
+
+<CodeBlock language="bash">
+{`export BASE_DOCKER_REGISTRY="${CUSTOM_VALUE.baseDockerRegistry.value}"
+  export PAUSED_IMAGE="${CUSTOM_VALUE.pausedImage.value}"
+`}
+</CodeBlock>
+
+### Версии компонентов
+
+<CodeBlock language="bash">
+{`export KUBERNETES_VERSION="${COMPONENTS_VERSION.kubernetes.value}"
+  export ETCD_VERSION="${COMPONENTS_VERSION.etcd.value}"
+  export ETCD_TOOL_VERSION="${COMPONENTS_VERSION.etcdctl.value}"
+  export RUNC_VERSION="${COMPONENTS_VERSION.runc.value}"
+  export CONTAINERD_VERSION="${COMPONENTS_VERSION.containerd.value}"
+  export CRICTL_VERSION="${COMPONENTS_VERSION.crictl.value}"
+`}
+</CodeBlock>
+
+
+### Переменные окружения ETCD
+
+```bash
+# Список ETCD Servers
+export ETCD_SERVERS=$(printf "https://master-%s.$BASE_CLUSTER_DOMAIN:$ETCD_SERVER_PORT," $(seq 1 $MASTER_COUNT) | sed 's/,$//')
+
+# Список ETCD Peers
+export ETCD_INITIAL_CLUSTER=$(seq -s, 1 $MASTER_COUNT | sed "s/\([0-9]\)/master-\1.$BASE_CLUSTER_DOMAIN=https:\/\/master-\1.$BASE_CLUSTER_DOMAIN:$ETCD_PEER_PORT/g")
+```
+</details>
+
+:::note
+Если вы когда-либо заглядывали в документацию от [Келси Хайтауэра](https://github.com/kelseyhightower/kubernetes-the-hard-way), то, возможно, заметили, что в конфигурационных файлах часто используются IP-адреса узлов. Этот метод, безусловно, работает, но есть более удобный способ. Чтобы упростить обслуживание и сделать дальнейшую шаблонизацию более гибкой, лучше использовать заранее известные FQDN-маски, как я уже упоминал для мастеров выше ```master-${INDEX}.${CLUSTER_NAME}.${BASE_DOMAIN}```.
+:::
+

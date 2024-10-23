@@ -1,21 +1,26 @@
+import CodeBlock            from '@theme/CodeBlock';
+import { CUSTOM_VALUE }     from '@site/blog-draft/kubernetes-the-hard-way/constants/customValue'
+import { PORTS }     from '@site/blog-draft/kubernetes-the-hard-way/constants/ports'
+import { COMPONENTS_VERSION } from '@site/blog-draft/kubernetes-the-hard-way/constants/componentsVersion'
+
 <details>
 <summary>Kube Scheduler</summary>
 
-
-```bash
-mkdir -p ${BASE_K8S_PATH}/pki
-mkdir -p ${BASE_K8S_PATH}/manifests
-```
-
 ### Переменные окружения сертификатов
-```bash
-export BASE_K8S_PATH="/etc/kubernetes"
-export KUBE_SCHEDULER_PORT=10259
-```
+<CodeBlock language="bash">
+{`export BASE_K8S_PATH="${CUSTOM_VALUE.kuberneteBaseFolderPath.value}"
+  export KUBE_SCHEDULER_PORT="${PORTS.kubeScheduler.portNumber}"
+  export KUBERNETES_VERSION="${COMPONENTS_VERSION.kubernetes.value}"
 
-```bash
+  mkdir -p $\{BASE_K8S_PATH\}/pki
+  mkdir -p $\{BASE_K8S_PATH\}/openssl/csr
+  mkdir -p $\{BASE_K8S_PATH\}/manifests
+`}
+</CodeBlock>
 
-cat <<EOF > ${BASE_K8S_PATH}/manifests/kube-1yaml
+### Инструкция StaticPod
+```bash
+cat <<EOF > ${BASE_K8S_PATH}/manifests/kube-scheduler.yaml
 apiVersion: v1
 kind: Pod
 metadata:

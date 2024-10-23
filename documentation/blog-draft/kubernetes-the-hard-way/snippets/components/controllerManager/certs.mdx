@@ -1,0 +1,128 @@
+import { FancyboxDiagram }  from '@site/src/components/commonBlocks/FancyboxDiagram'
+import TabItem              from '@theme/TabItem'
+import Tabs                 from '@theme/Tabs'
+
+import CodeBlock            from '@theme/CodeBlock';
+import { CUSTOM_VALUE }     from '@site/blog-draft/kubernetes-the-hard-way/constants/customValue'
+import { CERTIFICATES }     from '@site/blog-draft/kubernetes-the-hard-way/constants/certs'
+
+<details>
+<summary>Kube Controller Manager Certificates</summary>
+
+### Переменные окружения сертификатов
+<CodeBlock language="bash">
+{`export BASE_K8S_PATH="${CUSTOM_VALUE.kuberneteBaseFolderPath.value}"
+
+  export CONTROLLER_MANAGER_CLIENT_KEY_SIZE=${CERTIFICATES.controllerManagerClient.keySize}
+  export CONTROLLER_MANAGER_CLIENT_KEY_PATH="${CERTIFICATES.controllerManagerClient.keyPath}"
+  export CONTROLLER_MANAGER_CLIENT_CRT_PATH="${CERTIFICATES.controllerManagerClient.crtPath}"
+  export CONTROLLER_MANAGER_CLIENT_CRT_CONF="${CERTIFICATES.controllerManagerClient.crtConf}"
+  export CONTROLLER_MANAGER_CLIENT_CSR_PATH="${CERTIFICATES.controllerManagerClient.csrPath}"
+
+  export KUBERNETES_CA_CRT_PATH="${CERTIFICATES.kubernetesCA.crtPath}"
+  export KUBERNETES_CA_KEY_PATH="${CERTIFICATES.kubernetesCA.keyPath}"
+
+  mkdir -p $\{BASE_K8S_PATH\}/pki
+  mkdir -p $\{BASE_K8S_PATH\}/openssl/csr
+`}
+</CodeBlock>
+
+
+### Инструкция создания сертификатов
+
+:::note
+Для удобства добавил блок расширения, что бы в перспективе отобразить инструкции сертификатов для `cfssl`
+:::
+
+<Tabs 
+    defaultValue='openssl'
+    values={[
+        { label: "openssl", value: "openssl" },
+    ]}>
+    <TabItem value='openssl'>
+
+      #### Конфигурация `openssl` controller-manager-client
+
+      ```bash
+      cat <<EOF > ${CONTROLLER_MANAGER_CLIENT_CRT_CONF}
+      [ req ]
+      default_bits        = ${CONTROLLER_MANAGER_CLIENT_KEY_SIZE}
+      prompt              = no
+      default_md          = sha256
+      distinguished_name  = dn
+
+      [ dn ]
+      CN = system:kube-controller-manager
+
+      [ v3_ext ]
+      authorityKeyIdentifier=keyid,issuer:always
+      basicConstraints=CA:FALSE
+      keyUsage=keyEncipherment,dataEncipherment
+      extendedKeyUsage=clientAuth
+      EOF
+      ```
+
+      #### Генерация приватных ключей сертификатов
+
+      ```bash
+      openssl genrsa \
+        -out "${CONTROLLER_MANAGER_CLIENT_KEY_PATH}" ${CONTROLLER_MANAGER_CLIENT_KEY_SIZE}
+      ```
+
+      #### Генерация CSR будущих сертификатов
+
+      ```bash
+      openssl req \
+        -new \
+        -key "${CONTROLLER_MANAGER_CLIENT_KEY_PATH}" \
+        -out "${CONTROLLER_MANAGER_CLIENT_CSR_PATH}" \
+        -config "${CONTROLLER_MANAGER_CLIENT_CRT_CONF}"
+      ```
+
+      #### Подпись CSR ключом удостоверяющего центра (CA)
+
+      ```bash
+      openssl x509 \
+        -req \
+        -days 365 \
+        -sha256 \
+        -outform PEM \
+        -CA "${KUBERNETES_CA_CRT_PATH}" \
+        -CAkey "${KUBERNETES_CA_KEY_PATH}" \
+        -CAcreateserial \
+        -in "${CONTROLLER_MANAGER_CLIENT_CSR_PATH}" \
+        -out "${CONTROLLER_MANAGER_CLIENT_CRT_PATH}" \
+        -extensions v3_ext \
+        -extfile "${CONTROLLER_MANAGER_CLIENT_CRT_CONF}"
+      ```
+
+    </TabItem>
+
+</Tabs>
+
+
+
+### Инструкция создания Kubeconfig
+```bash
+
+kubectl config set-cluster kubernetes \
+  --certificate-authority="${KUBERNETES_CA_CRT_PATH}" \
+  --embed-certs=true \
+  --server=https://127.0.0.1:6443 \
+  --kubeconfig=${BASE_K8S_PATH}/controller-manager.conf
+
+kubectl config set-credentials system:node:${FULL_HOST_NAME} \
+  --client-certificate=${CONTROLLER_MANAGER_CLIENT_CRT_PATH} \
+  --client-key=${CONTROLLER_MANAGER_CLIENT_KEY_PATH} \
+  --embed-certs=true \
+  --kubeconfig=${BASE_K8S_PATH}/controller-manager.conf
+
+kubectl config set-context default \
+  --cluster=kubernetes \
+  --user=system:node:${FULL_HOST_NAME} \
+  --kubeconfig=${BASE_K8S_PATH}/controller-manager.conf
+
+kubectl config use-context default --kubeconfig=${BASE_K8S_PATH}/controller-manager.conf
+```
+
+</details>

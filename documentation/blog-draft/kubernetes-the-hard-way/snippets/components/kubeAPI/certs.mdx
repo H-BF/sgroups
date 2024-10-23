@@ -1,53 +1,69 @@
 import { FancyboxDiagram }  from '@site/src/components/commonBlocks/FancyboxDiagram'
 import TabItem              from '@theme/TabItem'
 import Tabs                 from '@theme/Tabs'
+import CodeBlock            from '@theme/CodeBlock';
+import { CUSTOM_VALUE }     from '@site/blog-draft/kubernetes-the-hard-way/constants/customValue'
+import { CERTIFICATES }     from '@site/blog-draft/kubernetes-the-hard-way/constants/certs'
 
 <details>
 <summary>Kube API Certificates</summary>
 
-```bash
-mkdir -p ${BASE_K8S_PATH}/pki
-mkdir -p ${BASE_K8S_PATH}/openssl/csr
-mkdir -p ${BASE_K8S_PATH}/kubeconfig/
-```
-
 ### Переменные окружения сертификатов
-```bash
-export CERTIFICATE_KEY_SIZE=2048
 
-export KUBERNETES_KUBELET_CLIENT_KEY_PATH="${BASE_K8S_PATH}/pki/apiserver-kubelet-client.key"
-export KUBERNETES_KUBELET_CLIENT_CRT_PATH="${BASE_K8S_PATH}/pki/apiserver-kubelet-client.crt"
-export KUBERNETES_KUBELET_CLIENT_CRT_CONF="${BASE_K8S_PATH}/openssl/apiserver-kubelet-client.conf"
-export KUBERNETES_KUBELET_CLIENT_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/apiserver-kubelet-client.csr"
+<CodeBlock language="bash">
+{`export BASE_K8S_PATH="${CUSTOM_VALUE.kuberneteBaseFolderPath.value}"
 
-export KUBERNETES_FRONT_PROXY_CLIENT_KEY_PATH="${BASE_K8S_PATH}/pki/front-proxy-client.key"
-export KUBERNETES_FRONT_PROXY_CLIENT_CRT_PATH="${BASE_K8S_PATH}/pki/front-proxy-client.crt"
-export KUBERNETES_FRONT_PROXY_CLIENT_CRT_CONF="${BASE_K8S_PATH}/openssl/front-proxy-client.conf"
-export KUBERNETES_FRONT_PROXY_CLIENT_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/front-proxy-client.csr"
+  export KUBERNETES_KUBELET_CLIENT_KEY_SIZE=${CERTIFICATES.kubernetesKubeletClient.keySize}
+  export KUBERNETES_KUBELET_CLIENT_KEY_PATH="${CERTIFICATES.kubernetesKubeletClient.keyPath}"
+  export KUBERNETES_KUBELET_CLIENT_CRT_PATH="${CERTIFICATES.kubernetesKubeletClient.crtPath}"
+  export KUBERNETES_KUBELET_CLIENT_CRT_CONF="${CERTIFICATES.kubernetesKubeletClient.crtConf}"
+  export KUBERNETES_KUBELET_CLIENT_CSR_PATH="${CERTIFICATES.kubernetesKubeletClient.csrPath}"
 
-export KUBERNETES_ETCD_CLIENT_KEY_PATH="${BASE_K8S_PATH}/pki/apiserver-etcd-client.key"
-export KUBERNETES_ETCD_CLIENT_CRT_PATH="${BASE_K8S_PATH}/pki/apiserver-etcd-client.crt"
-export KUBERNETES_ETCD_CLIENT_CRT_CONF="${BASE_K8S_PATH}/openssl/apiserver-etcd-client.conf"
-export KUBERNETES_ETCD_CLIENT_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/apiserver-etcd-client.csr"
+  export KUBERNETES_FRONT_PROXY_CLIENT_KEY_SIZE=${CERTIFICATES.kubernetesFrontProxyClient.keySize}
+  export KUBERNETES_FRONT_PROXY_CLIENT_KEY_PATH="${CERTIFICATES.kubernetesFrontProxyClient.keyPath}"
+  export KUBERNETES_FRONT_PROXY_CLIENT_CRT_PATH="${CERTIFICATES.kubernetesFrontProxyClient.crtPath}"
+  export KUBERNETES_FRONT_PROXY_CLIENT_CRT_CONF="${CERTIFICATES.kubernetesFrontProxyClient.crtConf}"
+  export KUBERNETES_FRONT_PROXY_CLIENT_CSR_PATH="${CERTIFICATES.kubernetesFrontProxyClient.csrPath}"
 
-export KUBERNETES_SERVER_KEY_PATH="${BASE_K8S_PATH}/pki/apiserver.key"
-export KUBERNETES_SERVER_CRT_PATH="${BASE_K8S_PATH}/pki/apiserver.crt"
-export KUBERNETES_SERVER_CRT_CONF="${BASE_K8S_PATH}/openssl/apiserver.conf"
-export KUBERNETES_SERVER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/apiserver.csr"
+  export KUBERNETES_ETCD_CLIENT_KEY_SIZE=${CERTIFICATES.kubernetesEtcdClient.keySize}
+  export KUBERNETES_ETCD_CLIENT_KEY_PATH="${CERTIFICATES.kubernetesEtcdClient.keyPath}"
+  export KUBERNETES_ETCD_CLIENT_CRT_PATH="${CERTIFICATES.kubernetesEtcdClient.crtPath}"
+  export KUBERNETES_ETCD_CLIENT_CRT_CONF="${CERTIFICATES.kubernetesEtcdClient.crtConf}"
+  export KUBERNETES_ETCD_CLIENT_CSR_PATH="${CERTIFICATES.kubernetesEtcdClient.csrPath}"
 
-export KUBERNETES_SERVICE_ACCOUNT_KEY_PATH="${BASE_K8S_PATH}/pki/sa.key"
-export KUBERNETES_SERVICE_ACCOUNT_CRT_PATH="${BASE_K8S_PATH}/pki/sa.pub"
+  export KUBERNETES_SERVER_KEY_SIZE=${CERTIFICATES.kubernetesServer.keySize}
+  export KUBERNETES_SERVER_KEY_PATH="${CERTIFICATES.kubernetesServer.keyPath}"
+  export KUBERNETES_SERVER_CRT_PATH="${CERTIFICATES.kubernetesServer.crtPath}"
+  export KUBERNETES_SERVER_CRT_CONF="${CERTIFICATES.kubernetesServer.crtConf}"
+  export KUBERNETES_SERVER_CSR_PATH="${CERTIFICATES.kubernetesServer.csrPath}"
 
-export KUBERNETES_SUPER_ADMIN_CLIENT_KEY_PATH="${BASE_K8S_PATH}/kubeconfig/super-admin.key"
-export KUBERNETES_SUPER_ADMIN_CLIENT_CRT_PATH="${BASE_K8S_PATH}/kubeconfig/super-admin.crt"
-export KUBERNETES_SUPER_ADMIN_CLIENT_CRT_CONF="${BASE_K8S_PATH}/openssl/super-admin.conf"
-export KUBERNETES_SUPER_ADMIN_CLIENT_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/super-admin.csr"
+  export KUBERNETES_SUPER_ADMIN_CLIENT_KEY_SIZE=${CERTIFICATES.kubernetesSuperAdminClient.keySize}
+  export KUBERNETES_SUPER_ADMIN_CLIENT_KEY_PATH="${CERTIFICATES.kubernetesSuperAdminClient.keyPath}"
+  export KUBERNETES_SUPER_ADMIN_CLIENT_CRT_PATH="${CERTIFICATES.kubernetesSuperAdminClient.crtPath}"
+  export KUBERNETES_SUPER_ADMIN_CLIENT_CRT_CONF="${CERTIFICATES.kubernetesSuperAdminClient.crtConf}"
+  export KUBERNETES_SUPER_ADMIN_CLIENT_CSR_PATH="${CERTIFICATES.kubernetesSuperAdminClient.csrPath}"
 
-export KUBERNETES_ADMIN_CLIENT_KEY_PATH="${BASE_K8S_PATH}/kubeconfig/admin.key"
-export KUBERNETES_ADMIN_CLIENT_CRT_PATH="${BASE_K8S_PATH}/kubeconfig/admin.crt"
-export KUBERNETES_ADMIN_CLIENT_CRT_CONF="${BASE_K8S_PATH}/openssl/admin.conf"
-export KUBERNETES_ADMIN_CLIENT_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/admin.csr"
-```
+  export KUBERNETES_ADMIN_CLIENT_KEY_SIZE=${CERTIFICATES.kubernetesAdminClient.keySize}
+  export KUBERNETES_ADMIN_CLIENT_KEY_PATH="${CERTIFICATES.kubernetesAdminClient.keyPath}"
+  export KUBERNETES_ADMIN_CLIENT_CRT_PATH="${CERTIFICATES.kubernetesAdminClient.crtPath}"
+  export KUBERNETES_ADMIN_CLIENT_CRT_CONF="${CERTIFICATES.kubernetesAdminClient.crtConf}"
+  export KUBERNETES_ADMIN_CLIENT_CSR_PATH="${CERTIFICATES.kubernetesAdminClient.csrPath}"
+
+  export KUBERNETES_CA_CRT_PATH="${CERTIFICATES.kubernetesCA.crtPath}"
+  export KUBERNETES_CA_KEY_PATH="${CERTIFICATES.kubernetesCA.keyPath}"
+
+  export ETCD_CA_CRT_PATH="${CERTIFICATES.etcdCA.crtPath}"
+  export ETCD_CA_KEY_PATH="${CERTIFICATES.etcdCA.keyPath}"
+
+  export KUBERNETES_SERVICE_ACCOUNT_KEY_PATH="${CERTIFICATES.kubernetesSA.keyPath}"
+  export KUBERNETES_SERVICE_ACCOUNT_CRT_PATH="${CERTIFICATES.kubernetesSA.crtPath}"
+
+  mkdir -p $\{BASE_K8S_PATH\}/pki
+  mkdir -p $\{BASE_K8S_PATH\}/openssl/csr
+  mkdir -p $\{BASE_K8S_PATH\}/kubeconfig/
+`}
+</CodeBlock>
+
 
 ### Инструкция создания сертификатов
 
@@ -67,7 +83,7 @@ export KUBERNETES_ADMIN_CLIENT_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/admin.csr"
       ```bash
       cat <<EOF > ${KUBERNETES_ETCD_CLIENT_CRT_CONF}
       [ req ]
-      default_bits        = ${CERTIFICATE_KEY_SIZE}
+      default_bits        = ${KUBERNETES_ETCD_CLIENT_KEY_SIZE}
       prompt              = no
       default_md          = sha256
       distinguished_name  = dn
@@ -88,7 +104,7 @@ export KUBERNETES_ADMIN_CLIENT_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/admin.csr"
       ```bash
       cat <<EOF > ${KUBERNETES_KUBELET_CLIENT_CRT_CONF}
       [ req ]
-      default_bits        = ${CERTIFICATE_KEY_SIZE}
+      default_bits        = ${KUBERNETES_KUBELET_CLIENT_KEY_SIZE}
       prompt              = no
       default_md          = sha256
       distinguished_name  = dn
@@ -110,7 +126,7 @@ export KUBERNETES_ADMIN_CLIENT_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/admin.csr"
       ```bash
       cat <<EOF > ${KUBERNETES_SUPER_ADMIN_CLIENT_CRT_CONF}
       [ req ]
-      default_bits        = ${CERTIFICATE_KEY_SIZE}
+      default_bits        = ${KUBERNETES_SUPER_ADMIN_CLIENT_KEY_SIZE}
       prompt              = no
       default_md          = sha256
       distinguished_name  = dn
@@ -132,7 +148,7 @@ export KUBERNETES_ADMIN_CLIENT_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/admin.csr"
       ```bash
       cat <<EOF > ${KUBERNETES_ADMIN_CLIENT_CRT_CONF}
       [ req ]
-      default_bits        = ${CERTIFICATE_KEY_SIZE}
+      default_bits        = ${KUBERNETES_ADMIN_CLIENT_KEY_SIZE}
       prompt              = no
       default_md          = sha256
       distinguished_name  = dn
@@ -154,7 +170,7 @@ export KUBERNETES_ADMIN_CLIENT_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/admin.csr"
       ```bash
       cat <<EOF > ${KUBERNETES_FRONT_PROXY_CLIENT_CRT_CONF}
       [ req ]
-      default_bits        = ${CERTIFICATE_KEY_SIZE}
+      default_bits        = ${KUBERNETES_FRONT_PROXY_CLIENT_KEY_SIZE}
       prompt              = no
       default_md          = sha256
       distinguished_name  = dn
@@ -175,7 +191,7 @@ export KUBERNETES_ADMIN_CLIENT_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/admin.csr"
       ```bash
       cat <<EOF > ${KUBERNETES_SERVER_CRT_CONF}
       [ req ]
-      default_bits        = ${CERTIFICATE_KEY_SIZE}
+      default_bits        = ${KUBERNETES_SERVER_KEY_SIZE}
       prompt              = no
       default_md          = sha256
       distinguished_name  = dn
@@ -190,7 +206,7 @@ export KUBERNETES_ADMIN_CLIENT_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/admin.csr"
       DNS.3 = kubernetes.default.svc
       DNS.4 = kubernetes.default.svc.${BASE_CLUSTER_DOMAIN}
       DNS.5 = ${FULL_HOST_NAME}
-      IP.1  = ${LOCAL_ADDRESS}
+      IP.1  = ${MACHINE_LOCAL_ADDRESS}
       IP.2  = 127.0.0.1
 
       [ dn ]
@@ -209,17 +225,17 @@ export KUBERNETES_ADMIN_CLIENT_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/admin.csr"
 
       ```bash
       openssl genrsa \
-        -out "${KUBERNETES_KUBELET_CLIENT_KEY_PATH}" ${CERTIFICATE_KEY_SIZE}
+        -out "${KUBERNETES_KUBELET_CLIENT_KEY_PATH}"      ${KUBERNETES_KUBELET_CLIENT_KEY_SIZE}
       openssl genrsa \
-        -out "${KUBERNETES_FRONT_PROXY_CLIENT_KEY_PATH}" ${CERTIFICATE_KEY_SIZE}
+        -out "${KUBERNETES_FRONT_PROXY_CLIENT_KEY_PATH}"  ${KUBERNETES_FRONT_PROXY_CLIENT_KEY_SIZE}
       openssl genrsa \
-        -out "${KUBERNETES_ETCD_CLIENT_KEY_PATH}" ${CERTIFICATE_KEY_SIZE}
+        -out "${KUBERNETES_ETCD_CLIENT_KEY_PATH}"         ${KUBERNETES_ETCD_CLIENT_KEY_SIZE}
       openssl genrsa \
-        -out "${KUBERNETES_SERVER_KEY_PATH}" ${CERTIFICATE_KEY_SIZE}
+        -out "${KUBERNETES_SERVER_KEY_PATH}"              ${KUBERNETES_SERVER_KEY_SIZE}
       openssl genrsa \
-        -out "${KUBERNETES_SUPER_ADMIN_CLIENT_KEY_PATH}" ${CERTIFICATE_KEY_SIZE}
+        -out "${KUBERNETES_SUPER_ADMIN_CLIENT_KEY_PATH}"  ${KUBERNETES_SUPER_ADMIN_CLIENT_KEY_SIZE}
       openssl genrsa \
-        -out "${KUBERNETES_ADMIN_CLIENT_KEY_PATH}" ${CERTIFICATE_KEY_SIZE}
+        -out "${KUBERNETES_ADMIN_CLIENT_KEY_PATH}"        ${KUBERNETES_ADMIN_CLIENT_KEY_SIZE}
       ```
 
       #### Генерация CSR будущих сертификатов

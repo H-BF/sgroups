@@ -1,45 +1,66 @@
+import CodeBlock              from '@theme/CodeBlock';
+import { CUSTOM_VALUE }       from '@site/blog-draft/kubernetes-the-hard-way/constants/customValue'
+import { CERTIFICATES }       from '@site/blog-draft/kubernetes-the-hard-way/constants/certs'
+import { PORTS }              from '@site/blog-draft/kubernetes-the-hard-way/constants/ports'
+import { COMPONENTS_VERSION } from '@site/blog-draft/kubernetes-the-hard-way/constants/componentsVersion'
+
 <details>
 <summary>Kube API</summary>
 
-```bash
-mkdir -p ${BASE_K8S_PATH}/pki
-mkdir -p ${BASE_K8S_PATH}/manifests
-```
-
 ### Переменные окружения сертификатов
-```bash
-export BASE_K8S_PATH="/etc/kubernetes"
+<CodeBlock language="bash">
+{`export BASE_K8S_PATH="${CUSTOM_VALUE.kuberneteBaseFolderPath.value}"
 
-export KUBERNETES_SERVICE_ACCOUNT_KEY_PATH="${BASE_K8S_PATH}/pki/sa.key"
-export KUBERNETES_SERVICE_ACCOUNT_CRT_PATH="${BASE_K8S_PATH}/pki/sa.pub"
-export KUBERNETES_SERVER_KEY_PATH="${BASE_K8S_PATH}/pki/apiserver.key"
-export KUBERNETES_SERVER_CRT_PATH="${BASE_K8S_PATH}/pki/apiserver.crt"
-export KUBERNETES_KUBELET_CLIENT_KEY_PATH="${BASE_K8S_PATH}/pki/apiserver-kubelet-client.key"
-export KUBERNETES_KUBELET_CLIENT_CRT_PATH="${BASE_K8S_PATH}/pki/apiserver-kubelet-client.crt"
-export KUBERNETES_FRONT_PROXY_CLIENT_KEY_PATH="${BASE_K8S_PATH}/pki/front-proxy-client.key"
-export KUBERNETES_FRONT_PROXY_CLIENT_CRT_PATH="${BASE_K8S_PATH}/pki/front-proxy-client.crt"
-export KUBERNETES_ETCD_CLIENT_KEY_PATH="${BASE_K8S_PATH}/pki/apiserver-etcd-client.key"
-export KUBERNETES_ETCD_CLIENT_CRT_PATH="${BASE_K8S_PATH}/pki/apiserver-etcd-client.crt"
-export KUBERNETES_CA_CRT_PATH="${BASE_K8S_PATH}/pki/ca.crt"
-export FRONT_PROXY_CA_CRT_PATH="${BASE_K8S_PATH}/pki/front-proxy-ca.crt"
-export ETCD_CA_CRT_PATH="${BASE_K8S_PATH}/pki/etcd/ca.crt"
+  export BASE_DOMAIN="${CUSTOM_VALUE.kubernetesBaseDomain.value}"
+  export CLUSTER_NAME="${CUSTOM_VALUE.kubernetesClusterName.value}"
+  export BASE_CLUSTER_DOMAIN=$\{CLUSTER_NAME\}.$\{BASE_DOMAIN\}
+  
+  export KUBE_APISERVER_PORT="${PORTS.kubeAPIServer.portNumber}"
+  export ETCD_SERVERS=$(printf "https://master-%s.$BASE_CLUSTER_DOMAIN:$ETCD_SERVER_PORT," $(seq 1 $MASTER_COUNT) | sed 's/,$//')
 
-export KUBE_APISERVER_PORT="6443"
-export ETCD_SERVERS=$(printf "https://master-%s.$BASE_CLUSTER_DOMAIN:$ETCD_SERVER_PORT," $(seq 1 $MASTER_COUNT) | sed 's/,$//')
-export BASE_CLUSTER_DOMAIN=${CLUSTER_NAME}.${BASE_DOMAIN}
-export SERVICE_CIDR="29.64.0.0/16"
-export LOCAL_ADDRESS=$(ip -4 addr show scope global | awk '/inet/ {print $2; exit}' | cut -d/ -f1)
-export KUBERNETES_VERSION="v1.30.4"
-```
+  export SERVICE_CIDR="${CUSTOM_VALUE.kubernetesServiceCIDR.value}"
+  export MACHINE_LOCAL_ADDRESS=${CUSTOM_VALUE.virtualMachineLocalAddress.value}
+  export KUBERNETES_VERSION="${COMPONENTS_VERSION.kubernetes.value}"
 
+  export KUBERNETES_KUBELET_CLIENT_KEY_PATH="${CERTIFICATES.kubernetesKubeletClient.keyPath}"
+  export KUBERNETES_KUBELET_CLIENT_CRT_PATH="${CERTIFICATES.kubernetesKubeletClient.crtPath}"
 
+  export KUBERNETES_FRONT_PROXY_CLIENT_KEY_PATH="${CERTIFICATES.kubernetesFrontProxyClient.keyPath}"
+  export KUBERNETES_FRONT_PROXY_CLIENT_CRT_PATH="${CERTIFICATES.kubernetesFrontProxyClient.crtPath}"
+
+  export KUBERNETES_ETCD_CLIENT_KEY_PATH="${CERTIFICATES.kubernetesEtcdClient.keyPath}"
+  export KUBERNETES_ETCD_CLIENT_CRT_PATH="${CERTIFICATES.kubernetesEtcdClient.crtPath}"
+
+  export KUBERNETES_SERVER_KEY_PATH="${CERTIFICATES.kubernetesServer.keyPath}"
+  export KUBERNETES_SERVER_CRT_PATH="${CERTIFICATES.kubernetesServer.crtPath}"
+
+  export KUBERNETES_SUPER_ADMIN_CLIENT_KEY_PATH="${CERTIFICATES.kubernetesSuperAdminClient.keyPath}"
+  export KUBERNETES_SUPER_ADMIN_CLIENT_CRT_PATH="${CERTIFICATES.kubernetesSuperAdminClient.crtPath}"
+
+  export KUBERNETES_ADMIN_KEY_PATH="${CERTIFICATES.kubernetesAdminClient.keyPath}"
+  export KUBERNETES_ADMIN_CRT_PATH="${CERTIFICATES.kubernetesAdminClient.crtPath}"
+
+  export KUBERNETES_CA_CRT_PATH="${CERTIFICATES.kubernetesCA.crtPath}"
+  export FRONT_PROXY_CA_CRT_PATH="${CERTIFICATES.kubernetesCA.crtPath}"
+  export ETCD_CA_CRT_PATH="${CERTIFICATES.etcdCA.crtPath}"
+
+  export KUBERNETES_SERVICE_ACCOUNT_KEY_PATH="${CERTIFICATES.kubernetesSA.keyPath}"
+  export KUBERNETES_SERVICE_ACCOUNT_CRT_PATH="${CERTIFICATES.kubernetesSA.crtPath}"
+
+  mkdir -p $\{BASE_K8S_PATH\}/pki
+  mkdir -p $\{BASE_K8S_PATH\}/openssl/csr
+  mkdir -p $\{BASE_K8S_PATH\}/kubeconfig/
+`}
+</CodeBlock>
+
+### Инструкция StaticPod
 ```bash
 cat <<EOF > ${BASE_K8S_PATH}/manifests/kube-apiserver.yaml
 apiVersion: v1
 kind: Pod
 metadata:
   annotations:
-    kubeadm.kubernetes.io/kube-apiserver.advertise-address.endpoint: ${LOCAL_ADDRESS}:${KUBE_APISERVER_PORT}
+    kubeadm.kubernetes.io/kube-apiserver.advertise-address.endpoint: ${MACHINE_LOCAL_ADDRESS}:${KUBE_APISERVER_PORT}
   creationTimestamp: null
   labels:
     component: kube-apiserver
@@ -50,7 +71,7 @@ spec:
   containers:
   - command:
     - kube-apiserver
-    - --advertise-address=${LOCAL_ADDRESS}
+    - --advertise-address=${MACHINE_LOCAL_ADDRESS}
     - --allow-privileged=true
     - --authorization-mode=Node,RBAC
     - --bind-address=0.0.0.0
@@ -83,7 +104,7 @@ spec:
     livenessProbe:
       failureThreshold: 8
       httpGet:
-        host: ${LOCAL_ADDRESS}
+        host: ${MACHINE_LOCAL_ADDRESS}
         path: /livez
         port: ${KUBE_APISERVER_PORT}
         scheme: HTTPS
@@ -94,7 +115,7 @@ spec:
     readinessProbe:
       failureThreshold: 3
       httpGet:
-        host: ${LOCAL_ADDRESS}
+        host: ${MACHINE_LOCAL_ADDRESS}
         path: /readyz
         port: ${KUBE_APISERVER_PORT}
         scheme: HTTPS
@@ -106,7 +127,7 @@ spec:
     startupProbe:
       failureThreshold: 24
       httpGet:
-        host: ${LOCAL_ADDRESS}
+        host: ${MACHINE_LOCAL_ADDRESS}
         path: /livez
         port: ${KUBE_APISERVER_PORT}
         scheme: HTTPS

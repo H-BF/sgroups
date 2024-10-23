@@ -1,35 +1,43 @@
 import { FancyboxDiagram }  from '@site/src/components/commonBlocks/FancyboxDiagram'
 import TabItem              from '@theme/TabItem'
 import Tabs                 from '@theme/Tabs'
+import CodeBlock            from '@theme/CodeBlock';
+import { CUSTOM_VALUE }     from '@site/blog-draft/kubernetes-the-hard-way/constants/customValue'
+import { CERTIFICATES }     from '@site/blog-draft/kubernetes-the-hard-way/constants/certs'
 
 <details>
 <summary>ETCD Certificates</summary>
 
-```bash
-mkdir -p ${BASE_K8S_PATH}/pki
-mkdir -p ${BASE_K8S_PATH}/openssl/csr
-```
-
 ### Переменные окружения сертификатов
 
-```bash
-export CERTIFICATE_KEY_SIZE=2048
+<CodeBlock language="bash">
+{`export BASE_K8S_PATH="${CUSTOM_VALUE.kuberneteBaseFolderPath.value}"
 
-export ETCD_CLIENT_KEY_PATH="${BASE_K8S_PATH}/pki/etcd/healthcheck-client.key"
-export ETCD_CLIENT_CRT_PATH="${BASE_K8S_PATH}/pki/etcd/healthcheck-client.crt"
-export ETCD_CLIENT_CRT_CONF="${BASE_K8S_PATH}/openssl/healthcheck-client.conf"
-export ETCD_CLIENT_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/etcd-client.csr"
+  export ETCD_CLIENT_KEY_SIZE=${CERTIFICATES.etcdClient.keySize}
+  export ETCD_CLIENT_KEY_PATH="${CERTIFICATES.etcdClient.keyPath}"
+  export ETCD_CLIENT_CRT_PATH="${CERTIFICATES.etcdClient.crtPath}"
+  export ETCD_CLIENT_CRT_CONF="${CERTIFICATES.etcdClient.crtConf}"
+  export ETCD_CLIENT_CSR_PATH="${CERTIFICATES.etcdClient.csrPath}"
 
-export ETCD_SERVER_KEY_PATH="${BASE_K8S_PATH}/pki/etcd/server.key"
-export ETCD_SERVER_CRT_PATH="${BASE_K8S_PATH}/pki/etcd/server.crt"
-export ETCD_SERVER_CRT_CONF="${BASE_K8S_PATH}/openssl/etcd-server.conf"
-export ETCD_SERVER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/etcd-server.csr"
+  export ETCD_SERVER_KEY_SIZE=${CERTIFICATES.etcdServer.keySize}
+  export ETCD_SERVER_KEY_PATH="${CERTIFICATES.etcdServer.keyPath}"
+  export ETCD_SERVER_CRT_PATH="${CERTIFICATES.etcdServer.crtPath}"
+  export ETCD_SERVER_CRT_CONF="${CERTIFICATES.etcdServer.crtConf}"
+  export ETCD_SERVER_CSR_PATH="${CERTIFICATES.etcdServer.csrPath}"
 
-export ETCD_PEER_KEY_PATH="${BASE_K8S_PATH}/pki/etcd/peer.key"
-export ETCD_PEER_CRT_PATH="${BASE_K8S_PATH}/pki/etcd/peer.crt"
-export ETCD_PEER_CRT_CONF="${BASE_K8S_PATH}/openssl/etcd-server.conf"
-export ETCD_PEER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/etcd-peer.csr"
-```
+  export ETCD_PEER_KEY_SIZE=${CERTIFICATES.etcdPeer.keySize}
+  export ETCD_PEER_KEY_PATH="${CERTIFICATES.etcdPeer.keyPath}"
+  export ETCD_PEER_CRT_PATH="${CERTIFICATES.etcdPeer.crtPath}"
+  export ETCD_PEER_CRT_CONF="${CERTIFICATES.etcdPeer.crtConf}"
+  export ETCD_PEER_CSR_PATH="${CERTIFICATES.etcdPeer.csrPath}"
+
+  export ETCD_CA_CRT_PATH="${CERTIFICATES.etcdCA.crtPath}"
+  export ETCD_CA_KEY_PATH="${CERTIFICATES.etcdCA.keyPath}"
+
+  mkdir -p $\{BASE_K8S_PATH\}/pki
+  mkdir -p $\{BASE_K8S_PATH\}/openssl/csr
+`}
+</CodeBlock>
 
 ### Инструкция создания сертификатов
 
@@ -49,7 +57,7 @@ export ETCD_PEER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/etcd-peer.csr"
       ```bash
       cat <<EOF > ${ETCD_CLIENT_CRT_CONF}
       [ req ]
-      default_bits        = 2048
+      default_bits        = ${ETCD_CLIENT_KEY_SIZE}
       prompt              = no
       default_md          = sha256
       distinguished_name  = dn
@@ -70,7 +78,7 @@ export ETCD_PEER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/etcd-peer.csr"
       ```bash
       cat <<EOF > ${ETCD_SERVER_CRT_CONF}
       [ req ]
-      default_bits        = 2048
+      default_bits        = ${ETCD_SERVER_KEY_SIZE}
       prompt              = no
       default_md          = sha256
       distinguished_name  = dn
@@ -85,7 +93,7 @@ export ETCD_PEER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/etcd-peer.csr"
       DNS.3 = ${FULL_HOST_NAME}
       IP.1  = 127.0.0.1
       IP.2  = 0:0:0:0:0:0:0:1
-      IP.3  = ${LOCAL_ADDRESS}
+      IP.3  = ${MACHINE_LOCAL_ADDRESS}
 
       [ dn ]
       CN = "${FULL_HOST_NAME}"
@@ -104,7 +112,7 @@ export ETCD_PEER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/etcd-peer.csr"
       ```bash
       cat <<EOF > ${ETCD_PEER_CRT_CONF}
       [ req ]
-      default_bits        = 2048
+      default_bits        = ${ETCD_PEER_KEY_SIZE}
       prompt              = no
       default_md          = sha256
       distinguished_name  = dn
@@ -119,7 +127,7 @@ export ETCD_PEER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/etcd-peer.csr"
       DNS.3 = ${FULL_HOST_NAME}
       IP.1  = 127.0.0.1
       IP.2  = 0:0:0:0:0:0:0:1
-      IP.3  = ${LOCAL_ADDRESS}
+      IP.3  = ${MACHINE_LOCAL_ADDRESS}
 
       [ dn ]
       CN = "${FULL_HOST_NAME}"
@@ -137,11 +145,11 @@ export ETCD_PEER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/etcd-peer.csr"
 
       ```bash
       openssl genrsa \
-        -out "${ETCD_CLIENT_KEY_PATH}" ${CERTIFICATE_KEY_SIZE}
+        -out "${ETCD_CLIENT_KEY_PATH}" ${ETCD_CLIENT_KEY_SIZE}
       openssl genrsa \
-        -out "${ETCD_SERVER_KEY_PATH}" ${CERTIFICATE_KEY_SIZE}
+        -out "${ETCD_SERVER_KEY_PATH}" ${ETCD_SERVER_KEY_SIZE}
       openssl genrsa \
-        -out "${ETCD_PEER_KEY_PATH}" ${CERTIFICATE_KEY_SIZE}
+        -out "${ETCD_PEER_KEY_PATH}" ${ETCD_PEER_KEY_SIZE}
       ```
 
       #### Генерация CSR будущих сертификатов

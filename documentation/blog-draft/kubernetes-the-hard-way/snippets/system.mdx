@@ -31,10 +31,14 @@ sudo modprobe br_netfilter
 
 ### Настройка Sysctl
 
-#### Настройка modprobe br_netfilter
 :::warning
+
+### Настройка сети
+
 После загрузки модуля br_netfilter часто требуется установить системные параметры, чтобы убедиться, что бриджированный трафик обрабатывается iptables.
-:::
+
+
+
 ```bash
 cat <<EOF >> /etc/sysctl.d/99-br-netfilter.conf
 net.bridge.bridge-nf-call-iptables=1
@@ -42,10 +46,8 @@ net.bridge.bridge-nf-call-ip6tables=1
 EOF
 ```
 
-#### Настройка сети
-:::warning
 Если параметр `net.ipv4.ip_forward` не включен, ядро операционной системы не будет пересылать IP-пакеты между интерфейсами, что приведет к проблемам с сетью в кластере Kubernetes. Это может проявляться в недоступности сервисов, невозможности подов связаться друг с другом или с внешними ресурсами.
-:::
+
 
 ```bash
 cat <<EOF >> /etc/sysctl.d/99-network.conf
@@ -53,8 +55,9 @@ net.ipv4.ip_forward=1
 EOF
 ```
 
+
 #### Применить конфигурацию Syscyl
 ```bash
 sysctl --system
 ```
-
+:::

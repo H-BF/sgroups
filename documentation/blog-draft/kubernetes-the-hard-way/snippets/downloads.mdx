@@ -1,0 +1,153 @@
+import { FancyboxDiagram } from '@site/src/components/commonBlocks/FancyboxDiagram'
+import React from 'react';
+import CodeBlock from '@theme/CodeBlock';
+
+import { PORTS }                from '@site/blog-draft/kubernetes-the-hard-way/constants/ports'
+import { CUSTOM_VALUE }         from '@site/blog-draft/kubernetes-the-hard-way/constants/customValue'
+import { COMPONENTS_VERSION }   from '@site/blog-draft/kubernetes-the-hard-way/constants/componentsVersion'
+import { DOWNLOAD_VERSION }     from '@site/blog-draft/kubernetes-the-hard-way/constants/downloads'
+
+В заранее подготовленных узлах под управлением ```OC Linux (Ubuntu 24.04.1 LTS)``` начинаем загружать базовые компоненты.
+Для этого выполните указанные ниже команды.
+
+<div className="center">
+
+**Топология созданной инфраструктуры**
+
+```mermaid
+---
+config:
+  look: handDrawn
+  theme: dark  
+---
+
+
+flowchart LR
+
+  master1[node:master-1]
+  master2[node:master-2]
+  master3[node:master-3]
+
+  dnsMaster1[dns:master-1.example.prorobotech.ru]
+  dnsMaster2[dns:master-2.example.prorobotech.ru]
+  dnsMaster3[dns:master-3.example.prorobotech.ru]
+
+  subgraph control plane
+    dnsMaster1-->master1
+    dnsMaster2-->master2
+    dnsMaster3-->master3
+  end
+
+```
+
+
+<div className="center">
+**В итоге должны получить примерно вот такую вот картину**
+  <FancyboxDiagram>
+```mermaid
+---
+config:
+  look: handDrawn
+  theme: dark  
+---
+
+
+flowchart TD
+
+  subgraph Control-Plane
+   subgraph Master-1
+      newLines["`
+         containerd
+         kubectl
+         kubelet
+         etcdctl
+         crictl
+         cfssl
+         runc
+      `"]
+   end
+   subgraph Master-2
+      newLines2["`
+         containerd
+         kubectl
+         kubelet
+         etcdctl
+         crictl
+         cfssl
+         runc
+      `"]
+   end
+
+   subgraph Master-3
+      newLines3["`
+         containerd
+         kubectl
+         kubelet
+         etcdctl
+         crictl
+         cfssl
+         runc
+      `"]
+   end
+  end
+
+```
+   </FancyboxDiagram>
+</div>
+
+</div>
+
+<details>
+<summary>Downloads</summary>
+
+### prerequisites
+```bash
+apt install wget tree net-tools conntrack socat -y
+```
+
+### kubernetes
+<CodeBlock language="bash">
+{`wget -O ${DOWNLOAD_VERSION.kubectl.path} ${DOWNLOAD_VERSION.kubectl.templateUrl}
+  wget -O ${DOWNLOAD_VERSION.kubelet.path} ${DOWNLOAD_VERSION.kubelet.templateUrl}
+  wget -O ${DOWNLOAD_VERSION.kubeadm.path} ${DOWNLOAD_VERSION.kubeadm.templateUrl}
+
+  chmod +x ${DOWNLOAD_VERSION.kubectl.path}
+  chmod +x ${DOWNLOAD_VERSION.kubelet.path}
+  chmod +x ${DOWNLOAD_VERSION.kubeadm.path}
+`}
+</CodeBlock>
+
+
+### cri
+<CodeBlock language="bash">
+{`mkdir -p /tmp/containerd
+
+  wget  -O ${DOWNLOAD_VERSION.runc.path}       ${DOWNLOAD_VERSION.runc.templateUrl}
+  wget  -O ${DOWNLOAD_VERSION.containerd.path}    ${DOWNLOAD_VERSION.containerd.templateUrl}
+  wget  -O ${DOWNLOAD_VERSION.crictl.path}        ${DOWNLOAD_VERSION.crictl.templateUrl}
+
+  chmod +x ${DOWNLOAD_VERSION.runc.path}
+  chmod +x ${DOWNLOAD_VERSION.crictl.path}
+
+  tar   -C "/tmp/containerd" -xvf /tmp/containerd.tar.gz
+  tar   -C "/usr/local/bin"  -xvf /tmp/crictl.tar.gz
+
+  cp /tmp/containerd/bin/* /usr/local/bin/
+`}
+</CodeBlock>
+
+
+### etcd
+<CodeBlock language="bash">
+{`mkdir -p /tmp/etcd
+  wget  -O ${DOWNLOAD_VERSION.etcdctl.path} ${DOWNLOAD_VERSION.etcdctl.templateUrl}
+  tar   -C "/tmp/etcd" -xvf /tmp/etcd.tar.gz
+  cp /tmp/etcd/etcd*/etcdctl /usr/local/bin/
+`}
+</CodeBlock>
+
+</details>
+
+:::note
+Обратите внимание, что для успешного завершения команд, требутся корректно настроенная сеть на узлах и открытые сетевые доступы до ресурса github.com по порту ```443/TCP``` и выполнение из под ```Root```
+:::

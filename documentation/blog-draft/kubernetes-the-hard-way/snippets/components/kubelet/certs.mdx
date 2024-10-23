@@ -1,35 +1,44 @@
 import { FancyboxDiagram }  from '@site/src/components/commonBlocks/FancyboxDiagram'
 import TabItem              from '@theme/TabItem'
 import Tabs                 from '@theme/Tabs'
+import CodeBlock            from '@theme/CodeBlock';
+import { CUSTOM_VALUE }     from '@site/blog-draft/kubernetes-the-hard-way/constants/customValue'
+import { CERTIFICATES }     from '@site/blog-draft/kubernetes-the-hard-way/constants/certs'
 
 <details>
 <summary>Kubelet Certificates</summary>
 
-```bash
-mkdir -p ${BASE_K8S_PATH}/pki
-mkdir -p ${BASE_K8S_PATH}/openssl/csr
-mkdir -p ${BASE_KUBELET_PATH}/pki
-```
-
-
 ### Переменные окружения сертификатов
 
-```bash
-export CERTIFICATE_KEY_SIZE=2048
-export KUBELET_CURRENT_CLIENT_CRT_PATH="${BASE_KUBELET_PATH}/pki/kubelet-client-current.pem"
-export KUBELET_CURRENT_SERVER_CRT_PATH="${BASE_KUBELET_PATH}/pki/kubelet-server-current.pem"
+<CodeBlock language="bash">
+{`export BASE_K8S_PATH="${CUSTOM_VALUE.kuberneteBaseFolderPath.value}"
+  export BASE_KUBELET_PATH="${CUSTOM_VALUE.kuberneteKubeletFolderPath.value}"
 
-export KUBELET_CLIENT_KEY_PATH="${BASE_KUBELET_PATH}/pki/kubelet-client-key.pem"
-export KUBELET_CLIENT_CRT_PATH="${BASE_KUBELET_PATH}/pki/kubelet-client.pem"
-export KUBELET_CLIENT_CRT_CONF="${BASE_K8S_PATH}/openssl/kubelet-client.conf"
-export KUBELET_CLIENT_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/kubelet-client.csr"
+  export KUBELET_CLIENT_KEY_SIZE=${CERTIFICATES.kubeletClient.keySize}
+  export KUBELET_CLIENT_KEY_PATH="${CERTIFICATES.kubeletClient.keyPath}"
+  export KUBELET_CLIENT_CRT_PATH="${CERTIFICATES.kubeletClient.crtPath}"
+  export KUBELET_CLIENT_CRT_CONF="${CERTIFICATES.kubeletClient.crtConf}"
+  export KUBELET_CLIENT_CSR_PATH="${CERTIFICATES.kubeletClient.csrPath}"
 
-export KUBELET_SERVER_KEY_PATH="${BASE_KUBELET_PATH}/pki/kubelet-server-key.pem"
-export KUBELET_SERVER_CRT_PATH="${BASE_KUBELET_PATH}/pki/kubelet-server.pem"
-export KUBELET_SERVER_CRT_CONF="${BASE_K8S_PATH}/openssl/kubelet-server.conf"
-export KUBELET_SERVER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/kubelet-server.csr"
+  export KUBELET_SERVER_KEY_SIZE=${CERTIFICATES.kubeletServer.keySize}
+  export KUBELET_SERVER_KEY_PATH="${CERTIFICATES.kubeletServer.keyPath}"
+  export KUBELET_SERVER_CRT_PATH="${CERTIFICATES.kubeletServer.crtPath}"
+  export KUBELET_SERVER_CRT_CONF="${CERTIFICATES.kubeletServer.crtConf}"
+  export KUBELET_SERVER_CSR_PATH="${CERTIFICATES.kubeletServer.csrPath}"
 
-```
+  export KUBELET_CURRENT_CLIENT_CRT_PATH="${CERTIFICATES.kubernetesCureentClient.crtPath}"
+  export KUBELET_CURRENT_SERVER_CRT_PATH="${CERTIFICATES.kubernetesCureentServer.crtPath}"
+
+  export KUBERNETES_CA_CRT_PATH="${CERTIFICATES.kubernetesCA.crtPath}"
+  export KUBERNETES_CA_KEY_PATH="${CERTIFICATES.kubernetesCA.keyPath}"
+
+  mkdir -p $\{BASE_K8S_PATH\}/pki
+  mkdir -p $\{BASE_K8S_PATH\}/openssl/csr
+  mkdir -p $\{BASE_KUBELET_PATH\}/pki
+
+`}
+</CodeBlock>
+
 
 ### Инструкция создания сертификатов
 
@@ -49,7 +58,7 @@ export KUBELET_SERVER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/kubelet-server.csr"
       ```bash
       cat <<EOF > ${KUBELET_CLIENT_CRT_CONF}
       [ req ]
-      default_bits        = ${CERTIFICATE_KEY_SIZE}
+      default_bits        = ${KUBELET_CLIENT_KEY_SIZE}
       prompt              = no
       default_md          = sha256
       distinguished_name  = dn
@@ -71,7 +80,7 @@ export KUBELET_SERVER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/kubelet-server.csr"
       ```bash
       cat <<EOF > ${KUBELET_SERVER_CRT_CONF}
       [ req ]
-      default_bits        = ${CERTIFICATE_KEY_SIZE}
+      default_bits        = ${KUBELET_SERVER_KEY_SIZE}
       prompt              = no
       default_md          = sha256
       distinguished_name  = dn
@@ -86,7 +95,7 @@ export KUBELET_SERVER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/kubelet-server.csr"
       DNS.3 = ${FULL_HOST_NAME}
       IP.1  = 127.0.0.1
       IP.2  = 0:0:0:0:0:0:0:1
-      IP.3  = ${LOCAL_ADDRESS}
+      IP.3  = ${MACHINE_LOCAL_ADDRESS}
 
       [ dn ]
       CN = "system:node:${FULL_HOST_NAME}"
@@ -105,9 +114,9 @@ export KUBELET_SERVER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/kubelet-server.csr"
 
       ```bash
       openssl genrsa \
-        -out "${KUBELET_CLIENT_KEY_PATH}" ${CERTIFICATE_KEY_SIZE}
+        -out "${KUBELET_CLIENT_KEY_PATH}" ${KUBELET_CLIENT_KEY_SIZE}
       openssl genrsa \
-        -out "${KUBELET_SERVER_KEY_PATH}" ${CERTIFICATE_KEY_SIZE}
+        -out "${KUBELET_SERVER_KEY_PATH}" ${KUBELET_SERVER_KEY_SIZE}
       ```
 
       #### Генерация CSR будущих сертификатов

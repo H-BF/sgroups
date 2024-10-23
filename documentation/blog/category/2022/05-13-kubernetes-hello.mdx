@@ -21,22 +21,22 @@ hide_table_of_contents: false
 import { FancyboxDiagram }  from '@site/src/components/commonBlocks/FancyboxDiagram'
 import TabItem              from '@theme/TabItem'
 import Tabs                 from '@theme/Tabs'
-import K8sEnv               from '@site/blog-draft/kubernetes-the-hard-way/environments.mdx'
-import K8sDownloads         from '@site/blog-draft/kubernetes-the-hard-way/downloads.mdx'
-import K8sSystem            from '@site/blog-draft/kubernetes-the-hard-way/system.mdx'
-import K8sCACerts           from '@site/blog-draft/kubernetes-the-hard-way/certs/kubernetes-ca.mdx'
-import ETCDCACerts          from '@site/blog-draft/kubernetes-the-hard-way/certs/etcd-ca.mdx'
-import FrontProxyCACerts    from '@site/blog-draft/kubernetes-the-hard-way/certs/front-proxy-ca.mdx'
-import CertsSchema          from '@site/blog-draft/kubernetes-the-hard-way/certs/schema.mdx'
+import K8sEnv               from '@site/blog-draft/kubernetes-the-hard-way/snippets/environments.mdx'
+import K8sDownloads         from '@site/blog-draft/kubernetes-the-hard-way/snippets/downloads.mdx'
+import K8sSystem            from '@site/blog-draft/kubernetes-the-hard-way/snippets/system.mdx'
+import K8sCACerts           from '@site/blog-draft/kubernetes-the-hard-way/snippets/certs/kubernetes-ca.mdx'
+import ETCDCACerts          from '@site/blog-draft/kubernetes-the-hard-way/snippets/certs/etcd-ca.mdx'
+import FrontProxyCACerts    from '@site/blog-draft/kubernetes-the-hard-way/snippets/certs/front-proxy-ca.mdx'
+import CertsSchema          from '@site/blog-draft/kubernetes-the-hard-way/snippets/certs/schema.mdx'
 
-import K8sCerts             from '@site/blog-draft/kubernetes-the-hard-way/components/kubelet/certs.mdx'
-import ETCDCerts            from '@site/blog-draft/kubernetes-the-hard-way/components/etcd/certs.mdx'
-import KubeAPICerts         from '@site/blog-draft/kubernetes-the-hard-way/components/kubeAPI/certs.mdx'
-import KubeControllersCerts from '@site/blog-draft/kubernetes-the-hard-way/components/controllerManager/certs.mdx'
-import KubeSchedulerCerts   from '@site/blog-draft/kubernetes-the-hard-way/components/scheduler/certs.mdx'
+import K8sCerts             from '@site/blog-draft/kubernetes-the-hard-way/snippets/components/kubelet/certs.mdx'
+import ETCDCerts            from '@site/blog-draft/kubernetes-the-hard-way/snippets/components/etcd/certs.mdx'
+import KubeAPICerts         from '@site/blog-draft/kubernetes-the-hard-way/snippets/components/kubeAPI/certs.mdx'
+import KubeControllersCerts from '@site/blog-draft/kubernetes-the-hard-way/snippets/components/controllerManager/certs.mdx'
+import KubeSchedulerCerts   from '@site/blog-draft/kubernetes-the-hard-way/snippets/components/scheduler/certs.mdx'
 
-import ComponentsInfo       from '@site/blog-draft/kubernetes-the-hard-way/components/components.mdx'
-import ComponentsSetings    from '@site/blog-draft/kubernetes-the-hard-way/components/componentsSetings.mdx'
+import ComponentsInfo       from '@site/blog-draft/kubernetes-the-hard-way/snippets/components/components.mdx'
+import ComponentsSetings    from '@site/blog-draft/kubernetes-the-hard-way/snippets/components/componentsSetings.mdx'
 
 
 Привет, друзья! С вами снова Дмитрий Путилин, и я рад продолжить нашу серию статей о Kubernetes. В этой статье мы вместе пройдем весь путь ручной установки контрол-плейна Kubernetes и доведем его до состояния, идентичного тому, что вы получили бы с помощью `kubeadm init`.
@@ -250,12 +250,3 @@ front-proxy-ca          Oct 20, 2034 22:04 UTC   9y              no
 
 ## Настройка компонентов
 <ComponentsSetings />
-
-## Терминология
-* **socket**: Интерфейс для обмена данными между процессами.
-* **http/https**: Протоколы передачи гипертекста; HTTP — без шифрования, HTTPS — с шифрованием через SSL/TLS для безопасной передачи данных в интернете.
-* **msg netlink**: Механизм межпроцессного взаимодействия в Linux, используемый для передачи сообщений между ядром и пользовательскими приложениями.
-* **sysctl**:
-* **modprobe**:
-* **sysctl**:
-
