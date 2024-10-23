@@ -5,16 +5,21 @@ import Tabs                 from '@theme/Tabs'
 <details>
 <summary>Kubernetes CA</summary>
 
+### Переменные окружения сертификатов
 ```bash
 mkdir -p ${BASE_K8S_PATH}/pki
 
 export KUBERNETES_CA_KEY_PATH="${BASE_K8S_PATH}/pki/ca.key"
 export KUBERNETES_CA_CRT_PATH="${BASE_K8S_PATH}/pki/ca.crt"
 export KUBERNETES_CA_CSR_PATH="${BASE_K8S_PATH}/openssl/kubernetes-ca.conf"
-export KUBERNETES_CA_CRT_CN="kubernetes"
-export KUBERNETES_CA_KEY_SIZE=4096
+export KUBERNETES_CA_KEY_SIZE=2048
 ```
 
+### Инструкция создания сертификатов
+
+:::note
+Для удобства добавил блок расширения, что бы в перспективе отобразить инструкции сертификатов для `cfssl`
+:::
 
 <Tabs 
     defaultValue='openssl'
@@ -27,6 +32,8 @@ export KUBERNETES_CA_KEY_SIZE=4096
       mkdir -p ${BASE_K8S_PATH}/openssl
       ```
 
+      #### Конфигурация `openssl` CA
+
       ```bash
       cat <<EOF > ${KUBERNETES_CA_CSR_PATH}
       [req]
@@ -35,7 +42,7 @@ export KUBERNETES_CA_KEY_SIZE=4096
       prompt             = no
 
       [req_distinguished_name]
-      CN = "${KUBERNETES_CA_CRT_CN}"
+      CN = kubernetes
 
       [v3_ca]
       keyUsage = critical, keyCertSign, keyEncipherment, digitalSignature
@@ -43,10 +50,16 @@ export KUBERNETES_CA_KEY_SIZE=4096
       EOF
       ```
 
+      #### Генерация приватного ключа CA сертификата
+
       ```bash
       openssl genrsa \
         -out "${KUBERNETES_CA_KEY_PATH}" ${KUBERNETES_CA_KEY_SIZE}
+      ```
 
+      #### Генерация публичного ключа CA сертификата
+
+      ```bash
       openssl req \
         -x509 \
         -new \

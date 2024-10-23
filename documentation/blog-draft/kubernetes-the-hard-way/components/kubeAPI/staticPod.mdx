@@ -1,8 +1,39 @@
 <details>
-<summary>KubeAPI</summary>
+<summary>Kube API</summary>
 
 ```bash
+mkdir -p ${BASE_K8S_PATH}/pki
 mkdir -p ${BASE_K8S_PATH}/manifests
+```
+
+### Переменные окружения сертификатов
+```bash
+export BASE_K8S_PATH="/etc/kubernetes"
+
+export KUBERNETES_SERVICE_ACCOUNT_KEY_PATH="${BASE_K8S_PATH}/pki/sa.key"
+export KUBERNETES_SERVICE_ACCOUNT_CRT_PATH="${BASE_K8S_PATH}/pki/sa.pub"
+export KUBERNETES_SERVER_KEY_PATH="${BASE_K8S_PATH}/pki/apiserver.key"
+export KUBERNETES_SERVER_CRT_PATH="${BASE_K8S_PATH}/pki/apiserver.crt"
+export KUBERNETES_KUBELET_CLIENT_KEY_PATH="${BASE_K8S_PATH}/pki/apiserver-kubelet-client.key"
+export KUBERNETES_KUBELET_CLIENT_CRT_PATH="${BASE_K8S_PATH}/pki/apiserver-kubelet-client.crt"
+export KUBERNETES_FRONT_PROXY_CLIENT_KEY_PATH="${BASE_K8S_PATH}/pki/front-proxy-client.key"
+export KUBERNETES_FRONT_PROXY_CLIENT_CRT_PATH="${BASE_K8S_PATH}/pki/front-proxy-client.crt"
+export KUBERNETES_ETCD_CLIENT_KEY_PATH="${BASE_K8S_PATH}/pki/apiserver-etcd-client.key"
+export KUBERNETES_ETCD_CLIENT_CRT_PATH="${BASE_K8S_PATH}/pki/apiserver-etcd-client.crt"
+export KUBERNETES_CA_CRT_PATH="${BASE_K8S_PATH}/pki/ca.crt"
+export FRONT_PROXY_CA_CRT_PATH="${BASE_K8S_PATH}/pki/front-proxy-ca.crt"
+export ETCD_CA_CRT_PATH="${BASE_K8S_PATH}/pki/etcd/ca.crt"
+
+export KUBE_APISERVER_PORT="6443"
+export ETCD_SERVERS=$(printf "https://master-%s.$BASE_CLUSTER_DOMAIN:$ETCD_SERVER_PORT," $(seq 1 $MASTER_COUNT) | sed 's/,$//')
+export BASE_CLUSTER_DOMAIN=${CLUSTER_NAME}.${BASE_DOMAIN}
+export SERVICE_CIDR="29.64.0.0/16"
+export LOCAL_ADDRESS=$(ip -4 addr show scope global | awk '/inet/ {print $2; exit}' | cut -d/ -f1)
+export KUBERNETES_VERSION="v1.30.4"
+```
+
+
+```bash
 cat <<EOF > ${BASE_K8S_PATH}/manifests/kube-apiserver.yaml
 apiVersion: v1
 kind: Pod

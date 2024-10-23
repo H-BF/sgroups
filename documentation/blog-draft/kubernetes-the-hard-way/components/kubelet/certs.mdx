@@ -9,8 +9,12 @@ import Tabs                 from '@theme/Tabs'
 mkdir -p ${BASE_K8S_PATH}/pki
 mkdir -p ${BASE_K8S_PATH}/openssl/csr
 mkdir -p ${BASE_KUBELET_PATH}/pki
+```
 
 
+### Переменные окружения сертификатов
+
+```bash
 export CERTIFICATE_KEY_SIZE=2048
 export KUBELET_CURRENT_CLIENT_CRT_PATH="${BASE_KUBELET_PATH}/pki/kubelet-client-current.pem"
 export KUBELET_CURRENT_SERVER_CRT_PATH="${BASE_KUBELET_PATH}/pki/kubelet-server-current.pem"
@@ -27,12 +31,20 @@ export KUBELET_SERVER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/kubelet-server.csr"
 
 ```
 
+### Инструкция создания сертификатов
+
+:::note
+Для удобства добавил блок расширения, что бы в перспективе отобразить инструкции сертификатов для `cfssl`
+:::
+
 <Tabs 
     defaultValue='openssl'
     values={[
         { label: "openssl", value: "openssl" },
     ]}>
     <TabItem value='openssl'>
+
+      #### Конфигурация `openssl` kubelet-client
 
       ```bash
       cat <<EOF > ${KUBELET_CLIENT_CRT_CONF}
@@ -53,6 +65,8 @@ export KUBELET_SERVER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/kubelet-server.csr"
       extendedKeyUsage=clientAuth
       EOF
       ```
+
+      #### Конфигурация `openssl` kubelet-server
 
       ```bash
       cat <<EOF > ${KUBELET_SERVER_CRT_CONF}
@@ -87,6 +101,8 @@ export KUBELET_SERVER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/kubelet-server.csr"
       EOF
       ```
 
+      #### Генерация приватных ключей сертификатов
+
       ```bash
       openssl genrsa \
         -out "${KUBELET_CLIENT_KEY_PATH}" ${CERTIFICATE_KEY_SIZE}
@@ -94,6 +110,7 @@ export KUBELET_SERVER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/kubelet-server.csr"
         -out "${KUBELET_SERVER_KEY_PATH}" ${CERTIFICATE_KEY_SIZE}
       ```
 
+      #### Генерация CSR будущих сертификатов
 
       ```bash
       openssl req \
@@ -108,6 +125,8 @@ export KUBELET_SERVER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/kubelet-server.csr"
         -out "${KUBELET_SERVER_CSR_PATH}" \
         -config "${KUBELET_SERVER_CRT_CONF}"
       ```
+
+      #### Подпись CSR ключом удостоверяющего центра (CA)
 
       ```bash
       openssl x509 \
@@ -147,6 +166,8 @@ export KUBELET_SERVER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/kubelet-server.csr"
 </Tabs>
 
 
+
+### Инструкция создания Kubeconfig
 ```bash
 
 kubectl config set-cluster kubernetes \
@@ -167,7 +188,6 @@ kubectl config set-context default \
   --kubeconfig=${BASE_K8S_PATH}/kubelet.conf
 
 kubectl config use-context default --kubeconfig=${BASE_K8S_PATH}/kubelet.conf
-
 ```
 
 </details>

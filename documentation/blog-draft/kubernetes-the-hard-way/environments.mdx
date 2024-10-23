@@ -32,7 +32,7 @@ export SERVICE_KUBE_API="29.64.0.1"
 export LOCAL_ADDRESS=$(ip -4 addr show scope global | awk '/inet/ {print $2; exit}' | cut -d/ -f1)
 ```
 
-Заранее определяем список слушающих портов, будут нам полезны для понимания кто что использует.
+Заранее определяем список слушающих портов, будут нам полезны для понимания кто что использует
 ```bash
 export ETCD_SERVER_PORT="2379"
 export ETCD_PEER_PORT="2380"
@@ -49,7 +49,7 @@ export BASE_DOCKER_REGISTRY="registry.k8s.io"
 export PAUSED_IMAGE="pause:3.9"
 ```
 
-### versions
+### Версии компонентов
 ```bash
 export KUBERNETES_VERSION="v1.30.4"
 export ETCD_VERSION="3.5.3-0"
@@ -60,7 +60,7 @@ export CRICTL_VERSION=$(echo $KUBERNETES_VERSION |
 sed -r 's/^v([0-9]*).([0-9]*).([0-9]*)/v\1.\2.0/')
 ```
 
-### etcd
+### Переменные окружения ETCD
 ```bash
 # Список ETCD Servers
 export ETCD_SERVERS=$(printf "https://master-%s.$BASE_CLUSTER_DOMAIN:$ETCD_SERVER_PORT," $(seq 1 $MASTER_COUNT) | sed 's/,$//')

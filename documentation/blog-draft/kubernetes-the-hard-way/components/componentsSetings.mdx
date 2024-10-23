@@ -1,9 +1,11 @@
 
-import CRISetup            from '@site/blog-draft/kubernetes-the-hard-way/components/cri/main.mdx'
-import ETCDSetup           from '@site/blog-draft/kubernetes-the-hard-way/components/etcd/staticPod.mdx'
-import KubeAPISetup        from '@site/blog-draft/kubernetes-the-hard-way/components/kubeAPI/staticPod.mdx'
-import KubeletSetup        from '@site/blog-draft/kubernetes-the-hard-way/components/kubelet/main.mdx'
-import { FancyboxDiagram } from '@site/src/components/commonBlocks/FancyboxDiagram'
+import CRISetup               from '@site/blog-draft/kubernetes-the-hard-way/components/cri/main.mdx'
+import ETCDSetup              from '@site/blog-draft/kubernetes-the-hard-way/components/etcd/staticPod.mdx'
+import ControllerManagerSetup from '@site/blog-draft/kubernetes-the-hard-way/components/controllerManager/staticPod.mdx'
+import SchedulerSetup         from '@site/blog-draft/kubernetes-the-hard-way/components/scheduler/staticPod.mdx'
+import KubeAPISetup           from '@site/blog-draft/kubernetes-the-hard-way/components/kubeAPI/staticPod.mdx'
+import KubeletSetup           from '@site/blog-draft/kubernetes-the-hard-way/components/kubelet/main.mdx'
+import { FancyboxDiagram }    from '@site/src/components/commonBlocks/FancyboxDiagram'
 
 #### Каждый компоненты мы представляем как набор сущностей:
 - `service`: Systemd unit, ориентированный на запуск сценария при старте ОС.
@@ -47,5 +49,10 @@ flowchart TD
 <KubeletSetup />
 
 ### Настройка Static Pods
+:::note
+TODO что такое static pod
+:::
 <ETCDSetup />
 <KubeAPISetup />
+<ControllerManagerSetup />
+<SchedulerSetup />

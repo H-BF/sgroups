@@ -8,7 +8,11 @@ import Tabs                 from '@theme/Tabs'
 ```bash
 mkdir -p ${BASE_K8S_PATH}/pki
 mkdir -p ${BASE_K8S_PATH}/openssl/csr
+```
 
+### Переменные окружения сертификатов
+
+```bash
 export CERTIFICATE_KEY_SIZE=2048
 
 export ETCD_CLIENT_KEY_PATH="${BASE_K8S_PATH}/pki/etcd/healthcheck-client.key"
@@ -27,6 +31,12 @@ export ETCD_PEER_CRT_CONF="${BASE_K8S_PATH}/openssl/etcd-server.conf"
 export ETCD_PEER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/etcd-peer.csr"
 ```
 
+### Инструкция создания сертификатов
+
+:::note
+Для удобства добавил блок расширения, что бы в перспективе отобразить инструкции сертификатов для `cfssl`
+:::
+
 <Tabs 
     defaultValue='openssl'
     values={[
@@ -34,7 +44,7 @@ export ETCD_PEER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/etcd-peer.csr"
     ]}>
     <TabItem value='openssl'>
 
-      #### Описываем инструкции:
+      #### Конфигурация `openssl` kube-etcd-healthcheck-client
 
       ```bash
       cat <<EOF > ${ETCD_CLIENT_CRT_CONF}
@@ -54,6 +64,8 @@ export ETCD_PEER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/etcd-peer.csr"
       extendedKeyUsage=clientAuth
       EOF
       ```
+
+      #### Конфигурация `openssl` etcd-server
 
       ```bash
       cat <<EOF > ${ETCD_SERVER_CRT_CONF}
@@ -87,6 +99,8 @@ export ETCD_PEER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/etcd-peer.csr"
       EOF
       ```
 
+      #### Конфигурация `openssl` etcd-peer
+
       ```bash
       cat <<EOF > ${ETCD_PEER_CRT_CONF}
       [ req ]
@@ -119,7 +133,7 @@ export ETCD_PEER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/etcd-peer.csr"
       EOF
       ```
 
-      #### Создаем приватные ключи:
+      #### Генерация приватных ключей сертификатов
 
       ```bash
       openssl genrsa \
@@ -130,7 +144,7 @@ export ETCD_PEER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/etcd-peer.csr"
         -out "${ETCD_PEER_KEY_PATH}" ${CERTIFICATE_KEY_SIZE}
       ```
 
-      #### Создаем CSR:
+      #### Генерация CSR будущих сертификатов
 
       ```bash
       openssl req \
@@ -152,7 +166,7 @@ export ETCD_PEER_CSR_PATH="${BASE_K8S_PATH}/openssl/csr/etcd-peer.csr"
         -config "${ETCD_PEER_CRT_CONF}"
       ```
 
-      #### Подписываем CSR:
+      #### Подпись CSR ключом удостоверяющего центра (CA)
 
       ```bash
       openssl x509 \

@@ -1,4 +1,5 @@
 ---
+
 title: Kubernetes the hard way
 description: Приключение на 20 минут вошли и вышли или как создать кластер по этапно
 slug: kubernetes-hello
@@ -14,6 +15,7 @@ authors:
 tags: [K8S]
 image: https://i.imgur.com/mErPwqL.png
 hide_table_of_contents: false
+
 ---
 
 import { FancyboxDiagram }  from '@site/src/components/commonBlocks/FancyboxDiagram'
@@ -30,26 +32,30 @@ import CertsSchema          from '@site/blog-draft/kubernetes-the-hard-way/certs
 import K8sCerts             from '@site/blog-draft/kubernetes-the-hard-way/components/kubelet/certs.mdx'
 import ETCDCerts            from '@site/blog-draft/kubernetes-the-hard-way/components/etcd/certs.mdx'
 import KubeAPICerts         from '@site/blog-draft/kubernetes-the-hard-way/components/kubeAPI/certs.mdx'
+import KubeControllersCerts from '@site/blog-draft/kubernetes-the-hard-way/components/controllerManager/certs.mdx'
+import KubeSchedulerCerts   from '@site/blog-draft/kubernetes-the-hard-way/components/scheduler/certs.mdx'
 
 import ComponentsInfo       from '@site/blog-draft/kubernetes-the-hard-way/components/components.mdx'
 import ComponentsSetings    from '@site/blog-draft/kubernetes-the-hard-way/components/componentsSetings.mdx'
 
 
-Всем привет. Меня зовут Путилин Дмитрий и сегодня хотел бы рассказать о том, с какими вопросами сталкиваются инженеры DEVOPS/SRE на собеседованиях по kubernetes.
+Привет, друзья! С вами снова Дмитрий Путилин, и я рад продолжить нашу серию статей о Kubernetes. В этой статье мы вместе пройдем весь путь ручной установки контрол-плейна Kubernetes и доведем его до состояния, идентичного тому, что вы получили бы с помощью `kubeadm init`.
 
 ![Описание изображения](https://habrastorage.org/r/w1560/getpro/habr/upload_files/58b/103/4eb/58b1034eb64ffed83f0199bdcbc4e866.png)
 
+
 <!-- truncate -->
 ## Введение
-Наверняка многие из вас, кто проходил собеседование на позицию SRE или DevOps, сталкивались с вопросоми о том, из каких компонентов состоит кластер Kubernetes или кто с кем взаимодействует, а может куда еще страшнее вопросы. В этой статье я постараюсь подробно и доступно рассказать, как правильно ответить на многие вопросы. А ещё, на примере, покажу, как можно собрать Kubernetes, используя только бинарные файлы. Давайте разбираться вместе!
+Если вы когда-либо разворачивали кластер Kubernetes, то, вероятно, сталкивались с такими инструментами, как kubespray, kubeadm, или даже пробовали собрать всё вручную по руководству "Kubernetes The Hard Way". Kubeadm стал одним из самых популярных вариантов для многих, но иногда может возникать ощущение, что это своего рода "чёрный ящик", и не всегда понятно, что именно происходит внутри. 
 
+В этом посте я хотел бы поделиться с вами основными задачами, которые выполняет kubeadm. Но самое главное — мы вместе пройдём пошаговый процесс создания кластера без его использования, чтобы глубже понять все детали работы этого инструмента. Давайте начнём!
 
 ## Для чего нужен Kubernetes
-Kubernetes, или K8S, — это как волшебная палочка для инженеров, работающих с контейнерами. Он помогает решать множество задач: от обеспечения воспроизводимости и создания резервных копий до стандартизации процессов и автоматического восстановления после сбоев. Проще говоря, K8S делает жизнь проще и спокойнее, позволяя сосредоточиться на более важных вещах, не беспокоясь о возможных проблемах.
+Давайте начнём с очевидного вопроса: что такое Kubernetes? Kubernetes, или просто K8S, — это настоящая палочка-выручалочка для инженеров, работающих с контейнерами. Он помогает справиться со множеством задач: от обеспечения воспроизводимости и резервного копирования до стандартизации процессов и автоматического восстановления после сбоев. Проще говоря, K8S делает нашу работу проще и спокойнее, позволяя сосредоточиться на действительно важных вещах, не переживая о возможных проблемах.
 
-Если вдруг K8S чего-то не умеет, всегда можно добавить нужную функциональность с помощью операторов и подключить её к кластеру.
+А если вдруг Kubernetes чего-то не хватает, всегда можно добавить нужную функциональность с помощью операторов и интегрировать её в кластер.
 
-Для меня Kubernetes — это в первую очередь мощное и легко расширяемое REST API. У него есть удобный интерфейс командной строки, понятная ролевая модель, мощный встроенный функционал очередей для реализации событийной модели и многое другое. И что самое интересное, использование контейнеров может даже не быть обязательным.
+Для меня Kubernetes — это, в первую очередь, мощное и легко расширяемое REST API. У него удобный интерфейс командной строки, понятная ролевая модель, мощные встроенные очереди для реализации событийной модели и многое другое. И самое интересное — использование контейнеров даже не обязательно!
 
 <ComponentsInfo />
 
@@ -174,6 +180,7 @@ flowchart LR
 <K8sEnv />
 
 ## Загрузка компонентов
+
 <K8sDownloads />
 
 ## Настройка ядра ОС
@@ -211,6 +218,35 @@ flowchart LR
 <K8sCerts />
 <ETCDCerts />
 <KubeAPICerts />
+<KubeControllersCerts />
+<KubeSchedulerCerts />
+
+<div className="center">
+**После настройки сертификатов рекомендуется проверить их корректность с помощью `Kubeadm`**
+</div>
+```bash
+root@compute:/home/dlputilin# kubeadm certs check-expiration
+
+CERTIFICATE                EXPIRES                  RESIDUAL TIME   CERTIFICATE AUTHORITY   EXTERNALLY MANAGED
+admin.conf                 Oct 22, 2025 22:06 UTC   364d            ca                      no      
+apiserver                  Oct 22, 2025 22:06 UTC   364d            ca                      no      
+apiserver-etcd-client      Oct 22, 2025 22:06 UTC   364d            etcd-ca                 no      
+apiserver-kubelet-client   Oct 22, 2025 22:06 UTC   364d            ca                      no      
+controller-manager.conf    Oct 22, 2025 22:06 UTC   364d            ca                      no      
+etcd-healthcheck-client    Oct 22, 2025 22:06 UTC   364d            etcd-ca                 no      
+etcd-peer                  Oct 22, 2025 22:06 UTC   364d            etcd-ca                 no      
+etcd-server                Oct 22, 2025 22:06 UTC   364d            etcd-ca                 no      
+front-proxy-client         Oct 22, 2025 22:06 UTC   364d            front-proxy-ca          no      
+scheduler.conf             Oct 22, 2025 22:06 UTC   364d            ca                      no      
+super-admin.conf           Oct 22, 2025 22:06 UTC   364d            ca                      no      
+
+CERTIFICATE AUTHORITY   EXPIRES                  RESIDUAL TIME   EXTERNALLY MANAGED
+ca                      Oct 20, 2034 22:04 UTC   9y              no      
+etcd-ca                 Oct 20, 2034 22:04 UTC   9y              no      
+front-proxy-ca          Oct 20, 2034 22:04 UTC   9y              no      
+
+```
+
 
 ## Настройка компонентов
 <ComponentsSetings />

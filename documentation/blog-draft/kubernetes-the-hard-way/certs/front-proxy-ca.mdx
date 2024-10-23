@@ -5,15 +5,22 @@ import Tabs                 from '@theme/Tabs'
 <details>
 <summary>Front Proxy CA</summary>
 
+### Переменные окружения сертификатов
+
 ```bash
 mkdir -p ${BASE_K8S_PATH}/pki/
 
 export FRONT_PROXY_CA_KEY_PATH="${BASE_K8S_PATH}/pki/front-proxy-ca.key"
 export FRONT_PROXY_CA_CRT_PATH="${BASE_K8S_PATH}/pki/front-proxy-ca.crt"
 export FRONT_PROXY_CA_CSR_PATH="${BASE_K8S_PATH}/openssl/front-proxy-ca.conf"
-export FRONT_PROXY_CA_CRT_CN="front-proxy-ca"
-export FRONT_PROXY_CA_KEY_SIZE=4096
+export FRONT_PROXY_CA_KEY_SIZE=2048
 ```
+
+### Инструкция создания сертификатов
+
+:::note
+Для удобства добавил блок расширения, что бы в перспективе отобразить инструкции сертификатов для `cfssl`
+:::
 
 <Tabs 
     defaultValue='openssl'
@@ -26,6 +33,8 @@ export FRONT_PROXY_CA_KEY_SIZE=4096
       mkdir -p ${BASE_K8S_PATH}/openssl
       ```
 
+      #### Конфигурация `openssl` CA
+
       ```bash
       cat <<EOF > ${FRONT_PROXY_CA_CSR_PATH}
       [req]
@@ -34,7 +43,7 @@ export FRONT_PROXY_CA_KEY_SIZE=4096
       prompt             = no
 
       [req_distinguished_name]
-      CN = "${FRONT_PROXY_CA_CRT_CN}"
+      CN = "front-proxy-ca"
 
       [v3_ca]
       keyUsage = critical, keyCertSign, keyEncipherment, digitalSignature
@@ -42,10 +51,16 @@ export FRONT_PROXY_CA_KEY_SIZE=4096
       EOF
       ```
 
+      #### Генерация приватного ключа `CA` сертификата
+
       ```bash
       openssl genrsa \
         -out "${FRONT_PROXY_CA_KEY_PATH}" ${FRONT_PROXY_CA_KEY_SIZE}
+      ```
 
+      #### Генерация публичного ключа `CA` сертификата
+
+      ```bash
       openssl req \
         -x509 \
         -new \
