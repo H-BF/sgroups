@@ -49,11 +49,16 @@ flowchart TD
 <CRISetup />
 <KubeletSetup />
 
-### Настройка Static Pods
-:::note
-Статичные поды в Kubernetes — это особый вид подов, которые запускаются и управляются напрямую демоном kubelet на каждом узле, без участия API-сервера и контроллеров Kubernetes. Чтобы создать статический под, вы размещаете файл-манифест в определённой директории на узле (по умолчанию это **{CUSTOM_VALUE.kuberneteBaseFolderPath.value}**). Kubelet постоянно следит за этой директорией и автоматически запускает или перезапускает поды при обнаружении изменений в этих файлах.
+:::warning
+Чтобы проверить правильность установки всех базовых компонентов, выполните команду:
+
+```bash
+kubeadm init phase preflight --dry-run
+```
+Если все установлено корректно, команда выполнится без ошибок, и вы увидите следующий вывод:
+```bash
+[preflight] Running pre-flight checks
+[preflight] Would pull the required images (like 'kubeadm config images pull')
+```
 :::
-<ETCDSetup />
-<KubeAPISetup />
-<ControllerManagerSetup />
-<SchedulerSetup />
+
