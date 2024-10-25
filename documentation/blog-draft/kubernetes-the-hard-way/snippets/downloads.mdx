@@ -1,101 +1,18 @@
-import { FancyboxDiagram } from '@site/src/components/commonBlocks/FancyboxDiagram'
-import React from 'react';
-import CodeBlock from '@theme/CodeBlock';
 
-import { PORTS }                from '@site/blog-draft/kubernetes-the-hard-way/constants/ports'
-import { CUSTOM_VALUE }         from '@site/blog-draft/kubernetes-the-hard-way/constants/customValue'
-import { COMPONENTS_VERSION }   from '@site/blog-draft/kubernetes-the-hard-way/constants/componentsVersion'
-import { DOWNLOAD_VERSION }     from '@site/blog-draft/kubernetes-the-hard-way/constants/downloads'
+import React                  from 'react';
+import CodeBlock              from '@theme/CodeBlock';
+
+import { FancyboxDiagram }    from '@site/src/components/commonBlocks/FancyboxDiagram'
+import { PORTS }              from '@site/blog-draft/kubernetes-the-hard-way/constants/ports'
+import { CUSTOM_VALUE }       from '@site/blog-draft/kubernetes-the-hard-way/constants/customValue'
+import { COMPONENTS_VERSION } from '@site/blog-draft/kubernetes-the-hard-way/constants/componentsVersion'
+import { DOWNLOAD_VERSION }   from '@site/blog-draft/kubernetes-the-hard-way/constants/downloads'
+import TopologyInfra            from '@site/blog-draft/kubernetes-the-hard-way/snippets/flowcharts/topologyInfra.mdx'
 
 В заранее подготовленных узлах под управлением ```OC Linux (Ubuntu 24.04.1 LTS)``` начинаем загружать базовые компоненты.
 Для этого выполните указанные ниже команды.
 
-<div className="center">
-
-**Топология созданной инфраструктуры**
-
-```mermaid
----
-config:
-  look: handDrawn
-  theme: dark  
----
-
-
-flowchart LR
-
-  master1[node:master-1]
-  master2[node:master-2]
-  master3[node:master-3]
-
-  dnsMaster1[dns:master-1.example.prorobotech.ru]
-  dnsMaster2[dns:master-2.example.prorobotech.ru]
-  dnsMaster3[dns:master-3.example.prorobotech.ru]
-
-  subgraph control plane
-    dnsMaster1-->master1
-    dnsMaster2-->master2
-    dnsMaster3-->master3
-  end
-
-```
-
-
-<div className="center">
-**В итоге должны получить примерно вот такую вот картину**
-  <FancyboxDiagram>
-```mermaid
----
-config:
-  look: handDrawn
-  theme: dark  
----
-
-
-flowchart TD
-
-  subgraph Control-Plane
-   subgraph Master-1
-      newLines["`
-         containerd
-         kubectl
-         kubelet
-         etcdctl
-         crictl
-         cfssl
-         runc
-      `"]
-   end
-   subgraph Master-2
-      newLines2["`
-         containerd
-         kubectl
-         kubelet
-         etcdctl
-         crictl
-         cfssl
-         runc
-      `"]
-   end
-
-   subgraph Master-3
-      newLines3["`
-         containerd
-         kubectl
-         kubelet
-         etcdctl
-         crictl
-         cfssl
-         runc
-      `"]
-   end
-  end
-
-```
-   </FancyboxDiagram>
-</div>
-
-</div>
+<TopologyInfra />
 
 <details>
 <summary>Downloads</summary>

@@ -1,0 +1,118 @@
+import TabItem                  from '@theme/TabItem'
+import Tabs                     from '@theme/Tabs'
+
+import K8sCerts                 from '@site/blog-draft/kubernetes-the-hard-way/snippets/components/kubelet/certs.mdx'
+import ETCDCerts                from '@site/blog-draft/kubernetes-the-hard-way/snippets/components/etcd/certs.mdx'
+import KubeAPICerts             from '@site/blog-draft/kubernetes-the-hard-way/snippets/components/kubeAPI/certs.mdx'
+import KubeControllersCerts     from '@site/blog-draft/kubernetes-the-hard-way/snippets/components/controllerManager/certs.mdx'
+import KubeSchedulerCerts       from '@site/blog-draft/kubernetes-the-hard-way/snippets/components/scheduler/certs.mdx'
+
+<Tabs groupId="install-type">
+
+  <TabItem value='HardWay'>
+    <K8sCerts />
+    <ETCDCerts />
+    <KubeAPICerts />
+    <KubeControllersCerts />
+    <KubeSchedulerCerts />
+  </TabItem>
+
+  <TabItem value='Kubeadm'>
+    #### Kubelet Certificates
+    ```bash
+    kubeadm init phase kubeconfig kubelet
+    kubeadm init phase kubelet-finalize experimental-cert-rotation
+    ```
+
+    #### ETCD Certificates
+    ```bash
+    kubeadm init phase certs etcd-healthcheck-client
+    kubeadm init phase certs etcd-peer
+    kubeadm init phase certs etcd-server
+    ```
+    #### Kube API Certificates
+    ```bash
+    kubeadm init phase certs apiserver
+    kubeadm init phase certs apiserver-etcd-client
+    kubeadm init phase certs apiserver-kubelet-client
+    kubeadm init phase certs front-proxy-client
+    kubeadm init phase certs sa
+    ```
+    ```bash
+    kubeadm init phase kubeconfig super-admin
+    kubeadm init phase kubeconfig admin
+    ```
+    #### Kube Controller Manager Certificates
+    ```bash
+    kubeadm init phase kubeconfig controller-manager
+    ```
+    #### Kube Scheduler Certificates
+    ```bash
+    kubeadm init phase kubeconfig scheduler
+    ```
+
+    :::note
+    После выполнения команд мы получаем следующий вывод.
+    ```
+    #### Kubelet Certificates
+    [kubeconfig] Writing "kubelet.conf" kubeconfig file
+    ```
+    ```
+    #### ETCD Certificates
+    [certs] Generating "etcd/healthcheck-client" certificate and key
+    [certs] Generating "etcd/peer" certificate and key
+    [certs] etcd/peer serving cert is signed for DNS names [localhost master-1.example.prorobotech.ru] and IPs [192.168.10.27 127.0.0.1 ::1]
+    [certs] Generating "etcd/server" certificate and key
+    [certs] etcd/server serving cert is signed for DNS names [localhost master-1.example.prorobotech.ru] and IPs [192.168.10.27 127.0.0.1 ::1]
+    ```
+    ```
+    #### Kube API Certificates
+    [certs] Generating "apiserver" certificate and key
+    [certs] apiserver serving cert is signed for DNS names [kubernetes kubernetes.default kubernetes.default.svc kubernetes.default.svc.cluster.local master-1.example.prorobotech.ru] and IPs [10.96.0.1 192.168.10.27]
+    [certs] Generating "apiserver-etcd-client" certificate and key
+    [certs] Generating "apiserver-kubelet-client" certificate and key
+    [certs] Generating "front-proxy-client" certificate and key
+    [certs] Generating "sa" key and public key
+    [kubeconfig] Writing "super-admin.conf" kubeconfig file
+    [kubeconfig] Writing "admin.conf" kubeconfig file
+    ```
+    ```
+    #### Kube Controller Manager Certificates
+    [kubeconfig] Writing "controller-manager.conf" kubeconfig file
+    ```
+    ```
+    #### Kube Scheduler Certificates
+    [kubeconfig] Writing "scheduler.conf" kubeconfig file
+    ```
+    :::
+  </TabItem>
+
+</Tabs>
+
+:::warning
+**После настройки сертификатов рекомендуется проверить их корректность с помощью `Kubeadm`**
+
+
+```bash
+root@compute:/home/user# kubeadm certs check-expiration
+
+CERTIFICATE                EXPIRES                  RESIDUAL TIME   CERTIFICATE AUTHORITY   EXTERNALLY MANAGED
+admin.conf                 Oct 22, 2025 22:06 UTC   364d            ca                      no      
+apiserver                  Oct 22, 2025 22:06 UTC   364d            ca                      no      
+apiserver-etcd-client      Oct 22, 2025 22:06 UTC   364d            etcd-ca                 no      
+apiserver-kubelet-client   Oct 22, 2025 22:06 UTC   364d            ca                      no      
+controller-manager.conf    Oct 22, 2025 22:06 UTC   364d            ca                      no      
+etcd-healthcheck-client    Oct 22, 2025 22:06 UTC   364d            etcd-ca                 no      
+etcd-peer                  Oct 22, 2025 22:06 UTC   364d            etcd-ca                 no      
+etcd-server                Oct 22, 2025 22:06 UTC   364d            etcd-ca                 no      
+front-proxy-client         Oct 22, 2025 22:06 UTC   364d            front-proxy-ca          no      
+scheduler.conf             Oct 22, 2025 22:06 UTC   364d            ca                      no      
+super-admin.conf           Oct 22, 2025 22:06 UTC   364d            ca                      no      
+
+CERTIFICATE AUTHORITY   EXPIRES                  RESIDUAL TIME   EXTERNALLY MANAGED
+ca                      Oct 20, 2034 22:04 UTC   9y              no      
+etcd-ca                 Oct 20, 2034 22:04 UTC   9y              no      
+front-proxy-ca          Oct 20, 2034 22:04 UTC   9y              no      
+
+```
+:::

@@ -1,0 +1,26 @@
+
+import TabItem  from '@theme/TabItem'
+import Tabs     from '@theme/Tabs'
+
+Для запуска кластера достаточно запустить `kubelet` и дождаться, когда запустятся контейнеры управляющего контура.
+
+<Tabs groupId="install-type">
+  <TabItem value='HardWay'>
+    ```bash
+    systemctl start kubelet
+    ```
+  </TabItem>
+  <TabItem value='Kubeadm'>
+    ```bash
+    kubeadm init phase kubelet-start
+    ```
+
+    :::note
+    ```
+    [kubelet-start] Writing kubelet environment file with flags to file "/var/lib/kubelet/kubeadm-flags.env"
+    [kubelet-start] Writing kubelet configuration to file "/var/lib/kubelet/config.yaml"
+    [kubelet-start] Starting the kubelet
+    ```
+    :::
+  </TabItem>
+</Tabs>

@@ -1,0 +1,54 @@
+import TabItem                  from '@theme/TabItem'
+import Tabs                     from '@theme/Tabs'
+
+import ETCDSetup                from '@site/blog-draft/kubernetes-the-hard-way/snippets/components/etcd/staticPod.mdx'
+import ControllerManagerSetup   from '@site/blog-draft/kubernetes-the-hard-way/snippets/components/controllerManager/staticPod.mdx'
+import SchedulerSetup           from '@site/blog-draft/kubernetes-the-hard-way/snippets/components/scheduler/staticPod.mdx'
+import KubeAPISetup             from '@site/blog-draft/kubernetes-the-hard-way/snippets/components/kubeAPI/staticPod.mdx'
+
+import { CUSTOM_VALUE }         from '@site/blog-draft/kubernetes-the-hard-way/constants/customValue'
+
+
+:::note
+Статичные поды в Kubernetes — это особый вид подов, которые запускаются и управляются напрямую демоном kubelet на каждом узле, без участия API-сервера и контроллеров Kubernetes. Чтобы создать статический под, вы размещаете файл-манифест в определённой директории на узле (по умолчанию это **{CUSTOM_VALUE.kuberneteBaseFolderPath.value}**). Kubelet постоянно следит за этой директорией и автоматически запускает или перезапускает поды при обнаружении изменений в этих файлах.
+:::
+
+<Tabs groupId="install-type">
+
+  <TabItem value='HardWay'>
+    <ETCDSetup />
+    <KubeAPISetup />
+    <ControllerManagerSetup />
+    <SchedulerSetup />
+  </TabItem>
+
+  <TabItem value='Kubeadm'>
+    #### ETCD
+    ```bash
+    kubeadm init phase  etcd local
+    ```
+
+    #### Kube API
+    ```bash
+    kubeadm init phase  control-plane apiserver
+    ```
+
+    #### Kube Controller Manager
+    ```bash
+    kubeadm init phase  control-plane controller-manager
+    ```
+
+    #### Kube Scheduler
+    ```bash
+    kubeadm init phase  control-plane scheduler
+    ```
+    :::note
+    ```
+    [etcd] Creating static Pod manifest for local etcd in "/etc/kubernetes/manifests"
+    [control-plane] Creating static Pod manifest for "apiserver"
+    [control-plane] Creating static Pod manifest for "kube-controller-manager"
+    [control-plane] Creating static Pod manifest for "kube-scheduler"
+    ```
+    :::
+  </TabItem>
+</Tabs>

@@ -1,0 +1,46 @@
+import TabItem                  from '@theme/TabItem'
+import Tabs                     from '@theme/Tabs'
+
+import K8sCACerts               from '@site/blog-draft/kubernetes-the-hard-way/snippets/certs/kubernetes-ca.mdx'
+import ETCDCACerts              from '@site/blog-draft/kubernetes-the-hard-way/snippets/certs/etcd-ca.mdx'
+import FrontProxyCACerts        from '@site/blog-draft/kubernetes-the-hard-way/snippets/certs/front-proxy-ca.mdx'
+
+<Tabs groupId="install-type">
+
+  <TabItem value='HardWay'>
+    <K8sCACerts />
+    <ETCDCACerts />
+    <FrontProxyCACerts />
+  </TabItem>
+
+  <TabItem value='Kubeadm'>
+    #### Kubernetes CA
+    ```bash
+    kubeadm init phase certs ca
+    ```
+    #### ETCD CA
+    ```bash
+    kubeadm init phase certs etcd-ca
+    ```
+    #### Front Proxy CA
+    ```bash
+    kubeadm init phase certs front-proxy-ca
+    ```
+    :::note
+    После выполнения команд мы получаем следующий вывод.
+    ```
+    #### Kubernetes CA
+    [certs] Generating "ca" certificate and key
+    ```
+    ```
+    #### ETCD CA
+    [certs] Generating "etcd/ca" certificate and key
+    ```
+    ```
+    #### Front Proxy CA
+    [certs] Generating "front-proxy-ca" certificate and key
+    ```
+    :::
+  </TabItem>
+
+</Tabs>

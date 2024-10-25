@@ -1,0 +1,36 @@
+import K8sEnv   from '@site/blog-draft/kubernetes-the-hard-way/snippets/environments.mdx'
+import TabItem  from '@theme/TabItem'
+import Tabs     from '@theme/Tabs'
+
+Я заранее подготовил 3 узла под управлением ```OC Linux (Ubuntu 24.04.1 LTS)```
+
+Теперь давайте опишем переменные окружения, которые нам потребуются
+
+<Tabs 
+    defaultValue='master1'
+    values={[
+        { label: "Master-1", value: "master1" },
+        { label: "Master-2", value: "master2" },
+        { label: "Master-3", value: "master3" },
+    ]}>
+    <TabItem value='master1'>
+      ```bash
+      export HOST_NAME=master-1
+      ```
+    </TabItem>
+
+    <TabItem value='master2'>
+      ```bash
+      export HOST_NAME=master-2
+      ```
+    </TabItem>
+
+    <TabItem value='master3'>
+      ```bash
+      export HOST_NAME=master-3
+      ```
+    </TabItem>
+</Tabs>
+
+<K8sEnv />
+

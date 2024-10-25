@@ -107,8 +107,8 @@ export const CERTIFICATES: TCertsItems = {
     keySize: "2048"
   },
   kubeletClient: {
-    keyPath: "${BASE_K8S_PATH}/pki/kubelet-client-key.pem",
-    crtPath: "${BASE_K8S_PATH}/pki/kubelet-client.pem", 
+    keyPath: "${BASE_KUBELET_PATH}/pki/kubelet-client-key.pem",
+    crtPath: "${BASE_KUBELET_PATH}/pki/kubelet-client.pem", 
     csrPath: "${BASE_K8S_PATH}/openssl/kubelet-client.conf",
     crtConf: "${BASE_K8S_PATH}/openssl/csr/kubelet-client.csr",
     keySize: "2048"
