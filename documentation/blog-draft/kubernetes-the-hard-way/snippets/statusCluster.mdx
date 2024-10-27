@@ -13,7 +13,9 @@ import { CUSTOM_VALUE }         from '@site/blog-draft/kubernetes-the-hard-way/c
 :::
 
 ### Проверка состояния ETCD
-Чтобы проверить состояние базы данных, используйте утилиту `etcdctl` для взаимодействия с ней.
+:::warning
+Чтобы проверить состояние базы данных, используйте утилиту `etcdctl` для взаимодействия с ней. Для более удобного взаимодействия с etcd, воспользуйтесь настройкой bashrc указанной ниже.
+
 
 <CodeBlock language="bash">
 {`cat <<'EOF' >> ~/.bashrc
@@ -44,30 +46,32 @@ import { CUSTOM_VALUE }         from '@site/blog-draft/kubernetes-the-hard-way/c
   endpoint status
   }
   EOF
+
+  source ~/.bashrc
 `}
 </CodeBlock>
 
-```bash
-source ~/.bashrc
-estat
-```
+:::
 
-:::note
-После выполнения команд мы получаем следующий вывод.
+<div className="center"> После выполнения команд мы получаем следующий вывод. </div>
 ```bash
+root@compute:/home/user# estat
+
 +----------------------------------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
 |                   ENDPOINT                   |        ID        | VERSION | DB SIZE | IS LEADER | IS LEARNER | RAFT TERM | RAFT INDEX | RAFT APPLIED INDEX | ERRORS |
 +----------------------------------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
 | https://master-1.example.prorobotech.ru:2379 | 7190fc20ca138014 |   3.5.3 |  5.4 MB |      true |      false |         2 |     191880 |             191880 |        |
 +----------------------------------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
 ```
-:::
 
 ### Проверка состояния Kube API
 
 Для подключения к кластеру нам потребуется переменная окружения `KUBECONFIG`
 ```bash
-export KUBECONFIG=${BASE_K8S_PATH}/super-admin.conf
+mkdir -p $HOME/.kube
+sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
 kubectl get nodes -o wide
 ```
 
@@ -84,7 +88,9 @@ master-1.example.prorobotech.ru   NotReady   <none>    16m   v1.30.4   192.168.1
 Чтобы узнать причину текущего состояния ноды, вы можете использовать команду `describe` и обратить внимание на блок `Conditions`, как показано в примере ниже.
 
 ```bash
-kubectl describe no master-1.example.prorobotech.ru
+export FULL_HOST_NAME=${HOST_NAME}.${BASE_CLUSTER_DOMAIN}
+
+kubectl describe no ${FULL_HOST_NAME}
 ```
 :::note
 После выполнения команд мы получаем следующий вывод.

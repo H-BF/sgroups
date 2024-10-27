@@ -11,52 +11,7 @@ import { CERTIFICATES }     from '@site/blog-draft/kubernetes-the-hard-way/const
 ### Переменные окружения сертификатов
 
 <CodeBlock language="bash">
-{`export BASE_K8S_PATH="${CUSTOM_VALUE.kuberneteBaseFolderPath.value}"
-
-  export KUBERNETES_KUBELET_CLIENT_KEY_SIZE=${CERTIFICATES.kubernetesKubeletClient.keySize}
-  export KUBERNETES_KUBELET_CLIENT_KEY_PATH="${CERTIFICATES.kubernetesKubeletClient.keyPath}"
-  export KUBERNETES_KUBELET_CLIENT_CRT_PATH="${CERTIFICATES.kubernetesKubeletClient.crtPath}"
-  export KUBERNETES_KUBELET_CLIENT_CRT_CONF="${CERTIFICATES.kubernetesKubeletClient.crtConf}"
-  export KUBERNETES_KUBELET_CLIENT_CSR_PATH="${CERTIFICATES.kubernetesKubeletClient.csrPath}"
-
-  export KUBERNETES_FRONT_PROXY_CLIENT_KEY_SIZE=${CERTIFICATES.kubernetesFrontProxyClient.keySize}
-  export KUBERNETES_FRONT_PROXY_CLIENT_KEY_PATH="${CERTIFICATES.kubernetesFrontProxyClient.keyPath}"
-  export KUBERNETES_FRONT_PROXY_CLIENT_CRT_PATH="${CERTIFICATES.kubernetesFrontProxyClient.crtPath}"
-  export KUBERNETES_FRONT_PROXY_CLIENT_CRT_CONF="${CERTIFICATES.kubernetesFrontProxyClient.crtConf}"
-  export KUBERNETES_FRONT_PROXY_CLIENT_CSR_PATH="${CERTIFICATES.kubernetesFrontProxyClient.csrPath}"
-
-  export KUBERNETES_ETCD_CLIENT_KEY_SIZE=${CERTIFICATES.kubernetesEtcdClient.keySize}
-  export KUBERNETES_ETCD_CLIENT_KEY_PATH="${CERTIFICATES.kubernetesEtcdClient.keyPath}"
-  export KUBERNETES_ETCD_CLIENT_CRT_PATH="${CERTIFICATES.kubernetesEtcdClient.crtPath}"
-  export KUBERNETES_ETCD_CLIENT_CRT_CONF="${CERTIFICATES.kubernetesEtcdClient.crtConf}"
-  export KUBERNETES_ETCD_CLIENT_CSR_PATH="${CERTIFICATES.kubernetesEtcdClient.csrPath}"
-
-  export KUBERNETES_SERVER_KEY_SIZE=${CERTIFICATES.kubernetesServer.keySize}
-  export KUBERNETES_SERVER_KEY_PATH="${CERTIFICATES.kubernetesServer.keyPath}"
-  export KUBERNETES_SERVER_CRT_PATH="${CERTIFICATES.kubernetesServer.crtPath}"
-  export KUBERNETES_SERVER_CRT_CONF="${CERTIFICATES.kubernetesServer.crtConf}"
-  export KUBERNETES_SERVER_CSR_PATH="${CERTIFICATES.kubernetesServer.csrPath}"
-
-  export KUBERNETES_SUPER_ADMIN_CLIENT_KEY_SIZE=${CERTIFICATES.kubernetesSuperAdminClient.keySize}
-  export KUBERNETES_SUPER_ADMIN_CLIENT_KEY_PATH="${CERTIFICATES.kubernetesSuperAdminClient.keyPath}"
-  export KUBERNETES_SUPER_ADMIN_CLIENT_CRT_PATH="${CERTIFICATES.kubernetesSuperAdminClient.crtPath}"
-  export KUBERNETES_SUPER_ADMIN_CLIENT_CRT_CONF="${CERTIFICATES.kubernetesSuperAdminClient.crtConf}"
-  export KUBERNETES_SUPER_ADMIN_CLIENT_CSR_PATH="${CERTIFICATES.kubernetesSuperAdminClient.csrPath}"
-
-  export KUBERNETES_ADMIN_CLIENT_KEY_SIZE=${CERTIFICATES.kubernetesAdminClient.keySize}
-  export KUBERNETES_ADMIN_CLIENT_KEY_PATH="${CERTIFICATES.kubernetesAdminClient.keyPath}"
-  export KUBERNETES_ADMIN_CLIENT_CRT_PATH="${CERTIFICATES.kubernetesAdminClient.crtPath}"
-  export KUBERNETES_ADMIN_CLIENT_CRT_CONF="${CERTIFICATES.kubernetesAdminClient.crtConf}"
-  export KUBERNETES_ADMIN_CLIENT_CSR_PATH="${CERTIFICATES.kubernetesAdminClient.csrPath}"
-
-  export KUBERNETES_CA_CRT_PATH="${CERTIFICATES.kubernetesCA.crtPath}"
-  export KUBERNETES_CA_KEY_PATH="${CERTIFICATES.kubernetesCA.keyPath}"
-
-  export ETCD_CA_CRT_PATH="${CERTIFICATES.etcdCA.crtPath}"
-  export ETCD_CA_KEY_PATH="${CERTIFICATES.etcdCA.keyPath}"
-
-  export KUBERNETES_SERVICE_ACCOUNT_KEY_PATH="${CERTIFICATES.kubernetesSA.keyPath}"
-  export KUBERNETES_SERVICE_ACCOUNT_CRT_PATH="${CERTIFICATES.kubernetesSA.crtPath}"
+{`
 
   mkdir -p $\{BASE_K8S_PATH\}/pki
   mkdir -p $\{BASE_K8S_PATH\}/openssl/csr
@@ -89,7 +44,7 @@ import { CERTIFICATES }     from '@site/blog-draft/kubernetes-the-hard-way/const
       distinguished_name  = dn
 
       [ dn ]
-      CN = kube-apiserver-etcd-client
+      CN = ${KUBERNETES_ETCD_CLIENT_CN}
 
       [ v3_ext ]
       authorityKeyIdentifier=keyid,issuer:always
@@ -110,7 +65,7 @@ import { CERTIFICATES }     from '@site/blog-draft/kubernetes-the-hard-way/const
       distinguished_name  = dn
 
       [ dn ]
-      CN = kube-apiserver-kubelet-client
+      CN = ${KUBERNETES_KUBELET_CLIENT_CN}
       O  = kubeadm:cluster-admins
 
       [ v3_ext ]
@@ -132,7 +87,7 @@ import { CERTIFICATES }     from '@site/blog-draft/kubernetes-the-hard-way/const
       distinguished_name  = dn
 
       [ dn ]
-      CN = kubernetes-super-admin
+      CN = ${KUBERNETES_SUPER_ADMIN_CLIENT_CN}
       O  = system:masters
 
       [ v3_ext ]
@@ -154,7 +109,7 @@ import { CERTIFICATES }     from '@site/blog-draft/kubernetes-the-hard-way/const
       distinguished_name  = dn
 
       [ dn ]
-      CN = kubernetes-admin
+      CN = ${KUBERNETES_ADMIN_CLIENT_CN}
       O  = kubeadm:cluster-admins
 
       [ v3_ext ]
@@ -176,7 +131,7 @@ import { CERTIFICATES }     from '@site/blog-draft/kubernetes-the-hard-way/const
       distinguished_name  = dn
 
       [ dn ]
-      CN = front-proxy-client
+      CN = ${KUBERNETES_FRONT_PROXY_CLIENT_CN}
 
       [ v3_ext ]
       authorityKeyIdentifier=keyid,issuer:always
@@ -210,7 +165,7 @@ import { CERTIFICATES }     from '@site/blog-draft/kubernetes-the-hard-way/const
       IP.2  = 127.0.0.1
 
       [ dn ]
-      CN = kube-apiserver
+      CN = ${KUBERNETES_SERVER_CN}
 
       [ v3_ext ]
       authorityKeyIdentifier=keyid,issuer:always

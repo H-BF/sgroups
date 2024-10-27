@@ -11,27 +11,7 @@ import { CERTIFICATES }     from '@site/blog-draft/kubernetes-the-hard-way/const
 ### Переменные окружения сертификатов
 
 <CodeBlock language="bash">
-{`export BASE_K8S_PATH="${CUSTOM_VALUE.kuberneteBaseFolderPath.value}"
-  export BASE_KUBELET_PATH="${CUSTOM_VALUE.kuberneteKubeletFolderPath.value}"
-
-  export KUBELET_CLIENT_KEY_SIZE=${CERTIFICATES.kubeletClient.keySize}
-  export KUBELET_CLIENT_KEY_PATH="${CERTIFICATES.kubeletClient.keyPath}"
-  export KUBELET_CLIENT_CRT_PATH="${CERTIFICATES.kubeletClient.crtPath}"
-  export KUBELET_CLIENT_CRT_CONF="${CERTIFICATES.kubeletClient.crtConf}"
-  export KUBELET_CLIENT_CSR_PATH="${CERTIFICATES.kubeletClient.csrPath}"
-
-  export KUBELET_SERVER_KEY_SIZE=${CERTIFICATES.kubeletServer.keySize}
-  export KUBELET_SERVER_KEY_PATH="${CERTIFICATES.kubeletServer.keyPath}"
-  export KUBELET_SERVER_CRT_PATH="${CERTIFICATES.kubeletServer.crtPath}"
-  export KUBELET_SERVER_CRT_CONF="${CERTIFICATES.kubeletServer.crtConf}"
-  export KUBELET_SERVER_CSR_PATH="${CERTIFICATES.kubeletServer.csrPath}"
-
-  export KUBELET_CURRENT_CLIENT_CRT_PATH="${CERTIFICATES.kubernetesCureentClient.crtPath}"
-  export KUBELET_CURRENT_SERVER_CRT_PATH="${CERTIFICATES.kubernetesCureentServer.crtPath}"
-
-  export KUBERNETES_CA_CRT_PATH="${CERTIFICATES.kubernetesCA.crtPath}"
-  export KUBERNETES_CA_KEY_PATH="${CERTIFICATES.kubernetesCA.keyPath}"
-
+{`
   mkdir -p $\{BASE_K8S_PATH\}/pki
   mkdir -p $\{BASE_K8S_PATH\}/openssl/csr
   mkdir -p $\{BASE_KUBELET_PATH\}/pki

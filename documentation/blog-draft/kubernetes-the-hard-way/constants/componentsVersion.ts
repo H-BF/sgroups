@@ -6,7 +6,7 @@ export const COMPONENTS_VERSION: TComponentsVersionItems = {
     value: "v1.30.4"
   },
   etcd: {
-    value: "3.5.3-0"
+    value: "3.5.12-0"
   },
   etcdctl: {
     value: "v3.5.5"

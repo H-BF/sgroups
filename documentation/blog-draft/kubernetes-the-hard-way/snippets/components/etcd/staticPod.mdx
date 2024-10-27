@@ -4,142 +4,115 @@ import { CERTIFICATES }           from '@site/blog-draft/kubernetes-the-hard-way
 import { PORTS }                  from '@site/blog-draft/kubernetes-the-hard-way/constants/ports'
 import { COMPONENTS_VERSION }     from '@site/blog-draft/kubernetes-the-hard-way/constants/componentsVersion'
 
+import {ETCD_ARGS}                from '@site/blog-draft/kubernetes-the-hard-way/constants/etcdArgs'
+
+
 <details>
 <summary>ETCD</summary>
 
 ### Переменные окружения сертификатов
 
 <CodeBlock language="bash">
-{`export BASE_K8S_PATH="${CUSTOM_VALUE.kuberneteBaseFolderPath.value}"
-
-  export ETCD_CLIENT_KEY_PATH="${CERTIFICATES.etcdClient.keyPath}"
-  export ETCD_CLIENT_CRT_PATH="${CERTIFICATES.etcdClient.crtPath}"
-
-  export ETCD_SERVER_KEY_PATH="${CERTIFICATES.etcdServer.keyPath}"
-  export ETCD_SERVER_CRT_PATH="${CERTIFICATES.etcdServer.crtPath}"
-
-  export ETCD_PEER_KEY_PATH="${CERTIFICATES.etcdPeer.keyPath}"
-  export ETCD_PEER_CRT_PATH="${CERTIFICATES.etcdPeer.crtPath}"
-
-  export ETCD_CA_CRT_PATH="${CERTIFICATES.etcdCA.crtPath}"
-  export ETCD_CA_KEY_PATH="${CERTIFICATES.etcdCA.keyPath}"
-
-  export ETCD_SERVER_PORT="${PORTS.etcdServer.portNumber}"
-  export ETCD_PEER_PORT="${PORTS.etcdPeer.portNumber}"
-  export ETCD_METRICS_PORT="${PORTS.etcdMetricServer.portNumber}"
-
-  export MASTER_COUNT=3
-  export ETCD_VERSION="${COMPONENTS_VERSION.etcd.value}"
-  export BASE_DOMAIN="${CUSTOM_VALUE.kubernetesBaseDomain.value}"
-  export CLUSTER_NAME="${CUSTOM_VALUE.kubernetesClusterName.value}"
-  export BASE_CLUSTER_DOMAIN=$\{CLUSTER_NAME\}.$\{BASE_DOMAIN\}
-  export FULL_HOST_NAME=$\{HOST_NAME\}.$\{BASE_CLUSTER_DOMAIN\}
-  export MACHINE_LOCAL_ADDRESS=${CUSTOM_VALUE.virtualMachineLocalAddress.value}
-
+{`
   mkdir -p $\{BASE_K8S_PATH\}/manifests
-
 `}
 </CodeBlock>
 
 ### Инструкция StaticPod
-```bash
-cat <<EOF > ${BASE_K8S_PATH}/manifests/etcd.yaml
----
-apiVersion: v1
-kind: Pod
-metadata:
-  creationTimestamp: null
-  labels:
-    component: etcd
-    tier: control-plane
-  name: etcd
-  namespace: kube-system
-spec:
-  containers:
-  - name: etcd
-    command:
+
+<CodeBlock language="bash">
+{`cat <<EOF > $\{BASE_K8S_PATH\}/manifests/etcd.yaml2
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    annotations:
+      kubeadm.kubernetes.io/etcd.advertise-client-urls: https://$\{MACHINE_LOCAL_ADDRESS\}:$\{ETCD_SERVER_PORT\}
+    creationTimestamp: null
+    labels:
+      component: etcd
+      tier: control-plane
+    name: etcd
+    namespace: kube-system
+  spec:
+    containers:
+    - command:
       - etcd
-    args:
-      - --name=${FULL_HOST_NAME}
-      - --initial-cluster=${ETCD_INITIAL_CLUSTER}
-      - --initial-advertise-peer-urls=https://${FULL_HOST_NAME}:${ETCD_PEER_PORT}
-      - --advertise-client-urls=https://${FULL_HOST_NAME}:${ETCD_SERVER_PORT}
-      - --peer-trusted-ca-file=${ETCD_CA_CRT_PATH}
-      - --trusted-ca-file=${ETCD_CA_CRT_PATH}
-      - --peer-cert-file=${ETCD_PEER_CRT_PATH}
-      - --peer-key-file=${ETCD_PEER_KEY_PATH}
-      - --cert-file=${ETCD_SERVER_CRT_PATH}
-      - --key-file=${ETCD_SERVER_KEY_PATH}
-      - --listen-client-urls=https://127.0.0.1:${ETCD_SERVER_PORT},https://${MACHINE_LOCAL_ADDRESS}:${ETCD_SERVER_PORT}
-      - --listen-peer-urls=https://${MACHINE_LOCAL_ADDRESS}:${ETCD_PEER_PORT}
-      - --listen-metrics-urls=http://127.0.0.1:${ETCD_METRICS_PORT},http://${MACHINE_LOCAL_ADDRESS}:${ETCD_METRICS_PORT}
-      - --initial-cluster-token=etcd
-      - --initial-cluster-state=new
-      - --data-dir=/var/lib/etcd
-      - --strict-reconfig-check=true
-      - --peer-client-cert-auth=true
-      - --client-cert-auth=true
+      - --advertise-client-urls=${ETCD_ARGS.advertiseClientUrls.value}
+      - --auto-compaction-retention=${ETCD_ARGS.autoCompactionRetention.value}
+      - --cert-file=${ETCD_ARGS.certFile.value}
+      - --client-cert-auth=${ETCD_ARGS.clientCertAuth.value}
+      - --data-dir=${ETCD_ARGS.dataDir.value}
+      - --election-timeout=${ETCD_ARGS.electionTimeout.value}
+      - --experimental-initial-corrupt-check=true
+      - --experimental-watch-progress-notify-interval=5s
+      - --heartbeat-interval=${ETCD_ARGS.heartbeatInterval.value}
+      - --initial-advertise-peer-urls=${ETCD_ARGS.initialAdvertisePeerUrls.value}
+      - --initial-cluster=${ETCD_ARGS.initialCluster.value}
+      - --key-file=${ETCD_ARGS.keyFile.value}
+      - --listen-client-urls=${ETCD_ARGS.listenClientUrls.value}
+      - --listen-metrics-urls=${ETCD_ARGS.listenMetricsUrls.value}
+      - --listen-peer-urls=${ETCD_ARGS.listenPeerUrls.value}
+      - --logger=${ETCD_ARGS.logger.value}
+      - --max-snapshots=${ETCD_ARGS.maxSnapshots.value}
+      - --max-wals=${ETCD_ARGS.maxWals.value}
+      - --metrics=${ETCD_ARGS.metrics.value}
+      - --name=${ETCD_ARGS.name.value}
+      - --peer-cert-file=${ETCD_ARGS.peerCertFile.value}
+      - --peer-client-cert-auth=${ETCD_ARGS.peerClientCertAuth.value}
+      - --peer-key-file=${ETCD_ARGS.peerKeyFile.value}
+      - --peer-trusted-ca-file=${ETCD_ARGS.peerTrustedCAFile.value}
       - --snapshot-count=10000
-      - --heartbeat-interval=250
-      - --election-timeout=1500
-      - --quota-backend-bytes=0
-      - --max-snapshots=10
-      - --max-wals=10
-      - --discovery-fallback=proxy
-      - --auto-compaction-retention=8
-      - --force-new-cluster=false
-      - --enable-v2=false
-      - --proxy=off
-      - --proxy-failure-wait=5000
-      - --proxy-refresh-interval=30000
-      - --proxy-dial-timeout=1000
-      - --proxy-write-timeout=5000
-      - --proxy-read-timeout=0
-      - --metrics=extensive
-      - --logger=zap
-      - --log-level=debug
-    image: k8s.gcr.io/etcd:${ETCD_VERSION}
-    imagePullPolicy: IfNotPresent
-    livenessProbe:
-      failureThreshold: 8
-      httpGet:
-        host: 127.0.0.1
-        path: /health
-        port: ${ETCD_METRICS_PORT}
-        scheme: HTTP
-      initialDelaySeconds: 10
-      periodSeconds: 10
-      timeoutSeconds: 15
-    resources:
-      requests:
-        cpu: 100m
-        memory: 100Mi
-    startupProbe:
-      failureThreshold: 24
-      httpGet:
-        host: 127.0.0.1
-        path: /health
-        port: ${ETCD_METRICS_PORT}
-        scheme: HTTP
-    volumeMounts:
-    - mountPath: /var/lib/etcd
-      name: etcd-data
-    - mountPath: ${BASE_K8S_PATH}/pki
+      - --trusted-ca-file=${ETCD_ARGS.trustedCAFile.value}
+      image: $\{BASE_DOCKER_REGISTRY\}/etcd:$\{ETCD_VERSION\}
+      imagePullPolicy: IfNotPresent
+      livenessProbe:
+        failureThreshold: 8
+        httpGet:
+          host: 127.0.0.1
+          path: /health?exclude=NOSPACE&serializable=true
+          port: $\{ETCD_METRICS_PORT\}
+          scheme: HTTP
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        timeoutSeconds: 15
+      name: etcd
+      resources:
+        requests:
+          cpu: 100m
+          memory: 100Mi
+      startupProbe:
+        failureThreshold: 24
+        httpGet:
+          host: 127.0.0.1
+          path: /health?serializable=false
+          port: $\{ETCD_METRICS_PORT\}
+          scheme: HTTP
+        initialDelaySeconds: 10
+        periodSeconds: 10
+        timeoutSeconds: 15
+      volumeMounts:
+      - mountPath: /var/lib/etcd
+        name: etcd-data
+      - mountPath: $\{BASE_K8S_PATH\}/pki/etcd
+        name: etcd-certs
+    hostNetwork: true
+    priority: 2000001000
+    priorityClassName: system-node-critical
+    securityContext:
+      seccompProfile:
+        type: RuntimeDefault
+    volumes:
+    - hostPath:
+        path: $\{BASE_K8S_PATH\}/pki/etcd
+        type: DirectoryOrCreate
       name: etcd-certs
-  hostNetwork: true
-  priorityClassName: system-node-critical
-  securityContext:
-      null
-  volumes:
-  - hostPath:
-      path: ${BASE_K8S_PATH}/pki
-      type: DirectoryOrCreate
-    name: etcd-certs
-  - hostPath:
-      path: /var/lib/etcd
-      type: DirectoryOrCreate
-    name: etcd-data
-status: {}
-EOF
-```
+    - hostPath:
+        path: /var/lib/etcd
+        type: DirectoryOrCreate
+      name: etcd-data
+  status: {}
+  EOF
+`}
+</CodeBlock>
+
 </details>

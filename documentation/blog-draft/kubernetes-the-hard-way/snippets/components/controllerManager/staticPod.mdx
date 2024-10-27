@@ -9,23 +9,7 @@ import { COMPONENTS_VERSION } from '@site/blog-draft/kubernetes-the-hard-way/con
 
 ### Переменные окружения сертификатов
 <CodeBlock language="bash">
-{`export BASE_K8S_PATH="${CUSTOM_VALUE.kuberneteBaseFolderPath.value}"
-
-  export CONTROLLER_MANAGER_CLIENT_KEY_SIZE=${CERTIFICATES.controllerManagerClient.keySize}
-  export CONTROLLER_MANAGER_CLIENT_KEY_PATH="${CERTIFICATES.controllerManagerClient.keyPath}"
-  export CONTROLLER_MANAGER_CLIENT_CRT_PATH="${CERTIFICATES.controllerManagerClient.crtPath}"
-  export CONTROLLER_MANAGER_CLIENT_CRT_CONF="${CERTIFICATES.controllerManagerClient.crtConf}"
-  export CONTROLLER_MANAGER_CLIENT_CSR_PATH="${CERTIFICATES.controllerManagerClient.csrPath}"
-
-  export KUBERNETES_CA_CRT_PATH="${CERTIFICATES.kubernetesCA.crtPath}"
-  export KUBERNETES_CA_KEY_PATH="${CERTIFICATES.kubernetesCA.keyPath}"
-  export FRONT_PROXY_CA_CRT_PATH="${CERTIFICATES.frontProxyCA.crtPath}"
-
-  export KUBERNETES_SERVICE_ACCOUNT_KEY_PATH="$\{BASE_K8S_PATH\}/pki/sa.key"
-  export KUBE_APISERVER_PORT="${PORTS.kubeAPIServer.portNumber}"
-  export KUBERNETES_VERSION="${COMPONENTS_VERSION.kubernetes.value}"
-  export CLUSTER_NAME="${CUSTOM_VALUE.kubernetesClusterName.value}"
-
+{`
   mkdir -p $\{BASE_K8S_PATH\}/pki
   mkdir -p $\{BASE_K8S_PATH\}/openssl/csr
 `}

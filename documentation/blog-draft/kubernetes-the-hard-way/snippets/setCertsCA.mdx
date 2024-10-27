@@ -5,6 +5,15 @@ import K8sCACerts               from '@site/blog-draft/kubernetes-the-hard-way/s
 import ETCDCACerts              from '@site/blog-draft/kubernetes-the-hard-way/snippets/certs/etcd-ca.mdx'
 import FrontProxyCACerts        from '@site/blog-draft/kubernetes-the-hard-way/snippets/certs/front-proxy-ca.mdx'
 
+:::danger
+Просьба обратить внимание, что CA создаются только на первом мастере, как инициализирующая часть создания кластера, все последующие работы с CA производятся либо через копирование сертификатов удостоверяющего центра на каждую ноду управляющего контура или воспользовавшись командой ниже.
+```bash
+kubeadm join phase control-plane-prepare certs ****
+kubeadm join phase control-plane-prepare kubeconfig ****
+```
+Полное описание команды будет ниже, вместе с информацией как получить такую команду.
+:::
+
 <Tabs groupId="install-type">
 
   <TabItem value='HardWay'>

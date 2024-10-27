@@ -29,6 +29,7 @@ import SetCerts                 from '@site/blog-draft/kubernetes-the-hard-way/s
 import StaticPods               from '@site/blog-draft/kubernetes-the-hard-way/snippets/staticPods.mdx'
 import StartCluster             from '@site/blog-draft/kubernetes-the-hard-way/snippets/startCluster.mdx'
 import StatusCluster            from '@site/blog-draft/kubernetes-the-hard-way/snippets/statusCluster.mdx'
+import PhaseKubeadm             from '@site/blog-draft/kubernetes-the-hard-way/snippets/phaseKubeadm.mdx'
 
 import ComponentsInfo           from '@site/blog-draft/kubernetes-the-hard-way/snippets/components/components.mdx'
 import ComponentsSetings        from '@site/blog-draft/kubernetes-the-hard-way/snippets/components/componentsSetings.mdx'
@@ -60,13 +61,13 @@ import Introduction             from '@site/blog-draft/kubernetes-the-hard-way/s
 ## Для чего нужен Kubernetes
 <AboutK8S />
 
-## Основные компоненты Kubernetes
+## Основные компоненты
 <ComponentsInfo />
 
 ## Архитектура 
 <Arch />
 
-## Этапы создания кластера Kubernetes
+## Этапы создания кластера
 <StagesOfCreation />
 
 ## Подготовка окружения
@@ -75,8 +76,11 @@ import Introduction             from '@site/blog-draft/kubernetes-the-hard-way/s
 ## Загрузка компонентов
 <K8sDownloads />
 
-## Настройка ядра ОС
+## Настройка ОС
 <K8sSystem />
+
+## Фазы Kubeadm
+<PhaseKubeadm />
 
 ## Настройка компонентов
 <ComponentsSetings />
@@ -87,7 +91,7 @@ import Introduction             from '@site/blog-draft/kubernetes-the-hard-way/s
 #### Настройка CA
 <SetCertsCA />
 
-#### Настройка сертификатов Kubernetes
+#### Настройка сертификатов
 <SetCerts />
 
 ## Настройка Static Pods
@@ -99,12 +103,206 @@ import Introduction             from '@site/blog-draft/kubernetes-the-hard-way/s
 ## Статус кластера
 <StatusCluster />
 
-## Базовая настройка Kubeadm
+## Kubeadm доп настройки
 - Маркировка узла
-- Установка `Taints`
+- Настройка ролевой модели
 - Загрузка `kubelet-conf` и `kubeadm-conf` в кластер
 - Загрузка корневых сертификатов в кластер
-- Настройка ролевой модели
 - Создание bootstrap tokens для 2-х остальных мастеров и добавление в `cluster-info`
 
 
+#### Маркировка узла
+<Tabs groupId="install-type">
+
+  <TabItem value='HardWay'>
+    #### Маркировка ноды и навешивание taint
+    ```bash
+    kubectl label node ${NODE} node-role.kubernetes.io/control-plane=""
+    ```
+    ```bash
+    kubectl taint node ${NODE} node-role.kubernetes.io/control-plane="":NoSchedule --overwrite
+    ```
+  </TabItem>
+
+  <TabItem value='Kubeadm'>
+    #### Маркировка ноды и навешивание taint
+    ```bash
+    kubeadm init phase mark-control-plane
+    ```
+    :::note
+    ```
+    [mark-control-plane] Marking the node master-1.example.prorobotech.ru as control-plane by adding the labels: [node-role.kubernetes.io/control-plane node.kubernetes.io/exclude-from-external-load-balancers]
+    [mark-control-plane] Marking the node master-1.example.prorobotech.ru as control-plane by adding the taints [node-role.kubernetes.io/control-plane:NoSchedule]
+    ```
+    :::
+  </TabItem>
+
+</Tabs>
+
+#### Настройка ролевой модели
+<Tabs groupId="install-type">
+
+  <TabItem value='HardWay'>
+    <details>
+    <summary>Role bindings</summary>
+    ```bash
+    kubectl apply -f - <<EOF
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: kubeadm:cluster-admins
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: cluster-admin
+    subjects:
+    - apiGroup: rbac.authorization.k8s.io
+      kind: Group
+      name: kubeadm:cluster-admins
+
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: kubeadm:get-nodes
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: kubeadm:get-nodes
+    subjects:
+    - apiGroup: rbac.authorization.k8s.io
+      kind: Group
+      name: system:bootstrappers:kubeadm:default-node-token
+
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: kubeadm:kubelet-bootstrap
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: system:node-bootstrapper
+    subjects:
+    - apiGroup: rbac.authorization.k8s.io
+      kind: Group
+      name: system:bootstrappers:kubeadm:default-node-token
+
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: kubeadm:node-autoapprove-bootstrap
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: system:certificates.k8s.io:certificatesigningrequests:nodeclient
+    subjects:
+    - apiGroup: rbac.authorization.k8s.io
+      kind: Group
+      name: system:bootstrappers:kubeadm:default-node-token
+
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: kubeadm:node-autoapprove-certificate-rotation
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: system:certificates.k8s.io:certificatesigningrequests:selfnodeclient
+    subjects:
+    - apiGroup: rbac.authorization.k8s.io
+      kind: Group
+      name: system:nodes
+    EOF
+    ```
+    </details>
+
+    <details>
+    <summary>Bootstrap tokens</summary>
+    ```bash
+    kubectl apply -f - <<EOF
+    ---
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: bootstrap-token-${TEST1}
+      namespace: kube-system
+    data:
+      auth-extra-groups: c3lzdGVtOmJvb3RzdHJhcHBlcnM6a3ViZWFkbTpkZWZhdWx0LW5vZGUtdG9rZW4=
+      description: VGhlIGRlZmF1bHQgYm9vdHN0cmFwIHRva2VuIGdlbmVyYXRlZCBieSAna3ViZWFkbSBpbml0Jy4=
+      expiration: MjAyNC0xMC0yNlQxODowNzo0Mlo=
+      token-id: aG9vczBt
+      token-secret: dGM5enVncWwxb2c3NnpiZw==
+      usage-bootstrap-authentication: dHJ1ZQ==
+      usage-bootstrap-signing: dHJ1ZQ==
+    type: bootstrap.kubernetes.io/token
+
+    ---
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: bootstrap-token-${TEST2}
+      namespace: kube-system
+    data:
+      auth-extra-groups: c3lzdGVtOmJvb3RzdHJhcHBlcnM6a3ViZWFkbTpkZWZhdWx0LW5vZGUtdG9rZW4=
+      description: VGhlIGRlZmF1bHQgYm9vdHN0cmFwIHRva2VuIGdlbmVyYXRlZCBieSAna3ViZWFkbSBpbml0Jy4=
+      expiration: MjAyNC0xMC0yNlQxODowNzo0Mlo=
+      token-id: aG9vczBt
+      token-secret: dGM5enVncWwxb2c3NnpiZw==
+      usage-bootstrap-authentication: dHJ1ZQ==
+      usage-bootstrap-signing: dHJ1ZQ==
+    type: bootstrap.kubernetes.io/token
+    EOF
+    ```
+    </details>
+
+    <details>
+    <summary>Cluster-Info</summary>
+    ```bash
+    kubectl apply -f - <<EOF
+    ---
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: cluster-info
+      namespace: kube-public
+    data:
+      jws-kubeconfig-hoos0m: eyJhbGciOiJIUzI1NiIsImtpZCI6Imhvb3MwbSJ9..LmagEY24-J2CXEyb239yHhEE8p5UY70STyIoXUiQ2Uw
+      jws-kubeconfig-xm2oh4: eyJhbGciOiJIUzI1NiIsImtpZCI6InhtMm9oNCJ9..PF8AONY6Php3QulS4AisEe1SE6NeeQgZVtWji76WUxE
+      jws-kubeconfig-z34dlv: eyJhbGciOiJIUzI1NiIsImtpZCI6InozNGRsdiJ9..e-lxw9KDtbBK-ByRbkBAHueVekA44GLyPmSF09krQgo
+      kubeconfig: |
+        apiVersion: v1
+        clusters:
+        - cluster:
+            certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURCVENDQWUyZ0F3SUJBZ0lJRlZpM1N2U0dreFF3RFFZSktvWklodmNOQVFFTEJRQXdGVEVUTUJFR0ExVUUKQXhNS2EzVmlaWEp1WlhSbGN6QWVGdzB5TkRFd01qVXhPREF5TWpSYUZ3MHpOREV3TWpNeE9EQTNNalJhTUJVeApFekFSQmdOVkJBTVRDbXQxWW1WeWJtVjBaWE13Z2dFaU1BMEdDU3FHU0liM0RRRUJBUVVBQTRJQkR3QXdnZ0VLCkFvSUJBUUNwRUpwRmdzWUZTazh6WDlTZHRISm9VZEFuMlRvRGo0R09tSUN6MTU2K1VocVE5bXpRb3FGaDA1b1cKV0VybC9wOXd1bzd0Rkx5WGtIRkZvSTNzM3lQMlY0eEtDaHpCVUhSSkk0K0l5R0dzdjlFRnRnUlhBUytIUWZmRwpVQmprSzMybTJBTFFUdVpWM1NFQ21PbjkwUEFQOSs5OWhDa2htMWxRVUxhZUpBc1E2WjdZOWxYSWJJTXBOWnlzCm5MUXBuL2Y3dEN6UHFhRWR4Uk1sTnFEaTJwNHhPbjRVSnhpMElQWEkwekxDQkUzVWhWV0N0VnhhT2srZmdBbDYKbTlrb3JyS0lzTGJzZ3ZvUzNnZW1CcGNzbERwM2h3LzhIOGFkNExvSUZxU3Z1WGV0MkdXNVU0QUVjTEhJYlh3UApiU0d5MVc0YldMVHlWalp3bnlvZ0pNS3MzL3c1QWdNQkFBR2pXVEJYTUE0R0ExVWREd0VCL3dRRUF3SUNwREFQCkJnTlZIUk1CQWY4RUJUQURBUUgvTUIwR0ExVWREZ1FXQkJTTDRGTGZnZU10TmY5c3pKdFZLUU5jM2oxMjV6QVYKQmdOVkhSRUVEakFNZ2dwcmRXSmxjbTVsZEdWek1BMEdDU3FHU0liM0RRRUJDd1VBQTRJQkFRQTVCSWdKUk9TQgpDbVI5ajN2OXo3bHNRNGlkQ1lhS3dkSnZ6aVFPZTN1Uytub0dZcTd2WDB3aUNPeDg3OVgrWlZWTk5Ud2M2OTNpCmdQak9tcHpycGxQRFhKZXYxanQxeHQwRmhtbGR6N0w2M0NwR0N6WGNxVGVzZ1BqaTI4anY5NURXQnREOEtKTVYKYmhSdWZVN2ZNN3hBdlI1aWFURVJndldxOFl2ZUdpMEViNGRoSmdoRWxmTnhUWW5xczFDcVVLZnFmanhnRE1CZwpNRURtdXhYYStUZzJUVzlITnV2Y0lNWGlZSkNLU3BJZTdVbUdPNVc0VEd3YVZFdVlpTmhoV3NGUE9WNWJWeGN6CmtweC9vdzlVdFU0SjhOU1pIVzBaRHhZV2hJMFlVUHl1djFWOTNJb29TVm51OGloZFMxcG5GQ3FGUlJIbkZvUGIKSnlQZS9xeXNuZ0kvCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+            server: https://192.168.10.20:6443
+          name: ""
+        contexts: null
+        current-context: ""
+        kind: Config
+        preferences: {}
+        users: null
+    EOF
+    ```
+    </details>
+  </TabItem>
+
+  <TabItem value='Kubeadm'>
+  ```bash
+  kubeadm init phase bootstrap-token
+  ```
+  </TabItem>
+
+</Tabs>
+
+
+#### Загрузка `kubelet-conf` и `kubeadm-conf` в кластер
+
+#### Загрузка корневых сертификатов в кластер
+
+
+
+#### Создание bootstrap tokens для 2-х остальных мастеров и добавление в `cluster-info`

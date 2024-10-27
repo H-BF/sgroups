@@ -6,132 +6,151 @@ export const CERTIFICATES: TCertsItems = {
     crtPath: "${BASE_K8S_PATH}/pki/etcd/ca.crt", 
     csrPath: "",
     crtConf: "${BASE_K8S_PATH}/openssl/etcd-ca.conf",
-    keySize: "2048"
+    keySize: "2048",
+    cname: "etcd-ca"
   },
   kubernetesCA: {
     keyPath: "${BASE_K8S_PATH}/pki/ca.key",
     crtPath: "${BASE_K8S_PATH}/pki/ca.crt", 
     csrPath: "",
     crtConf: "${BASE_K8S_PATH}/openssl/ca.conf",
-    keySize: "2048"
+    keySize: "2048",
+    cname: "kubernetes"
   },
   frontProxyCA: {
     keyPath: "${BASE_K8S_PATH}/pki/front-proxy-ca.key",
     crtPath: "${BASE_K8S_PATH}/pki/front-proxy-ca.crt", 
     csrPath: "",
     crtConf: "${BASE_K8S_PATH}/openssl/front-proxy-ca.conf",
-    keySize: "2048"
+    keySize: "2048",
+    cname: "front-proxy-ca"
   },
   controllerManagerClient: {
     keyPath: "${BASE_K8S_PATH}/kubeconfig/controller-manager-client-key.pem",
     crtPath: "${BASE_K8S_PATH}/kubeconfig/controller-manager-client.pem", 
     csrPath: "${BASE_K8S_PATH}/openssl/csr/controller-manager-client.csr",
     crtConf: "${BASE_K8S_PATH}/openssl/controller-manager-client.conf",
-    keySize: "2048"
+    keySize: "2048",
+    cname: "system:kube-controller-manager"
   },
   etcdClient: {
     keyPath: "${BASE_K8S_PATH}/pki/etcd/healthcheck-client.key",
     crtPath: "${BASE_K8S_PATH}/pki/etcd/healthcheck-client.crt", 
     csrPath: "${BASE_K8S_PATH}/openssl/healthcheck-client.conf",
     crtConf: "${BASE_K8S_PATH}/openssl/csr/etcd-client.csr",
-    keySize: "2048"
+    keySize: "2048",
+    cname: "kube-etcd-healthcheck-client"
   },
   etcdServer: {
     keyPath: "${BASE_K8S_PATH}/pki/etcd/server.key",
     crtPath: "${BASE_K8S_PATH}/pki/etcd/server.crt", 
     csrPath: "${BASE_K8S_PATH}/openssl/etcd-server.conf",
     crtConf: "${BASE_K8S_PATH}/openssl/csr/etcd-server.csr",
-    keySize: "2048"
+    keySize: "2048",
+    cname: "" // dynamic
   },
   etcdPeer: {
     keyPath: "${BASE_K8S_PATH}/pki/etcd/peer.key",
     crtPath: "${BASE_K8S_PATH}/pki/etcd/peer.crt", 
     csrPath: "${BASE_K8S_PATH}/openssl/etcd-peer.conf",
     crtConf: "${BASE_K8S_PATH}/openssl/csr/etcd-peer.csr",
-    keySize: "2048"
+    keySize: "2048",
+    cname: "" // dynamic
   },
   kubernetesKubeletClient: {
     keyPath: "${BASE_K8S_PATH}/pki/apiserver-kubelet-client.key",
     crtPath: "${BASE_K8S_PATH}/pki/apiserver-kubelet-client.crt", 
     csrPath: "${BASE_K8S_PATH}/openssl/apiserver-kubelet-client.conf",
     crtConf: "${BASE_K8S_PATH}/openssl/csr/apiserver-kubelet-client.csr",
-    keySize: "2048"
+    keySize: "2048",
+    cname: "kube-apiserver-kubelet-client"
   },
   kubernetesFrontProxyClient: {
     keyPath: "${BASE_K8S_PATH}/pki/front-proxy-client.key",
     crtPath: "${BASE_K8S_PATH}/pki/front-proxy-client.crt", 
     csrPath: "${BASE_K8S_PATH}/openssl/front-proxy-client.conf",
     crtConf: "${BASE_K8S_PATH}/openssl/csr/front-proxy-client.csr",
-    keySize: "2048"
+    keySize: "2048",
+    cname: "front-proxy-client"
   },
   kubernetesEtcdClient: {
     keyPath: "${BASE_K8S_PATH}/pki/apiserver-etcd-client.key",
     crtPath: "${BASE_K8S_PATH}/pki/apiserver-etcd-client.crt", 
     csrPath: "${BASE_K8S_PATH}/openssl/apiserver-etcd-client.conf",
     crtConf: "${BASE_K8S_PATH}/openssl/csr/apiserver-etcd-client.csr",
-    keySize: "2048"
+    keySize: "2048",
+    cname: "kube-apiserver-etcd-client"
   },
   kubernetesServer: {
     keyPath: "${BASE_K8S_PATH}/pki/apiserver.key",
     crtPath: "${BASE_K8S_PATH}/pki/apiserver.crt", 
     csrPath: "${BASE_K8S_PATH}/openssl/apiserver.conf",
     crtConf: "${BASE_K8S_PATH}/openssl/csr/apiserver.csr",
-    keySize: "2048"
+    keySize: "2048",
+    cname: "kube-apiserver"
   },
   kubernetesSuperAdminClient: {
     keyPath: "${BASE_K8S_PATH}/kubeconfig/super-admin.key",
     crtPath: "${BASE_K8S_PATH}/kubeconfig/super-admin.crt", 
     csrPath: "${BASE_K8S_PATH}/openssl/super-admin.conf",
     crtConf: "${BASE_K8S_PATH}/openssl/csr/super-admin.csr",
-    keySize: "2048"
+    keySize: "2048",
+    cname: "kubernetes-super-admin"
   },
   kubernetesAdminClient: {
     keyPath: "${BASE_K8S_PATH}/kubeconfig/admin.key",
     crtPath: "${BASE_K8S_PATH}/kubeconfig/admin.crt", 
     csrPath: "${BASE_K8S_PATH}/openssl/admin.conf",
     crtConf: "${BASE_K8S_PATH}/openssl/csr/admin.csr",
-    keySize: "2048"
+    keySize: "2048",
+    cname: "kubernetes-admin"
   },
   kubernetesSA: {
     keyPath: "${BASE_K8S_PATH}/pki/sa.key",
     crtPath: "${BASE_K8S_PATH}/pki/sa.pub", 
     csrPath: "",
     crtConf: "",
-    keySize: "2048"
-  },
-  kubernetesScheduler: {
-    keyPath: "${BASE_K8S_PATH}/pki/sa.key",
-    crtPath: "${BASE_K8S_PATH}/pki/sa.pub", 
-    csrPath: "",
-    crtConf: "",
-    keySize: "2048"
+    keySize: "2048",
+    cname: ""
   },
   kubeletClient: {
     keyPath: "${BASE_KUBELET_PATH}/pki/kubelet-client-key.pem",
     crtPath: "${BASE_KUBELET_PATH}/pki/kubelet-client.pem", 
     csrPath: "${BASE_K8S_PATH}/openssl/kubelet-client.conf",
     crtConf: "${BASE_K8S_PATH}/openssl/csr/kubelet-client.csr",
-    keySize: "2048"
+    keySize: "2048",
+    cname: ""
   },
   kubeletServer: {
     keyPath: "${BASE_K8S_PATH}/pki/kubelet-server-key.pem",
     crtPath: "${BASE_K8S_PATH}/pki/kubelet-server.pem", 
     csrPath: "${BASE_K8S_PATH}/openssl/kubelet-server.conf",
     crtConf: "${BASE_K8S_PATH}/openssl/csr/kubelet-server.csr",
-    keySize: "2048"
+    keySize: "2048",
+    cname: ""
   },
   kubernetesCureentClient: {
     keyPath: "",
     crtPath: "${BASE_KUBELET_PATH}/pki/kubelet-client-current.pem",
     csrPath: "",
     crtConf: "",
-    keySize: "2048"
+    keySize: "2048",
+    cname: ""
   },
   kubernetesCureentServer: {
     keyPath: "",
     crtPath: "${BASE_KUBELET_PATH}/pki/kubelet-server-current.pem",
     csrPath: "",
     crtConf: "",
-    keySize: "2048"
+    keySize: "2048",
+    cname: ""
+  },
+  schedulerClient: {
+    keyPath: "${BASE_K8S_PATH}/kubeconfig/scheduler-client-key.pem",
+    crtPath: "${BASE_K8S_PATH}/kubeconfig/scheduler-client.pem", 
+    csrPath: "${BASE_K8S_PATH}/openssl/csr/scheduler-client.csr",
+    crtConf: "${BASE_K8S_PATH}/openssl/scheduler-client.conf",
+    keySize: "2048",
+    cname: "system:kube-scheduler"
   },
 }

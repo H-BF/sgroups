@@ -26,4 +26,7 @@ export const PORTS: TPortsItems = {
   kubeletServer: {
     portNumber: '10250'
   },
+  kubeletReadOnlyPort: {
+    portNumber: '10255'
+  },
 }
