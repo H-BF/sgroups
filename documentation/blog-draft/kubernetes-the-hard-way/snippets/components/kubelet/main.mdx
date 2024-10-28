@@ -32,8 +32,6 @@ EOF
 Создадим дополнительную конфигурацию для службы Kubelet, которая будет содержать параметры запуска.
 
 ```bash
-mkdir -p /usr/lib/systemd/system/kubelet.service.d
-
 cat <<EOF > /usr/lib/systemd/system/kubelet.service.d/10-cloud.conf
 [Service]
 EnvironmentFile=-${BASE_KUBELET_PATH}/kubeadm-flags.env
@@ -55,8 +53,6 @@ EOF
 Создадим файл с переменными окружения, которые будут использоваться Kubelet при запуске.
 
 ```bash
-mkdir -p  ${BASE_KUBELET_PATH}/
-
 cat <<EOF > ${BASE_KUBELET_PATH}/kubeadm-flags.env
 KUBELET_KUBEADM_ARGS="
 --container-runtime-endpoint=unix://${CRI_ENDPOINT} \
@@ -66,8 +62,6 @@ EOF
 ```
 
 ```bash
-mkdir -p  ${BASE_KUBELET_PATH}/
-
 cat <<EOF > ${BASE_KUBELET_PATH}/cloud-flags.env
 KUBELET_KUBECONFIG_ARGS="
 --bootstrap-kubeconfig=${BASE_K8S_PATH}/bootstrap-kubelet.conf \
@@ -109,8 +103,8 @@ cgroupDriver: systemd
 clusterDNS:
 - ${SERVICE_DNS}
 clusterDomain: ${BASE_CLUSTER_DOMAIN}
-tlsCertFile: "${KUBELET_CURRENT_SERVER_CRT_PATH}"
-tlsPrivateKeyFile: "${KUBELET_CURRENT_SERVER_CRT_PATH}"
+# tlsCertFile: "${KUBELET_CURRENT_SERVER_CRT_PATH}"
+# tlsPrivateKeyFile: "${KUBELET_CURRENT_SERVER_CRT_PATH}"
 containerLogMaxSize: "50Mi"
 cpuManagerReconcilePeriod: 0s
 evictionPressureTransitionPeriod: 5s

@@ -176,12 +176,6 @@ import { CERTIFICATES }         from '@site/blog-draft/kubernetes-the-hard-way/c
 `}
 </CodeBlock>
 
-<CodeBlock language="bash">
-{`
-
-`}
-</CodeBlock>
-
 ### Версии компонентов
 
 <CodeBlock language="bash">
@@ -198,12 +192,80 @@ import { CERTIFICATES }         from '@site/blog-draft/kubernetes-the-hard-way/c
 ### Переменные окружения ETCD
 
 ```bash
-# Список ETCD Servers
-export ETCD_SERVERS="https://${MACHINE_LOCAL_ADDRESS}:${ETCD_SERVER_PORT}"
+export MASTER_COUNT=3
 
-# Список ETCD Peers
-export ETCD_INITIAL_CLUSTER="${FULL_HOST_NAME}=https://${MACHINE_LOCAL_ADDRESS}:${ETCD_PEER_PORT}"
+# Для Kube-apiserver 
+export ETCD_SERVERS=$(seq 1 $(( MASTER_COUNT )) \
+| awk -v fmt="https://master-%s.$BASE_CLUSTER_DOMAIN:$ETCD_SERVER_PORT" \
+'{ s && s = s "," ; s = s sprintf(fmt, $0) } END { print s }')
+
+# Для формирования ETCD кластера
+export ETCD_INITIAL_CLUSTER=$(seq 1 $(( MASTER_COUNT )) | 
+awk -v fmt="master-%s.$BASE_CLUSTER_DOMAIN=https://master-%s.$BASE_CLUSTER_DOMAIN:$ETCD_PEER_PORT" \
+'{ s && s = s "," ; s = s sprintf(fmt, $0, $0) } END { print s }')
 ```
+
+### Создание директорий
+
+<CodeBlock language="bash">
+{`mkdir -p $\{BASE_K8S_PATH\}/kubeconfig/
+  mkdir -p $\{BASE_K8S_PATH\}/manifests
+  mkdir -p $\{BASE_K8S_PATH\}/openssl
+  mkdir -p $\{BASE_K8S_PATH\}/openssl/csr
+  mkdir -p $\{BASE_K8S_PATH\}/pki
+  mkdir -p $\{BASE_K8S_PATH\}/pki/etcd
+  mkdir -p $\{BASE_KUBELET_PATH\}
+  mkdir -p $\{BASE_KUBELET_PATH\}/pki
+  mkdir -p /usr/lib/systemd/system/kubelet.service.d
+  mkdir -p /tmp/containerd
+  mkdir -p /etc/containerd/
+  mkdir -p /etc/containerd/conf.d
+`}
+</CodeBlock>
+
+### Настройка инструмента взаимодействия с ETCD
+<CodeBlock language="bash">
+{`cat <<'EOF' >> ~/.bashrc
+  export BASE_K8S_PATH="${CUSTOM_VALUE.kuberneteBaseFolderPath.value}"
+  export ETCDCTL_CERT="${CERTIFICATES.etcdPeer.crtPath}"
+  export ETCDCTL_KEY="${CERTIFICATES.etcdPeer.keyPath}"
+  export ETCDCTL_CACERT="${CERTIFICATES.etcdCA.crtPath}"
+  export ETCD_SERVER_PORT="${PORTS.etcdServer.portNumber}"
+
+  etcd_endpoints () {
+  export ENDPOINTS=$(
+  etcdctl \
+  --endpoints=127.0.0.1:$\{ETCD_SERVER_PORT\} member list | 
+  awk '{print $5}' | 
+  sed "s/,//" | 
+  sed "s/ /,/g"
+  )
+  }
+
+  estat () {
+  etcd_endpoints
+  etcdctl \
+  --write-out=table \
+  --endpoints=$ENDPOINTS \
+  endpoint status
+  }
+  EOF
+
+  source ~/.bashrc
+`}
+</CodeBlock>
+
+### Настройка инструмента взаимодействия с KubeAPI
+Для подключения к кластеру нам потребуется переменная окружения `KUBECONFIG`
+<CodeBlock language="bash">
+{`
+mkdir -p $HOME/.kube
+sudo ln -s /etc/kubernetes/admin.conf $HOME/.kube/config
+sudo chown $(id -u):$(id -g) $HOME/.kube/config
+`}
+</CodeBlock>
+
+
 </details>
 
 :::note

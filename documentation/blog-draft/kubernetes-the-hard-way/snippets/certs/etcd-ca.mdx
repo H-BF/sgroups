@@ -8,15 +8,6 @@ import { CERTIFICATES }     from '@site/blog-draft/kubernetes-the-hard-way/const
 <details>
 <summary>ETCD CA</summary>
 
-### Переменные окружения сертификатов
-<CodeBlock language="bash">
-{`
-
-  mkdir -p $\{BASE_K8S_PATH\}/pki/etcd
-
-
-`}
-</CodeBlock>
 
 ### Инструкция создания сертификатов
 
@@ -31,9 +22,6 @@ import { CERTIFICATES }     from '@site/blog-draft/kubernetes-the-hard-way/const
     ]}>
     <TabItem value='openssl'>
 
-      ```bash
-      mkdir -p ${BASE_K8S_PATH}/openssl
-      ```
       #### Конфигурация `openssl` CA
 
       ```bash

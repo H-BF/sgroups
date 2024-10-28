@@ -18,38 +18,44 @@ import KubeSchedulerCerts       from '@site/blog-draft/kubernetes-the-hard-way/s
   </TabItem>
 
   <TabItem value='Kubeadm'>
+    #### All Certificates
+    ```bash
+    kubeadm init phase certs all --config=${BASE_K8S_PATH}/kubeadm.conf
+    kubeadm init phase kubeconfig all --config=${BASE_K8S_PATH}/kubeadm.conf
+    ```
+
     #### Kubelet Certificates
     ```bash
-    kubeadm init phase kubeconfig kubelet
-    kubeadm init phase kubelet-finalize experimental-cert-rotation
+    kubeadm init phase kubeconfig kubelet --config=${BASE_K8S_PATH}/kubeadm.conf
+    kubeadm init phase kubelet-finalize experimental-cert-rotation --config=${BASE_K8S_PATH}/kubeadm.conf
     ```
 
     #### ETCD Certificates
     ```bash
-    kubeadm init phase certs etcd-healthcheck-client
-    kubeadm init phase certs etcd-peer
-    kubeadm init phase certs etcd-server
+    kubeadm init phase certs etcd-healthcheck-client --config=${BASE_K8S_PATH}/kubeadm.conf
+    kubeadm init phase certs etcd-peer --config=${BASE_K8S_PATH}/kubeadm.conf
+    kubeadm init phase certs etcd-server --config=${BASE_K8S_PATH}/kubeadm.conf
     ```
     #### Kube API Certificates
     ```bash
-    kubeadm init phase certs apiserver
-    kubeadm init phase certs apiserver-etcd-client
-    kubeadm init phase certs apiserver-kubelet-client
-    kubeadm init phase certs front-proxy-client
-    kubeadm init phase certs sa
+    kubeadm init phase certs apiserver --config=${BASE_K8S_PATH}/kubeadm.conf
+    kubeadm init phase certs apiserver-etcd-client --config=${BASE_K8S_PATH}/kubeadm.conf
+    kubeadm init phase certs apiserver-kubelet-client --config=${BASE_K8S_PATH}/kubeadm.conf
+    kubeadm init phase certs front-proxy-client --config=${BASE_K8S_PATH}/kubeadm.conf
+    kubeadm init phase certs sa --config=${BASE_K8S_PATH}/kubeadm.conf
     ```
     ```bash
-    kubeadm init phase kubeconfig super-admin
-    kubeadm init phase kubeconfig admin
+    kubeadm init phase kubeconfig super-admin --config=${BASE_K8S_PATH}/kubeadm.conf
+    kubeadm init phase kubeconfig admin --config=${BASE_K8S_PATH}/kubeadm.conf
     ```
     #### Kube Controller Manager Certificates
     ```bash
-    kubeadm init phase kubeconfig controller-manager
+    kubeadm init phase kubeconfig controller-manager --config=${BASE_K8S_PATH}/kubeadm.conf
     ```
     #### Kube Scheduler Certificates
     ```bash
-    kubeadm init phase kubeconfig scheduler
-    ```
+    kubeadm init phase kubeconfig scheduler --config=${BASE_K8S_PATH}/kubeadm.conf
+    ``` 
 
     :::note
     После выполнения команд мы получаем следующий вывод.

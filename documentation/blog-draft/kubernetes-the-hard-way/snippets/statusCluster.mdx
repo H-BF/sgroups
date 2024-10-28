@@ -15,45 +15,10 @@ import { CUSTOM_VALUE }         from '@site/blog-draft/kubernetes-the-hard-way/c
 ### Проверка состояния ETCD
 :::warning
 Чтобы проверить состояние базы данных, используйте утилиту `etcdctl` для взаимодействия с ней. Для более удобного взаимодействия с etcd, воспользуйтесь настройкой bashrc указанной ниже.
+```bash
+source ~/.bashrc
+```
 
-
-<CodeBlock language="bash">
-{`cat <<'EOF' >> ~/.bashrc
-  export BASE_K8S_PATH="${CUSTOM_VALUE.kuberneteBaseFolderPath.value}"
-  export ETCDCTL_CERT="${CERTIFICATES.etcdPeer.crtPath}"
-  export ETCDCTL_KEY="${CERTIFICATES.etcdPeer.keyPath}"
-  export ETCDCTL_CACERT="${CERTIFICATES.etcdCA.crtPath}"
-  export MACHINE_LOCAL_ADDRESS=${CUSTOM_VALUE.virtualMachineLocalAddress.value}
-  export ETCD_SERVER_PORT="${PORTS.etcdServer.portNumber}"
-  export ENDPOINTS=$\{MACHINE_LOCAL_ADDRESS\}:$\{ETCD_SERVER_PORT\}
-
-  etcd_endpoints () {
-  export ENDPOINTS=$(
-  etcdctl \
-  --endpoints=$ENDPOINTS member list | 
-  awk '{print $5}' | 
-  sed "s/,//" | 
-  sed "s/ /,/g"
-  )
-  }
-
-  etcd_endpoints
-
-  estat () {
-  etcdctl \
-  --write-out=table \
-  --endpoints=$ENDPOINTS \
-  endpoint status
-  }
-  EOF
-
-  source ~/.bashrc
-`}
-</CodeBlock>
-
-:::
-
-<div className="center"> После выполнения команд мы получаем следующий вывод. </div>
 ```bash
 root@compute:/home/user# estat
 
@@ -63,25 +28,23 @@ root@compute:/home/user# estat
 | https://master-1.example.prorobotech.ru:2379 | 7190fc20ca138014 |   3.5.3 |  5.4 MB |      true |      false |         2 |     191880 |             191880 |        |
 +----------------------------------------------+------------------+---------+---------+-----------+------------+-----------+------------+--------------------+--------+
 ```
+:::
 
 ### Проверка состояния Kube API
-
+:::note
 Для подключения к кластеру нам потребуется переменная окружения `KUBECONFIG`
-```bash
-mkdir -p $HOME/.kube
-sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-sudo chown $(id -u):$(id -g) $HOME/.kube/config
+:::
 
+#### Проверяем, что добавился узел
+```bash
 kubectl get nodes -o wide
 ```
 
-:::note
-После выполнения команд мы получаем следующий вывод.
 ```bash
 NAME                              STATUS     ROLES     AGE   VERSION   INTERNAL-IP     EXTERNAL-IP   OS-IMAGE             KERNEL-VERSION     CONTAINER-RUNTIME
 master-1.example.prorobotech.ru   NotReady   <none>    16m   v1.30.4   192.168.10.26   <none>        Ubuntu 24.04.1 LTS   6.8.0-47-generic   containerd://1.7.19
 ```
-:::
+
 
 В этой конфигурации узел находится в состоянии `NotReady` из-за отсутствия установленного `CNI-плагина`. После его установки узел автоматически перейдет в состояние Ready.
 

@@ -9,75 +9,7 @@ import {KUBE_API_ARGS}          from '@site/blog-draft/kubernetes-the-hard-way/c
 <details>
 <summary>Kube API</summary>
 
-### Переменные окружения сертификатов
-<CodeBlock language="bash">
-{`
-
-  mkdir -p $\{BASE_K8S_PATH\}/manifests
-
-`}
-</CodeBlock>
-
 ### Инструкция StaticPod
-<CodeBlock language="bash">
-
-{`cat <<EOF > $\{BASE_K8S_PATH\}/kubeadm.conf
-  ---
-  apiVersion: kubeadm.k8s.io/v1beta3
-  kind: ClusterConfiguration
-
-  imageRepository: "$\{BASE_DOCKER_REGISTRY\}"
-  networking:
-    serviceSubnet: "$\{SERVICE_CIDR\}"
-    dnsDomain: "$\{BASE_CLUSTER_DOMAIN\}"
-  kubernetesVersion: "$\{KUBERNETES_VERSION\}"
-  controlPlaneEndpoint: "$\{MACHINE_LOCAL_ADDRESS\}:$\{KUBE_APISERVER_PORT\}"
-
-  apiServer:
-    extraArgs:
-      advertise-address: "${KUBE_API_ARGS.advertiseAddress.value}"
-      allow-privileged: "${KUBE_API_ARGS.allowPrivileged.value}"
-      anonymous-auth: "${KUBE_API_ARGS.anonymousAuth.value}"
-      authorization-mode: "${KUBE_API_ARGS.authorizationMode.value}"
-      client-ca-file: "${KUBE_API_ARGS.clientCAFile.value}"
-      enable-admission-plugins: "${KUBE_API_ARGS.enableAdmissionPlugins.value}"
-      enable-bootstrap-token-auth: "${KUBE_API_ARGS.enableBootstrapTokenAuth.value}"
-      etcd-cafile: "${KUBE_API_ARGS.etcdCAFile.value}"
-      etcd-certfile: "${KUBE_API_ARGS.etcdCertfile.value}"
-      etcd-keyfile: "${KUBE_API_ARGS.etcdKeyfile.value}"
-      etcd-servers: "${KUBE_API_ARGS.etcdServers.value}"
-      kubelet-client-certificate: "${KUBE_API_ARGS.kubeletClientCertificate.value}"
-      kubelet-client-key: "${KUBE_API_ARGS.kubeletClientKey.value}"
-      kubelet-port: "${KUBE_API_ARGS.kubeletServerPort.value}"
-      kubelet-preferred-address-types: InternalIP,ExternalIP,Hostname
-      kubelet-read-only-port: "${KUBE_API_ARGS.kubeletReadOnlyPort.value}"
-      proxy-client-cert-file: "${KUBE_API_ARGS.proxyClientCertFile.value}"
-      proxy-client-key-file: "${KUBE_API_ARGS.proxyClientKeyFile.value}"
-      requestheader-allowed-names: "${KUBE_API_ARGS.requestheaderAllowedNames.value}"
-      requestheader-client-ca-file: "${KUBE_API_ARGS.requestheaderClientCAFile.value}"
-      requestheader-extra-headers-prefix: "${KUBE_API_ARGS.requestheaderExtraHeadersPrefix.value}"
-      requestheader-group-headers: "${KUBE_API_ARGS.requestheaderGroupHeaders.value}"
-      requestheader-username-headers: "${KUBE_API_ARGS.requestheaderUsernameHeaders.value}"
-      secure-port: "${KUBE_API_ARGS.securePort.value}"
-      service-account-issuer: "${KUBE_API_ARGS.serviceAccountIssuer.value}"
-      service-account-key-file: "${KUBE_API_ARGS.serviceAccountKeyFile.value}"
-      service-account-signing-key-file: "${KUBE_API_ARGS.serviceAccountSigningKeyFile.value}"
-      service-cluster-ip-range: "${KUBE_API_ARGS.serviceClusterIPRange.value}"
-      tls-cert-file: "${KUBE_API_ARGS.tlsCertFile.value}"
-      tls-private-key-file: "${KUBE_API_ARGS.tlsPrivateKeyFile.value}"
-
-    extraVolumes:
-    - name: "k8s-audit"
-      hostPath: "/var/log/kubernetes/audit/"
-      mountPath: "/var/log/kubernetes/audit/"
-      readOnly: false
-      pathType: DirectoryOrCreate
-    certSANs:
-      - "$\{MACHINE_LOCAL_ADDRESS\}"
-    timeoutForControlPlane: 4m0s
-  EOF
-`}
-</CodeBlock>
 
 <CodeBlock language="bash">
 {`cat <<EOF > $\{BASE_K8S_PATH\}/manifests/kube-apiserver.yaml

@@ -27,198 +27,24 @@ import {KUBE_API_ARGS}          from '@site/blog-draft/kubernetes-the-hard-way/c
 
   <TabItem value='Kubeadm'>
 
-    <CodeBlock>
-{`cat <<EOF > $\{BASE_K8S_PATH\}/kubeadm-etcd.conf
-  ---
-  apiVersion: kubeadm.k8s.io/v1beta3
-  kind: ClusterConfiguration
-
-  imageRepository: "$\{BASE_DOCKER_REGISTRY\}"
-  networking:
-    serviceSubnet: "$\{SERVICE_CIDR\}"
-    dnsDomain: "$\{BASE_CLUSTER_DOMAIN\}"
-  kubernetesVersion: "$\{KUBERNETES_VERSION\}"
-
-  etcd:
-    local:
-      imageRepository: "$\{BASE_DOCKER_REGISTRY\}"
-      dataDir: "/var/lib/etcd"
-      extraArgs:
-        advertise-client-urls: "${ETCD_ARGS.advertiseClientUrls.value}"
-        auto-compaction-retention: "${ETCD_ARGS.autoCompactionRetention.value}"
-        cert-file: "${ETCD_ARGS.certFile.value}"
-        client-cert-auth: "${ETCD_ARGS.clientCertAuth.value}"
-        data-dir: "${ETCD_ARGS.dataDir.value}"
-        election-timeout: "${ETCD_ARGS.electionTimeout.value}"
-        experimental-initial-corrupt-check: "true"
-        experimental-watch-progress-notify-interval: "5s"
-        heartbeat-interval: "${ETCD_ARGS.heartbeatInterval.value}"
-        key-file: "${ETCD_ARGS.keyFile.value}"
-        listen-client-urls: "${ETCD_ARGS.listenClientUrls.value}"
-        listen-metrics-urls: "${ETCD_ARGS.listenMetricsUrls.value}"
-        listen-peer-urls: "${ETCD_ARGS.listenPeerUrls.value}"
-        logger: "${ETCD_ARGS.logger.value}"
-        max-snapshots: "${ETCD_ARGS.maxSnapshots.value}"
-        max-wals: "${ETCD_ARGS.maxWals.value}"
-        metrics: "${ETCD_ARGS.metrics.value}"
-        name: "${ETCD_ARGS.name.value}"
-        peer-cert-file: "${ETCD_ARGS.peerCertFile.value}"
-        peer-client-cert-auth: "${ETCD_ARGS.peerClientCertAuth.value}"
-        peer-key-file: "${ETCD_ARGS.peerKeyFile.value}"
-        peer-trusted-ca-file: "${ETCD_ARGS.peerTrustedCAFile.value}"
-        snapshot-count: "10000"
-        trusted-ca-file: "${ETCD_ARGS.trustedCAFile.value}"
-
-  apiServer:
-    extraArgs:
-      advertise-address: "${KUBE_API_ARGS.advertiseAddress.value}"
-      allow-privileged: "${KUBE_API_ARGS.allowPrivileged.value}"
-      anonymous-auth: "${KUBE_API_ARGS.anonymousAuth.value}"
-      authorization-mode: "${KUBE_API_ARGS.authorizationMode.value}"
-      client-ca-file: "${KUBE_API_ARGS.clientCAFile.value}"
-      enable-admission-plugins: "${KUBE_API_ARGS.enableAdmissionPlugins.value}"
-      enable-bootstrap-token-auth: "${KUBE_API_ARGS.enableBootstrapTokenAuth.value}"
-      etcd-cafile: "${KUBE_API_ARGS.etcdCAFile.value}"
-      etcd-certfile: "${KUBE_API_ARGS.etcdCertfile.value}"
-      etcd-keyfile: "${KUBE_API_ARGS.etcdKeyfile.value}"
-      etcd-servers: "${KUBE_API_ARGS.etcdServers.value}"
-      kubelet-client-certificate: "${KUBE_API_ARGS.kubeletClientCertificate.value}"
-      kubelet-client-key: "${KUBE_API_ARGS.kubeletClientKey.value}"
-      kubelet-port: "${KUBE_API_ARGS.kubeletServerPort.value}"
-      kubelet-preferred-address-types: InternalIP,ExternalIP,Hostname
-      kubelet-read-only-port: "${KUBE_API_ARGS.kubeletReadOnlyPort.value}"
-      proxy-client-cert-file: "${KUBE_API_ARGS.proxyClientCertFile.value}"
-      proxy-client-key-file: "${KUBE_API_ARGS.proxyClientKeyFile.value}"
-      requestheader-allowed-names: "${KUBE_API_ARGS.requestheaderAllowedNames.value}"
-      requestheader-client-ca-file: "${KUBE_API_ARGS.requestheaderClientCAFile.value}"
-      requestheader-extra-headers-prefix: "${KUBE_API_ARGS.requestheaderExtraHeadersPrefix.value}"
-      requestheader-group-headers: "${KUBE_API_ARGS.requestheaderGroupHeaders.value}"
-      requestheader-username-headers: "${KUBE_API_ARGS.requestheaderUsernameHeaders.value}"
-      secure-port: "${KUBE_API_ARGS.securePort.value}"
-      service-account-issuer: "${KUBE_API_ARGS.serviceAccountIssuer.value}"
-      service-account-key-file: "${KUBE_API_ARGS.serviceAccountKeyFile.value}"
-      service-account-signing-key-file: "${KUBE_API_ARGS.serviceAccountSigningKeyFile.value}"
-      service-cluster-ip-range: "${KUBE_API_ARGS.serviceClusterIPRange.value}"
-      tls-cert-file: "${KUBE_API_ARGS.tlsCertFile.value}"
-      tls-private-key-file: "${KUBE_API_ARGS.tlsPrivateKeyFile.value}"
-
-    extraVolumes:
-    - name: "k8s-audit"
-      hostPath: "/var/log/kubernetes/audit/"
-      mountPath: "/var/log/kubernetes/audit/"
-      readOnly: false
-      pathType: DirectoryOrCreate
-    certSANs:
-      - "$\{MACHINE_LOCAL_ADDRESS\}"
-    timeoutForControlPlane: 4m0s
-  EOF
-`}
-      </CodeBlock>
     #### ETCD
     ```bash
-    kubeadm init phase  etcd local --config=${BASE_K8S_PATH}/kubeadm-etcd.conf
+    kubeadm init phase  etcd local --config=${BASE_K8S_PATH}/kubeadm.conf
     ```
 
     #### Kube API
-    <CodeBlock>
-{`cat <<EOF > $\{BASE_K8S_PATH\}/kubeadm.conf
-  ---
-  apiVersion: kubeadm.k8s.io/v1beta3
-  kind: ClusterConfiguration
-
-  imageRepository: "$\{BASE_DOCKER_REGISTRY\}"
-  networking:
-    serviceSubnet: "$\{SERVICE_CIDR\}"
-    dnsDomain: "$\{BASE_CLUSTER_DOMAIN\}"
-  kubernetesVersion: "$\{KUBERNETES_VERSION\}"
-
-  etcd:
-    local:
-      imageRepository: "$\{BASE_DOCKER_REGISTRY\}"
-      dataDir: "/var/lib/etcd"
-      extraArgs:
-        advertise-client-urls: "${ETCD_ARGS.advertiseClientUrls.value}"
-        auto-compaction-retention: "${ETCD_ARGS.autoCompactionRetention.value}"
-        cert-file: "${ETCD_ARGS.certFile.value}"
-        client-cert-auth: "${ETCD_ARGS.clientCertAuth.value}"
-        data-dir: "${ETCD_ARGS.dataDir.value}"
-        election-timeout: "${ETCD_ARGS.electionTimeout.value}"
-        experimental-initial-corrupt-check: "true"
-        experimental-watch-progress-notify-interval: "5s"
-        heartbeat-interval: "${ETCD_ARGS.heartbeatInterval.value}"
-        key-file: "${ETCD_ARGS.keyFile.value}"
-        listen-client-urls: "${ETCD_ARGS.listenClientUrls.value}"
-        listen-metrics-urls: "${ETCD_ARGS.listenMetricsUrls.value}"
-        listen-peer-urls: "${ETCD_ARGS.listenPeerUrls.value}"
-        logger: "${ETCD_ARGS.logger.value}"
-        max-snapshots: "${ETCD_ARGS.maxSnapshots.value}"
-        max-wals: "${ETCD_ARGS.maxWals.value}"
-        metrics: "${ETCD_ARGS.metrics.value}"
-        name: "${ETCD_ARGS.name.value}"
-        peer-cert-file: "${ETCD_ARGS.peerCertFile.value}"
-        peer-client-cert-auth: "${ETCD_ARGS.peerClientCertAuth.value}"
-        peer-key-file: "${ETCD_ARGS.peerKeyFile.value}"
-        peer-trusted-ca-file: "${ETCD_ARGS.peerTrustedCAFile.value}"
-        snapshot-count: "10000"
-        trusted-ca-file: "${ETCD_ARGS.trustedCAFile.value}"
-
-  apiServer:
-    extraArgs:
-      advertise-address: "${KUBE_API_ARGS.advertiseAddress.value}"
-      allow-privileged: "${KUBE_API_ARGS.allowPrivileged.value}"
-      anonymous-auth: "${KUBE_API_ARGS.anonymousAuth.value}"
-      authorization-mode: "${KUBE_API_ARGS.authorizationMode.value}"
-      client-ca-file: "${KUBE_API_ARGS.clientCAFile.value}"
-      enable-admission-plugins: "${KUBE_API_ARGS.enableAdmissionPlugins.value}"
-      enable-bootstrap-token-auth: "${KUBE_API_ARGS.enableBootstrapTokenAuth.value}"
-      etcd-cafile: "${KUBE_API_ARGS.etcdCAFile.value}"
-      etcd-certfile: "${KUBE_API_ARGS.etcdCertfile.value}"
-      etcd-keyfile: "${KUBE_API_ARGS.etcdKeyfile.value}"
-      etcd-servers: "${KUBE_API_ARGS.etcdServers.value}"
-      kubelet-client-certificate: "${KUBE_API_ARGS.kubeletClientCertificate.value}"
-      kubelet-client-key: "${KUBE_API_ARGS.kubeletClientKey.value}"
-      kubelet-port: "${KUBE_API_ARGS.kubeletServerPort.value}"
-      kubelet-preferred-address-types: InternalIP,ExternalIP,Hostname
-      kubelet-read-only-port: "${KUBE_API_ARGS.kubeletReadOnlyPort.value}"
-      proxy-client-cert-file: "${KUBE_API_ARGS.proxyClientCertFile.value}"
-      proxy-client-key-file: "${KUBE_API_ARGS.proxyClientKeyFile.value}"
-      requestheader-allowed-names: "${KUBE_API_ARGS.requestheaderAllowedNames.value}"
-      requestheader-client-ca-file: "${KUBE_API_ARGS.requestheaderClientCAFile.value}"
-      requestheader-extra-headers-prefix: "${KUBE_API_ARGS.requestheaderExtraHeadersPrefix.value}"
-      requestheader-group-headers: "${KUBE_API_ARGS.requestheaderGroupHeaders.value}"
-      requestheader-username-headers: "${KUBE_API_ARGS.requestheaderUsernameHeaders.value}"
-      secure-port: "${KUBE_API_ARGS.securePort.value}"
-      service-account-issuer: "${KUBE_API_ARGS.serviceAccountIssuer.value}"
-      service-account-key-file: "${KUBE_API_ARGS.serviceAccountKeyFile.value}"
-      service-account-signing-key-file: "${KUBE_API_ARGS.serviceAccountSigningKeyFile.value}"
-      service-cluster-ip-range: "${KUBE_API_ARGS.serviceClusterIPRange.value}"
-      tls-cert-file: "${KUBE_API_ARGS.tlsCertFile.value}"
-      tls-private-key-file: "${KUBE_API_ARGS.tlsPrivateKeyFile.value}"
-
-    extraVolumes:
-    - name: "k8s-audit"
-      hostPath: "/var/log/kubernetes/audit/"
-      mountPath: "/var/log/kubernetes/audit/"
-      readOnly: false
-      pathType: DirectoryOrCreate
-    certSANs:
-      - "$\{MACHINE_LOCAL_ADDRESS\}"
-    timeoutForControlPlane: 4m0s
-  EOF
-`}
-      </CodeBlock>
     ```bash
     kubeadm init phase  control-plane apiserver --config=${BASE_K8S_PATH}/kubeadm.conf
     ```
 
     #### Kube Controller Manager
     ```bash
-    kubeadm init phase  control-plane controller-manager
+    kubeadm init phase  control-plane controller-manager --config=${BASE_K8S_PATH}/kubeadm.conf
     ```
 
     #### Kube Scheduler
     ```bash
-    kubeadm init phase  control-plane scheduler
+    kubeadm init phase  control-plane scheduler --config=${BASE_K8S_PATH}/kubeadm.conf
     ```
     :::note
     ```

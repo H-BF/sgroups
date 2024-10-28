@@ -7,14 +7,6 @@ import { COMPONENTS_VERSION } from '@site/blog-draft/kubernetes-the-hard-way/con
 <details>
 <summary>Kube Controller Manager</summary>
 
-### Переменные окружения сертификатов
-<CodeBlock language="bash">
-{`
-  mkdir -p $\{BASE_K8S_PATH\}/pki
-  mkdir -p $\{BASE_K8S_PATH\}/openssl/csr
-`}
-</CodeBlock>
-
 ### Инструкция StaticPod
 ```bash
 cat <<EOF > ${BASE_K8S_PATH}/manifests/kube-controller-manager.yaml

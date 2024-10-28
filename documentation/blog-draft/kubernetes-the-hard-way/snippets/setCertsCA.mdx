@@ -25,15 +25,15 @@ kubeadm join phase control-plane-prepare kubeconfig ****
   <TabItem value='Kubeadm'>
     #### Kubernetes CA
     ```bash
-    kubeadm init phase certs ca
+    kubeadm init phase certs ca --config=${BASE_K8S_PATH}/kubeadm.conf
     ```
     #### ETCD CA
     ```bash
-    kubeadm init phase certs etcd-ca
+    kubeadm init phase certs etcd-ca --config=${BASE_K8S_PATH}/kubeadm.conf
     ```
     #### Front Proxy CA
     ```bash
-    kubeadm init phase certs front-proxy-ca
+    kubeadm init phase certs front-proxy-ca --config=${BASE_K8S_PATH}/kubeadm.conf
     ```
     :::note
     После выполнения команд мы получаем следующий вывод.
