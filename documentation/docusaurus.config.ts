@@ -120,11 +120,11 @@ const config: Config = {
           items: [
             {
               label: 'Руководство пользователя',
-              to: '/docs/documentation.pdf',
+              href: "/files/documentation.pdf",
             },
             {
               label: 'Пользовательская документация',
-              to: '/docs/documentation.pdf',
+              href: "/files/documentation.pdf",
             },
           ],
         },
