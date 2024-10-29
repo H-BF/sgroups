@@ -15,9 +15,6 @@ import { CUSTOM_VALUE }         from '@site/blog-draft/kubernetes-the-hard-way/c
 ### Проверка состояния ETCD
 :::warning
 Чтобы проверить состояние базы данных, используйте утилиту `etcdctl` для взаимодействия с ней. Для более удобного взаимодействия с etcd, воспользуйтесь настройкой bashrc указанной ниже.
-```bash
-source ~/.bashrc
-```
 
 ```bash
 root@compute:/home/user# estat
@@ -48,6 +45,7 @@ master-1.example.prorobotech.ru   NotReady   <none>    16m   v1.30.4   192.168.1
 
 В этой конфигурации узел находится в состоянии `NotReady` из-за отсутствия установленного `CNI-плагина`. После его установки узел автоматически перейдет в состояние Ready.
 
+:::note
 Чтобы узнать причину текущего состояния ноды, вы можете использовать команду `describe` и обратить внимание на блок `Conditions`, как показано в примере ниже.
 
 ```bash
@@ -55,7 +53,7 @@ export FULL_HOST_NAME=${HOST_NAME}.${BASE_CLUSTER_DOMAIN}
 
 kubectl describe no ${FULL_HOST_NAME}
 ```
-:::note
+
 После выполнения команд мы получаем следующий вывод.
 ```bash
 ********

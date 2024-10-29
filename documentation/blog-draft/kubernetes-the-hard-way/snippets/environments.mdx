@@ -25,8 +25,7 @@ import { CERTIFICATES }         from '@site/blog-draft/kubernetes-the-hard-way/c
 
   export BASE_CLUSTER_DOMAIN=$\{CLUSTER_NAME\}.$\{BASE_DOMAIN\}
   export FULL_HOST_NAME=$\{HOST_NAME\}.$\{BASE_CLUSTER_DOMAIN\}
-  export ETCD_INITIAL_CLUSTER="$\{FULL_HOST_NAME\}=https://$\{MACHINE_LOCAL_ADDRESS\}:$\{ETCD_PEER_PORT\}"
-  export ETCD_SERVERS="https://127.0.0.1:$\{ETCD_SERVER_PORT\}"
+
 `}
 </CodeBlock>
 
@@ -192,23 +191,15 @@ import { CERTIFICATES }         from '@site/blog-draft/kubernetes-the-hard-way/c
 ### Переменные окружения ETCD
 
 ```bash
-export MASTER_COUNT=3
-
-# Для Kube-apiserver 
-export ETCD_SERVERS=$(seq 1 $(( MASTER_COUNT )) \
-| awk -v fmt="https://master-%s.$BASE_CLUSTER_DOMAIN:$ETCD_SERVER_PORT" \
-'{ s && s = s "," ; s = s sprintf(fmt, $0) } END { print s }')
-
-# Для формирования ETCD кластера
-export ETCD_INITIAL_CLUSTER=$(seq 1 $(( MASTER_COUNT )) | 
-awk -v fmt="master-%s.$BASE_CLUSTER_DOMAIN=https://master-%s.$BASE_CLUSTER_DOMAIN:$ETCD_PEER_PORT" \
-'{ s && s = s "," ; s = s sprintf(fmt, $0, $0) } END { print s }')
+export ETCD_INITIAL_CLUSTER="${FULL_HOST_NAME}=https://${MACHINE_LOCAL_ADDRESS}:${ETCD_PEER_PORT}"
+export ETCD_SERVERS="https://127.0.0.1:${ETCD_SERVER_PORT}"
 ```
 
 ### Создание директорий
 
 <CodeBlock language="bash">
-{`mkdir -p $\{BASE_K8S_PATH\}/kubeconfig/
+{`mkdir -p $\{BASE_K8S_PATH\}
+  mkdir -p $\{BASE_K8S_PATH\}/kubeconfig
   mkdir -p $\{BASE_K8S_PATH\}/manifests
   mkdir -p $\{BASE_K8S_PATH\}/openssl
   mkdir -p $\{BASE_K8S_PATH\}/openssl/csr
@@ -218,8 +209,9 @@ awk -v fmt="master-%s.$BASE_CLUSTER_DOMAIN=https://master-%s.$BASE_CLUSTER_DOMAI
   mkdir -p $\{BASE_KUBELET_PATH\}/pki
   mkdir -p /usr/lib/systemd/system/kubelet.service.d
   mkdir -p /tmp/containerd
-  mkdir -p /etc/containerd/
+  mkdir -p /etc/containerd
   mkdir -p /etc/containerd/conf.d
+  mkdir -p $HOME/.kube
 `}
 </CodeBlock>
 
@@ -259,9 +251,7 @@ awk -v fmt="master-%s.$BASE_CLUSTER_DOMAIN=https://master-%s.$BASE_CLUSTER_DOMAI
 Для подключения к кластеру нам потребуется переменная окружения `KUBECONFIG`
 <CodeBlock language="bash">
 {`
-mkdir -p $HOME/.kube
-sudo ln -s /etc/kubernetes/admin.conf $HOME/.kube/config
-sudo chown $(id -u):$(id -g) $HOME/.kube/config
+ln -s /etc/kubernetes/admin.conf $HOME/.kube/config
 `}
 </CodeBlock>
 

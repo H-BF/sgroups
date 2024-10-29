@@ -1,0 +1,88 @@
+
+#### Kubelet Certificates
+```bash
+kubeadm init phase kubeconfig kubelet \
+    --config=${BASE_K8S_PATH}/kubeadm.conf
+kubeadm init phase kubelet-finalize experimental-cert-rotation \
+    --config=${BASE_K8S_PATH}/kubeadm.conf
+```
+
+#### ETCD Certificates
+```bash
+kubeadm init phase certs etcd-healthcheck-client \
+    --config=${BASE_K8S_PATH}/kubeadm.conf
+kubeadm init phase certs etcd-peer \
+    --config=${BASE_K8S_PATH}/kubeadm.conf
+kubeadm init phase certs etcd-server \
+    --config=${BASE_K8S_PATH}/kubeadm.conf
+```
+#### Kube API Certificates
+```bash
+kubeadm init phase certs apiserver \
+    --config=${BASE_K8S_PATH}/kubeadm.conf
+kubeadm init phase certs apiserver-etcd-client \
+    --config=${BASE_K8S_PATH}/kubeadm.conf
+kubeadm init phase certs apiserver-kubelet-client \
+    --config=${BASE_K8S_PATH}/kubeadm.conf
+kubeadm init phase certs front-proxy-client \
+    --config=${BASE_K8S_PATH}/kubeadm.conf
+kubeadm init phase certs sa \
+    --config=${BASE_K8S_PATH}/kubeadm.conf
+```
+```bash
+kubeadm init phase kubeconfig super-admin \
+    --config=${BASE_K8S_PATH}/kubeadm.conf
+kubeadm init phase kubeconfig admin \
+    --config=${BASE_K8S_PATH}/kubeadm.conf
+```
+#### Kube Controller Manager Certificates
+```bash
+kubeadm init phase kubeconfig controller-manager \
+    --config=${BASE_K8S_PATH}/kubeadm.conf
+```
+#### Kube Scheduler Certificates
+```bash
+kubeadm init phase kubeconfig scheduler \
+    --config=${BASE_K8S_PATH}/kubeadm.conf
+``` 
+
+:::note
+После выполнения команд мы получаем следующий вывод.
+```
+#### Kubelet Certificates
+[kubeconfig] Writing "kubelet.conf" kubeconfig file
+```
+```
+#### ETCD Certificates
+[certs] Generating "etcd/healthcheck-client" certificate and key
+[certs] Generating "etcd/peer" certificate and key
+[certs] etcd/peer serving cert is signed for DNS names [localhost master-1.example.prorobotech.ru] and IPs [192.168.10.27 127.0.0.1 ::1]
+[certs] Generating "etcd/server" certificate and key
+[certs] etcd/server serving cert is signed for DNS names [localhost master-1.example.prorobotech.ru] and IPs [192.168.10.27 127.0.0.1 ::1]
+```
+```
+#### Kube API Certificates
+[certs] Generating "apiserver" certificate and key
+[certs] apiserver serving cert is signed for DNS names [kubernetes kubernetes.default kubernetes.default.svc kubernetes.default.svc.cluster.local master-1.example.prorobotech.ru] and IPs [10.96.0.1 192.168.10.27]
+[certs] Generating "apiserver-etcd-client" certificate and key
+[certs] Generating "apiserver-kubelet-client" certificate and key
+[certs] Generating "front-proxy-client" certificate and key
+[certs] Generating "sa" key and public key
+[kubeconfig] Writing "super-admin.conf" kubeconfig file
+[kubeconfig] Writing "admin.conf" kubeconfig file
+```
+```
+#### Kube Controller Manager Certificates
+[kubeconfig] Writing "controller-manager.conf" kubeconfig file
+```
+```
+#### Kube Scheduler Certificates
+[kubeconfig] Writing "scheduler.conf" kubeconfig file
+```
+### All Certificates:
+Если требуется создать сразу все сертификаты, то воспользуйтесь следующими командами
+```bash
+kubeadm init phase certs all      --config=${BASE_K8S_PATH}/kubeadm.conf
+kubeadm init phase kubeconfig all --config=${BASE_K8S_PATH}/kubeadm.conf
+```
+:::

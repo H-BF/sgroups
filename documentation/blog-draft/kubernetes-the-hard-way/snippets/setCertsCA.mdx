@@ -4,52 +4,96 @@ import Tabs                     from '@theme/Tabs'
 import K8sCACerts               from '@site/blog-draft/kubernetes-the-hard-way/snippets/certs/kubernetes-ca.mdx'
 import ETCDCACerts              from '@site/blog-draft/kubernetes-the-hard-way/snippets/certs/etcd-ca.mdx'
 import FrontProxyCACerts        from '@site/blog-draft/kubernetes-the-hard-way/snippets/certs/front-proxy-ca.mdx'
+import CodeBlock                from '@theme/CodeBlock';
+import {ETCD_ARGS}              from '@site/blog-draft/kubernetes-the-hard-way/constants/etcdArgs'
+import {KUBE_API_ARGS}          from '@site/blog-draft/kubernetes-the-hard-way/constants/kubeAPIArgs'
+import KubeadmInitConfig        from '@site/blog-draft/kubernetes-the-hard-way/snippets/components/kubeadm/initConfig.mdx'
+import KubeadmJoinConfig        from '@site/blog-draft/kubernetes-the-hard-way/snippets/components/kubeadm/joinConfig.mdx'
+import KubeadmInitCA            from '@site/blog-draft/kubernetes-the-hard-way/snippets/components/kubeadm/initCA.mdx'
 
-:::danger
-Просьба обратить внимание, что CA создаются только на первом мастере, как инициализирующая часть создания кластера, все последующие работы с CA производятся либо через копирование сертификатов удостоверяющего центра на каждую ноду управляющего контура или воспользовавшись командой ниже.
-```bash
-kubeadm join phase control-plane-prepare certs ****
-kubeadm join phase control-plane-prepare kubeconfig ****
-```
-Полное описание команды будет ниже, вместе с информацией как получить такую команду.
-:::
 
-<Tabs groupId="install-type">
+<Tabs groupId="current-master">
+  <TabItem value='master-1'>
 
-  <TabItem value='HardWay'>
-    <K8sCACerts />
-    <ETCDCACerts />
-    <FrontProxyCACerts />
+    <Tabs groupId="install-type">
+
+      <TabItem value='HardWay'>
+        <K8sCACerts />
+        <ETCDCACerts />
+        <FrontProxyCACerts />
+      </TabItem>
+
+      <TabItem value='Kubeadm'>
+        <KubeadmInitConfig />
+        <KubeadmInitCA />
+      </TabItem>
+
+    </Tabs>
   </TabItem>
 
-  <TabItem value='Kubeadm'>
-    #### Kubernetes CA
-    ```bash
-    kubeadm init phase certs ca --config=${BASE_K8S_PATH}/kubeadm.conf
-    ```
-    #### ETCD CA
-    ```bash
-    kubeadm init phase certs etcd-ca --config=${BASE_K8S_PATH}/kubeadm.conf
-    ```
-    #### Front Proxy CA
-    ```bash
-    kubeadm init phase certs front-proxy-ca --config=${BASE_K8S_PATH}/kubeadm.conf
-    ```
-    :::note
-    После выполнения команд мы получаем следующий вывод.
-    ```
-    #### Kubernetes CA
-    [certs] Generating "ca" certificate and key
-    ```
-    ```
-    #### ETCD CA
-    [certs] Generating "etcd/ca" certificate and key
-    ```
-    ```
-    #### Front Proxy CA
-    [certs] Generating "front-proxy-ca" certificate and key
-    ```
-    :::
+  <TabItem value='master-2'>
+    <Tabs groupId="install-type">
+
+      <TabItem value='HardWay'>
+        :::danger
+        Просьба обратить внимание, что CA создаются только на первом мастере, как инициализирующая часть создания кластера, все последующие работы с CA производятся либо через копирование сертификатов удостоверяющего центра на каждую ноду управляющего контура или воспользовавшись командой ниже.
+        ```bash
+        join phase control-plane-prepare download-certs --config=${BASE_K8S_PATH}/kubeadm.conf
+        ```
+        :::
+      </TabItem>
+
+      <TabItem value='Kubeadm'>
+
+        <KubeadmJoinConfig/>
+
+        #### Downloads CA
+        ```bash
+        join phase control-plane-prepare download-certs \
+          --config=${BASE_K8S_PATH}/kubeadm.conf
+        ```
+        ```
+        [download-certs] Downloading the certificates in Secret "kubeadm-certs" in the "kube-system" Namespace
+        [download-certs] Saving the certificates to the folder: "/etc/kubernetes/pki"
+        ```
+
+      </TabItem>
+
+    </Tabs>
+
+  </TabItem>
+
+  <TabItem value='master-3'>
+    <Tabs groupId="install-type">
+
+
+      <TabItem value='HardWay'>
+        :::danger
+        Просьба обратить внимание, что CA создаются только на первом мастере, как инициализирующая часть создания кластера, все последующие работы с CA производятся либо через копирование сертификатов удостоверяющего центра на каждую ноду управляющего контура или воспользовавшись командой ниже.
+        ```bash
+        join phase control-plane-prepare download-certs --config=${BASE_K8S_PATH}/kubeadm.conf
+        ```
+        :::
+      </TabItem>
+      
+      <TabItem value='Kubeadm'>
+
+        <KubeadmJoinConfig/>
+
+        #### Downloads CA
+        ```bash
+        join phase control-plane-prepare download-certs \
+          --config=${BASE_K8S_PATH}/kubeadm.conf
+        ```
+        ```
+        [download-certs] Downloading the certificates in Secret "kubeadm-certs" in the "kube-system" Namespace
+        [download-certs] Saving the certificates to the folder: "/etc/kubernetes/pki"
+        ```
+      </TabItem>
+
+    </Tabs>
+
   </TabItem>
 
 </Tabs>
+

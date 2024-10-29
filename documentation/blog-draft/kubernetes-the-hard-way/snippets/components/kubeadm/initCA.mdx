@@ -1,0 +1,28 @@
+
+#### Create Kubernetes CA
+```bash
+kubeadm init phase certs ca --config=${BASE_K8S_PATH}/kubeadm.conf
+```
+#### Create ETCD CA
+```bash
+kubeadm init phase certs etcd-ca --config=${BASE_K8S_PATH}/kubeadm.conf
+```
+#### Create Front Proxy CA
+```bash
+kubeadm init phase certs front-proxy-ca --config=${BASE_K8S_PATH}/kubeadm.conf
+```
+:::note
+После выполнения команд мы получаем следующий вывод.
+```
+#### Create Kubernetes CA
+[certs] Generating "ca" certificate and key
+```
+```
+#### Create ETCD CA
+[certs] Generating "etcd/ca" certificate and key
+```
+```
+#### Create Front Proxy CA
+[certs] Generating "front-proxy-ca" certificate and key
+```
+:::
