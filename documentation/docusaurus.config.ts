@@ -104,18 +104,38 @@ const config: Config = {
     },
     footer: {
       style: 'dark',
+      copyright: `Copyright © ${new Date().getFullYear()} Исключительные права на ПО принадлежат ООО «ПРТ» (ИНН 7735199547; ОГРН 1237700341185). Все права защищены.`,
       links: [
         {
-          html: `
-           <div>
-              <a href="/docs/polzovatelskoe-soglashenie.pdf" target="_blank" rel="noopener noreferrer">
-                Пользовательское соглашение
-              </a>
-              <p>
-                Copyright © ${new Date().getFullYear()} Исключительные права на ПО принадлежат ООО «ПРТ» (ИНН 7735199547; ОГРН 1237700341185). Все права защищены.
-              </p>
-            </div>
-            `,
+          title: 'Документы',
+          items: [
+            {
+              label: 'Пользовательское соглашение',
+              to: '/docs/polzovatelskoe-soglashenie.pdf',
+            },
+          ],
+        },
+        {
+          title: 'Документация',
+          items: [
+            {
+              label: 'Руководство пользователя',
+              to: '/docs/documentation.pdf',
+            },
+            {
+              label: 'Пользовательская документация',
+              to: '/docs/documentation.pdf',
+            },
+          ],
+        },
+        {
+          title: 'Контакты',
+          items: [
+            {
+              label: 'Telegram',
+              href: 'https://t.me/sgroups_support',
+            },
+          ],
         },
       ],
   },
