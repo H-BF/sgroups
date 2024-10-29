@@ -1,0 +1,42 @@
+
+#### ETCD
+```bash
+kubeadm init phase  etcd local \
+    --config=${BASE_K8S_PATH}/kubeadm.conf
+```
+
+#### Kube API
+```bash
+kubeadm init phase  control-plane apiserver \
+    --config=${BASE_K8S_PATH}/kubeadm.conf
+```
+
+#### Kube Controller Manager
+```bash
+kubeadm init phase  control-plane controller-manager \
+    --config=${BASE_K8S_PATH}/kubeadm.conf
+```
+
+#### Kube Scheduler
+```bash
+kubeadm init phase  control-plane scheduler \
+    --config=${BASE_K8S_PATH}/kubeadm.conf
+```
+:::note
+```
+#### ETCD
+[etcd] Creating static Pod manifest for local etcd in "/etc/kubernetes/manifests"
+```
+```
+#### Kube API
+[control-plane] Creating static Pod manifest for "apiserver"
+```
+```
+#### Kube Controller Manager
+[control-plane] Creating static Pod manifest for "kube-controller-manager"
+```
+```
+#### Kube Scheduler
+[control-plane] Creating static Pod manifest for "kube-scheduler"
+```
+:::

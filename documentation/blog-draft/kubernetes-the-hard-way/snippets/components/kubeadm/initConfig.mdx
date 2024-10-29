@@ -16,17 +16,6 @@ import {KUBE_API_ARGS}          from '@site/blog-draft/kubernetes-the-hard-way/c
 {`cat <<EOF > $\{BASE_K8S_PATH\}/kubeadm.conf
   ---
   apiVersion: kubeadm.k8s.io/v1beta3
-  controlPlane:
-    localAPIEndpoint: {}
-    certificateKey: 0c00c2fd5c67c37656c00d78a9d7e1f2eb794ef8e4fc3e2a4b532eb14323cd59
-  discovery:
-    bootstrapToken:
-      apiServerEndpoint: api.example.prorobotech.ru:6443
-      unsafeSkipCAVerification: true
-      token: "fjt9ex.lwzqgdlvoxtqk4yw"
-  kind: JoinConfiguration
-  ---
-  apiVersion: kubeadm.k8s.io/v1beta3
   kind: InitConfiguration
   bootstrapTokens:
     - token: "fjt9ex.lwzqgdlvoxtqk4yw"
@@ -36,7 +25,7 @@ import {KUBE_API_ARGS}          from '@site/blog-draft/kubernetes-the-hard-way/c
   ---
   apiVersion: kubeadm.k8s.io/v1beta3
   kind: ClusterConfiguration
-
+  controlPlaneEndpoint: api.$\{CLUSTER_NAME\}.$\{BASE_DOMAIN\}:${KUBE_API_ARGS.securePort.value}
   imageRepository: "$\{BASE_DOCKER_REGISTRY\}"
   networking:
     serviceSubnet: "$\{SERVICE_CIDR\}"

@@ -1,0 +1,41 @@
+#### Kube API,Scheduler,Controller
+```bash
+kubeadm join phase control-plane-prepare control-plane \
+    --config=${BASE_K8S_PATH}/kubeadm-join.conf
+```
+
+#### Запуск Kubelet
+```bash
+kubeadm join phase kubelet-start \
+    --config=${BASE_K8S_PATH}/kubeadm-join.conf
+```
+
+#### Добавление нового узла в кластер ETCD
+```bash
+kubeadm join phase control-plane-join etcd \
+    --config=${BASE_K8S_PATH}/kubeadm-join.conf
+```
+
+:::note
+```
+#### Kube API,Scheduler,Controller
+[control-plane] Using manifest folder "/etc/kubernetes/manifests"
+[control-plane] Creating static Pod manifest for "kube-apiserver"
+[control-plane] Creating static Pod manifest for "kube-controller-manager"
+[control-plane] Creating static Pod manifest for "kube-scheduler"
+```
+```
+#### Запуск Kubelet
+[kubelet-start] Writing kubelet configuration to file "/var/lib/kubelet/config.yaml"
+[kubelet-start] Writing kubelet environment file with flags to file "/var/lib/kubelet/kubeadm-flags.env"
+[kubelet-start] Starting the kubelet
+[kubelet-check] Waiting for a healthy kubelet at http://127.0.0.1:10248/healthz. This can take up to 4m0s
+[kubelet-check] The kubelet is healthy after 501.740644ms
+[kubelet-start] Waiting for the kubelet to perform the TLS Bootstrap
+```
+```
+#### Добавление нового узла в кластер ETCD
+[etcd] Announced new etcd member joining to the existing etcd cluster
+[etcd] Creating static Pod manifest for "etcd"
+```
+:::

@@ -24,7 +24,6 @@ import KubeadmInitCA            from '@site/blog-draft/kubernetes-the-hard-way/s
       </TabItem>
 
       <TabItem value='Kubeadm'>
-        <KubeadmInitConfig />
         <KubeadmInitCA />
       </TabItem>
 
@@ -38,19 +37,18 @@ import KubeadmInitCA            from '@site/blog-draft/kubernetes-the-hard-way/s
         :::danger
         Просьба обратить внимание, что CA создаются только на первом мастере, как инициализирующая часть создания кластера, все последующие работы с CA производятся либо через копирование сертификатов удостоверяющего центра на каждую ноду управляющего контура или воспользовавшись командой ниже.
         ```bash
-        join phase control-plane-prepare download-certs --config=${BASE_K8S_PATH}/kubeadm.conf
+        kubeadm join phase control-plane-prepare download-certs \
+          --config=${BASE_K8S_PATH}/kubeadm-join.conf
         ```
         :::
       </TabItem>
 
       <TabItem value='Kubeadm'>
 
-        <KubeadmJoinConfig/>
-
         #### Downloads CA
         ```bash
-        join phase control-plane-prepare download-certs \
-          --config=${BASE_K8S_PATH}/kubeadm.conf
+        kubeadm join phase control-plane-prepare download-certs \
+          --config=${BASE_K8S_PATH}/kubeadm-join.conf
         ```
         ```
         [download-certs] Downloading the certificates in Secret "kubeadm-certs" in the "kube-system" Namespace
@@ -71,7 +69,7 @@ import KubeadmInitCA            from '@site/blog-draft/kubernetes-the-hard-way/s
         :::danger
         Просьба обратить внимание, что CA создаются только на первом мастере, как инициализирующая часть создания кластера, все последующие работы с CA производятся либо через копирование сертификатов удостоверяющего центра на каждую ноду управляющего контура или воспользовавшись командой ниже.
         ```bash
-        join phase control-plane-prepare download-certs --config=${BASE_K8S_PATH}/kubeadm.conf
+        kubeadm join phase control-plane-prepare download-certs --config=${BASE_K8S_PATH}/kubeadm-join.conf
         ```
         :::
       </TabItem>
@@ -82,8 +80,8 @@ import KubeadmInitCA            from '@site/blog-draft/kubernetes-the-hard-way/s
 
         #### Downloads CA
         ```bash
-        join phase control-plane-prepare download-certs \
-          --config=${BASE_K8S_PATH}/kubeadm.conf
+        kubeadm join phase control-plane-prepare download-certs \
+          --config=${BASE_K8S_PATH}/kubeadm-join.conf
         ```
         ```
         [download-certs] Downloading the certificates in Secret "kubeadm-certs" in the "kube-system" Namespace

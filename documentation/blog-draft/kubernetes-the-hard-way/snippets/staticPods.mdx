@@ -7,52 +7,70 @@ import SchedulerSetup           from '@site/blog-draft/kubernetes-the-hard-way/s
 import KubeAPISetup             from '@site/blog-draft/kubernetes-the-hard-way/snippets/components/kubeAPI/staticPod.mdx'
 
 import { CUSTOM_VALUE }         from '@site/blog-draft/kubernetes-the-hard-way/constants/customValue'
-import CodeBlock              from '@theme/CodeBlock';
-import {ETCD_ARGS}                from '@site/blog-draft/kubernetes-the-hard-way/constants/etcdArgs'
+import CodeBlock                from '@theme/CodeBlock';
+import {ETCD_ARGS}              from '@site/blog-draft/kubernetes-the-hard-way/constants/etcdArgs'
 import {KUBE_API_ARGS}          from '@site/blog-draft/kubernetes-the-hard-way/constants/kubeAPIArgs'
-
+import KubeadmInitStaticPods    from '@site/blog-draft/kubernetes-the-hard-way/snippets/components/kubeadm/initStaticPod.mdx'
+import KubeadmJoinStaticPods    from '@site/blog-draft/kubernetes-the-hard-way/snippets/components/kubeadm/joinStaticPod.mdx'
 
 :::note
 Статичные поды в Kubernetes — это особый вид подов, которые запускаются и управляются напрямую демоном kubelet на каждом узле, без участия API-сервера и контроллеров Kubernetes. Чтобы создать статический под, вы размещаете файл-манифест в определённой директории на узле (по умолчанию это **{CUSTOM_VALUE.kuberneteBaseFolderPath.value}**). Kubelet постоянно следит за этой директорией и автоматически запускает или перезапускает поды при обнаружении изменений в этих файлах.
 :::
 
-<Tabs groupId="install-type">
 
-  <TabItem value='HardWay'>
-    <ETCDSetup />
-    <KubeAPISetup />
-    <ControllerManagerSetup />
-    <SchedulerSetup />
+<Tabs groupId="current-master">
+  <TabItem value='master-1'>
+
+    <Tabs groupId="install-type">
+
+      <TabItem value='HardWay'>
+        <ETCDSetup />
+        <KubeAPISetup />
+        <ControllerManagerSetup />
+        <SchedulerSetup />
+      </TabItem>
+
+      <TabItem value='Kubeadm'>
+        <KubeadmInitStaticPods />
+      </TabItem>
+
+    </Tabs>
   </TabItem>
 
-  <TabItem value='Kubeadm'>
+  <TabItem value='master-2'>
+    <Tabs groupId="install-type">
 
-    #### ETCD
-    ```bash
-    kubeadm init phase  etcd local --config=${BASE_K8S_PATH}/kubeadm.conf
-    ```
+      <TabItem value='HardWay'>
+        <KubeAPISetup />
+        <ControllerManagerSetup />
+        <SchedulerSetup />
+      </TabItem>
 
-    #### Kube API
-    ```bash
-    kubeadm init phase  control-plane apiserver --config=${BASE_K8S_PATH}/kubeadm.conf
-    ```
+      <TabItem value='Kubeadm'>
+        <KubeadmJoinStaticPods />
+      </TabItem>
 
-    #### Kube Controller Manager
-    ```bash
-    kubeadm init phase  control-plane controller-manager --config=${BASE_K8S_PATH}/kubeadm.conf
-    ```
+    </Tabs>
 
-    #### Kube Scheduler
-    ```bash
-    kubeadm init phase  control-plane scheduler --config=${BASE_K8S_PATH}/kubeadm.conf
-    ```
-    :::note
-    ```
-    [etcd] Creating static Pod manifest for local etcd in "/etc/kubernetes/manifests"
-    [control-plane] Creating static Pod manifest for "apiserver"
-    [control-plane] Creating static Pod manifest for "kube-controller-manager"
-    [control-plane] Creating static Pod manifest for "kube-scheduler"
-    ```
-    :::
   </TabItem>
+
+  <TabItem value='master-3'>
+    <Tabs groupId="install-type">
+
+
+      <TabItem value='HardWay'>
+        <KubeAPISetup />
+        <ControllerManagerSetup />
+        <SchedulerSetup />
+      </TabItem>
+      
+      <TabItem value='Kubeadm'>
+        <KubeadmJoinStaticPods />
+      </TabItem>
+
+    </Tabs>
+
+  </TabItem>
+
 </Tabs>
+

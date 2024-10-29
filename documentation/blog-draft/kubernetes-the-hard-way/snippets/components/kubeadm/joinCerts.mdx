@@ -3,6 +3,8 @@
 ```bash
 kubeadm join phase control-plane-prepare certs \
     --config=${BASE_K8S_PATH}/kubeadm-join.conf
+kubeadm join phase control-plane-prepare kubeconfig \
+    --config=${BASE_K8S_PATH}/kubeadm-join.conf
 ```
 
 :::note
