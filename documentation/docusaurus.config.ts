@@ -111,7 +111,7 @@ const config: Config = {
           items: [
             {
               label: 'Пользовательское соглашение',
-              to: 'https://h-bf.prorobotech.ru/files/polzovatelskoe-soglashenie.pdf',
+              href: 'https://h-bf.prorobotech.ru/files/polzovatelskoe-soglashenie.pdf',
             },
           ],
         },
@@ -120,11 +120,11 @@ const config: Config = {
           items: [
             {
               label: 'Руководство пользователя',
-              to: 'https://h-bf.prorobotech.ru/files/documentation.pdf',
+              href: 'https://h-bf.prorobotech.ru/files/documentation.pdf',
             },
             {
               label: 'Пользовательская документация',
-              to: 'https://h-bf.prorobotech.ru/files/documentation.pdf',
+              href: 'https://h-bf.prorobotech.ru/files/documentation.pdf',
             },
           ],
         },
