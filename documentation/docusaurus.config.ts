@@ -3,13 +3,13 @@ import type { Config } from '@docusaurus/types'
 import type * as Preset from '@docusaurus/preset-classic'
 
 const config: Config = {
-  title: 'Swarm',
+  title: 'PRO Robotech',
   favicon: 'img/favicon.ico',
 
   // Set the production url of your site here
   url: 'http://localhost',
   baseUrl: '/',
-
+  staticDirectories: ['public', 'static'],
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
 
@@ -111,7 +111,7 @@ const config: Config = {
           items: [
             {
               label: 'Пользовательское соглашение',
-              to: '/docs/polzovatelskoe-soglashenie.pdf',
+              to: 'https://h-bf.prorobotech.ru/files/polzovatelskoe-soglashenie.pdf',
             },
           ],
         },
@@ -120,11 +120,11 @@ const config: Config = {
           items: [
             {
               label: 'Руководство пользователя',
-              href: "/files/documentation.pdf",
+              to: 'https://h-bf.prorobotech.ru/files/documentation.pdf',
             },
             {
               label: 'Пользовательская документация',
-              href: "/files/documentation.pdf",
+              to: 'https://h-bf.prorobotech.ru/files/documentation.pdf',
             },
           ],
         },
@@ -138,7 +138,8 @@ const config: Config = {
           ],
         },
       ],
-  },
+    },
+    
       prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
@@ -153,5 +154,4 @@ const config: Config = {
     },
   ],
 }
-
 export default config
