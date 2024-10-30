@@ -19,7 +19,7 @@ import TopologyInfra            from '@site/blog-draft/kubernetes-the-hard-way/s
 
 ### prerequisites
 ```bash
-apt install wget tree net-tools conntrack socat haproxy -y
+apt install wget tree net-tools conntrack socat -y
 ```
 
 ### kubernetes
@@ -62,89 +62,6 @@ apt install wget tree net-tools conntrack socat haproxy -y
 
 </details>
 
-<details>
-<summary>Haproxy CFG</summary>
-
-<CodeBlock language="bash">
-{`cat <<EOF > /etc/haproxy/haproxy.cfg
-  global
-    maxconn 4096
-    user haproxy
-    group haproxy
-    daemon
-
-  defaults
-    mode tcp
-    timeout connect 5000ms
-    timeout client 10000ms
-    timeout server 10000ms
-
-  resolvers mydns
-    nameserver dns1 127.0.0.53:53  # You can use any reliable DNS server
-    resolve_retries 3
-    timeout retry 1s
-    hold other 30s
-    hold refused 30s
-    hold nx 30s
-    hold timeout 30s
-    hold valid 10s
-
-  frontend k8s-api
-    bind *:62443
-    mode tcp
-    option tcplog
-    default_backend k8s-api-servers
-
-  frontend etcd-servers
-    bind *:62379
-    mode tcp
-    option tcplog
-    default_backend etcd-servers
-
-  frontend etcd-peers
-    bind *:62380
-    mode tcp
-    option tcplog
-    default_backend etcd-peers
-
-  backend k8s-api-servers
-    mode tcp
-    balance source
-    server master1 master-1.example.prorobotech.ru:6443 check resolvers mydns init-addr last,none
-    server master2 master-2.example.prorobotech.ru:6443 check resolvers mydns init-addr last,none
-    server master3 master-3.example.prorobotech.ru:6443 check resolvers mydns init-addr last,none
-
-  backend etcd-servers
-    mode tcp
-    balance source
-    server master1 master-1.example.prorobotech.ru:2379 check resolvers mydns init-addr last,none
-    server master2 master-2.example.prorobotech.ru:2379 check resolvers mydns init-addr last,none
-    server master3 master-3.example.prorobotech.ru:2379 check resolvers mydns init-addr last,none
-
-  backend etcd-peers
-    mode tcp
-    balance source
-    server master1 master-1.example.prorobotech.ru:2380 check resolvers mydns init-addr last,none
-    server master2 master-2.example.prorobotech.ru:2380 check resolvers mydns init-addr last,none
-    server master3 master-3.example.prorobotech.ru:2380 check resolvers mydns init-addr last,none
-
-  frontend stats
-    bind *:9000
-    mode http
-    stats enable
-    stats uri /
-    stats refresh 10s
-    stats admin if TRUE
-    stats auth admin:password
-  EOF
-`}
-</CodeBlock>
-
-<CodeBlock language="bash">
-{`systemctl restart haproxy`}
-</CodeBlock>
-
-</details>
 
 :::note
 Обратите внимание, что для успешного завершения команд, требутся корректно настроенная сеть на узлах и открытые сетевые доступы до ресурса `github.com` по порту ```443/TCP``` и выполнение команд из под ```root```
