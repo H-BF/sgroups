@@ -122,10 +122,6 @@ const config: Config = {
               label: 'Руководство пользователя',
               href: 'https://h-bf.prorobotech.ru/files/documentation.pdf',
             },
-            {
-              label: 'Пользовательская документация',
-              href: 'https://h-bf.prorobotech.ru/files/documentation.pdf',
-            },
           ],
         },
         {
